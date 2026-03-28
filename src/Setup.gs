@@ -35,7 +35,7 @@ function setup() {
     vulGrootboekschema_(ss);
     zetInstellingen_(ss);
     maakFormuliersTabbladen_(ss);
-    maakGoogleForms_(ss);
+    maakHoofdFormulier_(ss);
     installeelTriggers_();
     // Drive mappenstructuur aanmaken
     const jaar = new Date().getFullYear();
@@ -290,13 +290,7 @@ function zetInstellingen_(ss) {
 //  FORMULIER RESPONSE TABBLADEN
 // ─────────────────────────────────────────────
 function maakFormuliersTabbladen_(ss) {
-  const namen = [
-    'RESP_Verkoopfactuur',
-    'RESP_Inkoopfactuur',
-    'RESP_Banktransactie',
-    'RESP_Relatie',
-    'RESP_Journaalpost',
-  ];
+  const namen = ['RESP_Hoofdformulier'];
   namen.forEach(naam => {
     if (!ss.getSheetByName(naam)) {
       const sheet = ss.insertSheet(naam);
@@ -306,8 +300,225 @@ function maakFormuliersTabbladen_(ss) {
 }
 
 // ─────────────────────────────────────────────
-//  GOOGLE FORMS AANMAKEN
+//  EENFORMULIER AANMAKEN (vervangt 5 aparte forms)
 // ─────────────────────────────────────────────
+/**
+ * Maakt één Google Form met secties en vertakkingen:
+ *   Sectie 1 → Inkomsten (factuur)
+ *   Sectie 2 → Uitgaven (kosten)
+ *   Sectie 3 → Declaratie (privé voorgeschoten)
+ *
+ * Het formulier werkt op mobiel en desktop. Na verzending:
+ *   Inkomsten  → PDF factuur aangemaakt + automatisch gemaild
+ *   Uitgaven   → Boeking + BTW bijgewerkt
+ *   Declaratie → Boeking aangemaakt
+ */
+function maakHoofdFormulier_(ss) {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty(PROP.FORM_HOOFD_ID)) return; // Reeds aangemaakt
+
+  const bedrijf = getInstelling_('Bedrijfsnaam') || 'Ons Bedrijf';
+  const form = FormApp.create(`${bedrijf} – Boekhouding`);
+
+  form.setDescription(
+    'Vul dit formulier in om facturen, kosten of declaraties te registreren.\n\n' +
+    '• Inkomsten → factuur (PDF) wordt automatisch aangemaakt en gemaild\n' +
+    '• Uitgaven & declaraties → direct verwerkt in de administratie\n\n' +
+    'U hoeft geen boekhouder te zijn. Het systeem doet de rest.'
+  );
+  form.setConfirmationMessage(
+    'Bedankt — uw invoer is verwerkt!\n\n' +
+    'Inkomsten: factuur (PDF + UBL) is aangemaakt en gemaild naar de klant.\n' +
+    'Uitgaven/declaraties: verwerkt in administratie en BTW-overzicht.\n\n' +
+    'U ontvangt zelf een kopie per e-mail als u dat hebt aangegeven.'
+  );
+  form.setProgressBar(true);
+  form.setShowLinkToRespondAgain(true);
+  form.setCollectEmail(false);
+
+  // ── Pagina 1: Type keuze ────────────────────────────────────────────
+  const typeItem = form.addMultipleChoiceItem()
+    .setTitle('Wat wil je doen?')
+    .setRequired(true)
+    .setHelpText('Kies één van de drie opties. U ziet daarna alleen de relevante velden.');
+
+  // ── Sectie: Inkomsten ───────────────────────────────────────────────
+  const secInkomsten = form.addPageBreakItem()
+    .setTitle('Inkomsten – Factuur aanmaken')
+    .setHelpText('Vul de klant- en factuurgegevens in. De factuur wordt automatisch aangemaakt en per e-mail verstuurd.');
+
+  form.addTextItem()
+    .setTitle('Klantnaam')
+    .setRequired(true)
+    .setHelpText('Naam van de klant of het bedrijf — bijv. "Bedrijf BV" of "Jan de Vries"');
+
+  form.addTextItem()
+    .setTitle('Klant e-mailadres')
+    .setRequired(true)
+    .setHelpText('De factuur PDF wordt hiernaartoe verstuurd');
+
+  form.addTextItem()
+    .setTitle('Factuuradres klant')
+    .setHelpText('Straat + huisnummer, postcode, plaats — verschijnt op de factuur');
+
+  form.addTextItem()
+    .setTitle('KvK-nummer klant')
+    .setHelpText('Optioneel — voor zakelijke klanten');
+
+  form.addTextItem()
+    .setTitle('BTW-nummer klant')
+    .setHelpText('Optioneel — bijv. NL123456789B01');
+
+  form.addDateItem()
+    .setTitle('Factuurdatum')
+    .setRequired(true);
+
+  form.addTextItem()
+    .setTitle('Betalingstermijn (dagen)')
+    .setHelpText('Standaard 30 — vul een getal in');
+
+  const btwItem1 = form.addListItem().setTitle('BTW tarief').setRequired(true);
+  btwItem1.setChoiceValues(BTW_KEUZES);
+
+  // Factuurregels (5 regels voor uurtje/factuurtje én complexe facturen)
+  for (let i = 1; i <= 5; i++) {
+    const req = i === 1;
+    form.addTextItem()
+      .setTitle(`Regel ${i} – Omschrijving`)
+      .setRequired(req)
+      .setHelpText(i === 1
+        ? 'Bijv. "Consultancy januari 2026", "Materialen project X" of "Uurtarief 8 uur"'
+        : 'Optioneel – bijv. materialen, reiskosten, extra dienst');
+    form.addTextItem()
+      .setTitle(`Regel ${i} – Aantal`)
+      .setRequired(req)
+      .setHelpText(i === 1 ? 'Aantal uren, stuks of eenheden — bijv. 8 of 2.5' : '');
+    form.addTextItem()
+      .setTitle(`Regel ${i} – Prijs per eenheid (excl. BTW)`)
+      .setRequired(req)
+      .setHelpText(i === 1 ? 'Prijs excl. BTW per stuk/uur — bijv. 75.00' : '');
+  }
+
+  form.addTextItem()
+    .setTitle('Korting (in €)')
+    .setHelpText('Optioneel — vul het kortingsbedrag in euro\'s in. Leeg laten = geen korting.');
+
+  const mailItem = form.addMultipleChoiceItem()
+    .setTitle('Factuur direct e-mailen naar klant?')
+    .setRequired(true);
+  mailItem.setChoiceValues(['Ja, direct versturen', 'Nee, later handmatig']);
+
+  form.addTextItem()
+    .setTitle('Projectcode / Referentie')
+    .setHelpText('Optioneel — verschijnt op de factuur als referentie');
+
+  form.addParagraphTextItem()
+    .setTitle('Notities op factuur')
+    .setHelpText('Optioneel — bijv. bijzondere afspraken of aanvullende informatie');
+
+  // ── Sectie: Uitgaven ────────────────────────────────────────────────
+  const secUitgaven = form.addPageBreakItem()
+    .setTitle('Uitgaven – Kosten registreren')
+    .setHelpText('Registreer een inkoopfactuur, bon of andere bedrijfskost.');
+
+  form.addTextItem()
+    .setTitle('Leveranciernaam')
+    .setRequired(true)
+    .setHelpText('Naam van de leverancier of winkel');
+
+  form.addTextItem()
+    .setTitle('Factuurnummer leverancier')
+    .setRequired(true)
+    .setHelpText('Het factuurnummer op de ontvangen factuur of bon');
+
+  form.addDateItem()
+    .setTitle('Factuurdatum uitgave')
+    .setRequired(true);
+
+  form.addTextItem()
+    .setTitle('Bedrag excl. BTW')
+    .setRequired(true)
+    .setHelpText('Bedrag zonder BTW — bijv. 100.00');
+
+  const btwItem2 = form.addListItem().setTitle('BTW tarief uitgave').setRequired(true);
+  btwItem2.setChoiceValues(['21% (hoog)', '9% (laag)', '0% (nultarief)', 'Geen BTW (vrijgesteld)']);
+
+  form.addTextItem()
+    .setTitle('BTW bedrag uitgave')
+    .setHelpText('Optioneel — leeg laten = automatisch berekend op basis van tarief');
+
+  const catItem = form.addListItem().setTitle('Categorie kosten').setRequired(true);
+  catItem.setChoiceValues(KOSTEN_CATEGORIEEN);
+
+  const betaalItem = form.addListItem().setTitle('Betaalmethode').setRequired(true);
+  betaalItem.setChoiceValues(['Overschrijving', 'Pin / Debet', 'Contant', 'Creditcard', 'iDEAL / PayPal / Anders']);
+
+  const statusUitItem = form.addListItem().setTitle('Betalingsstatus uitgave').setRequired(true);
+  statusUitItem.setChoiceValues(['Betaald', 'Openstaand']);
+
+  form.addParagraphTextItem()
+    .setTitle('Omschrijving uitgave')
+    .setRequired(true)
+    .setHelpText('Bijv. "Adobe abonnement feb 2026" of "Benzine klantbezoek Utrecht"');
+
+  form.addParagraphTextItem()
+    .setTitle('Notities uitgave')
+    .setHelpText('Optioneel');
+
+  // ── Sectie: Declaratie ──────────────────────────────────────────────
+  const secDeclaratie = form.addPageBreakItem()
+    .setTitle('Declaratie – Privé voorgeschoten')
+    .setHelpText('U heeft privé betaald voor een zakelijke uitgave. Vul in om het terug te ontvangen.');
+
+  form.addDateItem()
+    .setTitle('Datum declaratie')
+    .setRequired(true);
+
+  const catItem2 = form.addListItem().setTitle('Categorie declaratie').setRequired(true);
+  catItem2.setChoiceValues(KOSTEN_CATEGORIEEN);
+
+  form.addTextItem()
+    .setTitle('Bedrag excl. BTW declaratie')
+    .setRequired(true)
+    .setHelpText('Bedrag zonder BTW');
+
+  const btwItem3 = form.addListItem().setTitle('BTW tarief declaratie').setRequired(true);
+  btwItem3.setChoiceValues(['21% (hoog)', '9% (laag)', '0% (nultarief)', 'Geen BTW (vrijgesteld)']);
+
+  const betaalItem2 = form.addListItem().setTitle('Betaalmethode declaratie').setRequired(true);
+  betaalItem2.setChoiceValues(['Contant', 'Privé bankpas / creditcard', 'iDEAL / PayPal / Anders']);
+
+  form.addParagraphTextItem()
+    .setTitle('Omschrijving declaratie')
+    .setRequired(true)
+    .setHelpText('Bijv. "Parkeerkosten klantbezoek" of "Pennen Bruna voor kantoor"');
+
+  form.addTextItem()
+    .setTitle('Betaald door (naam)')
+    .setHelpText('Optioneel — uw naam of die van een medewerker');
+
+  const declStatusItem = form.addListItem().setTitle('Declaratie status').setRequired(true);
+  declStatusItem.setChoiceValues(['Terug te betalen', 'Terugbetaald']);
+
+  // ── Vertakkingen instellen ──────────────────────────────────────────
+  typeItem.setChoices([
+    typeItem.createChoice('Inkomsten (factuur maken)', secInkomsten),
+    typeItem.createChoice('Uitgaven (kosten boeken)', secUitgaven),
+    typeItem.createChoice('Declaratie (privé voorgeschoten)', secDeclaratie),
+  ]);
+
+  // ── Koppelen aan spreadsheet ────────────────────────────────────────
+  form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
+  Utilities.sleep(1500);
+
+  props.setProperty(PROP.FORM_HOOFD_ID, form.getId());
+  Logger.log('Hoofdformulier aangemaakt: ' + form.getPublishedUrl());
+
+  slaFormUrlsOp_(ss);
+}
+
+// VEROUDERD – vervangen door maakHoofdFormulier_()
+// Bewaard voor backward-compatibiliteit (bestaande installaties met de 5 losse forms)
 function maakGoogleForms_(ss) {
   const props = PropertiesService.getScriptProperties();
   const ssId = ss.getId();
@@ -510,17 +721,12 @@ function slaFormUrlsOp_(ss) {
   const urlData = [
     ['', ''],
     ['FORMULIER LINKS', ''],
-    ['Verkoopfactuur formulier', getFormUrl_(props.getProperty(PROP.FORM_VERKOOP_ID))],
-    ['Inkoopfactuur formulier', getFormUrl_(props.getProperty(PROP.FORM_INKOOP_ID))],
-    ['Banktransactie formulier', getFormUrl_(props.getProperty(PROP.FORM_BANK_ID))],
-    ['Relatie formulier', getFormUrl_(props.getProperty(PROP.FORM_RELATIE_ID))],
-    ['Journaalpost formulier', getFormUrl_(props.getProperty(PROP.FORM_JOURNAAL_ID))],
+    ['Boekhouding formulier (alles-in-één)', getFormUrl_(props.getProperty(PROP.FORM_HOOFD_ID))],
   ];
 
   const lastRow = sheet.getLastRow();
   sheet.getRange(lastRow + 1, 1, urlData.length, 2).setValues(urlData);
 
-  // Opmaak sectietitel
   sheet.getRange(lastRow + 2, 1, 1, 2)
     .setBackground(KLEUREN.HEADER_BG)
     .setFontColor(KLEUREN.HEADER_FG)
@@ -540,7 +746,6 @@ function getFormUrl_(formId) {
 //  TRIGGERS INSTALLEREN
 // ─────────────────────────────────────────────
 function installeelTriggers_() {
-  // Verwijder bestaande triggers van dit script
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
 
   const props = PropertiesService.getScriptProperties();
@@ -552,30 +757,21 @@ function installeelTriggers_() {
     .onOpen()
     .create();
 
-  // Form submit triggers
-  const formIds = [
-    { propKey: PROP.FORM_VERKOOP_ID,  handler: 'verwerkVerkoopfactuurFormulier'  },
-    { propKey: PROP.FORM_INKOOP_ID,   handler: 'verwerkInkoopfactuurFormulier'   },
-    { propKey: PROP.FORM_BANK_ID,     handler: 'verwerkBanktransactieFormulier'  },
-    { propKey: PROP.FORM_RELATIE_ID,  handler: 'verwerkRelatieFormulier'         },
-    { propKey: PROP.FORM_JOURNAAL_ID, handler: 'verwerkJournaalpostFormulier'    },
-  ];
-
-  formIds.forEach(({ propKey, handler }) => {
-    const formId = props.getProperty(propKey);
-    if (!formId) return;
+  // Hoofdformulier trigger
+  const hoofdFormId = props.getProperty(PROP.FORM_HOOFD_ID);
+  if (hoofdFormId) {
     try {
-      const form = FormApp.openById(formId);
-      ScriptApp.newTrigger(handler)
-        .forForm(form)
+      ScriptApp.newTrigger('verwerkHoofdformulier')
+        .forForm(FormApp.openById(hoofdFormId))
         .onFormSubmit()
         .create();
+      Logger.log('Hoofdformulier trigger geïnstalleerd');
     } catch (e) {
-      Logger.log(`Trigger fout voor ${handler}: ${e.message}`);
+      Logger.log('Trigger fout hoofdformulier: ' + e.message);
     }
-  });
+  }
 
-  // Dagelijkse trigger voor factuurherinneringen en rapportages
+  // Dagelijkse trigger: factuurherinneringen, BTW deadlines, dashboard
   ScriptApp.newTrigger('dagelijkseTaken')
     .timeBased()
     .atHour(8)
@@ -632,8 +828,8 @@ function resetSetup() {
   if (bevestiging !== ui.Button.YES) return;
 
   const props = PropertiesService.getScriptProperties();
-  [PROP.FORM_VERKOOP_ID, PROP.FORM_INKOOP_ID, PROP.FORM_BANK_ID,
-   PROP.FORM_RELATIE_ID, PROP.FORM_JOURNAAL_ID, PROP.SETUP_DONE
+  [PROP.FORM_HOOFD_ID, PROP.FORM_VERKOOP_ID, PROP.FORM_INKOOP_ID,
+   PROP.FORM_BANK_ID, PROP.FORM_RELATIE_ID, PROP.FORM_JOURNAAL_ID, PROP.SETUP_DONE
   ].forEach(k => props.deleteProperty(k));
 
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));

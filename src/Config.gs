@@ -217,19 +217,36 @@ const PROP = {
   VOLGEND_FACTUUR_NR:    'volgendFactuurNr',
   VOLGEND_INKOOP_NR:     'volgendInkoopNr',
   VOLGEND_BOEKING_NR:    'volgendBoekingNr',
+  FORM_HOOFD_ID:         'formHoofdId',
+  // Behouden voor backward-compatibiliteit (bestaande installaties)
   FORM_VERKOOP_ID:       'formVerkoopId',
   FORM_INKOOP_ID:        'formInkoopId',
   FORM_BANK_ID:          'formBankId',
   FORM_RELATIE_ID:       'formRelatieId',
   FORM_JOURNAAL_ID:      'formJournaalId',
-  TRIGGER_VERKOOP_ID:    'triggerVerkoopId',
-  TRIGGER_INKOOP_ID:     'triggerInkoopId',
-  TRIGGER_BANK_ID:       'triggerBankId',
-  TRIGGER_RELATIE_ID:    'triggerRelatieId',
-  TRIGGER_JOURNAAL_ID:   'triggerJournaalId',
   SETUP_DONE:            'setupDone',
   BOEKJAAR:              'boekjaar',
 };
+
+// ─────────────────────────────────────────────
+//  KOSTEN CATEGORIEËN (gebruikt in formulier)
+// ─────────────────────────────────────────────
+const KOSTEN_CATEGORIEEN = [
+  'Marketing & Reclame',
+  'Software & Abonnementen',
+  'Kantoor & Werkruimte',
+  'Advies & Dienstverlening',
+  'Auto & Vervoer',
+  'Openbaar Vervoer & Reiskosten',
+  'Maaltijden & Representatie',
+  'Inkoop / Materialen',
+  'Verzekeringen & Bankkosten',
+  'Personeelskosten',
+  'Onderhoud & Reparaties',
+  'Telecom & Internet',
+  'Studie & Opleiding',
+  'Overige kosten',
+];
 
 // ─────────────────────────────────────────────
 //  KLEUREN PALET

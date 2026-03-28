@@ -11,13 +11,14 @@ function onOpen() {
 
   ui.createMenu('Boekhouding')
 
+    // ── Invoer ────────────────────────────────
+    .addItem('📋 Boekhouding formulier openen', 'openHoofdFormulier')
+    .addSeparator()
+
     // ── Facturen ──────────────────────────────
     .addSubMenu(ui.createMenu('Facturen')
-      .addItem('Nieuwe verkoopfactuur aanmaken', 'openVerkoopfactuurFormulier')
-      .addItem('Inkoopfactuur registreren', 'openInkoopfactuurFormulier')
-      .addSeparator()
-      .addItem('Verkoopfactuur als PDF versturen', 'stuurVerkoopfactuurPdf')
-      .addItem('Herinneringen versturen (vervallen)', 'stuurBetalingsherinneringen')
+      .addItem('Factuur handmatig versturen (PDF)', 'stuurVerkoopfactuurPdf')
+      .addItem('Betalingsherinneringen nu sturen', 'stuurBetalingsherinneringen')
       .addSeparator()
       .addItem('Debiteuren overzicht vernieuwen', 'vernieuwDebiteurenOverzicht')
       .addItem('Crediteuren overzicht vernieuwen', 'vernieuwCrediteurenOverzicht')
@@ -25,16 +26,9 @@ function onOpen() {
 
     // ── Bankboek ──────────────────────────────
     .addSubMenu(ui.createMenu('Bankboek')
-      .addItem('Banktransactie invoeren', 'openBanktransactieFormulier')
       .addItem('Bankafschrift importeren (CSV)', 'importeerBankafschrift')
       .addSeparator()
       .addItem('Transacties koppelen aan facturen', 'koppelTransactiesAanFacturen')
-    )
-
-    // ── Relaties ──────────────────────────────
-    .addSubMenu(ui.createMenu('Relaties')
-      .addItem('Nieuwe relatie toevoegen', 'openRelatieFormulier')
-      .addItem('Relaties beheren', 'beheerRelaties')
     )
 
     // ── Boekingen ─────────────────────────────
@@ -93,31 +87,11 @@ function onOpen() {
 }
 
 // ─────────────────────────────────────────────
-//  FORMULIER OPENERS (OPENEN VIA URL)
+//  HOOFDFORMULIER OPENEN
 // ─────────────────────────────────────────────
-function openVerkoopfactuurFormulier() {
-  openFormulier_(PROP.FORM_VERKOOP_ID, 'Verkoopfactuur');
-}
-
-function openInkoopfactuurFormulier() {
-  openFormulier_(PROP.FORM_INKOOP_ID, 'Inkoopfactuur');
-}
-
-function openBanktransactieFormulier() {
-  openFormulier_(PROP.FORM_BANK_ID, 'Banktransactie');
-}
-
-function openRelatieFormulier() {
-  openFormulier_(PROP.FORM_RELATIE_ID, 'Relatie toevoegen');
-}
-
-function openJournaalpostFormulier() {
-  openFormulier_(PROP.FORM_JOURNAAL_ID, 'Journaalpost');
-}
-
-function openFormulier_(propKey, titel) {
+function openHoofdFormulier() {
   const props = PropertiesService.getScriptProperties();
-  const formId = props.getProperty(propKey);
+  const formId = props.getProperty(PROP.FORM_HOOFD_ID);
   if (!formId) {
     SpreadsheetApp.getUi().alert(
       'Formulier niet gevonden',
@@ -126,14 +100,36 @@ function openFormulier_(propKey, titel) {
     );
     return;
   }
-  const form = FormApp.openById(formId);
-  const url = form.getPublishedUrl();
+  const url = FormApp.openById(formId).getPublishedUrl();
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body{font-family:Arial,sans-serif;padding:20px;text-align:center}
+      .btn{display:inline-block;background:#1A237E;color:#fff;padding:12px 24px;
+           border-radius:6px;text-decoration:none;font-size:14px;margin:8px 0}
+      .qr{margin-top:12px;font-size:11px;color:#888}
+    </style>
+    <h3 style="color:#1A237E">Boekhouding formulier</h3>
+    <p>Open op desktop of mobiel:</p>
+    <a class="btn" href="${url}" target="_blank">📋 Formulier openen</a>
+    <p style="font-size:11px;color:#888;margin-top:12px;word-break:break-all">${url}</p>
+    <p class="qr">Tip: stuur deze link naar uzelf voor snelle toegang op uw telefoon.</p>
+  `).setWidth(480).setHeight(250);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Boekhouding formulier');
+}
+
+// Backward-compat voor handmatige journaalpost (nog steeds nuttig)
+function openJournaalpostFormulier() {
+  const props = PropertiesService.getScriptProperties();
+  const formId = props.getProperty(PROP.FORM_JOURNAAL_ID);
+  if (!formId) {
+    openHoofdFormulier();
+    return;
+  }
+  const url = FormApp.openById(formId).getPublishedUrl();
   const html = HtmlService.createHtmlOutput(
-    `<p>Klik op de link om het formulier te openen:</p>
-     <p><a href="${url}" target="_blank">📋 ${titel} formulier openen</a></p>
-     <p><small>Of kopieer deze URL: ${url}</small></p>`
-  ).setWidth(450).setHeight(150);
-  SpreadsheetApp.getUi().showModalDialog(html, titel);
+    `<p><a href="${url}" target="_blank">📋 Journaalpost formulier openen</a></p>`
+  ).setWidth(450).setHeight(100);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Journaalpost');
 }
 
 // ─────────────────────────────────────────────
@@ -141,29 +137,23 @@ function openFormulier_(propKey, titel) {
 // ─────────────────────────────────────────────
 function toonFormulierLinks() {
   const props = PropertiesService.getScriptProperties();
-  const forms = [
-    { naam: 'Verkoopfactuur', key: PROP.FORM_VERKOOP_ID },
-    { naam: 'Inkoopfactuur', key: PROP.FORM_INKOOP_ID },
-    { naam: 'Banktransactie', key: PROP.FORM_BANK_ID },
-    { naam: 'Relatie toevoegen', key: PROP.FORM_RELATIE_ID },
-    { naam: 'Journaalpost', key: PROP.FORM_JOURNAAL_ID },
-  ];
-
-  let html = '<h3>Google Forms Links</h3><table style="border-collapse:collapse;width:100%">';
-  forms.forEach(f => {
-    const formId = props.getProperty(f.key);
-    let url = 'Niet aangemaakt';
-    if (formId) {
-      try { url = `<a href="${FormApp.openById(formId).getPublishedUrl()}" target="_blank">Openen</a>`; }
-      catch(e) { url = 'Fout'; }
-    }
-    html += `<tr><td style="padding:4px;font-weight:bold">${f.naam}</td><td style="padding:4px">${url}</td></tr>`;
-  });
-  html += '</table>';
-
+  const formId = props.getProperty(PROP.FORM_HOOFD_ID);
+  let url = 'Niet aangemaakt — voer Setup uit';
+  if (formId) {
+    try { url = FormApp.openById(formId).getPublishedUrl(); }
+    catch(e) { url = 'Fout bij ophalen: ' + e.message; }
+  }
+  const html = `
+    <style>body{font-family:Arial,sans-serif;padding:16px} a{color:#1A237E}</style>
+    <h3>Boekhouding formulier</h3>
+    <p>Gebruik dit ene formulier voor facturen, kosten en declaraties:</p>
+    <p><a href="${url}" target="_blank">📋 Formulier openen</a></p>
+    <p style="font-size:11px;color:#666;word-break:break-all">${url}</p>
+    <p style="font-size:11px;color:#888">Tip: sla de link op als bladwijzer op uw telefoon voor snelle invoer onderweg.</p>
+  `;
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(500).setHeight(300),
-    'Formulier Links'
+    HtmlService.createHtmlOutput(html).setWidth(500).setHeight(250),
+    'Formulier Link'
   );
 }
 

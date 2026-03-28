@@ -490,11 +490,15 @@ function zoekGrootboekBwType_(code) {
 // ─────────────────────────────────────────────
 //  HELPERS RELATIES
 // ─────────────────────────────────────────────
-function zoekOfMaakRelatie_(ss, naam, type) {
+function zoekOfMaakRelatie_(ss, naam, type, email) {
   const sheet = ss.getSheetByName(SHEETS.RELATIES);
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][2]).toLowerCase() === naam.toLowerCase()) {
+      // Sla e-mail op als die nog niet bekend was (kolom 11 = index 10)
+      if (email && !data[i][10]) {
+        sheet.getRange(i + 1, 11).setValue(email);
+      }
       return data[i][0]; // Relatie ID
     }
   }
@@ -503,7 +507,7 @@ function zoekOfMaakRelatie_(ss, naam, type) {
   const id = volgendRelatieId_();
   sheet.appendRow([
     id, type, naam, '', '', '', '', 'Nederland',
-    '', '', '', '', '', 30, '21% (hoog)', '', 'Ja', '', new Date()
+    '', '', email || '', '', '', 30, '21% (hoog)', '', 'Ja', '', new Date()
   ]);
   return id;
 }

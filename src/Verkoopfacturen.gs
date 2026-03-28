@@ -19,6 +19,7 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     const voettekst = getInstelling_('Factuur voettekst') || '';
 
     const factuurnummer = factuurprefix + factuurNr;
+    const sepaQr = haalSepaQrBase64_(iban, bedrijf, totalIncl, factuurnummer);
 
     const html = `
 <!DOCTYPE html>
@@ -125,13 +126,21 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
 
   <div class="betaalinfo">
     <h4>Betaalinformatie</h4>
-    <p>
-      Gelieve het bedrag van <strong>${formatBedrag_(totalIncl)}</strong> over te maken vóór
-      <strong>${formatDatum_(vervaldatum)}</strong> naar:<br>
-      IBAN: <strong>${iban}</strong><br>
-      t.n.v.: ${bedrijf}<br>
-      o.v.v.: ${factuurnummer}
-    </p>
+    <div style="display:flex;gap:20px;align-items:flex-start">
+      <div>
+        <p>
+          Gelieve het bedrag van <strong>${formatBedrag_(totalIncl)}</strong> over te maken vóór
+          <strong>${formatDatum_(vervaldatum)}</strong> naar:<br>
+          IBAN: <strong>${iban}</strong><br>
+          t.n.v.: ${bedrijf}<br>
+          o.v.v.: ${factuurnummer}
+        </p>
+      </div>
+      ${sepaQr ? `<div style="text-align:center;flex-shrink:0">
+        <img src="${sepaQr}" width="90" height="90" alt="SEPA QR">
+        <div style="font-size:8pt;color:#888;margin-top:2px">Scan om te betalen</div>
+      </div>` : ''}
+    </div>
   </div>
 
   ${formData['Notities / bijzonderheden'] ? `
@@ -388,6 +397,172 @@ function verwerkBankCsvImport(csvTekst, scheidingsteken, kolommen) {
 }
 
 // ─────────────────────────────────────────────
+//  AUTO-EMAIL FACTUUR NAAR KLANT
+// ─────────────────────────────────────────────
+/**
+ * Verstuurt de gegenereerde factuur PDF (en optioneel UBL) per e-mail naar de klant.
+ * Wordt automatisch aangeroepen vanuit de form-handler als 'Ja, direct versturen'.
+ */
+function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedragIncl, vervaldatum, pdfUrl, ublUrl) {
+  try {
+    const bedrijf = getInstelling_('Bedrijfsnaam') || '';
+    const iban = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '';
+    const eigenEmail = getInstelling_('Email rapporten naar') || '';
+
+    const pdfFile = DriveApp.getFileById(extractFileId_(pdfUrl));
+    const bijlagen = [pdfFile.getAs('application/pdf')];
+
+    if (ublUrl) {
+      try {
+        bijlagen.push(DriveApp.getFileById(extractFileId_(ublUrl)).getBlob());
+      } catch (e) { /* UBL optioneel */ }
+    }
+
+    const onderwerp = `Factuur ${factuurNummer} van ${bedrijf}`;
+    const tekst =
+      `Beste ${klantnaam},\n\n` +
+      `Bijgaand ontvangt u factuur ${factuurNummer}.\n\n` +
+      `Bedrag te betalen: ${formatBedrag_(bedragIncl)}\n` +
+      `Vervaldatum: ${formatDatum_(vervaldatum)}\n\n` +
+      `Gelieve het bedrag over te maken naar:\n` +
+      `IBAN: ${iban}\n` +
+      `t.n.v.: ${bedrijf}\n` +
+      `o.v.v.: ${factuurNummer}\n\n` +
+      `Met vriendelijke groet,\n${bedrijf}`;
+
+    const opties = {
+      attachments: bijlagen,
+      name: bedrijf,
+    };
+    if (eigenEmail) opties.cc = eigenEmail;
+
+    GmailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
+    Logger.log(`Factuur ${factuurNummer} gemaild naar ${klantEmail}`);
+    return true;
+  } catch (err) {
+    Logger.log('Fout stuurFactuurEmailNaarKlant_: ' + err.message);
+    return false;
+  }
+}
+
+// ─────────────────────────────────────────────
+//  UBL 2.1 GENEREREN (e-factuur formaat)
+// ─────────────────────────────────────────────
+function genereerUBL_(factuurNr, klantnaam, klantadres, regels, totalExcl, totalBtw, totalIncl, datum, vervaldatum, btwTarief) {
+  try {
+    const bedrijf = getInstelling_('Bedrijfsnaam') || '';
+    const adres   = getInstelling_('Adres') || '';
+    const kvk     = getInstelling_('KvK-nummer') || '';
+    const btwNr   = getInstelling_('BTW-nummer') || '';
+    const iban    = (getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '').replace(/\s/g, '');
+    const prefix  = getInstelling_('Factuurprefix') || 'F';
+
+    const esc_ = s => String(s || '').replace(/[<>&"']/g, c =>
+      ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
+    const isoDate = d => Utilities.formatDate(new Date(d), 'UTC', 'yyyy-MM-dd');
+    const vatPct = btwTarief !== null ? (btwTarief * 100).toFixed(2) : '0.00';
+
+    const regelsXml = regels.map((r, i) => `
+    <cac:InvoiceLine>
+      <cbc:ID>${i + 1}</cbc:ID>
+      <cbc:InvoicedQuantity unitCode="C62">${r.aantal}</cbc:InvoicedQuantity>
+      <cbc:LineExtensionAmount currencyID="EUR">${r.totaal.toFixed(2)}</cbc:LineExtensionAmount>
+      <cac:Item>
+        <cbc:Description>${esc_(r.omschr)}</cbc:Description>
+      </cac:Item>
+      <cac:Price>
+        <cbc:PriceAmount currencyID="EUR">${r.prijs.toFixed(2)}</cbc:PriceAmount>
+      </cac:Price>
+    </cac:InvoiceLine>`).join('');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+  xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+  xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+  <cbc:ID>${esc_(prefix + factuurNr)}</cbc:ID>
+  <cbc:IssueDate>${isoDate(datum)}</cbc:IssueDate>
+  <cbc:DueDate>${isoDate(vervaldatum)}</cbc:DueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cac:PartyName><cbc:Name>${esc_(bedrijf)}</cbc:Name></cac:PartyName>
+      <cac:PostalAddress><cbc:StreetName>${esc_(adres)}</cbc:StreetName><cac:Country><cbc:IdentificationCode>NL</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
+      <cac:PartyTaxScheme><cbc:CompanyID>${esc_(btwNr)}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+      <cac:PartyLegalEntity><cbc:RegistrationName>${esc_(bedrijf)}</cbc:RegistrationName><cbc:CompanyID>${esc_(kvk)}</cbc:CompanyID></cac:PartyLegalEntity>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyName><cbc:Name>${esc_(klantnaam)}</cbc:Name></cac:PartyName>
+      <cac:PostalAddress><cbc:StreetName>${esc_(klantadres || '')}</cbc:StreetName><cac:Country><cbc:IdentificationCode>NL</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:PaymentMeans>
+    <cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>
+    <cbc:PaymentDueDate>${isoDate(vervaldatum)}</cbc:PaymentDueDate>
+    <cac:PayeeFinancialAccount><cbc:ID>${esc_(iban)}</cbc:ID></cac:PayeeFinancialAccount>
+  </cac:PaymentMeans>
+  <cac:TaxTotal>
+    <cbc:TaxAmount currencyID="EUR">${totalBtw.toFixed(2)}</cbc:TaxAmount>
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="EUR">${totalExcl.toFixed(2)}</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">${totalBtw.toFixed(2)}</cbc:TaxAmount>
+      <cac:TaxCategory>
+        <cbc:ID>S</cbc:ID>
+        <cbc:Percent>${vatPct}</cbc:Percent>
+        <cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="EUR">${totalExcl.toFixed(2)}</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="EUR">${totalExcl.toFixed(2)}</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="EUR">${totalIncl.toFixed(2)}</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="EUR">${totalIncl.toFixed(2)}</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  ${regelsXml}
+</Invoice>`;
+
+    const map = getOrMaakFactuurenMap_();
+    const blob = Utilities.newBlob(xml, 'application/xml', `UBL_${prefix}${factuurNr}.xml`);
+    const file = map.createFile(blob);
+    return file.getUrl();
+  } catch (err) {
+    Logger.log('Fout genereerUBL_: ' + err.message);
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────
+//  SEPA QR CODE (base64 voor PDF insluiting)
+// ─────────────────────────────────────────────
+function haalSepaQrBase64_(iban, bedrijfNaam, bedrag, referentie) {
+  try {
+    const ibanClean = String(iban || '').replace(/\s/g, '');
+    if (!ibanClean) return null;
+    const qrData = [
+      'BCD', '001', '1', 'SCT', '',
+      String(bedrijfNaam || '').substring(0, 70),
+      ibanClean,
+      'EUR' + Number(bedrag || 0).toFixed(2),
+      '', '',
+      String(referentie || '').substring(0, 35),
+    ].join('\n');
+    const url = 'https://chart.googleapis.com/chart?cht=qr&chs=180x180&chl=' +
+      encodeURIComponent(qrData);
+    const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (resp.getResponseCode() === 200) {
+      return 'data:image/png;base64,' + Utilities.base64Encode(resp.getContent());
+    }
+  } catch (e) {
+    Logger.log('SEPA QR fout (niet fataal): ' + e.message);
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────────
 //  HELPERS
 // ─────────────────────────────────────────────
 function getOrMaakFactuurenMap_() {
@@ -398,6 +573,11 @@ function getOrMaakFactuurenMap_() {
 }
 
 function extractFileId_(url) {
-  const match = url.match(/[-\w]{25,}/);
-  return match ? match[0] : '';
+  if (!url) return '';
+  const m1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (m1) return m1[1];
+  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m2) return m2[1];
+  const m3 = url.match(/[-\w]{25,}/);
+  return m3 ? m3[0] : '';
 }
