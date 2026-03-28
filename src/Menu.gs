@@ -46,6 +46,10 @@ function onOpen() {
       .addItem('BTW journaalpost sluiten', 'sluitBtwPeriode')
     )
 
+    // ── Belastingadvies ───────────────────────
+    .addItem('💡 Belastingadvies & aftrekposten', 'genereerBelastingadvies')
+    .addSeparator()
+
     // ── Rapporten ─────────────────────────────
     .addSubMenu(ui.createMenu('Rapporten')
       .addItem('Dashboard vernieuwen', 'vernieuwDashboard')
@@ -76,8 +80,10 @@ function onOpen() {
       .addItem('Setup uitvoeren (eerste keer)', 'setup')
       .addSeparator()
       .addItem('Formulier links tonen', 'toonFormulierLinks')
-      .addItem('Grootboekschema herladen', 'herlaadGrootboekschema')
+      .addItem('Google Drive mappen tonen', 'toonDriveStructuur')
+      .addItem('Nieuw boekjaar aanmaken', 'maakNieuwBoekjaar')
       .addSeparator()
+      .addItem('Grootboekschema herladen', 'herlaadGrootboekschema')
       .addItem('Alle rapporten vernieuwen', 'vernieuwAlleRapporten')
       .addSeparator()
       .addItem('Setup resetten', 'resetSetup')

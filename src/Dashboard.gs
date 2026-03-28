@@ -79,6 +79,26 @@ function vernieuwDashboard() {
   let rij = 7;
   rij = schrijfWaarschuwingen_(sheet, ss, kpi, rij);
 
+  // ── Belastingadvies samenvatting ──────────────────────────────────────
+  rij++;
+  try {
+    const advies = berekenBelastingadvies_(ss);
+    const topAdviezen = advies.adviezen.filter(a => a.type === 'VOORDEEL' || a.type === 'ACTIE' || a.type === 'WAARSCHUWING').slice(0, 3);
+    if (topAdviezen.length > 0 || advies.totaalAftrek > 0) {
+      sheet.getRange(rij, 1, 1, 8).merge()
+        .setValue('💡 BELASTINGADVIES  |  Totaal aftrekposten: ' + formatBedrag_(advies.totaalAftrek) +
+                  '  |  Geschatte IB: ' + formatBedrag_(advies.geschatteIB) +
+                  '  →  Klik: Boekhouding → Belastingadvies voor details')
+        .setBackground('#FFF8E1').setFontWeight('bold').setFontSize(10);
+      rij++;
+      topAdviezen.forEach(a => {
+        sheet.getRange(rij, 1, 1, 8).merge().setValue(a.titel + '  –  ' + a.tekst.substring(0, 120) + '...')
+          .setBackground('#FFFDE7').setFontSize(9).setWrap(false);
+        rij++;
+      });
+    }
+  } catch(e) { /* Belastingadvies overgeslagen */ }
+
   // ── Recente verkoopfacturen ───────────────────────────────────────────
   rij++;
   sheet.getRange(rij, 1, 1, 5).merge()

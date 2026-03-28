@@ -31,11 +31,16 @@ function setup() {
   try {
     Logger.log('Setup gestart...');
     maakTabbladen_(ss);
+    verbergTechnischeTabbladen_(ss);
     vulGrootboekschema_(ss);
     zetInstellingen_(ss);
     maakFormuliersTabbladen_(ss);
     maakGoogleForms_(ss);
     installeelTriggers_();
+    // Drive mappenstructuur aanmaken
+    const jaar = new Date().getFullYear();
+    maakDriveStructuur_(jaar);
+    slaDriverLinksOpInInstellingen_(jaar);
 
     PropertiesService.getScriptProperties().setProperty(PROP.SETUP_DONE, 'true');
 
@@ -61,6 +66,16 @@ function setup() {
 // ─────────────────────────────────────────────
 //  ALLE TABBLADEN AANMAKEN
 // ─────────────────────────────────────────────
+// Zichtbare tabs: alleen wat de gebruiker dagelijks nodig heeft.
+// Technische tabs (grootboek, rapporten) worden verborgen en
+// zijn bereikbaar via het menu.
+const ZICHTBARE_TABS = [
+  SHEETS.DASHBOARD, SHEETS.INSTELLINGEN,
+  SHEETS.VERKOOPFACTUREN, SHEETS.INKOOPFACTUREN,
+  SHEETS.BANKTRANSACTIES, SHEETS.RELATIES,
+  SHEETS.BTW_AANGIFTE,
+];
+
 function maakTabbladen_(ss) {
   const tabDefinities = [
     { naam: SHEETS.DASHBOARD,       volgorde: 1,  kleur: '#1A237E' },
@@ -68,10 +83,11 @@ function maakTabbladen_(ss) {
     { naam: SHEETS.VERKOOPFACTUREN, volgorde: 3,  kleur: '#1565C0' },
     { naam: SHEETS.INKOOPFACTUREN,  volgorde: 4,  kleur: '#0277BD' },
     { naam: SHEETS.BANKTRANSACTIES, volgorde: 5,  kleur: '#00695C' },
-    { naam: SHEETS.JOURNAALPOSTEN,  volgorde: 6,  kleur: '#2E7D32' },
-    { naam: SHEETS.RELATIES,        volgorde: 7,  kleur: '#558B2F' },
-    { naam: SHEETS.GROOTBOEKSCHEMA, volgorde: 8,  kleur: '#F57F17' },
-    { naam: SHEETS.BTW_AANGIFTE,    volgorde: 9,  kleur: '#E65100' },
+    { naam: SHEETS.RELATIES,        volgorde: 6,  kleur: '#558B2F' },
+    { naam: SHEETS.BTW_AANGIFTE,    volgorde: 7,  kleur: '#E65100' },
+    // Technische tabs — verborgen, gegenereerd via menu
+    { naam: SHEETS.JOURNAALPOSTEN,  volgorde: 8,  kleur: '#2E7D32' },
+    { naam: SHEETS.GROOTBOEKSCHEMA, volgorde: 9,  kleur: '#F57F17' },
     { naam: SHEETS.BALANS,          volgorde: 10, kleur: '#BF360C' },
     { naam: SHEETS.WV_REKENING,     volgorde: 11, kleur: '#880E4F' },
     { naam: SHEETS.CASHFLOW,        volgorde: 12, kleur: '#4A148C' },
@@ -101,6 +117,18 @@ function maakTabbladen_(ss) {
   zetBanktransactiesHeaders_(ss.getSheetByName(SHEETS.BANKTRANSACTIES));
   zetJournaalpostenHeaders_(ss.getSheetByName(SHEETS.JOURNAALPOSTEN));
   zetRelatiesHeaders_(ss.getSheetByName(SHEETS.RELATIES));
+}
+
+function verbergTechnischeTabbladen_(ss) {
+  const technisch = [
+    SHEETS.JOURNAALPOSTEN, SHEETS.GROOTBOEKSCHEMA,
+    SHEETS.BALANS, SHEETS.WV_REKENING, SHEETS.CASHFLOW,
+    SHEETS.DEBITEUREN, SHEETS.CREDITEUREN, SHEETS.JAARREKENING,
+  ];
+  technisch.forEach(naam => {
+    const sheet = ss.getSheetByName(naam);
+    if (sheet) sheet.hideSheet();
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -221,6 +249,7 @@ function zetInstellingen_(ss) {
     ['BOEKHOUDINSTELLINGEN', ''],
     ['Boekjaar start', '01-01-' + new Date().getFullYear()],
     ['Boekjaar einde', '31-12-' + new Date().getFullYear()],
+    ['Startjaar onderneming', new Date().getFullYear()],
     ['Standaard BTW tarief', '21% (hoog)'],
     ['BTW aangifteperiode', 'Kwartaal'],
     ['Betalingstermijn (dagen)', '30'],
@@ -242,7 +271,7 @@ function zetInstellingen_(ss) {
   sheet.getRange(1, 1, data.length, 2).setValues(data);
 
   // Opmaak sectietitels
-  [1, 16, 25, 31].forEach(rij => {
+  [1, 16, 27, 33].forEach(rij => {
     sheet.getRange(rij, 1, 1, 2)
       .setBackground(KLEUREN.HEADER_BG)
       .setFontColor(KLEUREN.HEADER_FG)
