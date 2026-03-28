@@ -515,7 +515,7 @@ function installeelTriggers_() {
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
 
   const props = PropertiesService.getScriptProperties();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
 
   // onOpen trigger
   ScriptApp.newTrigger('onOpen')
@@ -580,7 +580,7 @@ function zetHeaderRij_(sheet, headers) {
 //  INSTELLING OPHALEN UIT INSTELLINGEN TABBLAD
 // ─────────────────────────────────────────────
 function getInstelling_(sleutel) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
   if (!sheet) return null;
   const data = sheet.getDataRange().getValues();
