@@ -13,7 +13,7 @@ function verwerkVerkoopfactuurFormulier(e) {
     const data = {};
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getSpreadsheet_();
     const factuurNr = volgendFactuurnummer_();
     const datum = data['Factuurdatum'] ? new Date(data['Factuurdatum']) : new Date();
     const termijn = parseInt(data['Betalingstermijn (dagen)'] || '30');
@@ -147,7 +147,7 @@ function verwerkInkoopfactuurFormulier(e) {
     const data = {};
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getSpreadsheet_();
     const inkoopNr = volgendInkoopNummer_();
     const datum = data['Factuurdatum'] ? new Date(data['Factuurdatum']) : new Date();
     const leverancier = data['Leveranciernaam'] || '';
@@ -233,7 +233,7 @@ function verwerkBanktransactieFormulier(e) {
     const data = {};
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getSpreadsheet_();
     const transactieId = volgendTransactieId_();
     const datum = data['Transactiedatum'] ? new Date(data['Transactiedatum']) : new Date();
     const type = data['Type transactie'] || 'Betaling (af)';
@@ -303,7 +303,7 @@ function verwerkRelatieFormulier(e) {
     const data = {};
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getSpreadsheet_();
     const relatieId = volgendRelatieId_();
 
     const relatieData = [
@@ -345,7 +345,7 @@ function verwerkJournaalpostFormulier(e) {
     const data = {};
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getSpreadsheet_();
     const datum = data['Boekingsdatum'] ? new Date(data['Boekingsdatum']) : new Date();
     const bedrag = parseBedrag_(data['Bedrag (excl. BTW)'] || '0');
     const btwKeuze = data['BTW tarief'] || 'Geen BTW';
@@ -381,7 +381,7 @@ function verwerkJournaalpostFormulier(e) {
 //  DAGELIJKSE TAKEN (TIMER TRIGGER)
 // ─────────────────────────────────────────────
 function dagelijkseTaken() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
 
   // Vervallen facturen markeren
   markeerVervallenFacturen_(ss);
@@ -515,7 +515,7 @@ function stuurFoutEmail_(context, err) {
 //  HERINNERINGEN HANDMATIG STUREN
 // ─────────────────────────────────────────────
 function stuurBetalingsherinneringen() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
   const data = sheet.getDataRange().getValues();
   const vandaag = new Date();

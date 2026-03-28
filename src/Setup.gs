@@ -8,32 +8,28 @@
 //  HOOFDFUNCTIE: VOLLEDIG SYSTEEM OPZETTEN
 // ─────────────────────────────────────────────
 function setup() {
-  // Standalone script: maak een nieuwe spreadsheet aan als er geen actieve is
-  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  // Haal spreadsheet op of maak een nieuwe aan (standalone-compatibel)
+  let ss = getSpreadsheet_();
+  let ui = null;
+  try { ui = SpreadsheetApp.getUi(); } catch (e) {}
+
   if (!ss) {
-    ss = SpreadsheetApp.create('Boekhouding ' + new Date().getFullYear());
-    const url = ss.getUrl();
-    Logger.log('Nieuwe spreadsheet aangemaakt: ' + url);
-    // Open de spreadsheet in de browser
-    const html = HtmlService.createHtmlOutput(
-      '<p>Spreadsheet aangemaakt! <a href="' + url + '" target="_blank">Klik hier om te openen</a></p>' +
-      '<p>Ververs daarna de spreadsheet en voer Setup opnieuw uit via het menu <b>Boekhouding → Setup uitvoeren</b>.</p>'
-    ).setWidth(450).setHeight(120);
-    SpreadsheetApp.getUi().showModalDialog(html, 'Spreadsheet aangemaakt');
+    const naam = 'Boekhouding ' + new Date().getFullYear();
+    ss = SpreadsheetApp.create(naam);
+    PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', ss.getId());
+    Logger.log('=== SPREADSHEET AANGEMAAKT ===');
+    Logger.log('URL: ' + ss.getUrl());
+    Logger.log('Open deze URL in uw browser, ga dan naar');
+    Logger.log('Extensies → Apps Script en voer setup() opnieuw uit.');
+    Logger.log('==============================');
+    alertOfLog_(ui, 'Spreadsheet aangemaakt',
+      'Spreadsheet aangemaakt!\n\nURL (zie ook Logboek):\n' + ss.getUrl() +
+      '\n\nOpen deze URL, ga dan naar Extensies → Apps Script → setup() uitvoeren.');
     return;
   }
-  const ui = SpreadsheetApp.getUi();
-
-  const bevestiging = ui.alert(
-    'Boekhoudprogramma instellen',
-    'Dit zal alle benodigde tabbladen, formulieren en triggers aanmaken.\n\nBestaat al een tabblad, dan wordt het overgeslagen.\n\nDoorgaan?',
-    ui.ButtonSet.YES_NO
-  );
-  if (bevestiging !== ui.Button.YES) return;
 
   try {
-    ui.alert('Even geduld...', 'De setup wordt uitgevoerd. Dit kan ± 60 seconden duren.', ui.ButtonSet.OK);
-
+    Logger.log('Setup gestart...');
     maakTabbladen_(ss);
     vulGrootboekschema_(ss);
     zetInstellingen_(ss);
@@ -43,21 +39,22 @@ function setup() {
 
     PropertiesService.getScriptProperties().setProperty(PROP.SETUP_DONE, 'true');
 
-    ui.alert(
-      'Setup geslaagd!',
-      'Het boekhoudprogramma is klaar voor gebruik.\n\n' +
-      'Vul eerst uw bedrijfsgegevens in op het tabblad "Instellingen".\n\n' +
-      'De Google Forms zijn aangemaakt en staan klaar in Google Drive.',
-      ui.ButtonSet.OK
-    );
+    Logger.log('=== SETUP GESLAAGD ===');
+    Logger.log('Spreadsheet URL: ' + ss.getUrl());
+    Logger.log('Vul uw bedrijfsgegevens in op het tabblad Instellingen.');
+    Logger.log('De Google Forms staan klaar in Google Drive.');
 
-    // Activeer Dashboard
-    ss.setActiveSheet(ss.getSheetByName(SHEETS.DASHBOARD));
+    alertOfLog_(ui, 'Setup geslaagd!',
+      'Het boekhoudprogramma is klaar.\n\n' +
+      'Spreadsheet: ' + ss.getUrl() + '\n\n' +
+      'Vul uw bedrijfsgegevens in op tabblad "Instellingen".');
+
+    try { ss.setActiveSheet(ss.getSheetByName(SHEETS.DASHBOARD)); } catch (e) {}
     vernieuwDashboard();
 
   } catch (e) {
-    ui.alert('Fout bij setup', e.message + '\n\nStack: ' + e.stack, ui.ButtonSet.OK);
-    Logger.log(e);
+    Logger.log('FOUT bij setup: ' + e.message + '\n' + e.stack);
+    alertOfLog_(ui, 'Fout bij setup', e.message);
   }
 }
 

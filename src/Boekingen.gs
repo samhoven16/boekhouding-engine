@@ -98,7 +98,7 @@ function getGrootboekSaldo_(ss, rekeningCode) {
 //  ALLE SALDI HERBEREKENEN (VOLLEDIGE HERBEREKENING)
 // ─────────────────────────────────────────────
 function herberekeningGrootboekSaldi() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const gbSheet = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
   const jpSheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
 
@@ -126,7 +126,7 @@ function herberekeningGrootboekSaldi() {
 //  GROOTBOEKKAART EXPORTEREN (PER REKENING)
 // ─────────────────────────────────────────────
 function exporteerGrootboekkaart() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const ui = SpreadsheetApp.getUi();
 
   const resp = ui.prompt(
@@ -220,7 +220,7 @@ function genereerGrootboekkaart_(ss, code, naam) {
 // ─────────────────────────────────────────────
 function boekAfschrijvingen() {
   const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
 
   // Haal vaste activa op uit grootboek
   const gbData = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA).getDataRange().getValues();
@@ -278,7 +278,7 @@ function boekAfschrijvingen() {
 }
 
 function verwerkAfschrijvingen(data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const periode = data.periode || 'Jaarlijks';
   const factor = periode === 'Maandelijks' ? 1/12 : 1;
   const datum = new Date();
@@ -313,7 +313,7 @@ function verwerkAfschrijvingen(data) {
 //  DEBITEUREN OVERZICHT
 // ─────────────────────────────────────────────
 function vernieuwDebiteurenOverzicht() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.DEBITEUREN);
   sheet.clearContents();
 
@@ -368,7 +368,7 @@ function vernieuwDebiteurenOverzicht() {
 //  CREDITEUREN OVERZICHT
 // ─────────────────────────────────────────────
 function vernieuwCrediteurenOverzicht() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.CREDITEUREN);
   sheet.clearContents();
 
@@ -407,7 +407,7 @@ function vernieuwCrediteurenOverzicht() {
 //  TRANSACTIES KOPPELEN AAN FACTUREN
 // ─────────────────────────────────────────────
 function koppelTransactiesAanFacturen() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const btData = ss.getSheetByName(SHEETS.BANKTRANSACTIES).getDataRange().getValues();
   let gekoppeld = 0;
 

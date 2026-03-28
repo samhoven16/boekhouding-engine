@@ -8,7 +8,7 @@
 //  BALANS GENEREREN
 // ─────────────────────────────────────────────
 function genereerBalans() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.BALANS);
   sheet.clearContents();
   sheet.clearFormats();
@@ -127,7 +127,7 @@ function schrijfBalansZijde_(sheet, saldi, zijdeType, titel, startRij, startKol,
 //  WINST & VERLIESREKENING
 // ─────────────────────────────────────────────
 function genereerWvRekening() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.WV_REKENING);
   sheet.clearContents();
   sheet.clearFormats();
@@ -251,7 +251,7 @@ function schrijfWvSectie_(sheet, saldi, type, titel, startRij) {
 //  CASHFLOW OVERZICHT
 // ─────────────────────────────────────────────
 function genereerCashflow() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.CASHFLOW);
   sheet.clearContents();
   sheet.clearFormats();
@@ -322,7 +322,7 @@ function genereerCashflow() {
 //  JAARREKENING
 // ─────────────────────────────────────────────
 function genereerJaarrekening() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.JAARREKENING);
   sheet.clearContents();
   sheet.clearFormats();

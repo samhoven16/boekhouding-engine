@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────
 function markeerInkoopfactuurBetaald() {
   const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
 
   const resp = ui.prompt(
     'Inkoopfactuur betaald',
@@ -56,7 +56,7 @@ function markeerInkoopfactuurBetaald() {
 //  LEVERANCIERS OVERZICHT
 // ─────────────────────────────────────────────
 function beheerRelaties() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   ss.setActiveSheet(ss.getSheetByName(SHEETS.RELATIES));
 }
 
@@ -78,7 +78,7 @@ function valideerInkoopfactuur_(data) {
 //  INKOOPFACTUREN OVERZICHT (FILTERED)
 // ─────────────────────────────────────────────
 function toonOpenInkoopfacturen() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const data = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
   const vandaag = new Date();
 

@@ -4,6 +4,39 @@
  */
 
 // ─────────────────────────────────────────────
+//  SPREADSHEET OPHALEN (STANDALONE + GEBONDEN)
+// ─────────────────────────────────────────────
+
+/**
+ * Haalt de spreadsheet op. Werkt zowel als standalone script
+ * (opent via opgeslagen ID) als als gebonden script (getActiveSpreadsheet).
+ */
+function getSpreadsheet_() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (ss) return ss;
+  } catch (e) {}
+
+  const ssId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (ssId) {
+    try { return SpreadsheetApp.openById(ssId); } catch (e) {
+      Logger.log('Kon spreadsheet niet openen met ID ' + ssId + ': ' + e.message);
+    }
+  }
+  return null;
+}
+
+/**
+ * Toont een alert als er een UI beschikbaar is, anders logt het bericht.
+ */
+function alertOfLog_(ui, titel, bericht) {
+  if (ui) {
+    try { ui.alert(titel, bericht, ui.ButtonSet.OK); return; } catch (e) {}
+  }
+  Logger.log('[' + titel + '] ' + bericht);
+}
+
+// ─────────────────────────────────────────────
 //  DATUM FUNCTIES
 // ─────────────────────────────────────────────
 

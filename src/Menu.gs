@@ -165,7 +165,7 @@ function toonFormulierLinks() {
 //  GROOTBOEKSCHEMA HERLADEN
 // ─────────────────────────────────────────────
 function herlaadGrootboekschema() {
-  vulGrootboekschema_(SpreadsheetApp.getActiveSpreadsheet());
+  vulGrootboekschema_(getSpreadsheet_());
   SpreadsheetApp.getUi().alert('Grootboekschema is bijgewerkt.');
 }
 

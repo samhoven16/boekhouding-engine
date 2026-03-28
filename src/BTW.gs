@@ -13,7 +13,7 @@ function genereerBtwAangifteQ3() { genereerBtwAangifte('Q3'); }
 function genereerBtwAangifteQ4() { genereerBtwAangifte('Q4'); }
 
 function genereerBtwAangifte(kwartaal) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const jaar = parseInt(getInstelling_('Boekjaar start') || new Date().getFullYear());
   const periode = bepaalBtwPeriode_(kwartaal, isNaN(jaar) ? new Date().getFullYear() : jaar);
 
@@ -229,7 +229,7 @@ function sluitBtwPeriode() {
   if (kwartaalResp.getSelectedButton() !== ui.Button.OK) return;
 
   const kwartaal = kwartaalResp.getResponseText().toUpperCase().trim();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
   const jaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
   const periode = bepaalBtwPeriode_(kwartaal, jaar);
@@ -285,7 +285,7 @@ function sluitBtwPeriode() {
 //  KOR REGELING CONTROLE
 // ─────────────────────────────────────────────
 function controleerKor() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
   const jaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
   const periode = { van: new Date(jaar, 0, 1), tot: new Date(jaar, 11, 31) };

@@ -166,7 +166,7 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
 // ─────────────────────────────────────────────
 function stuurVerkoopfactuurPdf() {
   const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
 
   const resp = ui.prompt(
     'Factuur versturen',
@@ -251,7 +251,7 @@ function stuurVerkoopfactuurPdf() {
 //  CREDITNOTA AANMAKEN
 // ─────────────────────────────────────────────
 function maakCreditnota(factuurNummer) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
   const data = sheet.getDataRange().getValues();
 
@@ -348,7 +348,7 @@ function importeerBankafschrift() {
 }
 
 function verwerkBankCsvImport(csvTekst, scheidingsteken, kolommen) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.BANKTRANSACTIES);
   const regels = csvTekst.trim().split('\n');
   let aantalImport = 0;

@@ -33,7 +33,7 @@ function getKassaldo_(ss) {
 // ─────────────────────────────────────────────
 function bankAfstemming() {
   const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
 
   const resp = ui.prompt(
     'Bankafstemming',
@@ -158,7 +158,7 @@ function boekPriveCorrectie() {
 }
 
 function verwerkPriveCorrectie(data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const bedrag = parseBedrag_(data.bedrag);
   const datum = parseDatum_(data.datum);
   const isStorting = data.type === 'storting';
@@ -182,7 +182,7 @@ function verwerkPriveCorrectie(data) {
 //  DGA REKENING-COURANT
 // ─────────────────────────────────────────────
 function boekDgaTransactie(isOpname, bedrag, omschr) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const datum = new Date();
 
   // Opname: RC DGA debet | Bank credit

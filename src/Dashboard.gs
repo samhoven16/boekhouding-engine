@@ -7,7 +7,7 @@
 //  DASHBOARD VERNIEUWEN (HOOFDFUNCTIE)
 // ─────────────────────────────────────────────
 function vernieuwDashboard() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.DASHBOARD);
   sheet.clearContents();
   sheet.clearFormats();
