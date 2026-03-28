@@ -8,7 +8,20 @@
 //  HOOFDFUNCTIE: VOLLEDIG SYSTEEM OPZETTEN
 // ─────────────────────────────────────────────
 function setup() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  // Standalone script: maak een nieuwe spreadsheet aan als er geen actieve is
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    ss = SpreadsheetApp.create('Boekhouding ' + new Date().getFullYear());
+    const url = ss.getUrl();
+    Logger.log('Nieuwe spreadsheet aangemaakt: ' + url);
+    // Open de spreadsheet in de browser
+    const html = HtmlService.createHtmlOutput(
+      '<p>Spreadsheet aangemaakt! <a href="' + url + '" target="_blank">Klik hier om te openen</a></p>' +
+      '<p>Ververs daarna de spreadsheet en voer Setup opnieuw uit via het menu <b>Boekhouding → Setup uitvoeren</b>.</p>'
+    ).setWidth(450).setHeight(120);
+    SpreadsheetApp.getUi().showModalDialog(html, 'Spreadsheet aangemaakt');
+    return;
+  }
   const ui = SpreadsheetApp.getUi();
 
   const bevestiging = ui.alert(
