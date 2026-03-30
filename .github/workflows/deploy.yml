@@ -1,0 +1,43 @@
+name: Auto Deploy naar Google Apps Script
+
+# Wordt automatisch geactiveerd bij elke push naar de hoofdbranch.
+# U hoeft nooit meer de terminal in — push uw code en het systeem doet de rest.
+
+on:
+  push:
+    branches:
+      - main
+      - claude/google-forms-accounting-system-0N1Mx
+  workflow_dispatch:  # Handmatig starten via de GitHub interface (groene knop)
+
+jobs:
+  deploy:
+    name: Deployen naar Apps Script
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v4
+
+      - name: Node.js installeren
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: clasp installeren
+        run: npm install -g @google/clasp
+
+      - name: clasp credentials instellen
+        run: |
+          echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+          chmod 600 ~/.clasprc.json
+
+      - name: Code pushen naar Google Apps Script
+        run: |
+          cd $GITHUB_WORKSPACE
+          clasp push --force
+        env:
+          CLASP_SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID }}
+
+      - name: Resultaat melden
+        run: echo "✅ Deployment geslaagd naar script ${{ secrets.CLASP_SCRIPT_ID }}"

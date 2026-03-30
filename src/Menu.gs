@@ -10,6 +10,9 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
+  // Onboarding wizard bij eerste gebruik + update-melding bij terugkerende gebruikers
+  try { controleerOnboarding_(); } catch (e) { Logger.log('Onboarding check fout: ' + e.message); }
+
   ui.createMenu('Boekhouding')
 
     // ── Dagelijks gebruik ─────────────────────
@@ -85,6 +88,14 @@ function onOpen() {
       .addItem('Alle overzichten vernieuwen', 'vernieuwAlleRapporten')
       .addSeparator()
       .addItem('Setup opnieuw uitvoeren (reset)', 'resetSetup')
+    )
+
+    // ── Licentie & Updates ────────────────────
+    .addSubMenu(ui.createMenu('Licentie & Updates')
+      .addItem('Licentie activeren / wijzigen', 'toonLicentieDialoog')
+      .addItem('Licentie-informatie bekijken', 'toonLicentieInfo')
+      .addSeparator()
+      .addItem('Wat is er nieuw?', 'toonWatIsErNieuw')
     )
 
     .addToUi();
