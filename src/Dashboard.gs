@@ -18,7 +18,9 @@ function vernieuwDashboard() {
 
   // Bereken KPI's
   const kpi = berekenKpiData_(ss);
-  const btwData = getBtwPerMaand_(ss, jaar);
+  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
+  const btwJaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
+  const btwData = getBtwPerMaand_(ss, btwJaar);
 
   // ── Koptekst ─────────────────────────────────────────────────────────
   sheet.getRange(1, 1, 1, 8).merge()
@@ -35,6 +37,14 @@ function vernieuwDashboard() {
   sheet.setRowHeight(2, 22);
 
   // ── KPI Blokken (rij 4) ───────────────────────────────────────────────
+  // Burn rate + cash runway (pijnpunt: Fractional CFO / Qonto / Bunq "geen echte boekhouding")
+  const burnRate = kpi.kosten > 0 && kpi.omzet > 0
+    ? rondBedrag_(Math.max(0, kpi.kosten - kpi.omzet) / 12)
+    : 0;
+  const runway = burnRate > 0 && kpi.banksaldo > 0
+    ? Math.floor(kpi.banksaldo / burnRate)
+    : null;
+
   const kpiItems = [
     { label: 'Omzet (YTD)', waarde: kpi.omzet, format: 'bedrag', kleur: '#E8F5E9' },
     { label: 'Kosten (YTD)', waarde: kpi.kosten, format: 'bedrag', kleur: '#FFEBEE' },
@@ -75,9 +85,13 @@ function vernieuwDashboard() {
   sheet.setRowHeight(4, 35);
   sheet.setRowHeight(5, 35);
 
+  // Verwerk herhalende kosten (automatisch boeken + komende betalingen voor waarschuwingen)
+  let herhalendeResult = { geboekt: 0, komend: [] };
+  try { herhalendeResult = verwerkHerhalendeKosten_(); } catch (e) { Logger.log('Herhalende kosten: ' + e.message); }
+
   // ── Waarschuwingen ────────────────────────────────────────────────────
   let rij = 7;
-  rij = schrijfWaarschuwingen_(sheet, ss, kpi, rij);
+  rij = schrijfWaarschuwingen_(sheet, ss, kpi, rij, herhalendeResult.komend);
 
   // ── Belastingadvies samenvatting ──────────────────────────────────────
   rij++;
@@ -192,6 +206,14 @@ function vernieuwDashboard() {
       naam: 'Debiteurendagen', waarde: kpi.debiteurendagen + ' dagen',
       norm: '≤ 45 dagen', ok: kpi.debiteurendagen <= 45,
     },
+    {
+      naam: 'Cash runway', waarde: kpi.runway !== null ? kpi.runway + ' maanden' : 'Winstgevend ✓',
+      norm: '≥ 3 maanden', ok: kpi.runway === null || kpi.runway >= 3,
+    },
+    {
+      naam: 'Maandelijkse burn rate', waarde: kpi.burnRate > 0 ? formatBedrag_(kpi.burnRate) : '— (winstgevend)',
+      norm: '< maandomzet', ok: kpi.burnRate === 0,
+    },
   ];
 
   kengetallen.forEach(kg => {
@@ -242,6 +264,13 @@ function berekenKpiData_(ss) {
   const btwData = getBtwPerMaand_(ss, jaar);
   const btwSaldo = btwData.reduce((s, m) => s + m.saldo, 0);
 
+  // Burn rate + runway berekenen (maandelijkse kosten minus omzet)
+  const maandenVerstreken = Math.max(1, new Date().getMonth() + 1);
+  const maandelijkseKosten = kg.kosten / maandenVerstreken;
+  const maandelijkseOmzet  = kg.omzet  / maandenVerstreken;
+  const netBurnRate = rondBedrag_(Math.max(0, maandelijkseKosten - maandelijkseOmzet));
+  const runway = netBurnRate > 0 ? Math.floor(kg.banksaldo / netBurnRate) : null;
+
   return {
     ...kg,
     debiteurenOpen: rondBedrag_(debiteurenOpen),
@@ -251,13 +280,15 @@ function berekenKpiData_(ss) {
     debiteurendagen: aantalOpenFacturen > 0 ? Math.round(totaalDagenOpen / aantalOpenFacturen) : 0,
     liquiditeit: kg.liquiditeit,
     solvabiliteit: kg.solvabiliteit,
+    burnRate: netBurnRate,
+    runway,
   };
 }
 
 // ─────────────────────────────────────────────
 //  WAARSCHUWINGEN SCHRIJVEN
 // ─────────────────────────────────────────────
-function schrijfWaarschuwingen_(sheet, ss, kpi, startRij) {
+function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
   const waarschuwingen = [];
 
   if (kpi.banksaldo < 0) waarschuwingen.push(['KRITIEK', 'Negatief banksaldo!', '#FFCDD2']);
@@ -269,12 +300,49 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij) {
   const aantalVervallen = vfData.slice(1).filter(r => r[14] === FACTUUR_STATUS.VERVALLEN).length;
   if (aantalVervallen > 0) waarschuwingen.push(['LET OP', `${aantalVervallen} vervallen factuur/facturen`, '#FFF3E0']);
 
-  // BTW deadline controle
+  // BTW deadline controle (bug-fix: was altijd true door <= 31 conditie)
+  // Deadlines: Q1→30 april, Q2→31 juli, Q3→31 okt, Q4→31 jan
+  // Waarschuwing toont in de 2 weken voor de deadline
   const nu = new Date();
   const maand = nu.getMonth() + 1;
-  const btwMaanden = [1, 4, 7, 10];
-  const aangifte = btwMaanden.find(m => maand === m + 1 && nu.getDate() <= 31);
-  if (aangifte) waarschuwingen.push(['INFO', 'BTW aangifte deadline aankomende maand!', '#E3F2FD']);
+  const dag   = nu.getDate();
+  const btwDeadlines = [
+    { kwartaal: 'Q4 vorig jaar', warnMaand: 1,  warnVanaf: 15 },
+    { kwartaal: 'Q1',            warnMaand: 4,  warnVanaf: 15 },
+    { kwartaal: 'Q2',            warnMaand: 7,  warnVanaf: 15 },
+    { kwartaal: 'Q3',            warnMaand: 10, warnVanaf: 15 },
+  ];
+  const btwDeadline = btwDeadlines.find(d => d.warnMaand === maand && dag >= d.warnVanaf);
+  if (btwDeadline) {
+    waarschuwingen.push(['LET OP', `BTW aangifte ${btwDeadline.kwartaal} — deadline einde deze maand! Genereer via Boekhouding → BTW.`, '#FFF3E0']);
+  }
+
+  // Cash runway waarschuwing (nieuw: Fractional CFO / startup pijnpunt)
+  if (kpi.runway !== undefined && kpi.runway !== null && kpi.runway < 3) {
+    waarschuwingen.push(['KRITIEK', `Cash runway: ~${kpi.runway} maand(en) bij huidig uitgavenpatroon. Verlaag kosten of vergroot omzet.`, '#FFCDD2']);
+  }
+
+  // Crediteuren vervallen waarschuwing (nieuw: Blue10 AP automation pijnpunt)
+  const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  let vervallenCrediteuren = 0;
+  const vandaag30 = nu;
+  for (let i = 1; i < ifData.length; i++) {
+    if (ifData[i][12] === FACTUUR_STATUS.BETAALD) continue;
+    const factDatum = ifData[i][3] ? new Date(ifData[i][3]) : null;
+    if (!factDatum) continue;
+    const vervaldatum = new Date(factDatum.getTime() + 30 * 24 * 60 * 60 * 1000);
+    if (vandaag30 > vervaldatum) vervallenCrediteuren++;
+  }
+  if (vervallenCrediteuren > 0) {
+    waarschuwingen.push(['LET OP', `${vervallenCrediteuren} inkoopfactuur/facturen zijn te laat betaald (leverancierstermijn >30 dagen). Zie tabblad Crediteuren.`, '#FFF3E0']);
+  }
+
+  // Herhalende kosten komende 30 dagen
+  if (komendHerhalend && komendHerhalend.length > 0) {
+    const totaalKomend = komendHerhalend.reduce((s, k) => s + k.bedrag, 0);
+    const namen = komendHerhalend.slice(0, 3).map(k => k.naam + ' (' + formatBedrag_(k.bedrag) + ')').join(', ');
+    waarschuwingen.push(['INFO', `Herhalende kosten volgende 30 dagen: ${formatBedrag_(totaalKomend)} — ${namen}${komendHerhalend.length > 3 ? ' en meer' : ''}`, '#E3F2FD']);
+  }
 
   if (waarschuwingen.length === 0) {
     sheet.getRange(startRij, 1, 1, 8).merge()

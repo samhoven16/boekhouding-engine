@@ -4,10 +4,10 @@
  * Het systeem detecteert zelf welke aftrekposten van toepassing zijn
  * en waarschuwt proactief wanneer actie nodig is.
  *
- * Verwerkte regelingen (2024/2025):
- *  - Zelfstandigenaftrek            €5.030  (ZZP, ≥1225 uur)
+ * Verwerkte regelingen (2025):
+ *  - Zelfstandigenaftrek            €2.470  (ZZP, ≥1225 uur — stapsgewijs verlaagd)
  *  - Startersaftrek                 €2.123  (eerste 3 jaar ZZP)
- *  - MKB-winstvrijstelling          13,31%  (na aftrekken)
+ *  - MKB-winstvrijstelling          12,70%  (na aftrekken)
  *  - KOR                            €0 BTW  (omzet < €20.000)
  *  - KIA                            28%     (investeringen €2.801–€353.973)
  *  - Reiskosten eigen vervoer       €0,23/km
@@ -16,24 +16,24 @@
  */
 
 // ─────────────────────────────────────────────
-//  BELASTING TARIEVEN EN GRENZEN (2024)
+//  BELASTING TARIEVEN EN GRENZEN (2025)
 // ─────────────────────────────────────────────
 const BELASTING = {
-  ZELFSTANDIGENAFTREK:    5030,
-  STARTERSAFTREK:         2123,
-  MKB_WINSTVRIJSTELLING:  0.1331,
-  KOR_GRENS:              20000,
-  KIA_MIN:                2801,
-  KIA_MAX:                353973,
-  KIA_PCT:                0.28,
-  REISKOSTEN_PER_KM:      0.23,
-  THUISWERK_PER_DAG:      2.35,
-  REPRESENTATIE_AFTREK:   0.735,  // 73,5% aftrekbaar
-  IB_SCHIJF_1_MAX:        75518,
-  IB_SCHIJF_1_PCT:        0.3697,
-  IB_SCHIJF_2_PCT:        0.495,
-  HEFFINGSKORTING_MAX:    3374,
-  ARBEIDSKORTING_MAX:     5158,
+  ZELFSTANDIGENAFTREK:    2470,    // 2025: €2.470 (was €3.750 in 2024, daalt jaarlijks richting €900 in 2027)
+  STARTERSAFTREK:         2123,    // 2025: ongewijzigd
+  MKB_WINSTVRIJSTELLING:  0.1270,  // 2025: 12,70% (was 13,31% in 2024)
+  KOR_GRENS:              20000,   // ongewijzigd
+  KIA_MIN:                2801,    // ongewijzigd
+  KIA_MAX:                353973,  // ongewijzigd
+  KIA_PCT:                0.28,    // ongewijzigd
+  REISKOSTEN_PER_KM:      0.23,    // 2025: ongewijzigd (zal stijgen)
+  THUISWERK_PER_DAG:      2.40,    // 2025: €2,40/dag (was €2,35)
+  REPRESENTATIE_AFTREK:   0.735,   // 73,5% aftrekbaar — ongewijzigd
+  IB_SCHIJF_1_MAX:        76817,   // 2025: €76.817 (was €75.518)
+  IB_SCHIJF_1_PCT:        0.3582,  // 2025: 35,82% (was 36,97% — verlaagd)
+  IB_SCHIJF_2_PCT:        0.495,   // 2025: ongewijzigd
+  HEFFINGSKORTING_MAX:    3068,    // 2025: max €3.068 (inkomensafhankelijk)
+  ARBEIDSKORTING_MAX:     5625,    // 2025: max €5.625
 };
 
 // ─────────────────────────────────────────────

@@ -37,6 +37,9 @@ function onOpen() {
       .addItem('Transacties automatisch categoriseren', 'autoCategoriseerTransacties')
       .addSeparator()
       .addItem('Banksaldo controleren (afstemming)', 'bankAfstemming')
+      .addSeparator()
+      .addItem('🔄 Herhalende kosten toevoegen', 'beheerHerhalendeKosten')
+      .addItem('Herhalende kosten overzicht', 'toonHerhalendeKostenOverzicht')
     )
 
     // ── Geavanceerd boekhouden ────────────────
