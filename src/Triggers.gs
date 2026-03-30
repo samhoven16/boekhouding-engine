@@ -73,9 +73,10 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   const klantId = zoekOfMaakRelatie_(ss, klantnaam, RELATIE_TYPE.KLANT, klantEmail);
 
   const prefix = getInstelling_('Factuurprefix') || 'F';
+  const factuurNummerOpgemaakt = formatFactuurnummer_(factuurNr, prefix, 6);
   const factuurData = [
     factuurNr,
-    prefix + factuurNr,
+    factuurNummerOpgemaakt,
     datum,
     vervaldatum,
     klantId,
@@ -104,19 +105,19 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   const nieuweRij = vfSheet.getLastRow();
 
   // Journaalposten
-  const omschr = `Verkoopfactuur ${prefix}${factuurNr} – ${klantnaam}`;
+  const omschr = `Verkoopfactuur ${factuurNummerOpgemaakt} – ${klantnaam}`;
   maakJournaalpost_(ss, {
     datum, omschr, dagboek: 'Verkoopboek',
     debet: '1100', credit: bepaalOmzetRekening_(data['BTW tarief']),
     bedrag: totalExcl, btwTarief, btwBedrag: 0,
-    ref: prefix + factuurNr, type: BOEKING_TYPE.VERKOOPFACTUUR,
+    ref: factuurNummerOpgemaakt, type: BOEKING_TYPE.VERKOOPFACTUUR,
   });
   if (totalBtw > 0) {
     maakJournaalpost_(ss, {
       datum, omschr: omschr + ' (BTW)', dagboek: 'Verkoopboek',
       debet: '1100', credit: bepaalBtwVerkoopRekening_(data['BTW tarief']),
       bedrag: totalBtw, btwTarief, btwBedrag: totalBtw,
-      ref: prefix + factuurNr, type: BOEKING_TYPE.VERKOOPFACTUUR,
+      ref: factuurNummerOpgemaakt, type: BOEKING_TYPE.VERKOOPFACTUUR,
     });
   }
 
@@ -143,10 +144,10 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 
   // Automatisch mailen naar klant
   if (directMailen && klantEmail && pdfUrl) {
-    stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, prefix + factuurNr, totalIncl, vervaldatum, pdfUrl, ublUrl);
+    stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummerOpgemaakt, totalIncl, vervaldatum, pdfUrl, ublUrl);
   }
 
-  Logger.log(`Verkoopfactuur ${prefix}${factuurNr} aangemaakt voor ${klantnaam}`);
+  Logger.log(`Verkoopfactuur ${factuurNummerOpgemaakt} aangemaakt voor ${klantnaam}`);
 }
 
 // ─────────────────────────────────────────────

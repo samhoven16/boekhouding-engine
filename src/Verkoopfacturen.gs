@@ -18,7 +18,7 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     const factuurprefix = getInstelling_('Factuurprefix') || 'F';
     const voettekst = getInstelling_('Factuur voettekst') || '';
 
-    const factuurnummer = factuurprefix + factuurNr;
+    const factuurnummer = formatFactuurnummer_(factuurNr, factuurprefix, 6);
     const sepaQr = haalSepaQrBase64_(iban, bedrijf, totalIncl, factuurnummer);
 
     const html = `
@@ -61,35 +61,35 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
 <body>
   <div class="header">
     <div>
-      <div class="bedrijfsnaam">${bedrijf}</div>
-      <div style="font-size:10pt;color:#666;margin-top:4px">${adres}<br>${postcode} ${plaats}</div>
-      <div style="font-size:9pt;color:#888;margin-top:4px">KvK: ${kvk} | BTW: ${btwNr}</div>
+      <div class="bedrijfsnaam">${escHtml_(bedrijf)}</div>
+      <div style="font-size:10pt;color:#666;margin-top:4px">${escHtml_(adres)}<br>${escHtml_(postcode)} ${escHtml_(plaats)}</div>
+      <div style="font-size:9pt;color:#888;margin-top:4px">KvK: ${escHtml_(kvk)} | BTW: ${escHtml_(btwNr)}</div>
     </div>
     <div class="factuur-info">
       <div class="factuur-titel">FACTUUR</div>
-      <div class="factuur-nr">${factuurnummer}</div>
+      <div class="factuur-nr">${escHtml_(factuurnummer)}</div>
     </div>
   </div>
 
   <div class="adressen">
     <div class="adres-blok">
       <div class="adres-titel">Aan</div>
-      <strong>${klantnaam}</strong><br>
-      ${formData['Factuuradres klant'] ? formData['Factuuradres klant'].replace(/\n/g, '<br>') : ''}<br>
-      ${formData['BTW-nummer klant'] ? 'BTW: ' + formData['BTW-nummer klant'] : ''}
+      <strong>${escHtml_(klantnaam)}</strong><br>
+      ${formData['Factuuradres klant'] ? escHtml_(formData['Factuuradres klant']).replace(/\n/g, '<br>') : ''}<br>
+      ${formData['BTW-nummer klant'] ? 'BTW: ' + escHtml_(formData['BTW-nummer klant']) : ''}
     </div>
     <div class="adres-blok">
       <div class="adres-titel">Van</div>
-      <strong>${bedrijf}</strong><br>
-      ${adres}<br>${postcode} ${plaats}
+      <strong>${escHtml_(bedrijf)}</strong><br>
+      ${escHtml_(adres)}<br>${escHtml_(postcode)} ${escHtml_(plaats)}
     </div>
   </div>
 
   <div class="datums">
     <div class="datum-item"><label>Factuurdatum</label><span>${formatDatum_(datum)}</span></div>
     <div class="datum-item"><label>Vervaldatum</label><span>${formatDatum_(vervaldatum)}</span></div>
-    <div class="datum-item"><label>Factuurnummer</label><span>${factuurnummer}</span></div>
-    ${formData['Projectcode / Referentie'] ? `<div class="datum-item"><label>Referentie</label><span>${formData['Projectcode / Referentie']}</span></div>` : ''}
+    <div class="datum-item"><label>Factuurnummer</label><span>${escHtml_(factuurnummer)}</span></div>
+    ${formData['Projectcode / Referentie'] ? `<div class="datum-item"><label>Referentie</label><span>${escHtml_(formData['Projectcode / Referentie'])}</span></div>` : ''}
   </div>
 
   <table class="regels">
@@ -99,7 +99,7 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     <tbody>
       ${regels.map(r => `
         <tr>
-          <td>${r.omschr}</td>
+          <td>${escHtml_(r.omschr)}</td>
           <td class="getal">${r.aantal}</td>
           <td class="getal">${formatBedrag_(r.prijs)}</td>
           <td class="getal">${formatBedrag_(r.totaal)}</td>
@@ -131,9 +131,9 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
         <p>
           Gelieve het bedrag van <strong>${formatBedrag_(totalIncl)}</strong> over te maken vóór
           <strong>${formatDatum_(vervaldatum)}</strong> naar:<br>
-          IBAN: <strong>${iban}</strong><br>
-          t.n.v.: ${bedrijf}<br>
-          o.v.v.: ${factuurnummer}
+          IBAN: <strong>${escHtml_(iban)}</strong><br>
+          t.n.v.: ${escHtml_(bedrijf)}<br>
+          o.v.v.: ${escHtml_(factuurnummer)}
         </p>
       </div>
       ${sepaQr ? `<div style="text-align:center;flex-shrink:0">
@@ -145,13 +145,13 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
 
   ${formData['Notities / bijzonderheden'] ? `
   <div style="margin-bottom:16px;padding:10px;background:#FFF8E1;border-radius:4px">
-    <strong>Notities:</strong> ${formData['Notities / bijzonderheden']}
+    <strong>Notities:</strong> ${escHtml_(formData['Notities / bijzonderheden'])}
   </div>` : ''}
 
   <div class="bedrijfsinfo">
-    ${bedrijf} | ${adres}, ${postcode} ${plaats} | KvK: ${kvk} | BTW: ${btwNr} | IBAN: ${iban}
+    ${escHtml_(bedrijf)} | ${escHtml_(adres)}, ${escHtml_(postcode)} ${escHtml_(plaats)} | KvK: ${escHtml_(kvk)} | BTW: ${escHtml_(btwNr)} | IBAN: ${escHtml_(iban)}
   </div>
-  <div class="voettekst">${voettekst}</div>
+  <div class="voettekst">${escHtml_(voettekst)}</div>
 </body>
 </html>`;
 
@@ -404,12 +404,21 @@ function verwerkBankCsvImport(csvTekst, scheidingsteken, kolommen) {
  * Wordt automatisch aangeroepen vanuit de form-handler als 'Ja, direct versturen'.
  */
 function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedragIncl, vervaldatum, pdfUrl, ublUrl) {
+  if (!klantEmail || !pdfUrl) {
+    Logger.log('stuurFactuurEmailNaarKlant_: klantEmail of pdfUrl ontbreekt, mail overgeslagen.');
+    return false;
+  }
+  const fileId = extractFileId_(pdfUrl);
+  if (!fileId) {
+    Logger.log('stuurFactuurEmailNaarKlant_: kon geen file-ID extracten uit pdfUrl, mail overgeslagen.');
+    return false;
+  }
   try {
     const bedrijf = getInstelling_('Bedrijfsnaam') || '';
     const iban = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '';
     const eigenEmail = getInstelling_('Email rapporten naar') || '';
 
-    const pdfFile = DriveApp.getFileById(extractFileId_(pdfUrl));
+    const pdfFile = DriveApp.getFileById(fileId);
     const bijlagen = [pdfFile.getAs('application/pdf')];
 
     if (ublUrl) {

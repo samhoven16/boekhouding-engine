@@ -40,7 +40,8 @@ function onOpen() {
       .addItem('BTW journaalpost sluiten', 'sluitBtwPeriode')
     )
 
-    // ── Belastingadvies ───────────────────────
+    // ── Helpdesk & Belastingadvies ────────────
+    .addItem('💬 Helpdesk & Assistent', 'openAssistent')
     .addItem('💡 Belastingadvies & aftrekposten', 'genereerBelastingadvies')
     .addSeparator()
 
@@ -74,6 +75,7 @@ function onOpen() {
       .addItem('Setup uitvoeren (eerste keer)', 'setup')
       .addSeparator()
       .addItem('Formulier links tonen', 'toonFormulierLinks')
+      .addItem('🔗 Zapier / Make / API instructies', 'toonZapierInstructies')
       .addItem('Google Drive mappen tonen', 'toonDriveStructuur')
       .addItem('Nieuw boekjaar aanmaken', 'maakNieuwBoekjaar')
       .addSeparator()

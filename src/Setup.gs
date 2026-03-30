@@ -232,19 +232,19 @@ function zetInstellingen_(ss) {
 
   const data = [
     ['BEDRIJFSGEGEVENS', ''],
-    ['Bedrijfsnaam', 'Mijn Bedrijf BV'],
-    ['Rechtsvorm', 'BV'],
-    ['Adres', 'Straatnaam 1'],
-    ['Postcode', '1234 AB'],
-    ['Plaats', 'Amsterdam'],
+    ['Bedrijfsnaam', '← Vul hier uw bedrijfsnaam in'],
+    ['Rechtsvorm', 'Eenmanszaak'],
+    ['Adres', '← Uw straatnaam + huisnummer'],
+    ['Postcode', '← Postcode'],
+    ['Plaats', '← Woonplaats'],
     ['Land', 'Nederland'],
-    ['KvK-nummer', '12345678'],
-    ['BTW-nummer', 'NL123456789B01'],
-    ['IBAN', 'NL01ABNA0123456789'],
-    ['BIC', 'ABNANL2A'],
-    ['Email', 'info@mijnbedrijf.nl'],
-    ['Telefoon', '020-1234567'],
-    ['Website', 'www.mijnbedrijf.nl'],
+    ['KvK-nummer', '← 8-cijferig KvK-nummer'],
+    ['BTW-nummer', '← NL + 9 cijfers + B + 2 cijfers'],
+    ['IBAN', '← NL + bankrekeningnummer'],
+    ['BIC', '← BIC/SWIFT code van uw bank'],
+    ['Email', '← uw@emailadres.nl'],
+    ['Telefoon', '← Uw telefoonnummer'],
+    ['Website', '← www.uwwebsite.nl (optioneel)'],
     ['', ''],
     ['BOEKHOUDINSTELLINGEN', ''],
     ['Boekjaar start', '01-01-' + new Date().getFullYear()],
@@ -253,7 +253,7 @@ function zetInstellingen_(ss) {
     ['Standaard BTW tarief', '21% (hoog)'],
     ['BTW aangifteperiode', 'Kwartaal'],
     ['Betalingstermijn (dagen)', '30'],
-    ['Volgende factuurnummer', '2024001'],
+    ['Volgende factuurnummer', new Date().getFullYear() + '001'],
     ['Factuurprefix', 'F'],
     ['KOR regeling actief', 'Nee'],
     ['', ''],
@@ -266,12 +266,16 @@ function zetInstellingen_(ss) {
     ['Dashboard vernieuwen bij openen', 'Ja'],
     ['Email rapporten naar', 'eigenaar@mijnbedrijf.nl'],
     ['BTW aangifte herinnering', 'Ja'],
+    ['', ''],
+    ['INTEGRATIES & API', ''],
+    ['Webhook API sleutel', '← Kies een sterk wachtwoord (bijv. mijnbedrijf-2026-geheim)'],
+    ['Web App URL', '← Plak hier de Web App URL na publicatie (zie Zapier instructies)'],
   ];
 
   sheet.getRange(1, 1, data.length, 2).setValues(data);
 
   // Opmaak sectietitels
-  [1, 16, 27, 33].forEach(rij => {
+  [1, 16, 27, 33, 37].forEach(rij => {
     sheet.getRange(rij, 1, 1, 2)
       .setBackground(KLEUREN.HEADER_BG)
       .setFontColor(KLEUREN.HEADER_FG)

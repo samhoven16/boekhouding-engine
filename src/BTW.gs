@@ -378,10 +378,11 @@ function getBtwPerMaand_(ss, jaar) {
 // ─────────────────────────────────────────────
 function parseBtwTarief_(label) {
   if (!label) return 0.21;
-  if (label.includes('21')) return 0.21;
-  if (label.includes('9')) return 0.09;
-  if (label.includes('0%') || label.includes('nultarief')) return 0.00;
-  if (label.includes('Vrijgesteld') || label.includes('Verlegd')) return null;
+  const l = label.toLowerCase();
+  if (l.includes('21')) return 0.21;
+  if (l.includes('9%') || l.includes('laag')) return 0.09;
+  if (l.includes('0%') || l.includes('nultarief')) return 0.00;
+  if (l.includes('vrijgesteld') || l.includes('verlegd') || l.includes('geen btw')) return null;
   return 0.21;
 }
 
