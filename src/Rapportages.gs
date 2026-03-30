@@ -257,7 +257,8 @@ function genereerCashflow() {
   sheet.clearFormats();
 
   const bedrijf = getInstelling_('Bedrijfsnaam') || '';
-  const jaar = new Date().getFullYear();
+  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
+  const jaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
 
   zetRapportKoptekst_(sheet, 'CASHFLOW OVERZICHT', bedrijf, `Boekjaar ${jaar}`, 3);
 

@@ -33,7 +33,10 @@ function onOpen() {
     .addSubMenu(ui.createMenu('Bank')
       .addItem('Bankafschrift importeren (CSV)', 'importeerBankafschrift')
       .addSeparator()
-      .addItem('Betalingen koppelen aan facturen', 'koppelTransactiesAanFacturen')
+      .addItem('Betalingen automatisch koppelen aan facturen', 'koppelTransactiesAanFacturen')
+      .addItem('Transacties automatisch categoriseren', 'autoCategoriseerTransacties')
+      .addSeparator()
+      .addItem('Banksaldo controleren (afstemming)', 'bankAfstemming')
     )
 
     // ── Geavanceerd boekhouden ────────────────
@@ -86,6 +89,7 @@ function onOpen() {
       .addItem('Nieuw boekjaar starten', 'maakNieuwBoekjaar')
       .addItem('Rekeningschema opnieuw laden', 'herlaadGrootboekschema')
       .addItem('Alle overzichten vernieuwen', 'vernieuwAlleRapporten')
+      .addItem('Saldi herberekenen (bij fouten)', 'herberekeningGrootboekSaldi')
       .addSeparator()
       .addItem('Setup opnieuw uitvoeren (reset)', 'resetSetup')
     )

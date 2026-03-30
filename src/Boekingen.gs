@@ -163,7 +163,6 @@ function genereerGrootboekkaart_(ss, code, naam) {
 
   const headers = ['Datum', 'Omschrijving', 'Dagboek', 'Referentie', 'Debet', 'Credit', 'Saldo'];
   zetHeaderRij_(sheet, headers);
-  sheet.setRange = sheet.getRange(2, 1, 1, 7);
 
   const jpSheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
   const data = jpSheet.getDataRange().getValues();
@@ -317,7 +316,7 @@ function vernieuwDebiteurenOverzicht() {
   const sheet = ss.getSheetByName(SHEETS.DEBITEUREN);
   sheet.clearContents();
 
-  const headers = ['Factuurnummer', 'Datum', 'Vervaldatum', 'Klant', 'Bedrag incl.', 'Betaald', 'Openstaand', 'Dagen over', 'Status'];
+  const headers = ['Factuurnummer', 'Datum', 'Vervaldatum', 'Klant', 'Bedrag incl.', 'Betaald', 'Openstaand', 'Dagen te laat', 'Status'];
   zetHeaderRij_(sheet, headers);
 
   const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
@@ -345,7 +344,7 @@ function vernieuwDebiteurenOverzicht() {
       incl,
       betaald,
       open,
-      dagenOver > 0 ? dagenOver : 0,
+      dagenOver > 0 ? dagenOver : '',
       status,
     ]);
 
@@ -372,10 +371,11 @@ function vernieuwCrediteurenOverzicht() {
   const sheet = ss.getSheetByName(SHEETS.CREDITEUREN);
   sheet.clearContents();
 
-  const headers = ['Intern nr.', 'Factuurdatum', 'Leverancier', 'Factuurref.', 'Bedrag incl.', 'Status', 'Openstaand'];
+  const headers = ['Intern nr.', 'Factuurdatum', 'Vervaldatum', 'Leverancier', 'Factuurref.', 'Bedrag incl.', 'Betaald', 'Openstaand', 'Status'];
   zetHeaderRij_(sheet, headers);
 
   const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  const vandaag = new Date();
   let rij = 2;
   let totaalOpen = 0;
 
@@ -384,23 +384,44 @@ function vernieuwCrediteurenOverzicht() {
     if (status === FACTUUR_STATUS.BETAALD) continue;
 
     const incl = parseFloat(ifData[i][11]) || 0;
-    totaalOpen += incl;
+    // ifData[i][13] is Betaaldatum (a date), not a betaald amount — inkoopfacturen
+    // use binary paid/unpaid status. Partial payments are not tracked in this schema,
+    // so openstaand equals incl for all unpaid rows.
+    const betaald = 0;
+    const openstaand = rondBedrag_(incl - betaald);
+    if (openstaand <= 0) continue;
+
+    // ifData[i][3] is Factuurdatum leverancier (no separate vervaldatum column in schema)
+    const factuurdatum = ifData[i][3] ? new Date(ifData[i][3]) : null;
+    // Approximate vervaldatum: factuurdatum + 30 days (standard payment term)
+    const vervaldatum = factuurdatum ? new Date(factuurdatum.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
+    const dagenOver = vervaldatum ? Math.floor((vandaag - vervaldatum) / (1000 * 60 * 60 * 24)) : 0;
+
+    totaalOpen += openstaand;
 
     sheet.appendRow([
       ifData[i][1],  // Intern nummer
-      ifData[i][3],  // Factuurdatum
+      factuurdatum,  // Factuurdatum
+      vervaldatum,   // Vervaldatum (berekend op basis van factuurdatum + 30 dagen)
       ifData[i][6],  // Leverancier
       ifData[i][4],  // Factuurref
       incl,
+      betaald || '',
+      openstaand,
       status,
-      incl,
     ]);
+
+    if (dagenOver > 0) {
+      sheet.getRange(rij, 1, 1, 9).setBackground('#FFEBEE');
+    }
+
     rij++;
   }
 
-  sheet.appendRow(['', '', 'TOTAAL TE BETALEN', '', '', '', totaalOpen])
+  sheet.appendRow(['', '', '', 'TOTAAL TE BETALEN', '', '', '', totaalOpen, ''])
     .setFontWeight('bold');
-  sheet.getRange(2, 5, rij - 1, 3).setNumberFormat('€#,##0.00');
+  sheet.getRange(rij, 6, 1, 3).setBackground(KLEUREN.SECTIE_BG);
+  sheet.getRange(2, 6, rij - 1, 3).setNumberFormat('€#,##0.00');
 }
 
 // ─────────────────────────────────────────────

@@ -21,15 +21,31 @@ function genereerBtwAangifte(kwartaal) {
 
   zetBtwAangifteOpSheet_(ss, aangifte, kwartaal, periode);
 
+  // Samenvatting in begrijpelijke taal (geen rubriekcodes)
+  const saldoRegel = aangifte.saldo > 0.005
+    ? `💸 U moet ${formatBedrag_(aangifte.saldo)} betalen aan de Belastingdienst.\n` +
+      `   Deadline: ${bepaalBtwDeadline_(kwartaal, periode.van.getFullYear())}`
+    : aangifte.saldo < -0.005
+      ? `💰 U kunt ${formatBedrag_(Math.abs(aangifte.saldo))} terugvragen van de Belastingdienst.`
+      : `✓ Saldo is nul — niets te betalen of terug te vragen.`;
+
+  const heeftOmzet21 = aangifte.r1a_grondslag > 0;
+  const heeftOmzet9  = aangifte.r1b_grondslag > 0;
+  const heeftVrijgest = aangifte.r1d > 0;
+
+  let omzetRegels = '';
+  if (heeftOmzet21) omzetRegels += `Omzet 21% BTW:  ${formatBedrag_(aangifte.r1a_grondslag)} → BTW ${formatBedrag_(aangifte.r1a_btw)}\n`;
+  if (heeftOmzet9)  omzetRegels += `Omzet 9% BTW:   ${formatBedrag_(aangifte.r1b_grondslag)} → BTW ${formatBedrag_(aangifte.r1b_btw)}\n`;
+  if (heeftVrijgest) omzetRegels += `Vrijgestelde omzet: ${formatBedrag_(aangifte.r1d)} (geen BTW)\n`;
+
   SpreadsheetApp.getUi().alert(
-    `BTW aangifte ${kwartaal} gegenereerd`,
-    `Periode: ${formatDatum_(periode.van)} – ${formatDatum_(periode.tot)}\n\n` +
-    `Rubriek 1a (21%):     ${formatBedrag_(aangifte.r1a_grondslag)} / BTW: ${formatBedrag_(aangifte.r1a_btw)}\n` +
-    `Rubriek 1b (9%):      ${formatBedrag_(aangifte.r1b_grondslag)} / BTW: ${formatBedrag_(aangifte.r1b_btw)}\n` +
-    `Rubriek 1d (vrijgest): ${formatBedrag_(aangifte.r1d)}\n` +
-    `Rubriek 5b (voorbelasting): ${formatBedrag_(aangifte.r5b)}\n\n` +
-    `Te betalen / terug te vorderen: ${formatBedrag_(aangifte.saldo)}\n` +
-    `${aangifte.saldo >= 0 ? '(te betalen aan Belastingdienst)' : '(terug te vorderen)'}`,
+    `BTW aangifte ${kwartaal} — ${formatDatum_(periode.van)} t/m ${formatDatum_(periode.tot)}`,
+    `WAT U HEEFT VERKOCHT:\n${omzetRegels || '(geen omzet in deze periode)\n'}\n` +
+    `BTW die u in rekening heeft gebracht: ${formatBedrag_(aangifte.r5a)}\n` +
+    `BTW die u zelf heeft betaald (aftrekbaar): ${formatBedrag_(aangifte.r5b)}\n\n` +
+    `━━━━━━━━━━━━━━━━━━━━━\n` +
+    `${saldoRegel}\n\n` +
+    `Het overzicht staat klaar op het tabblad "BTW Aangifte".`,
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
@@ -273,10 +289,13 @@ function sluitBtwPeriode() {
     });
   }
 
+  const actie = aangifte.saldo >= 0
+    ? `Te betalen: ${formatBedrag_(aangifte.saldo)}\nDeadline: ${bepaalBtwDeadline_(kwartaal, jaar)}\n\nMaak de betaling over aan de Belastingdienst vóór de deadline.`
+    : `Terug te vorderen: ${formatBedrag_(Math.abs(aangifte.saldo))}\nDien uw aangifte in om dit terug te krijgen.`;
+
   ui.alert(
-    `BTW periode ${kwartaal} gesloten`,
-    `Journaalposten aangemaakt.\n\nSaldo: ${formatBedrag_(aangifte.saldo)}\n` +
-    `${aangifte.saldo >= 0 ? 'Te betalen vóór: ' + bepaalBtwDeadline_(kwartaal, jaar) : 'Terug te vorderen'}`,
+    `BTW-periode ${kwartaal} afgesloten`,
+    `De BTW-administratie is bijgewerkt.\n\n${actie}`,
     ui.ButtonSet.OK
   );
 }
@@ -302,23 +321,30 @@ function controleerKor() {
   const korGrens = 20000;
   const korActief = getInstelling_('KOR regeling actief') === 'Ja';
 
-  let bericht = `KOR Controle ${jaar}\n\n`;
-  bericht += `Totale omzet (excl. BTW): ${formatBedrag_(totaalOmzet)}\n`;
-  bericht += `KOR grens: ${formatBedrag_(korGrens)}\n\n`;
+  const pct = totaalOmzet > 0 ? Math.round((totaalOmzet / korGrens) * 100) : 0;
+  const resterende = Math.max(0, korGrens - totaalOmzet);
+
+  let bericht = `KOR-check ${jaar}  (Kleineondernemersregeling)\n\n`;
+  bericht += `Uw omzet dit jaar: ${formatBedrag_(totaalOmzet)}  (${pct}% van de grens)\n`;
+  bericht += `KOR-grens:         ${formatBedrag_(korGrens)}\n\n`;
 
   if (totaalOmzet < korGrens) {
-    bericht += `✓ U valt onder de KOR grens.\n`;
-    bericht += korActief
-      ? 'KOR is actief: u hoeft geen BTW te berekenen over uw omzet.'
-      : 'KOR is NIET actief. Overweeg aanmelding bij de Belastingdienst.';
+    bericht += `✅ U zit ONDER de grens — nog ${formatBedrag_(resterende)} ruimte.\n\n`;
+    if (korActief) {
+      bericht += 'KOR is ingeschakeld: u rekent geen BTW aan uw klanten.\nU hoeft geen BTW-aangifte te doen.';
+    } else {
+      bericht += 'KOR is NIET ingeschakeld.\n\nWat is het voordeel?\nAls u KOR aanvraagt bij de Belastingdienst hoeft u geen BTW te berekenen.\nDit scheelt administratie. Vraag het aan via belastingdienst.nl (zoek op "KOR aanmelden").';
+    }
   } else {
-    bericht += `⚠ Uw omzet overschrijdt de KOR grens van €20.000.\n`;
-    bericht += korActief
-      ? 'Meld u af voor de KOR bij de Belastingdienst!'
-      : 'U bent BTW-plichtig (correct).';
+    bericht += `⚠️  U zit BOVEN de grens van €20.000.\n\n`;
+    if (korActief) {
+      bericht += '❗ KOR is nog ingeschakeld maar u overschrijdt de grens!\nMeld u NU af voor de KOR via belastingdienst.nl.\nU moet BTW berekenen vanaf het moment dat u de grens overschreed.';
+    } else {
+      bericht += '✓ KOR is terecht niet ingeschakeld.\nU verwerkt BTW correct in uw facturen.';
+    }
   }
 
-  SpreadsheetApp.getUi().alert('KOR Regeling Controle', bericht, SpreadsheetApp.getUi().ButtonSet.OK);
+  SpreadsheetApp.getUi().alert('KOR — Kleineondernemersregeling', bericht, SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 // ─────────────────────────────────────────────
