@@ -289,13 +289,16 @@ function sluitBtwPeriode() {
     });
   }
 
+  // Vergrendel de periode automatisch na afsluiten
+  vergrendelPeriode_(periode.van, periode.tot, `BTW ${kwartaal} ${jaar}`);
+
   const actie = aangifte.saldo >= 0
     ? `Te betalen: ${formatBedrag_(aangifte.saldo)}\nDeadline: ${bepaalBtwDeadline_(kwartaal, jaar)}\n\nMaak de betaling over aan de Belastingdienst vóór de deadline.`
     : `Terug te vorderen: ${formatBedrag_(Math.abs(aangifte.saldo))}\nDien uw aangifte in om dit terug te krijgen.`;
 
   ui.alert(
     `BTW-periode ${kwartaal} afgesloten`,
-    `De BTW-administratie is bijgewerkt.\n\n${actie}`,
+    `De BTW-administratie is bijgewerkt.\n\n${actie}\n\n🔒 De periode is vergrendeld — nieuwe boekingen in deze periode zijn niet meer mogelijk.`,
     ui.ButtonSet.OK
   );
 }

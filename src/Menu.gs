@@ -51,6 +51,16 @@ function onOpen() {
       .addItem('BTW-periode afsluiten', 'sluitBtwPeriode')
     )
 
+    // ── Kwaliteit & Controle ──────────────────
+    .addSubMenu(ui.createMenu('Controle & Export')
+      .addItem('✅ Gezondheidscheck uitvoeren', 'voerGezondheidCheckUit')
+      .addSeparator()
+      .addItem('📦 Accountantspakket exporteren', 'exporteerAccountantsPakket')
+      .addItem('📧 Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
+      .addSeparator()
+      .addItem('🔒 Gesloten periodes beheren', 'beheerGeslotenPeriodes')
+    )
+
     // ── Hulp & advies ─────────────────────────
     .addItem('💬 Hulp & Assistent', 'openAssistent')
     .addItem('💡 Belastingtips & besparingen', 'genereerBelastingadvies')

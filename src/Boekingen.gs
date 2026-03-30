@@ -14,6 +14,29 @@
  *   btwTarief, btwBedrag, ref, projectcode, type, notities, isHoofdpost
  */
 function maakJournaalpost_(ss, opt) {
+  // ── Periode-vergrendeling check ───────────────────────────────────────
+  // Adresseert "geen controle" pijnpunt: voorkom boekingen in afgesloten periodes
+  const boekDatum = opt.datum instanceof Date ? opt.datum : new Date(opt.datum || new Date());
+  const geslotenPeriodes = PropertiesService.getScriptProperties().getProperty('GESLOTEN_PERIODES');
+  if (geslotenPeriodes) {
+    try {
+      const periodes = JSON.parse(geslotenPeriodes);
+      for (const p of periodes) {
+        const van = new Date(p.van);
+        const tot = new Date(p.tot);
+        if (boekDatum >= van && boekDatum <= tot) {
+          throw new Error(
+            `Periode ${Utilities.formatDate(van, 'Europe/Amsterdam', 'MMM yyyy')} is afgesloten. ` +
+            `U kunt geen boekingen meer maken in een afgesloten periode. ` +
+            `Gebruik "Periode ontgrendelen" als dit een correctie is.`
+          );
+        }
+      }
+    } catch (jsonErr) {
+      if (jsonErr.message.includes('afgesloten')) throw jsonErr; // Rethrow onze eigen fout
+    }
+  }
+
   const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
   const boekingId = volgendBoekingId_();
 
@@ -558,4 +581,79 @@ function bepaalBtwVoorbelastingRekening_(btwLabel) {
   if (btwLabel.includes('21')) return '1410';
   if (btwLabel.includes('9')) return '1420';
   return '1400';
+}
+
+// ─────────────────────────────────────────────
+//  PERIODE VERGRENDELING
+//  Adresseert: "geen controle" (Excel), "compliance risico" (Wave)
+// ─────────────────────────────────────────────
+
+/**
+ * Vergrendelt een periode zodat er geen nieuwe boekingen in gemaakt kunnen worden.
+ * Wordt automatisch aangeroepen bij het afsluiten van een BTW-periode.
+ */
+function vergrendelPeriode_(van, tot, label) {
+  const props = PropertiesService.getScriptProperties();
+  const bestaand = props.getProperty('GESLOTEN_PERIODES');
+  const periodes = bestaand ? JSON.parse(bestaand) : [];
+
+  // Voorkom dubbele vergrendeling
+  const al = periodes.find(p => p.van === van.toISOString() && p.tot === tot.toISOString());
+  if (!al) {
+    periodes.push({
+      van:   van.toISOString(),
+      tot:   tot.toISOString(),
+      label: label || formatDatum_(van) + ' t/m ' + formatDatum_(tot),
+      geslotenOp: new Date().toISOString(),
+    });
+    props.setProperty('GESLOTEN_PERIODES', JSON.stringify(periodes));
+    Logger.log('Periode vergrendeld: ' + label);
+  }
+}
+
+/**
+ * Toont een overzicht van vergrendelde periodes en biedt de mogelijkheid
+ * om een periode te ontgrendelen.
+ */
+function beheerGeslotenPeriodes() {
+  const props = PropertiesService.getScriptProperties();
+  const bestaand = props.getProperty('GESLOTEN_PERIODES');
+  const periodes = bestaand ? JSON.parse(bestaand) : [];
+  const ui = SpreadsheetApp.getUi();
+
+  if (periodes.length === 0) {
+    ui.alert('Gesloten periodes', 'Er zijn geen vergrendelde periodes.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const lijstTekst = periodes.map((p, i) =>
+    `${i + 1}. ${p.label}  (gesloten op ${p.geslotenOp ? formatDatum_(new Date(p.geslotenOp)) : '?'})`
+  ).join('\n');
+
+  const resp = ui.prompt(
+    '🔒 Gesloten periodes',
+    `De volgende periodes zijn vergrendeld:\n\n${lijstTekst}\n\n` +
+    `Voer het nummer in van de periode die u wilt ontgrendelen, of druk op Annuleren:`,
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+
+  const nr = parseInt(resp.getResponseText().trim()) - 1;
+  if (isNaN(nr) || nr < 0 || nr >= periodes.length) {
+    ui.alert('Ongeldig nummer.'); return;
+  }
+
+  const bevestiging = ui.alert(
+    '⚠️ Periode ontgrendelen',
+    `Weet u zeker dat u "${periodes[nr].label}" wilt ontgrendelen?\n\n` +
+    `U kunt dan weer boekingen maken in deze periode. Dit kan gevolgen hebben voor ingediende BTW-aangiften.`,
+    ui.ButtonSet.YES_NO
+  );
+
+  if (bevestiging === ui.Button.YES) {
+    periodes.splice(nr, 1);
+    props.setProperty('GESLOTEN_PERIODES', JSON.stringify(periodes));
+    ui.alert('Periode ontgrendeld.', 'U kunt weer boekingen maken in deze periode.', ui.ButtonSet.OK);
+  }
 }
