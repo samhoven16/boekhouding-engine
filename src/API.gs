@@ -75,7 +75,7 @@ function doPost(e) {
       default:
         return jsonResponse_({
           succes: false,
-          fout: `Onbekende actie: "${actie}". Geldige acties: factuur, kosten, declaratie, status, klant_opslaan`,
+          fout: `Onbekend verzoek: "${actie}". Geldige waarden: factuur, kosten, declaratie, status, klant_opslaan`,
         });
     }
   } catch (err) {
@@ -265,22 +265,24 @@ function toonZapierInstructies() {
       .stap{background:#E8EAF6;padding:10px;border-radius:4px;margin:8px 0}
       .tip{background:#FFF8E1;padding:8px;border-radius:4px;font-size:11px}
     </style>
-    <h3>🔗 Koppelen met Zapier / Make / n8n</h3>
+    <h3>Koppelen met andere programma's</h3>
+    <p>U kunt uw boekhouding automatisch laten bijwerken vanuit andere programma's zoals Zapier, Make of n8n.</p>
 
-    <div class="stap"><b>Stap 1:</b> Maak uw script openbaar als Web App<br>
-    Ga in Apps Script naar <b>Inzetten → Nieuwe inzet → Web App</b><br>
-    Uitvoeren als: <b>Ik zelf</b> | Toegang: <b>Iedereen</b><br>
-    Kopieer de Web App URL</div>
+    <div class="stap"><b>Stap 1:</b> Publiceer uw script als Web App<br>
+    Open de Apps Script editor → klik op <b>Implementeren → Nieuwe implementatie → Web App</b><br>
+    Kies: Uitvoeren als <b>"Ik zelf"</b> en Toegang <b>"Iedereen"</b><br>
+    Kopieer de URL die verschijnt</div>
 
-    <div class="stap"><b>Stap 2 (optioneel):</b> Stel een API-sleutel in<br>
-    In het tabblad <b>Instellingen</b>: voeg toe: <code>Webhook API sleutel</code> → uw sleutel</div>
+    <div class="stap"><b>Stap 2 (aanbevolen):</b> Stel een beveiligingscode in<br>
+    Ga naar het tabblad <b>Instellingen</b> en vul een wachtwoord in bij <code>Webhook API sleutel</code>.<br>
+    Dit voorkomt dat anderen uw boekhouding kunnen aanpassen.</div>
 
-    <div class="stap"><b>Stap 3:</b> Configureer in Zapier/Make<br>
+    <div class="stap"><b>Stap 3:</b> Stel Zapier / Make in<br>
     Kies als actie: <b>Webhooks → POST</b><br>
-    URL: uw Web App URL<br>
+    Plak de Web App URL<br>
     Body type: <b>JSON</b></div>
 
-    <p><b>Voorbeeld JSON — Factuur aanmaken:</b></p>
+    <p><b>Voorbeeld: automatisch een factuur aanmaken</b></p>
     <pre>{
   "actie": "factuur",
   "klantnaam": "Bedrijf BV",
@@ -292,7 +294,7 @@ function toonZapierInstructies() {
   "directMailen": true
 }</pre>
 
-    <p><b>Voorbeeld JSON — Kosten boeken:</b></p>
+    <p><b>Voorbeeld: kosten automatisch boeken</b></p>
     <pre>{
   "actie": "kosten",
   "leverancier": "Adobe Systems",
@@ -302,11 +304,9 @@ function toonZapierInstructies() {
   "omschrijving": "Adobe CC abonnement"
 }</pre>
 
-    <div class="tip">💡 <b>Tip voor AI-workflows:</b> U kunt ook een AI-agent (bijv. via Claude API of ChatGPT API) laten koppelen met uw boekhouding via deze webhook. De AI parseert e-mails, bonnetjes of spraakberichten en stuurt JSON naar uw Web App URL.</div>
-
-    <p><a href="https://zapier.com/apps/webhooks" target="_blank">Zapier Webhooks documentatie →</a></p>
+    <div class="tip"><b>Geavanceerd:</b> U kunt ook een AI-tool (bijv. Claude of ChatGPT) automatisch bonnetjes laten verwerken en naar uw boekhouding sturen via deze koppeling.</div>
   `).setWidth(600).setHeight(520);
-  ui.showModalDialog(html, 'Koppelen met Zapier / Make / n8n');
+  ui.showModalDialog(html, 'Koppelen met andere programma\'s');
 }
 
 // ─────────────────────────────────────────────

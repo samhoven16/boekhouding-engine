@@ -49,10 +49,10 @@ function setup() {
     Logger.log('Vul uw bedrijfsgegevens in op het tabblad Instellingen.');
     Logger.log('De Google Forms staan klaar in Google Drive.');
 
-    alertOfLog_(ui, 'Setup geslaagd!',
-      'Het boekhoudprogramma is klaar.\n\n' +
-      'Spreadsheet: ' + ss.getUrl() + '\n\n' +
-      'Vul uw bedrijfsgegevens in op tabblad "Instellingen".');
+    alertOfLog_(ui, 'Setup gelukt!',
+      'Uw boekhouding is klaar voor gebruik.\n\n' +
+      'Vul eerst uw bedrijfsgegevens in op het tabblad "Instellingen" (bedrijfsnaam, BTW-nummer, IBAN, etc.).\n\n' +
+      'Daarna kunt u direct facturen maken, kosten boeken en declaraties indienen via het formulier.');
 
     try { ss.setActiveSheet(ss.getSheetByName(SHEETS.DASHBOARD)); } catch (e) {}
     vernieuwDashboard();
@@ -129,6 +129,24 @@ function verbergTechnischeTabbladen_(ss) {
     const sheet = ss.getSheetByName(naam);
     if (sheet) sheet.hideSheet();
   });
+
+  // Verwijder oude RESP_ tabbladen van de 5-formulier versie
+  const oudeRespTabs = [
+    'RESP_Verkoopfactuur', 'RESP_Inkoopfactuur', 'RESP_Banktransactie',
+    'RESP_Relatie', 'RESP_Journaalpost',
+    'RESP_Verkoopfacturen', 'RESP_Inkoopfacturen', 'RESP_Banktransacties',
+    'RESP_Relaties', 'RESP_Journaalposten',
+  ];
+  oudeRespTabs.forEach(naam => {
+    const sheet = ss.getSheetByName(naam);
+    if (sheet) {
+      try { ss.deleteSheet(sheet); } catch(e) { sheet.hideSheet(); }
+    }
+  });
+
+  // Verberg RESP_Hoofdformulier (alleen technisch nodig)
+  const respHoofd = ss.getSheetByName('RESP_Hoofdformulier');
+  if (respHoofd) respHoofd.hideSheet();
 }
 
 // ─────────────────────────────────────────────
@@ -325,16 +343,17 @@ function maakHoofdFormulier_(ss) {
   const form = FormApp.create(`${bedrijf} – Boekhouding`);
 
   form.setDescription(
-    'Vul dit formulier in om facturen, kosten of declaraties te registreren.\n\n' +
-    '• Inkomsten → factuur (PDF) wordt automatisch aangemaakt en gemaild\n' +
-    '• Uitgaven & declaraties → direct verwerkt in de administratie\n\n' +
-    'U hoeft geen boekhouder te zijn. Het systeem doet de rest.'
+    'Gebruik dit formulier om:\n\n' +
+    '• Een factuur te maken → de factuur (PDF) wordt automatisch aangemaakt en per e-mail naar uw klant gestuurd\n' +
+    '• Kosten te boeken → uw uitgave wordt direct verwerkt in de administratie\n' +
+    '• Een declaratie in te dienen → als u iets zakelijks met eigen geld heeft betaald\n\n' +
+    'U hoeft geen boekhoudkennis te hebben. Het systeem regelt de rest.'
   );
   form.setConfirmationMessage(
-    'Bedankt — uw invoer is verwerkt!\n\n' +
-    'Inkomsten: factuur (PDF + UBL) is aangemaakt en gemaild naar de klant.\n' +
-    'Uitgaven/declaraties: verwerkt in administratie en BTW-overzicht.\n\n' +
-    'U ontvangt zelf een kopie per e-mail als u dat hebt aangegeven.'
+    'Gelukt! Uw invoer is verwerkt.\n\n' +
+    'Heeft u een factuur aangemaakt? De PDF is verstuurd naar uw klant (als u dat heeft aangegeven).\n' +
+    'Kosten of declaratie? Deze staan in uw administratie en BTW-overzicht.\n\n' +
+    'U kunt dit formulier opnieuw invullen via de knop hieronder.'
   );
   form.setProgressBar(true);
   form.setShowLinkToRespondAgain(true);
@@ -344,12 +363,12 @@ function maakHoofdFormulier_(ss) {
   const typeItem = form.addMultipleChoiceItem()
     .setTitle('Wat wil je doen?')
     .setRequired(true)
-    .setHelpText('Kies één van de drie opties. U ziet daarna alleen de relevante velden.');
+    .setHelpText('Kies een optie. U krijgt daarna alleen de velden te zien die u nodig heeft.');
 
   // ── Sectie: Inkomsten ───────────────────────────────────────────────
   const secInkomsten = form.addPageBreakItem()
-    .setTitle('Inkomsten – Factuur aanmaken')
-    .setHelpText('Vul de klant- en factuurgegevens in. De factuur wordt automatisch aangemaakt en per e-mail verstuurd.');
+    .setTitle('Factuur aanmaken')
+    .setHelpText('Vul hieronder de klantgegevens en factuurregels in. Uw factuur (PDF) wordt automatisch aangemaakt. U kunt deze direct laten e-mailen naar uw klant.');
 
   form.addTextItem()
     .setTitle('Klantnaam')
@@ -422,8 +441,8 @@ function maakHoofdFormulier_(ss) {
 
   // ── Sectie: Uitgaven ────────────────────────────────────────────────
   const secUitgaven = form.addPageBreakItem()
-    .setTitle('Uitgaven – Kosten registreren')
-    .setHelpText('Registreer een inkoopfactuur, bon of andere bedrijfskost.');
+    .setTitle('Kosten boeken')
+    .setHelpText('Registreer een uitgave (factuur, bon, abonnement). Dit wordt automatisch verwerkt in uw administratie en BTW-overzicht.');
 
   form.addTextItem()
     .setTitle('Leveranciernaam')
@@ -471,8 +490,8 @@ function maakHoofdFormulier_(ss) {
 
   // ── Sectie: Declaratie ──────────────────────────────────────────────
   const secDeclaratie = form.addPageBreakItem()
-    .setTitle('Declaratie – Privé voorgeschoten')
-    .setHelpText('U heeft privé betaald voor een zakelijke uitgave. Vul in om het terug te ontvangen.');
+    .setTitle('Declaratie indienen')
+    .setHelpText('Heeft u iets zakelijks betaald met uw eigen (privé) geld? Vul het hieronder in, zodat u het kunt terugkrijgen.');
 
   form.addDateItem()
     .setTitle('Datum declaratie')

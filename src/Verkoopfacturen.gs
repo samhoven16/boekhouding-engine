@@ -178,8 +178,8 @@ function stuurVerkoopfactuurPdf() {
   const ss = getSpreadsheet_();
 
   const resp = ui.prompt(
-    'Factuur versturen',
-    'Voer het factuurnummer in (bijv. F2024001):',
+    'Factuur per e-mail versturen',
+    'Typ het factuurnummer (bijv. F000001):',
     ui.ButtonSet.OK_CANCEL
   );
   if (resp.getSelectedButton() !== ui.Button.OK) return;
@@ -199,7 +199,7 @@ function stuurVerkoopfactuurPdf() {
   }
 
   if (!gevonden) {
-    ui.alert('Factuur ' + zoekNr + ' niet gevonden.');
+    ui.alert('Niet gevonden', 'Factuur "' + zoekNr + '" is niet gevonden. Controleer het nummer en probeer opnieuw.', ui.ButtonSet.OK);
     return;
   }
 
@@ -208,22 +208,22 @@ function stuurVerkoopfactuurPdf() {
   const klantEmail = haalRelatieEmail_(ss, klantId);
 
   const emailResp = ui.prompt(
-    'Factuur versturen',
-    `Naar welk e-mailadres sturen?\n(Klant: ${gevonden[5]}, gevonden: ${klantEmail || 'onbekend'})`,
+    'Factuur per e-mail versturen',
+    `Naar welk e-mailadres wilt u de factuur sturen?\n\nKlant: ${gevonden[5]}\nBekend e-mailadres: ${klantEmail || '(niet ingevuld)'}`,
     ui.ButtonSet.OK_CANCEL
   );
   if (emailResp.getSelectedButton() !== ui.Button.OK) return;
 
   const email = emailResp.getResponseText().trim() || klantEmail;
   if (!email) {
-    ui.alert('Geen e-mailadres opgegeven.');
+    ui.alert('Geen e-mailadres', 'U heeft geen e-mailadres ingevuld. De factuur kan niet worden verstuurd.', ui.ButtonSet.OK);
     return;
   }
 
   // PDF URL ophalen of opnieuw genereren
   let pdfUrl = gevonden[19]; // PDF URL kolom
   if (!pdfUrl) {
-    ui.alert('Geen PDF beschikbaar. Genereer eerst de factuur opnieuw via het formulier.');
+    ui.alert('Geen PDF', 'Er is nog geen PDF beschikbaar voor deze factuur. Maak de factuur opnieuw aan via het formulier.', ui.ButtonSet.OK);
     return;
   }
 
@@ -249,10 +249,17 @@ function stuurVerkoopfactuurPdf() {
 
     // Status bijwerken
     sheet.getRange(rij, 15).setValue(FACTUUR_STATUS.VERZONDEN);
-    ui.alert(`Factuur ${factuurnummer} is verstuurd naar ${email}.`);
+    ui.alert('Verstuurd!', `Factuur ${factuurnummer} is per e-mail verstuurd naar ${email}.`, ui.ButtonSet.OK);
 
   } catch (err) {
-    ui.alert('Fout bij versturen: ' + err.message);
+    // Bij fout: toon de PDF link zodat gebruiker het handmatig kan doen
+    const pdfLink = pdfUrl || '';
+    ui.alert('Versturen mislukt',
+      `De factuur kon niet per e-mail worden verstuurd.\n\nFout: ${err.message}\n\n` +
+      `U kunt de factuur-PDF handmatig downloaden en versturen:\n${pdfLink}\n\n` +
+      `Let op: e-mail versturen werkt alleen vanuit een Gmail-account. Gebruikt u een ander e-mailprogramma (bijv. Outlook, ProtonMail)? ` +
+      `Download dan de PDF via bovenstaande link en verstuur deze zelf.`,
+      ui.ButtonSet.OK);
   }
 }
 

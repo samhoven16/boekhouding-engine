@@ -1,12 +1,7 @@
 /**
  * Assistent.gs
- * Ingebouwde slimme helpdesk — beantwoordt vragen over het programma,
- * boekhouding en belastingen op basis van uw eigen boekhouding.
- *
- * Bevat:
- * 1. Contextbewuste FAQ (leest uw eigen cijfers mee)
- * 2. Directe doorverwijzing naar belastingadvies
- * 3. Optionele AI-doorverwijzing via externe link
+ * Ingebouwde hulpcenter — beantwoordt vragen over het programma,
+ * boekhouding en belastingen op basis van uw eigen administratie.
  */
 
 // ─────────────────────────────────────────────
@@ -19,72 +14,72 @@ function openAssistent() {
   const jaar = new Date().getFullYear();
   const btwPeriode = getInstelling_('BTW aangifteperiode') || 'Kwartaal';
 
-  // Snel antwoord op basis van actuele cijfers
+  // Actuele cijfers uit eigen administratie
   const snelleFeiten = [
-    { vraag: 'Wat is mijn omzet dit jaar?',        antwoord: `Uw omzet (year-to-date) is ${formatBedrag_(kpi.omzet)}.` },
-    { vraag: 'Wat zijn mijn kosten?',              antwoord: `Uw totale kosten dit jaar zijn ${formatBedrag_(kpi.kosten)}.` },
-    { vraag: 'Hoeveel winst maak ik?',             antwoord: `Uw nettowinst is ${formatBedrag_(kpi.nettowinst)} (winstmarge: ${kpi.winstmarge}%).` },
-    { vraag: 'Wat heb ik open staan bij klanten?', antwoord: `Open debiteuren: ${formatBedrag_(kpi.debiteurenOpen)} (${kpi.aantalOpenFacturen} facturen).` },
-    { vraag: 'Hoeveel BTW ben ik verschuldigd?',   antwoord: `Uw BTW-saldo dit jaar: ${formatBedrag_(kpi.btwSaldo)}.${kpi.btwSaldo > 0 ? ' Dit is te betalen aan de Belastingdienst.' : ' U kunt dit terugvragen.'}` },
-    { vraag: 'Wat is mijn banksaldo?',             antwoord: `Huidig banksaldo in de administratie: ${formatBedrag_(kpi.banksaldo)}.` },
+    { vraag: 'Wat is mijn omzet dit jaar?',                antwoord: `Uw totale omzet dit jaar is ${formatBedrag_(kpi.omzet)}.` },
+    { vraag: 'Wat zijn mijn kosten?',                      antwoord: `Uw totale kosten dit jaar zijn ${formatBedrag_(kpi.kosten)}.` },
+    { vraag: 'Hoeveel winst maak ik?',                     antwoord: `Uw netto winst is ${formatBedrag_(kpi.nettowinst)} (winstmarge: ${kpi.winstmarge}%).` },
+    { vraag: 'Hoeveel moeten klanten mij nog betalen?',    antwoord: `Open facturen bij klanten: ${formatBedrag_(kpi.debiteurenOpen)} (${kpi.aantalOpenFacturen} facturen).` },
+    { vraag: 'Hoeveel BTW moet ik afdragen?',              antwoord: `Uw BTW-saldo dit jaar: ${formatBedrag_(kpi.btwSaldo)}.${kpi.btwSaldo > 0 ? ' Dit moet u betalen aan de Belastingdienst.' : ' Dit kunt u terugvragen.'}` },
+    { vraag: 'Wat staat er op mijn zakelijke rekening?',   antwoord: `Banksaldo volgens de administratie: ${formatBedrag_(kpi.banksaldo)}.` },
   ];
 
-  // Kennisbank (altijd beschikbaar)
+  // Uitgebreide FAQ
   const faq = [
     {
-      categorie: 'Hoe gebruik ik het programma?',
+      categorie: 'Hoe gebruik ik dit programma?',
       items: [
         { v: 'Hoe maak ik een factuur?',
-          a: 'Klik op "📋 Boekhouding formulier openen" in het menu of via Boekhouding → Formulier. Kies "Inkomsten (factuur maken)", vul de gegevens in en klik op verzenden. De factuur wordt automatisch aangemaakt en gemaild.' },
+          a: 'Klik bovenin op <b>Boekhouding → Nieuw invoeren</b>. Kies "Inkomsten (factuur maken)", vul de gegevens in en klik op verzenden. De factuur (PDF) wordt automatisch aangemaakt en per e-mail naar uw klant gestuurd.' },
         { v: 'Hoe boek ik een kostenpost?',
-          a: 'Open het formulier en kies "Uitgaven (kosten boeken)". Vul leverancier, bedrag en categorie in. De boeking wordt automatisch verwerkt in uw administratie en BTW-overzicht.' },
-        { v: 'Hoe voer ik een declaratie in?',
-          a: 'Open het formulier en kies "Declaratie (privé voorgeschoten)". Vul het bedrag, de omschrijving en de categorie in. Het systeem boekt dit als een privé-onttrekking.' },
-        { v: 'Hoe koppel ik mijn bankafschrift?',
-          a: 'Ga naar Boekhouding → Bankboek → Bankafschrift importeren (CSV). Exporteer uw bankafschrift als CSV bij uw bank en plak de inhoud in het importvenster.' },
-        { v: 'Hoe stuur ik een herinnering?',
-          a: 'Automatische betalingsherinneringen worden dagelijks verstuurd (na 1, 7 en 14 dagen). Handmatig: Boekhouding → Facturen → Betalingsherinneringen nu sturen.' },
+          a: 'Open hetzelfde formulier en kies "Uitgaven (kosten boeken)". Vul leverancier, bedrag en categorie in. De boeking wordt direct verwerkt in uw administratie en BTW-overzicht.' },
+        { v: 'Hoe dien ik een declaratie in?',
+          a: 'Heeft u iets zakelijks betaald met uw privérekening? Open het formulier, kies "Declaratie" en vul het bedrag en de omschrijving in. Het systeem houdt bij dat u dit geld nog terugkrijgt.' },
+        { v: 'Hoe importeer ik mijn bankafschrift?',
+          a: 'Ga naar <b>Boekhouding → Bank → Bankafschrift importeren</b>. Download eerst uw bankafschrift als CSV bij uw bank (bijv. via internetbankieren), en plak de inhoud in het importvenster.' },
+        { v: 'Hoe stuur ik een betalingsherinnering?',
+          a: 'Het systeem stuurt automatisch herinneringen na 1, 7 en 14 dagen na de vervaldatum. Wilt u het nu doen? Ga naar <b>Boekhouding → Facturen → Betalingsherinneringen versturen</b>.' },
+        { v: 'Hoe upload ik een foto van een bon?',
+          a: 'Klik op <b>Boekhouding → Bon of factuur uploaden (foto)</b>. Upload een foto van de bon en vul een korte omschrijving in. Het bestand wordt opgeslagen in Google Drive.' },
       ],
     },
     {
       categorie: 'BTW en belastingen',
       items: [
-        { v: 'Wanneer moet ik BTW aangifte doen?',
-          a: `U doet ${btwPeriode === 'Kwartaal' ? 'elk kwartaal' : 'maandelijks'} BTW aangifte. Deadlines: Q1 → 30 april | Q2 → 31 juli | Q3 → 31 oktober | Q4 → 31 januari. Ga naar Boekhouding → BTW om uw aangifte te genereren.` },
-        { v: 'Wat is de KOR regeling?',
-          a: 'De Kleineondernemersregeling (KOR) geldt als uw jaaromzet onder €20.000 blijft. U hoeft dan geen BTW te rekenen en geen aangifte te doen. Uw systeem detecteert dit automatisch. Zie Boekhouding → Belastingadvies.' },
+        { v: 'Wanneer moet ik BTW-aangifte doen?',
+          a: `U doet ${btwPeriode === 'Kwartaal' ? 'elk kwartaal (elke 3 maanden)' : 'maandelijks'} BTW-aangifte.<br><b>Deadlines:</b> Q1 → 30 april | Q2 → 31 juli | Q3 → 31 oktober | Q4 → 31 januari.<br>Ga naar <b>Boekhouding → BTW</b> om uw aangifte klaar te zetten.` },
+        { v: 'Wat is de Kleineondernemersregeling (KOR)?',
+          a: 'Als uw jaaromzet onder €20.000 blijft, bent u vrijgesteld van BTW-aangifte. U hoeft dan geen BTW te berekenen aan klanten. Uw systeem detecteert dit automatisch. Zie <b>Boekhouding → BTW → KOR check</b>.' },
         { v: 'Wat is de zelfstandigenaftrek?',
-          a: 'Als u meer dan 1.225 uur per jaar aan uw onderneming besteedt, kunt u €5.030 aftrekken van uw winst (2024). Dit verlaagt uw inkomstenbelasting aanzienlijk.' },
+          a: `Als u meer dan 1.225 uur per jaar aan uw bedrijf besteedt, mag u een vast bedrag aftrekken van uw winst. Dit verlaagt uw inkomstenbelasting. Zie <b>Boekhouding → Belastingtips</b> voor het exacte bedrag.` },
         { v: 'Wat is de MKB-winstvrijstelling?',
-          a: '14% van uw winst (na aftrekposten) is vrijgesteld van inkomstenbelasting. Dit wordt automatisch berekend in uw belastingadvies.' },
+          a: 'U betaalt inkomstenbelasting over 86% van uw winst — 14% is belastingvrij. Dit wordt automatisch berekend in uw belastingadvies.' },
         { v: 'Wat zijn representatiekosten?',
-          a: 'Kosten voor zakelijke lunches, diners en relatiegeschenken. Slechts 73,5% is fiscaal aftrekbaar. Gebruik de categorie "Maaltijden & Representatie" bij het boeken.' },
-        { v: 'Hoe werkt de KIA (Kleinschaligheidsinvesteringsaftrek)?',
-          a: 'Als u tussen €2.800 en €353.973 investeert in bedrijfsmiddelen, kunt u 28% extra aftrekken. Het systeem detecteert dit automatisch via uw grootboek.' },
+          a: 'Zakelijke lunches, diners en relatiegeschenken. Hiervan mag u slechts 73,5% als kosten aftrekken. Gebruik de categorie "Maaltijden & Representatie" bij het boeken van deze kosten.' },
+        { v: 'Krijg ik extra aftrek bij bedrijfsinvesteringen?',
+          a: 'Ja! Bij investeringen tussen €2.800 en €353.973 (bijv. apparatuur, gereedschap, voertuig) krijgt u extra belastingaftrek via de Kleinschaligheidsinvesteringsaftrek (KIA). Het systeem detecteert dit automatisch.' },
       ],
     },
     {
       categorie: 'Facturen',
       items: [
-        { v: 'Welke verplichte vermeldingen staan er op een factuur?',
-          a: 'Een factuur moet bevatten: uw naam/bedrijfsnaam, adres, BTW-nummer, KvK-nummer, factuurdatum, factuurnummer, omschrijving, bedrag excl. BTW, BTW-percentage, BTW-bedrag, totaalbedrag en IBAN. Uw systeem vult dit automatisch in.' },
-        { v: 'Hoe maak ik een creditnota?',
-          a: 'Ga naar tabblad Verkoopfacturen, zoek de factuur, en bel via het menu de functie "Creditnota aanmaken" aan (Boekhouding → Facturen). Het systeem boekt de storno automatisch.' },
+        { v: 'Wat staat er verplicht op een factuur?',
+          a: 'Bedrijfsnaam, adres, BTW-nummer, KvK-nummer, factuurdatum, factuurnummer, omschrijving, bedrag excl. BTW, BTW-percentage, BTW-bedrag, totaalbedrag en uw IBAN. <b>Dit wordt automatisch ingevuld door het systeem.</b>' },
         { v: 'Wat is een UBL-factuur?',
-          a: 'UBL (Universal Business Language) is een digitaal factuurformaat dat vereist is voor facturering aan de overheid (e-Facturatie) en steeds vaker door grote bedrijven. Uw systeem genereert automatisch een UBL 2.1 XML-bestand bij elke factuur.' },
+          a: 'UBL is een digitaal factuurformaat dat steeds vaker vereist is bij de overheid en grote bedrijven (e-Facturatie). Bij elke factuur maakt het systeem automatisch een UBL-bestand aan dat u kunt meesturen.' },
         { v: 'Hoe lang moet ik facturen bewaren?',
-          a: 'Minimaal 7 jaar (fiscale bewaarplicht). Uw facturen worden automatisch opgeslagen in Google Drive in de mappenstructuur per boekjaar.' },
+          a: 'Minimaal <b>7 jaar</b> (wettelijke bewaarplicht). Uw facturen worden automatisch opgeslagen in Google Drive.' },
       ],
     },
     {
-      categorie: 'Rapportages',
+      categorie: 'Overzichten & rapporten',
       items: [
-        { v: 'Hoe genereer ik een balans?',
-          a: 'Boekhouding → Rapporten → Balans genereren. U ziet automatisch uw activa, passiva en eigen vermogen.' },
-        { v: 'Wat is het verschil tussen balans en W&V rekening?',
-          a: 'De balans toont uw vermogenspositie (bezittingen vs. schulden) op een moment. De W&V rekening (resultatenrekening) toont uw omzet en kosten over een periode.' },
-        { v: 'Hoe exporteer ik voor mijn accountant?',
-          a: 'Ga naar Boekhouding → Rapporten → Jaarrekening genereren. Dit genereert een volledig rapport dat u kunt delen met uw accountant.' },
+        { v: 'Hoe maak ik een balans?',
+          a: 'Ga naar <b>Boekhouding → Overzichten → Balans</b>. U ziet dan een overzicht van uw bezittingen (activa) en schulden (passiva).' },
+        { v: 'Wat is het verschil tussen balans en winst & verlies?',
+          a: 'De <b>balans</b> laat zien wat u bezit en wat u schuldig bent (op een bepaald moment). De <b>winst & verlies</b> laat zien hoeveel u verdiend en uitgegeven heeft (over een periode).' },
+        { v: 'Hoe deel ik mijn administratie met mijn accountant?',
+          a: 'Ga naar <b>Boekhouding → Overzichten → Jaarrekening</b>. Dit genereert een compleet rapport dat u kunt delen.' },
       ],
     },
   ];
@@ -138,54 +133,54 @@ function openAssistent() {
   .ai-blok a { color: #1565C0; text-decoration: none; font-weight: bold; }
   .ai-blok a:hover { text-decoration: underline; }
   .tip { background: #FFF8E1; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin: 8px 0; }
-  .belasting-knop { background: #1A237E; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; width: 100%; margin: 8px 0; }
-  .belasting-knop:hover { background: #283593; }
+  .actie-knop { background: #1A237E; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; width: 100%; margin: 8px 0; }
+  .actie-knop:hover { background: #283593; }
 </style>
 </head>
 <body>
 <div class="header">
-  💬 Slimme Helpdesk – ${bedrijf}
-  <span>Uw administratie op ${formatDatum_(new Date())} | Boekjaar ${jaar}</span>
+  Hulpcenter – ${escHtml_(bedrijf)}
+  <span>${formatDatum_(new Date())} | Boekjaar ${jaar}</span>
 </div>
 
 <div class="tabs">
-  <div class="tab actief" onclick="toonTab('snel', this)">📊 Uw cijfers</div>
-  <div class="tab" onclick="toonTab('faq', this)">❓ Vragen & Antwoorden</div>
-  <div class="tab" onclick="toonTab('ai', this)">🤖 AI Assistent</div>
+  <div class="tab actief" onclick="toonTab('snel', this)">Uw cijfers</div>
+  <div class="tab" onclick="toonTab('faq', this)">Veelgestelde vragen</div>
+  <div class="tab" onclick="toonTab('ai', this)">AI hulp</div>
 </div>
 
 <div id="snel" class="sectie actief">
-  <p style="color:#666;font-size:11px;margin-bottom:8px">Direct antwoord op basis van uw huidige administratie:</p>
+  <p style="color:#666;font-size:11px;margin-bottom:8px">Antwoorden op basis van uw huidige administratie:</p>
   ${snelHtml}
-  <div class="tip">📌 Meer details? Gebruik Boekhouding → Rapporten of Boekhouding → Belastingadvies</div>
-  <button class="belasting-knop" onclick="google.script.run.genereerBelastingadvies()">
-    💡 Belastingadvies & aftrekposten genereren
+  <div class="tip">Meer details nodig? Ga naar <b>Boekhouding → Overzichten</b> of <b>Belastingtips</b>.</div>
+  <button class="actie-knop" onclick="google.script.run.genereerBelastingadvies()">
+    Belastingtips & besparingen bekijken
   </button>
 </div>
 
 <div id="faq" class="sectie">
-  <p style="color:#666;font-size:11px;margin-bottom:8px">Klik op een categorie om vragen te bekijken:</p>
+  <p style="color:#666;font-size:11px;margin-bottom:8px">Klik op een categorie om antwoorden te bekijken:</p>
   ${faqHtml}
 </div>
 
 <div id="ai" class="sectie">
   <div class="ai-blok">
-    <h4>🤖 Stel een vraag aan AI</h4>
-    <p>Voor complexe boekhoudvragen kunt u een AI-assistent gebruiken. Kopieer uw vraag en plak uw context:</p>
-    <p><a href="https://claude.ai" target="_blank">Claude (Anthropic) openen →</a></p>
-    <p><a href="https://chat.openai.com" target="_blank">ChatGPT openen →</a></p>
+    <h4>Stel een vraag aan AI</h4>
+    <p>Voor specifieke vragen over uw situatie kunt u een AI-assistent raadplegen. Kopieer onderstaande context en stel uw vraag:</p>
+    <p><a href="https://claude.ai" target="_blank">Claude (Anthropic) openen</a></p>
+    <p><a href="https://chat.openai.com" target="_blank">ChatGPT openen</a></p>
   </div>
   <div class="tip">
-    <b>Handig prompt-voorbeeld:</b><br>
-    "Ik ben ZZP'er in Nederland. Mijn omzet dit jaar is ${formatBedrag_(kpi.omzet)}, kosten ${formatBedrag_(kpi.kosten)}.
-    Ik gebruik Google Spreadsheets voor mijn boekhouding (dubbel boekhouden, NL GAAP).
-    Vraag: [uw vraag hier]"
+    <b>Voorbeeldvraag om te plakken:</b><br>
+    "Ik ben ondernemer in Nederland. Mijn omzet dit jaar is ${formatBedrag_(kpi.omzet)}, kosten ${formatBedrag_(kpi.kosten)}.
+    Ik gebruik een boekhoudprogramma met dubbel boekhouden (NL GAAP).
+    Vraag: [typ hier uw vraag]"
   </div>
   <div class="ai-blok" style="background:#E8F5E9">
-    <h4>🔗 Koppelen met AI-workflows (Zapier / Make)</h4>
-    <p>Verbind uw boekhouding met AI-tools via de ingebouwde webhook API:</p>
-    <button class="belasting-knop" style="background:#2E7D32" onclick="google.script.run.toonZapierInstructies(); google.script.host.close();">
-      Webhook / Zapier instructies tonen
+    <h4>Automatisering (Zapier / Make / n8n)</h4>
+    <p>Verbind uw boekhouding met andere tools via de ingebouwde koppeling:</p>
+    <button class="actie-knop" style="background:#2E7D32" onclick="google.script.run.toonZapierInstructies(); google.script.host.close();">
+      Koppelinstructies bekijken
     </button>
   </div>
 </div>
@@ -206,5 +201,5 @@ function toggle(el) {
 </html>
   `).setWidth(580).setHeight(560);
 
-  SpreadsheetApp.getUi().showModalDialog(html, '💬 Helpdesk & Assistent');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Hulpcenter');
 }
