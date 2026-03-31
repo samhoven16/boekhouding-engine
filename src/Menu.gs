@@ -104,7 +104,19 @@ function onOpen() {
       .addItem('Alle overzichten vernieuwen', 'vernieuwAlleRapporten')
       .addItem('Saldi herberekenen (bij fouten)', 'herberekeningGrootboekSaldi')
       .addSeparator()
+      .addItem('✅ Instellingen controleren', 'valideerEnMeldInstellingen')
+      .addSeparator()
       .addItem('Setup opnieuw uitvoeren (reset)', 'resetSetup')
+    )
+
+    // ── Privé Financiën ───────────────────────
+    .addSubMenu(ui.createMenu('🏠 Privé Financiën')
+      .addItem('Privé dashboard openen', 'openPriveDashboard')
+      .addSeparator()
+      .addItem('Privé transactie toevoegen', 'voegPriveTransactieToe')
+      .addItem('Vermogensoverzicht beheren', 'beheerVermogensoverzicht')
+      .addSeparator()
+      .addItem('💡 IB aangifte schatting (Box 1/2/3)', 'openIbAangifteHelper')
     )
 
     // ── Licentie & Updates ────────────────────

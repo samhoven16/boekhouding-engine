@@ -222,7 +222,86 @@ function vernieuwDashboard() {
     rij++;
   });
 
+  // ── ROI Sectie: "Wat heeft Boekhouding Engine u opgeleverd?" ─────────
+  rij += 2;
+  sheet.getRange(rij, 1, 1, 8).merge()
+    .setValue('WAT HEEFT BOEKHOUDING ENGINE U OPGELEVERD?')
+    .setBackground('#1A237E').setFontColor('#FFFFFF')
+    .setFontWeight('bold').setFontSize(12);
+  rij++;
+
+  const roiData = berekenRoiData_(ss, kpi);
+
+  const roiItems = [
+    { label: 'Facturen verstuurd', waarde: roiData.aantalFacturen + ' stuks', icon: '📋' },
+    { label: 'Omzet geïnd dit jaar', waarde: formatBedrag_(roiData.omzetGeind), icon: '💶' },
+    { label: 'BTW correct verwerkt', waarde: formatBedrag_(roiData.btwVerwerkt), icon: '✅' },
+    { label: 'Geschatte tijdsbesparing', waarde: roiData.tijdsBesparing + ' uur/jaar', icon: '⏱' },
+  ];
+
+  roiItems.forEach((item, i) => {
+    const col = i * 2 + 1;
+    sheet.getRange(rij, col, 1, 2).merge()
+      .setValue(item.icon + '  ' + item.label)
+      .setBackground('#E8EAF6').setFontWeight('bold').setFontSize(9)
+      .setHorizontalAlignment('center');
+    sheet.getRange(rij + 1, col, 1, 2).merge()
+      .setValue(item.waarde)
+      .setBackground('#E8EAF6').setFontSize(14).setFontWeight('bold')
+      .setHorizontalAlignment('center').setFontColor('#1A237E');
+  });
+
+  sheet.setRowHeight(rij, 28);
+  sheet.setRowHeight(rij + 1, 32);
+  rij += 3;
+
+  // Tijdbesparing motivatietekst
+  sheet.getRange(rij, 1, 1, 8).merge()
+    .setValue(`💡 Op basis van ${roiData.aantalFacturen} facturen, ${roiData.aantalBoekingen} boekingen en automatische categorisering schat Boekhouding Engine u ~${roiData.tijdsBesparing} uur administratietijd te hebben bespaard dit jaar.`)
+    .setBackground('#F5F5FF').setFontSize(9).setWrap(true).setFontColor('#37474F');
+  sheet.setRowHeight(rij, 30);
+
   ss.setActiveSheet(sheet);
+}
+
+// ─────────────────────────────────────────────
+//  ROI DATA BEREKENEN
+// ─────────────────────────────────────────────
+function berekenRoiData_(ss, kpi) {
+  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  const jrData = ss.getSheetByName(SHEETS.JOURNAALPOSTEN).getDataRange().getValues();
+
+  const aantalFacturen = Math.max(0, vfData.length - 1);
+
+  // Omzet geïnd = som van alle betaalde facturen
+  let omzetGeind = 0;
+  for (let i = 1; i < vfData.length; i++) {
+    if (vfData[i][14] === FACTUUR_STATUS.BETAALD) {
+      omzetGeind += parseFloat(vfData[i][13]) || 0; // betaald bedrag
+    }
+  }
+
+  // BTW correct verwerkt = som van alle BTW-bedragen op facturen
+  let btwVerwerkt = 0;
+  for (let i = 1; i < vfData.length; i++) {
+    const incl = parseFloat(vfData[i][12]) || 0;
+    const excl = parseFloat(vfData[i][11]) || 0;
+    btwVerwerkt += rondBedrag_(incl - excl);
+  }
+
+  const aantalBoekingen = Math.max(0, jrData.length - 1);
+
+  // Tijdsbesparing schatting:
+  // - 15 min per factuur aanmaken/versturen
+  // - 5 min per boeking handmatig vs. 1 min automatisch → 4 min bespaard
+  // - 2 uur per kwartaal BTW aangifte (vs. 4 uur handmatig) → 6 uur/jaar
+  const minPerFactuur = 15;
+  const minPerBoeking = 4;
+  const minBtw = 6 * 60;
+  const totalMin = (aantalFacturen * minPerFactuur) + (aantalBoekingen * minPerBoeking) + minBtw;
+  const tijdsBesparing = Math.round(totalMin / 60);
+
+  return { aantalFacturen, omzetGeind, btwVerwerkt, aantalBoekingen, tijdsBesparing };
 }
 
 // ─────────────────────────────────────────────
