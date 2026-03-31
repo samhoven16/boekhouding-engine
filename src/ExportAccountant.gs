@@ -162,7 +162,8 @@ function emailNaarAccountant() {
 function verstuurSamenvattingAccountant(emailAccountant, persoonlijkBericht) {
   const ss      = getSpreadsheet_();
   const bedrijf = getInstelling_('Bedrijfsnaam') || 'Mijn Bedrijf';
-  const jaar    = new Date().getFullYear();
+  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
+  const jaar    = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
   const kg      = berekenKengetallen_(ss);
 
   MailApp.sendEmail({

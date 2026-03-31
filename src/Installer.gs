@@ -24,13 +24,17 @@
 // ─────────────────────────────────────────────
 
 /**
- * Verwerkt installatieaanvragen via de browser.
+ * Installatieformulier via doGet.
+ *
+ * NIET direct aanroepen — de gecombineerde doGet in API.gs routeert
+ * naar bouwInstallerPagina_() als het query-param ?sleutel= aanwezig is.
+ * GAS staat slechts één doGet per project toe; zie API.gs.
+ *
  * URL: https://script.google.com/macros/s/[ID]/exec?sleutel=BKHE-XXXX-XXXX-XXXX
  */
-function doGet(e) {
+function doGetInstaller_(e) {
   const sleutel = String((e && e.parameter && e.parameter.sleutel) || '').trim().toUpperCase();
 
-  // Toon installatieformulier (met of zonder vooringevulde sleutel)
   return HtmlService.createHtmlOutput(bouwInstallerPagina_(sleutel))
     .setTitle('Boekhouding Engine — Installatie')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);

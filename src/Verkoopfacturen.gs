@@ -378,7 +378,8 @@ function verwerkBankCsvImport(csvTekst, scheidingsteken, kolommen) {
 
     const datumStr = koloms[kolommen.datum];
     const omschr = koloms[kolommen.omschr];
-    const bedragStr = koloms[kolommen.bedrag].replace(',', '.');
+    // Normaliseer Nederlandstalig getal: "1.234,56" → "1234.56"
+    const bedragStr = koloms[kolommen.bedrag].replace(/\./g, '').replace(',', '.');
     const bedrag = parseFloat(bedragStr);
 
     if (isNaN(bedrag)) continue;

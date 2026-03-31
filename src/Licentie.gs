@@ -24,10 +24,13 @@ const LICENTIE_KLANT_KEY     = 'licentieKlantnaam';
 const LICENTIE_VERSIE_KEY    = 'licentieVersie';
 const LICENTIE_CACHE_UREN    = 24;
 
-// URL van de centrale licentieserver (Google Sheet als Web App, gepubliceerd door de ontwikkelaar)
-// Vervang dit door uw eigen gepubliceerde Web App URL na deployment
-const LICENTIE_SERVER_URL    = PropertiesService.getScriptProperties()
-  .getProperty('LICENTIE_SERVER_URL') || '';
+// URL van de centrale licentieserver — lazy geladen (niet op module-niveau,
+// want PropertiesService aanroepen tijdens script-parsing kan falen in
+// bepaalde GAS-contexten zoals bibliotheekimports of editor-tests).
+function getLicentieServerUrl_() {
+  return PropertiesService.getScriptProperties()
+    .getProperty('LICENTIE_SERVER_URL') || '';
+}
 
 // ─────────────────────────────────────────────
 //  LICENTIE DIALOOG TONEN
@@ -156,7 +159,7 @@ function isLicentieGeldig_() {
  * Als de server niet bereikbaar is, geldt de gecachte status.
  */
 function valideerLicentieOpServer_(sleutel) {
-  const serverUrl = LICENTIE_SERVER_URL;
+  const serverUrl = getLicentieServerUrl_();
 
   // Als er geen server URL is geconfigureerd, accepteer ALLE sleutels
   // (voor demo/dev gebruik — zet de server URL in voor productie)
