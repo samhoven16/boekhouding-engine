@@ -14,6 +14,32 @@
  *   btwTarief, btwBedrag, ref, projectcode, type, notities, isHoofdpost
  */
 function maakJournaalpost_(ss, opt) {
+  // ── Periode-vergrendeling check ───────────────────────────────────────
+  // Adresseert "geen controle" pijnpunt: voorkom boekingen in afgesloten periodes
+  const boekDatum = opt.datum instanceof Date ? opt.datum : new Date(opt.datum || new Date());
+  const geslotenPeriodes = PropertiesService.getScriptProperties().getProperty('GESLOTEN_PERIODES');
+  if (geslotenPeriodes) {
+    try {
+      const periodes = JSON.parse(geslotenPeriodes);
+      for (const p of periodes) {
+        const van = new Date(p.van);
+        const tot = new Date(p.tot);
+        if (boekDatum >= van && boekDatum <= tot) {
+          throw new Error(
+            `Periode ${Utilities.formatDate(van, 'Europe/Amsterdam', 'MMM yyyy')} is afgesloten. ` +
+            `U kunt geen boekingen meer maken in een afgesloten periode. ` +
+            `Gebruik "Periode ontgrendelen" als dit een correctie is.`
+          );
+        }
+      }
+    } catch (jsonErr) {
+      if (jsonErr.message.includes('afgesloten')) throw jsonErr; // Rethrow periode-fout
+      Logger.log('GESLOTEN_PERIODES parse fout (ongeldige JSON): ' + jsonErr.message);
+      // Sla corrupte waarde op zodat toekomstige boekingen niet geblokkeerd worden
+      PropertiesService.getScriptProperties().deleteProperty('GESLOTEN_PERIODES');
+    }
+  }
+
   const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
   const boekingId = volgendBoekingId_();
 
@@ -163,7 +189,6 @@ function genereerGrootboekkaart_(ss, code, naam) {
 
   const headers = ['Datum', 'Omschrijving', 'Dagboek', 'Referentie', 'Debet', 'Credit', 'Saldo'];
   zetHeaderRij_(sheet, headers);
-  sheet.setRange = sheet.getRange(2, 1, 1, 7);
 
   const jpSheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
   const data = jpSheet.getDataRange().getValues();
@@ -317,7 +342,7 @@ function vernieuwDebiteurenOverzicht() {
   const sheet = ss.getSheetByName(SHEETS.DEBITEUREN);
   sheet.clearContents();
 
-  const headers = ['Factuurnummer', 'Datum', 'Vervaldatum', 'Klant', 'Bedrag incl.', 'Betaald', 'Openstaand', 'Dagen over', 'Status'];
+  const headers = ['Factuurnummer', 'Datum', 'Vervaldatum', 'Klant', 'Bedrag incl.', 'Betaald', 'Openstaand', 'Dagen te laat', 'Status'];
   zetHeaderRij_(sheet, headers);
 
   const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
@@ -345,7 +370,7 @@ function vernieuwDebiteurenOverzicht() {
       incl,
       betaald,
       open,
-      dagenOver > 0 ? dagenOver : 0,
+      dagenOver > 0 ? dagenOver : '',
       status,
     ]);
 
@@ -357,9 +382,9 @@ function vernieuwDebiteurenOverzicht() {
     rij++;
   }
 
-  // Totaalregel
-  sheet.appendRow(['', '', '', 'TOTAAL OPENSTAAND', '', '', totaalOpen, '', ''])
-    .setFontWeight('bold');
+  // Totaalregel — appendRow() returns Sheet, not Range; get range separately
+  sheet.appendRow(['', '', '', 'TOTAAL OPENSTAAND', '', '', totaalOpen, '', '']);
+  sheet.getRange(rij, 1, 1, 9).setFontWeight('bold');
   sheet.getRange(rij, 5, 1, 3).setBackground(KLEUREN.SECTIE_BG);
   sheet.getRange(2, 5, rij - 1, 3).setNumberFormat('€#,##0.00');
 }
@@ -372,10 +397,11 @@ function vernieuwCrediteurenOverzicht() {
   const sheet = ss.getSheetByName(SHEETS.CREDITEUREN);
   sheet.clearContents();
 
-  const headers = ['Intern nr.', 'Factuurdatum', 'Leverancier', 'Factuurref.', 'Bedrag incl.', 'Status', 'Openstaand'];
+  const headers = ['Intern nr.', 'Factuurdatum', 'Vervaldatum', 'Leverancier', 'Factuurref.', 'Bedrag incl.', 'Betaald', 'Openstaand', 'Status'];
   zetHeaderRij_(sheet, headers);
 
   const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  const vandaag = new Date();
   let rij = 2;
   let totaalOpen = 0;
 
@@ -384,23 +410,44 @@ function vernieuwCrediteurenOverzicht() {
     if (status === FACTUUR_STATUS.BETAALD) continue;
 
     const incl = parseFloat(ifData[i][11]) || 0;
-    totaalOpen += incl;
+    // ifData[i][13] is Betaaldatum (a date), not a betaald amount — inkoopfacturen
+    // use binary paid/unpaid status. Partial payments are not tracked in this schema,
+    // so openstaand equals incl for all unpaid rows.
+    const betaald = 0;
+    const openstaand = rondBedrag_(incl - betaald);
+    if (openstaand <= 0) continue;
+
+    // ifData[i][3] is Factuurdatum leverancier (no separate vervaldatum column in schema)
+    const factuurdatum = ifData[i][3] ? new Date(ifData[i][3]) : null;
+    // Approximate vervaldatum: factuurdatum + 30 days (standard payment term)
+    const vervaldatum = factuurdatum ? new Date(factuurdatum.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
+    const dagenOver = vervaldatum ? Math.floor((vandaag - vervaldatum) / (1000 * 60 * 60 * 24)) : 0;
+
+    totaalOpen += openstaand;
 
     sheet.appendRow([
       ifData[i][1],  // Intern nummer
-      ifData[i][3],  // Factuurdatum
+      factuurdatum,  // Factuurdatum
+      vervaldatum,   // Vervaldatum (berekend op basis van factuurdatum + 30 dagen)
       ifData[i][6],  // Leverancier
       ifData[i][4],  // Factuurref
       incl,
+      betaald || '',
+      openstaand,
       status,
-      incl,
     ]);
+
+    if (dagenOver > 0) {
+      sheet.getRange(rij, 1, 1, 9).setBackground('#FFEBEE');
+    }
+
     rij++;
   }
 
-  sheet.appendRow(['', '', 'TOTAAL TE BETALEN', '', '', '', totaalOpen])
-    .setFontWeight('bold');
-  sheet.getRange(2, 5, rij - 1, 3).setNumberFormat('€#,##0.00');
+  sheet.appendRow(['', '', '', 'TOTAAL TE BETALEN', '', '', '', totaalOpen, '']);
+  sheet.getRange(rij, 1, 1, 9).setFontWeight('bold');
+  sheet.getRange(rij, 6, 1, 3).setBackground(KLEUREN.SECTIE_BG);
+  sheet.getRange(2, 6, rij - 1, 3).setNumberFormat('€#,##0.00');
 }
 
 // ─────────────────────────────────────────────
@@ -490,11 +537,15 @@ function zoekGrootboekBwType_(code) {
 // ─────────────────────────────────────────────
 //  HELPERS RELATIES
 // ─────────────────────────────────────────────
-function zoekOfMaakRelatie_(ss, naam, type) {
+function zoekOfMaakRelatie_(ss, naam, type, email) {
   const sheet = ss.getSheetByName(SHEETS.RELATIES);
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][2]).toLowerCase() === naam.toLowerCase()) {
+      // Sla e-mail op als die nog niet bekend was (kolom 11 = index 10)
+      if (email && !data[i][10]) {
+        sheet.getRange(i + 1, 11).setValue(email);
+      }
       return data[i][0]; // Relatie ID
     }
   }
@@ -503,7 +554,7 @@ function zoekOfMaakRelatie_(ss, naam, type) {
   const id = volgendRelatieId_();
   sheet.appendRow([
     id, type, naam, '', '', '', '', 'Nederland',
-    '', '', '', '', '', 30, '21% (hoog)', '', 'Ja', '', new Date()
+    '', '', email || '', '', '', 30, '21% (hoog)', '', 'Ja', '', new Date()
   ]);
   return id;
 }
@@ -533,4 +584,79 @@ function bepaalBtwVoorbelastingRekening_(btwLabel) {
   if (btwLabel.includes('21')) return '1410';
   if (btwLabel.includes('9')) return '1420';
   return '1400';
+}
+
+// ─────────────────────────────────────────────
+//  PERIODE VERGRENDELING
+//  Adresseert: "geen controle" (Excel), "compliance risico" (Wave)
+// ─────────────────────────────────────────────
+
+/**
+ * Vergrendelt een periode zodat er geen nieuwe boekingen in gemaakt kunnen worden.
+ * Wordt automatisch aangeroepen bij het afsluiten van een BTW-periode.
+ */
+function vergrendelPeriode_(van, tot, label) {
+  const props = PropertiesService.getScriptProperties();
+  const bestaand = props.getProperty('GESLOTEN_PERIODES');
+  const periodes = bestaand ? JSON.parse(bestaand) : [];
+
+  // Voorkom dubbele vergrendeling
+  const al = periodes.find(p => p.van === van.toISOString() && p.tot === tot.toISOString());
+  if (!al) {
+    periodes.push({
+      van:   van.toISOString(),
+      tot:   tot.toISOString(),
+      label: label || formatDatum_(van) + ' t/m ' + formatDatum_(tot),
+      geslotenOp: new Date().toISOString(),
+    });
+    props.setProperty('GESLOTEN_PERIODES', JSON.stringify(periodes));
+    Logger.log('Periode vergrendeld: ' + label);
+  }
+}
+
+/**
+ * Toont een overzicht van vergrendelde periodes en biedt de mogelijkheid
+ * om een periode te ontgrendelen.
+ */
+function beheerGeslotenPeriodes() {
+  const props = PropertiesService.getScriptProperties();
+  const bestaand = props.getProperty('GESLOTEN_PERIODES');
+  const periodes = bestaand ? JSON.parse(bestaand) : [];
+  const ui = SpreadsheetApp.getUi();
+
+  if (periodes.length === 0) {
+    ui.alert('Gesloten periodes', 'Er zijn geen vergrendelde periodes.', ui.ButtonSet.OK);
+    return;
+  }
+
+  const lijstTekst = periodes.map((p, i) =>
+    `${i + 1}. ${p.label}  (gesloten op ${p.geslotenOp ? formatDatum_(new Date(p.geslotenOp)) : '?'})`
+  ).join('\n');
+
+  const resp = ui.prompt(
+    '🔒 Gesloten periodes',
+    `De volgende periodes zijn vergrendeld:\n\n${lijstTekst}\n\n` +
+    `Voer het nummer in van de periode die u wilt ontgrendelen, of druk op Annuleren:`,
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+
+  const nr = parseInt(resp.getResponseText().trim()) - 1;
+  if (isNaN(nr) || nr < 0 || nr >= periodes.length) {
+    ui.alert('Ongeldig nummer.'); return;
+  }
+
+  const bevestiging = ui.alert(
+    '⚠️ Periode ontgrendelen',
+    `Weet u zeker dat u "${periodes[nr].label}" wilt ontgrendelen?\n\n` +
+    `U kunt dan weer boekingen maken in deze periode. Dit kan gevolgen hebben voor ingediende BTW-aangiften.`,
+    ui.ButtonSet.YES_NO
+  );
+
+  if (bevestiging === ui.Button.YES) {
+    periodes.splice(nr, 1);
+    props.setProperty('GESLOTEN_PERIODES', JSON.stringify(periodes));
+    ui.alert('Periode ontgrendeld.', 'U kunt weer boekingen maken in deze periode.', ui.ButtonSet.OK);
+  }
 }

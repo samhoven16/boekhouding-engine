@@ -257,7 +257,8 @@ function genereerCashflow() {
   sheet.clearFormats();
 
   const bedrijf = getInstelling_('Bedrijfsnaam') || '';
-  const jaar = new Date().getFullYear();
+  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
+  const jaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
 
   zetRapportKoptekst_(sheet, 'CASHFLOW OVERZICHT', bedrijf, `Boekjaar ${jaar}`, 3);
 
@@ -427,7 +428,7 @@ function berekenKengetallen_(ss) {
   const kosten = Object.values(saldi).filter(r => r.type === 'Kosten').reduce((s, r) => s + r.saldo, 0);
   const nettowinst = rondBedrag_(omzet - kosten);
   const debiteuren = getSaldo('1100');
-  const bank = getSaldo('1200') + getSaldo('1210');
+  const bank = getSaldo('1200') + getSaldo('1205') + getSaldo('1210') + getSaldo('1220');
   const crediteuren = getSaldo('4000');
   const eigenVermogen = Object.values(saldi).filter(r => r.bw === 'Balans' && r.cat === 'Eigen vermogen')
     .reduce((s, r) => s + r.saldo, 0) + nettowinst;

@@ -102,10 +102,10 @@ function toonOpenInkoopfacturen() {
     totaal += bedrag;
     html += `<tr>
       <td>${formatDatum_(data[i][3])}</td>
-      <td>${data[i][6]}</td>
-      <td>${data[i][4]}</td>
+      <td>${escHtml_(String(data[i][6] || ''))}</td>
+      <td>${escHtml_(String(data[i][4] || ''))}</td>
       <td>${formatBedrag_(bedrag)}</td>
-      <td>${data[i][12]}</td>
+      <td>${escHtml_(String(data[i][12] || ''))}</td>
     </tr>`;
   }
 

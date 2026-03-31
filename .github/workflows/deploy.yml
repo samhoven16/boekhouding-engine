@@ -1,0 +1,63 @@
+name: Auto Deploy naar Google Apps Script
+
+# Wordt automatisch geactiveerd bij elke push naar de hoofdbranch.
+# U hoeft nooit meer de terminal in — push uw code en het systeem doet de rest.
+
+on:
+  push:
+    branches:
+      - main
+      - claude/google-forms-accounting-system-0N1Mx
+  workflow_dispatch:  # Handmatig starten via de GitHub interface (groene knop)
+
+jobs:
+  deploy:
+    name: Deployen naar Apps Script
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v4
+
+      - name: Node.js installeren
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: clasp installeren
+        run: npm install -g @google/clasp
+
+      - name: Secrets valideren
+        run: |
+          MISSING=""
+          if [ -z '${{ secrets.CLASP_CREDENTIALS }}' ]; then
+            echo "::error::CLASP_CREDENTIALS secret ontbreekt."
+            echo "::error::Stel dit in via: GitHub repo → Settings → Secrets and variables → Actions → New repository secret"
+            echo "::error::Waarde: de volledige inhoud van ~/.clasprc.json na 'clasp login' op uw lokale machine."
+            MISSING="yes"
+          fi
+          if [ -n "$MISSING" ]; then exit 1; fi
+
+      - name: clasp credentials instellen
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+        run: |
+          echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
+          chmod 600 ~/.clasprc.json
+          # Basiscontrole: is het geldige JSON?
+          if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" ~/.clasprc.json 2>/dev/null; then
+            echo "::error::CLASP_CREDENTIALS bevat geen geldige JSON. Controleer de secret-waarde."
+            exit 1
+          fi
+
+      - name: clasp verbinding testen
+        run: |
+          echo "clasp versie: $(clasp --version)"
+          echo "Script ID uit .clasp.json: $(python3 -c "import json; d=json.load(open('.clasp.json')); print(d.get('scriptId','?'))")"
+          # clasp login status tonen (faalt niet als het mislukt)
+          clasp status 2>&1 || true
+
+      - name: Code pushen naar Google Apps Script
+        run: |
+          clasp push --force
+          echo "✅ Deployment geslaagd naar Apps Script"

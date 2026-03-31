@@ -145,6 +145,20 @@ function formatPct_(waarde) {
 }
 
 // ─────────────────────────────────────────────
+//  HTML SANITISATIE
+// ─────────────────────────────────────────────
+
+/**
+ * Escapet HTML speciale tekens om XSS/injectie in HTML-templates te voorkomen.
+ * Gebruik in alle factuur-PDF templates voor gebruikersinvoer.
+ */
+function escHtml_(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+// ─────────────────────────────────────────────
 //  VALIDATIE FUNCTIES
 // ─────────────────────────────────────────────
 
@@ -345,17 +359,25 @@ ${bedrijf}`;
  */
 function getVersieInfo() {
   return {
-    versie: '1.0.0',
-    aangemaakt: '2024',
+    versie: '2.0.0',
+    aangemaakt: '2026',
     beschrijving: 'Boekhoudprogramma voor ZZP/MKB via Google Forms & Spreadsheets',
     functies: [
       'Dubbel boekhouden (NL GAAP)',
-      'Verkoopfacturen met PDF',
+      'Unified Google Form (facturen, kosten, declaraties)',
+      'Verkoopfacturen met PDF + UBL 2.1 e-factuur',
+      'SEPA QR code op factuur',
+      'Automatisch e-mailen naar klant',
+      'Dunning (betalingsherinneringen in 3 stappen)',
       'Inkoopfacturen administratie',
       'Bankboek en reconciliatie',
       'BTW aangifte (kwartaal)',
       'Balans, W&V, Cashflow',
       'KPI Dashboard',
+      'Google Drive mappenstructuur',
+      'Belastingadvies & aftrekposten',
+      'Webhook API (Zapier/Make/n8n)',
+      'Slimme Helpdesk & Assistent',
       'Debiteuren/Crediteuren beheer',
       'Google Forms integratie',
       'E-mail notificaties',

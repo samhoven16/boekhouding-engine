@@ -4,10 +4,10 @@
  * Het systeem detecteert zelf welke aftrekposten van toepassing zijn
  * en waarschuwt proactief wanneer actie nodig is.
  *
- * Verwerkte regelingen (2024/2025):
- *  - Zelfstandigenaftrek            €5.030  (ZZP, ≥1225 uur)
+ * Verwerkte regelingen (2025):
+ *  - Zelfstandigenaftrek            €2.470  (ZZP, ≥1225 uur — stapsgewijs verlaagd)
  *  - Startersaftrek                 €2.123  (eerste 3 jaar ZZP)
- *  - MKB-winstvrijstelling          13,31%  (na aftrekken)
+ *  - MKB-winstvrijstelling          12,70%  (na aftrekken)
  *  - KOR                            €0 BTW  (omzet < €20.000)
  *  - KIA                            28%     (investeringen €2.801–€353.973)
  *  - Reiskosten eigen vervoer       €0,23/km
@@ -16,24 +16,24 @@
  */
 
 // ─────────────────────────────────────────────
-//  BELASTING TARIEVEN EN GRENZEN (2024)
+//  BELASTING TARIEVEN EN GRENZEN (2025)
 // ─────────────────────────────────────────────
 const BELASTING = {
-  ZELFSTANDIGENAFTREK:    5030,
-  STARTERSAFTREK:         2123,
-  MKB_WINSTVRIJSTELLING:  0.1331,
-  KOR_GRENS:              20000,
-  KIA_MIN:                2801,
-  KIA_MAX:                353973,
-  KIA_PCT:                0.28,
-  REISKOSTEN_PER_KM:      0.23,
-  THUISWERK_PER_DAG:      2.35,
-  REPRESENTATIE_AFTREK:   0.735,  // 73,5% aftrekbaar
-  IB_SCHIJF_1_MAX:        75518,
-  IB_SCHIJF_1_PCT:        0.3697,
-  IB_SCHIJF_2_PCT:        0.495,
-  HEFFINGSKORTING_MAX:    3374,
-  ARBEIDSKORTING_MAX:     5158,
+  ZELFSTANDIGENAFTREK:    2470,    // 2025: €2.470 (was €3.750 in 2024, daalt jaarlijks richting €900 in 2027)
+  STARTERSAFTREK:         2123,    // 2025: ongewijzigd
+  MKB_WINSTVRIJSTELLING:  0.1270,  // 2025: 12,70% (was 13,31% in 2024)
+  KOR_GRENS:              20000,   // ongewijzigd
+  KIA_MIN:                2801,    // ongewijzigd
+  KIA_MAX:                353973,  // ongewijzigd
+  KIA_PCT:                0.28,    // ongewijzigd
+  REISKOSTEN_PER_KM:      0.23,    // 2025: ongewijzigd (zal stijgen)
+  THUISWERK_PER_DAG:      2.40,    // 2025: €2,40/dag (was €2,35)
+  REPRESENTATIE_AFTREK:   0.735,   // 73,5% aftrekbaar — ongewijzigd
+  IB_SCHIJF_1_MAX:        76817,   // 2025: €76.817 (was €75.518)
+  IB_SCHIJF_1_PCT:        0.3582,  // 2025: 35,82% (was 36,97% — verlaagd)
+  IB_SCHIJF_2_PCT:        0.495,   // 2025: ongewijzigd
+  HEFFINGSKORTING_MAX:    3068,    // 2025: max €3.068 (inkomensafhankelijk)
+  ARBEIDSKORTING_MAX:     5625,    // 2025: max €5.625
 };
 
 // ─────────────────────────────────────────────
@@ -124,7 +124,7 @@ function berekenBelastingadvies_(ss) {
     const winstNaAftrekken = Math.max(0, winst - totaalAftrek);
     const mkbAftrek = rondBedrag_(winstNaAftrekken * BELASTING.MKB_WINSTVRIJSTELLING);
     aftrekken.push({
-      naam: 'MKB-winstvrijstelling (13,31%)',
+      naam: 'MKB-winstvrijstelling (12,70%)',
       bedrag: mkbAftrek,
       voorwaarde: 'Automatisch van toepassing voor ondernemers IB',
       code: '7990',
@@ -132,7 +132,7 @@ function berekenBelastingadvies_(ss) {
     adviezen.push({
       type: 'AFTREKPOST',
       titel: '✅ MKB-winstvrijstelling: ' + formatBedrag_(mkbAftrek),
-      tekst: `13,31% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
+      tekst: `12,70% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
              `Dit wordt automatisch meegenomen in uw aangifte.`,
       besparing: rondBedrag_(mkbAftrek * BELASTING.IB_SCHIJF_1_PCT),
     });
@@ -189,12 +189,16 @@ function berekenBelastingadvies_(ss) {
   // ── 7. BTW aangifte deadline check ───────────────────────────────────
   const vandaag = new Date();
   const maand = vandaag.getMonth() + 1;
+  // BTW deadlines: Q4→31 jan, Q1→30 apr, Q2→31 jul, Q3→31 okt
+  // Waarschuwing toont in de deadlinemaand zelf (maand 1, 4, 7 of 10)
+  const maandNamen = ['', 'januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                      'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
   const kwartaalDeadlines = { 1: 'Q4 vorig jaar', 4: 'Q1', 7: 'Q2', 10: 'Q3' };
   if (kwartaalDeadlines[maand] && vandaag.getDate() <= 28) {
     adviezen.push({
       type: 'ACTIE',
       titel: '📅 BTW aangifte: ' + kwartaalDeadlines[maand] + ' deadline nadert',
-      tekst: `De BTW aangifte voor ${kwartaalDeadlines[maand]} moet voor eind ${['', 'januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'][maand + 1] || 'deze maand'} worden ingediend. ` +
+      tekst: `De BTW aangifte voor ${kwartaalDeadlines[maand]} moet voor eind ${maandNamen[maand]} worden ingediend. ` +
              `Genereer uw aangifte via: Boekhouding → BTW.`,
       besparing: null,
     });
