@@ -11,6 +11,8 @@ jobs:
   deploy:
     name: Deployen naar Apps Script
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Code ophalen
@@ -37,9 +39,10 @@ jobs:
               sys.exit(1)
 
           try:
-              creds = json.loads(raw)
+              # raw_decode pakt het eerste geldige JSON-object en negeert trailing content
+              creds, _ = json.JSONDecoder().raw_decode(raw)
           except json.JSONDecodeError as e:
-              print(f"::error title=Ongeldige JSON::JSON-fout: {e}. Controleer of de volledige inhoud is geplakt (begint met {{ eindigt met }}).")
+              print(f"::error title=Ongeldige JSON::JSON-fout: {e}. Zorg dat de inhoud begint met {{ en correct afgesloten is.")
               sys.exit(1)
 
           # Formaat A: {"tokens": {"default": {...}}} — van gcloud of nieuwe clasp versie
