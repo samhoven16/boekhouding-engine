@@ -24,61 +24,73 @@ jobs:
       - name: clasp installeren
         run: npm install -g @google/clasp
 
-      - name: Diagnose — secret aanwezig?
+      - name: Credentials normaliseren en schrijven
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
         run: |
-          if [ -z "$CLASP_CREDENTIALS" ]; then
-            echo "::error title=Secret ontbreekt::CLASP_CREDENTIALS is leeg of niet ingesteld."
-            exit 1
-          fi
-          LENGTE=${#CLASP_CREDENTIALS}
-          EERSTE_CHAR="${CLASP_CREDENTIALS:0:1}"
-          LAATSTE_CHAR="${CLASP_CREDENTIALS: -1}"
-          echo "✓ CLASP_CREDENTIALS ingesteld"
-          echo "  Lengte: $LENGTE tekens"
-          echo "  Begint met: '$EERSTE_CHAR'"
-          echo "  Eindigt met: '$LAATSTE_CHAR'"
-          # Valideer JSON-formaat
-          JSON_FOUT=$(echo "$CLASP_CREDENTIALS" | python3 -c "import json,sys; d=json.load(sys.stdin); print('geldig, sleutels:', list(d.keys()))" 2>&1)
-          if [ $? -ne 0 ]; then
-            echo "::error title=Ongeldige JSON::Lengte=$LENGTE, begint='$EERSTE_CHAR', eindigt='$LAATSTE_CHAR'. Fout: $JSON_FOUT"
-            echo "::error::Verwacht: inhoud van ~/.clasprc.json (begint met { eindigt met })"
-            exit 1
-          fi
-          echo "✓ JSON geldig: $JSON_FOUT"
+          python3 << 'PYTHON'
+          import json, os, sys
 
-      - name: clasp credentials instellen
-        env:
-          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
-        run: |
-          echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
-          chmod 600 ~/.clasprc.json
+          raw = os.environ.get('CLASP_CREDENTIALS', '').strip()
+          if not raw:
+              print("::error title=Secret ontbreekt::CLASP_CREDENTIALS is leeg. Ga naar Settings → Secrets → Actions en voeg toe.")
+              sys.exit(1)
+
+          try:
+              creds = json.loads(raw)
+          except json.JSONDecodeError as e:
+              print(f"::error title=Ongeldige JSON::JSON-fout: {e}. Controleer of de volledige inhoud is geplakt (begint met {{ eindigt met }}).")
+              sys.exit(1)
+
+          # Formaat A: {"tokens": {"default": {...}}} — van gcloud of nieuwe clasp versie
+          if 'tokens' in creds and 'default' in creds.get('tokens', {}):
+              d = creds['tokens']['default']
+              clasp_creds = {
+                  "token": {
+                      "access_token":  d.get("access_token", ""),
+                      "refresh_token": d.get("refresh_token", ""),
+                      "token_type":    "Bearer",
+                      "expiry_date":   0
+                  },
+                  "oauth2ClientSettings": {
+                      "clientId":     d.get("client_id", ""),
+                      "clientSecret": d.get("client_secret", ""),
+                      "redirectUri":  "http://localhost"
+                  },
+                  "isLocalCreds": False
+              }
+              print("✓ Credential-formaat geconverteerd (tokens.default → clasp formaat)")
+
+          # Formaat B: standaard clasp formaat {"token": {...}}
+          elif 'token' in creds:
+              clasp_creds = creds
+              print("✓ Credentials al in clasp-formaat")
+
+          else:
+              print(f"::error title=Onbekend formaat::Sleutels gevonden: {list(creds.keys())}. Verwacht: 'token' of 'tokens'.")
+              sys.exit(1)
+
+          path = os.path.expanduser('~/.clasprc.json')
+          with open(path, 'w') as f:
+              json.dump(clasp_creds, f)
+          os.chmod(path, 0o600)
+          print("✓ ~/.clasprc.json geschreven")
+          PYTHON
 
       - name: clasp push
         run: |
           echo "clasp versie: $(clasp --version)"
-          echo "Script ID: $(python3 -c "import json; print(json.load(open('.clasp.json'))['scriptId'])")"
-          echo "Bestanden in src/: $(ls src/ | wc -l)"
+          echo "Script ID:    $(python3 -c "import json; print(json.load(open('.clasp.json'))['scriptId'])")"
 
-          # Voer clasp push uit en vang de output op
           set +e
-          PUSH_OUTPUT=$(clasp push --force 2>&1)
-          PUSH_EXIT=$?
+          OUTPUT=$(clasp push --force 2>&1)
+          EXIT=$?
           set -e
+          echo "$OUTPUT"
 
-          echo "$PUSH_OUTPUT"
-
-          if [ $PUSH_EXIT -ne 0 ]; then
-            # Eerste 3 regels van de fout als annotatie
-            FOUT=$(echo "$PUSH_OUTPUT" | head -5 | tr '\n' ' ')
+          if [ $EXIT -ne 0 ]; then
+            FOUT=$(echo "$OUTPUT" | head -3 | tr '\n' ' ')
             echo "::error title=clasp push mislukt::$FOUT"
-            echo ""
-            echo "Mogelijke oorzaken:"
-            echo "  1) OAuth token verlopen → hernieuw: clasp login && cat ~/.clasprc.json → update CLASP_CREDENTIALS secret"
-            echo "  2) Script ID onbekend → controleer .clasp.json scriptId"
-            echo "  3) Geen write-rechten op het Apps Script project"
-            exit $PUSH_EXIT
+            exit $EXIT
           fi
-
           echo "✅ Deployment geslaagd"
