@@ -1,0 +1,99 @@
+name: Auto Deploy naar Google Apps Script
+
+on:
+  push:
+    branches:
+      - main
+      - claude/google-forms-accounting-system-0N1Mx
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deployen naar Apps Script
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v4
+
+      - name: Node.js installeren
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: clasp installeren
+        run: npm install -g @google/clasp
+
+      - name: Credentials normaliseren en schrijven
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+        run: |
+          python3 << 'PYTHON'
+          import json, os, sys
+
+          raw = os.environ.get('CLASP_CREDENTIALS', '').strip()
+          if not raw:
+              print("::error title=Secret ontbreekt::CLASP_CREDENTIALS is leeg. Ga naar Settings → Secrets → Actions en voeg toe.")
+              sys.exit(1)
+
+          try:
+              # raw_decode pakt het eerste geldige JSON-object en negeert trailing content
+              creds, _ = json.JSONDecoder().raw_decode(raw)
+          except json.JSONDecodeError as e:
+              print(f"::error title=Ongeldige JSON::JSON-fout: {e}. Zorg dat de inhoud begint met {{ en correct afgesloten is.")
+              sys.exit(1)
+
+          # Formaat A: {"tokens": {"default": {...}}} — van gcloud of nieuwe clasp versie
+          if 'tokens' in creds and 'default' in creds.get('tokens', {}):
+              d = creds['tokens']['default']
+              clasp_creds = {
+                  "token": {
+                      "access_token":  d.get("access_token", ""),
+                      "refresh_token": d.get("refresh_token", ""),
+                      "token_type":    "Bearer",
+                      "expiry_date":   0
+                  },
+                  "oauth2ClientSettings": {
+                      "clientId":     d.get("client_id", ""),
+                      "clientSecret": d.get("client_secret", ""),
+                      "redirectUri":  "http://localhost"
+                  },
+                  "isLocalCreds": False
+              }
+              print("✓ Credential-formaat geconverteerd (tokens.default → clasp formaat)")
+
+          # Formaat B: standaard clasp formaat {"token": {...}}
+          elif 'token' in creds:
+              clasp_creds = creds
+              print("✓ Credentials al in clasp-formaat")
+
+          else:
+              print(f"::error title=Onbekend formaat::Sleutels gevonden: {list(creds.keys())}. Verwacht: 'token' of 'tokens'.")
+              sys.exit(1)
+
+          path = os.path.expanduser('~/.clasprc.json')
+          with open(path, 'w') as f:
+              json.dump(clasp_creds, f)
+          os.chmod(path, 0o600)
+          print("✓ ~/.clasprc.json geschreven")
+          PYTHON
+
+      - name: clasp push
+        run: |
+          echo "clasp versie: $(clasp --version)"
+          echo "Script ID:    $(python3 -c "import json; print(json.load(open('.clasp.json'))['scriptId'])")"
+
+          set +e
+          OUTPUT=$(clasp push --force 2>&1)
+          EXIT=$?
+          set -e
+          echo "$OUTPUT"
+
+          if [ $EXIT -ne 0 ]; then
+            FOUT=$(echo "$OUTPUT" | head -3 | tr '\n' ' ')
+            echo "::error title=clasp push mislukt::$FOUT"
+            exit $EXIT
+          fi
+          echo "✅ Deployment geslaagd"
