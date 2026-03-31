@@ -19,7 +19,7 @@ jobs:
       - name: Node.js installeren
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: clasp installeren
         run: npm install -g @google/clasp
@@ -29,15 +29,24 @@ jobs:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
         run: |
           if [ -z "$CLASP_CREDENTIALS" ]; then
-            echo "::error title=Secret ontbreekt::CLASP_CREDENTIALS is leeg of niet ingesteld. Ga naar repo → Settings → Secrets and variables → Actions en voeg CLASP_CREDENTIALS toe met de inhoud van ~/.clasprc.json na lokale 'clasp login'."
+            echo "::error title=Secret ontbreekt::CLASP_CREDENTIALS is leeg of niet ingesteld."
             exit 1
           fi
-          echo "✓ CLASP_CREDENTIALS is ingesteld (${#CLASP_CREDENTIALS} tekens)"
+          LENGTE=${#CLASP_CREDENTIALS}
+          EERSTE_CHAR="${CLASP_CREDENTIALS:0:1}"
+          LAATSTE_CHAR="${CLASP_CREDENTIALS: -1}"
+          echo "✓ CLASP_CREDENTIALS ingesteld"
+          echo "  Lengte: $LENGTE tekens"
+          echo "  Begint met: '$EERSTE_CHAR'"
+          echo "  Eindigt met: '$LAATSTE_CHAR'"
           # Valideer JSON-formaat
-          if ! echo "$CLASP_CREDENTIALS" | python3 -c "import json,sys; d=json.load(sys.stdin); print('✓ JSON geldig, token type:', d.get('token',{}).get('token_type','?'))" 2>&1; then
-            echo "::error title=Ongeldige credentials::CLASP_CREDENTIALS bevat geen geldige JSON. Kopieer de volledige inhoud van ~/.clasprc.json."
+          JSON_FOUT=$(echo "$CLASP_CREDENTIALS" | python3 -c "import json,sys; d=json.load(sys.stdin); print('geldig, sleutels:', list(d.keys()))" 2>&1)
+          if [ $? -ne 0 ]; then
+            echo "::error title=Ongeldige JSON::Lengte=$LENGTE, begint='$EERSTE_CHAR', eindigt='$LAATSTE_CHAR'. Fout: $JSON_FOUT"
+            echo "::error::Verwacht: inhoud van ~/.clasprc.json (begint met { eindigt met })"
             exit 1
           fi
+          echo "✓ JSON geldig: $JSON_FOUT"
 
       - name: clasp credentials instellen
         env:
