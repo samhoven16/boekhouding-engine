@@ -270,26 +270,37 @@ function vernieuwDashboard() {
 function berekenRoiData_(ss, kpi) {
   const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
   const jrData = ss.getSheetByName(SHEETS.JOURNAALPOSTEN).getDataRange().getValues();
+  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
+  const boekjaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
 
   const aantalFacturen = Math.max(0, vfData.length - 1);
 
-  // Omzet geïnd = som van alle betaalde facturen
+  // Omzet geïnd = incl-bedrag van betaalde facturen in boekjaar
   let omzetGeind = 0;
   for (let i = 1; i < vfData.length; i++) {
-    if (vfData[i][14] === FACTUUR_STATUS.BETAALD) {
-      omzetGeind += parseFloat(vfData[i][13]) || 0; // betaald bedrag
-    }
+    if (vfData[i][14] !== FACTUUR_STATUS.BETAALD) continue;
+    const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
+    if (datum && datum.getFullYear() !== boekjaar) continue;
+    omzetGeind += parseFloat(vfData[i][12]) || 0; // incl. BTW bedrag
   }
 
-  // BTW correct verwerkt = som van alle BTW-bedragen op facturen
+  // BTW correct verwerkt = som van BTW-bedragen op facturen in boekjaar
   let btwVerwerkt = 0;
   for (let i = 1; i < vfData.length; i++) {
+    const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
+    if (datum && datum.getFullYear() !== boekjaar) continue;
     const incl = parseFloat(vfData[i][12]) || 0;
-    const excl = parseFloat(vfData[i][11]) || 0;
+    const excl = parseFloat(vfData[i][9]) || 0;
     btwVerwerkt += rondBedrag_(incl - excl);
   }
 
-  const aantalBoekingen = Math.max(0, jrData.length - 1);
+  // Boekingen gefilterd op boekjaar
+  let aantalBoekingen = 0;
+  for (let i = 1; i < jrData.length; i++) {
+    const datum = jrData[i][1] ? new Date(jrData[i][1]) : null;
+    if (!datum || datum.getFullYear() !== boekjaar) continue;
+    aantalBoekingen++;
+  }
 
   // Tijdsbesparing schatting:
   // - 15 min per factuur aanmaken/versturen

@@ -33,7 +33,10 @@ function maakJournaalpost_(ss, opt) {
         }
       }
     } catch (jsonErr) {
-      if (jsonErr.message.includes('afgesloten')) throw jsonErr; // Rethrow onze eigen fout
+      if (jsonErr.message.includes('afgesloten')) throw jsonErr; // Rethrow periode-fout
+      Logger.log('GESLOTEN_PERIODES parse fout (ongeldige JSON): ' + jsonErr.message);
+      // Sla corrupte waarde op zodat toekomstige boekingen niet geblokkeerd worden
+      PropertiesService.getScriptProperties().deleteProperty('GESLOTEN_PERIODES');
     }
   }
 
@@ -379,9 +382,9 @@ function vernieuwDebiteurenOverzicht() {
     rij++;
   }
 
-  // Totaalregel
-  sheet.appendRow(['', '', '', 'TOTAAL OPENSTAAND', '', '', totaalOpen, '', ''])
-    .setFontWeight('bold');
+  // Totaalregel — appendRow() returns Sheet, not Range; get range separately
+  sheet.appendRow(['', '', '', 'TOTAAL OPENSTAAND', '', '', totaalOpen, '', '']);
+  sheet.getRange(rij, 1, 1, 9).setFontWeight('bold');
   sheet.getRange(rij, 5, 1, 3).setBackground(KLEUREN.SECTIE_BG);
   sheet.getRange(2, 5, rij - 1, 3).setNumberFormat('€#,##0.00');
 }
@@ -441,8 +444,8 @@ function vernieuwCrediteurenOverzicht() {
     rij++;
   }
 
-  sheet.appendRow(['', '', '', 'TOTAAL TE BETALEN', '', '', '', totaalOpen, ''])
-    .setFontWeight('bold');
+  sheet.appendRow(['', '', '', 'TOTAAL TE BETALEN', '', '', '', totaalOpen, '']);
+  sheet.getRange(rij, 1, 1, 9).setFontWeight('bold');
   sheet.getRange(rij, 6, 1, 3).setBackground(KLEUREN.SECTIE_BG);
   sheet.getRange(2, 6, rij - 1, 3).setNumberFormat('€#,##0.00');
 }

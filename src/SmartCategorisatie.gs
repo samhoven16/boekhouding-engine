@@ -22,91 +22,95 @@
 const CATEGORIE_REGELS = [
   // ── Huur & Vastgoed ─────────────────────────
   { keywords: ['huur', 'huurpenning', 'servicekosten woning', 'verhuurder', 'vastgoed'],
-    rekening: '5200', naam: 'Huurkosten',       zekerheid: 90 },
+    rekening: '7210', naam: 'Huur bedrijfsruimte', zekerheid: 90 },
 
   // ── Energie & Nutsvoorzieningen ──────────────
   { keywords: ['vattenfall', 'eneco', 'essent', 'nuon', 'greenchoice', 'energie', 'stroom', 'gas',
                'electra', 'elektriciteit', 'waterleiding', 'evides', 'dunea', 'vitens'],
-    rekening: '5300', naam: 'Energie & Water',  zekerheid: 92 },
+    rekening: '7220', naam: 'Energie (gas, water, elektra)', zekerheid: 92 },
 
   // ── Telecom & Internet ───────────────────────
   { keywords: ['kpn', 't-mobile', 'vodafone', 'tele2', 'odido', 'ziggo', 'xs4all', 'telfort',
                'simyo', 'hollandsnieuwe', 'bellen', 'internet abonnement', 'mobiel abonnement',
                'vaste lijn', 'telefoon', 'telecom'],
-    rekening: '5400', naam: 'Telefoon & Internet', zekerheid: 90 },
+    rekening: '7430', naam: 'Telefoon en internet', zekerheid: 90 },
 
   // ── Verzekeringen ────────────────────────────
   { keywords: ['centraal beheer', 'interpolis', 'aegon', 'nationale nederlanden', 'nn', 'allianz',
                'aon', 'univé', 'achmea', 'cz', 'menzis', 'ohra', 'avéro', 'verzekering',
                'premie', 'polis', 'wia', 'aov'],
-    rekening: '5500', naam: 'Verzekeringen',    zekerheid: 88 },
+    rekening: '7910', naam: 'Bedrijfsverzekeringen', zekerheid: 88 },
 
   // ── Brandstof & Auto ────────────────────────
   { keywords: ['shell', 'bp', 'esso', 'total', 'tinq', 'tango', 'texaco', 'argos', 'brandstof',
                'benzine', 'diesel', 'tanken', 'tankstation'],
-    rekening: '5600', naam: 'Brandstof',        zekerheid: 92 },
+    rekening: '7310', naam: 'Brandstofkosten', zekerheid: 92 },
 
   // ── Lease & Mobiliteit ───────────────────────
-  { keywords: ['lease', 'arval', 'athlon', 'louwman', 'mobiliteit', 'ov-chipkaart', 'ns.nl',
+  { keywords: ['lease', 'arval', 'athlon', 'louwman', 'ov-chipkaart', 'ns.nl',
                'gvb', 'ret', 'htm', 'connexxion', 'arriva', 'trein', 'bus abonnement'],
-    rekening: '5650', naam: 'Mobiliteit & Lease', zekerheid: 85 },
+    rekening: '7340', naam: 'Reiskosten openbaar vervoer', zekerheid: 85 },
 
   // ── Kantoorartikelen ─────────────────────────
   { keywords: ['staples', 'office depot', 'bol.com', 'coolblue', 'mediamarkt', 'alternate',
                'printpapier', 'toner', 'inkt', 'printer', 'scanner', 'kantoorbenodigdheden',
                'postzegel', 'postnl', 'dhl pakket'],
-    rekening: '5700', naam: 'Kantoorkosten',    zekerheid: 75 },
+    rekening: '7410', naam: 'Kantoorbenodigdheden en drukwerk', zekerheid: 75 },
 
   // ── Software & Abonnementen ──────────────────
   { keywords: ['microsoft', 'google workspace', 'adobe', 'dropbox', 'slack', 'zoom', 'teams',
                'notion', 'mailchimp', 'hubspot', 'exact', 'moneybird', 'software', 'licentie',
                'abonnement', 'saas', 'cloud', 'subscription', 'spotify', 'netflix'],
-    rekening: '5710', naam: 'Software & Abonnementen', zekerheid: 82 },
+    rekening: '7440', naam: 'Software, apps en licenties', zekerheid: 82 },
 
   // ── Accountant & Advies ──────────────────────
   { keywords: ['accountant', 'boekhouder', 'administratie', 'belastingadviseur', 'notaris',
                'juridisch', 'advocaat', 'consultant', 'advies'],
-    rekening: '5800', naam: 'Advies & Accountant', zekerheid: 85 },
+    rekening: '7450', naam: 'Accountants- en advieskosten', zekerheid: 85 },
 
   // ── Reclame & Marketing ──────────────────────
   { keywords: ['google ads', 'facebook ads', 'instagram', 'linkedin', 'advertentie', 'reclame',
                'drukkerij', 'flyer', 'website', 'seo', 'marketing', 'branding', 'fotograaf'],
-    rekening: '5900', naam: 'Marketing & Reclame', zekerheid: 80 },
+    rekening: '7510', naam: 'Reclame en advertentiekosten', zekerheid: 80 },
 
   // ── Personeel & Salaris ──────────────────────
   { keywords: ['salaris', 'loon', 'salarisverwerking', 'adp', 'nmbrs', 'loket.nl', 'hr',
                'payroll', 'personeelskosten', 'uurloon', 'freelancer betaling'],
-    rekening: '4400', naam: 'Personeelskosten', zekerheid: 88 },
+    rekening: '7100', naam: 'Personeelskosten', zekerheid: 88 },
 
   // ── Belastingen & Heffingen ──────────────────
   { keywords: ['belastingdienst', 'belasting', 'btw', 'omzetbelasting', 'vennootschapsbelasting',
                'inkomstenbelasting', 'gemeentelijke belasting', 'ozb', 'waterschapsheffing'],
-    rekening: '6000', naam: 'Belastingen',      zekerheid: 95 },
+    rekening: '9000', naam: 'Vpb / inkomstenbelasting', zekerheid: 95 },
 
   // ── Bankkosten ────────────────────────────────
   { keywords: ['abnamro', 'ing ', 'rabobank', 'abn amro', 'sns bank', 'regiobank', 'triodos',
-               'bunq', 'knab', 'bankkosten', 'provisie', 'rente', 'servicekosten rekening'],
-    rekening: '6100', naam: 'Bankkosten',       zekerheid: 80 },
+               'bunq', 'knab', 'bankkosten', 'provisie', 'servicekosten rekening'],
+    rekening: '7820', naam: 'Bankkosten en provisies', zekerheid: 80 },
 
   // ── Eten & Representatie ─────────────────────
   { keywords: ['restaurant', 'lunch', 'diner', 'eten', 'catering', 'horeca', 'cafe', 'koffie',
                'albert heijn', 'jumbo', 'lidl', 'aldi', 'supermarkt', 'representatie',
                'mcdonalds', 'burger king', 'thuisbezorgd', 'uber eats', 'deliveroo'],
-    rekening: '5850', naam: 'Representatie & Eten', zekerheid: 70 },
+    rekening: '7520', naam: 'Representatiekosten (73,5% aftrekbaar)', zekerheid: 70 },
 
   // ── Intresten ontvangen ──────────────────────
   { keywords: ['rente ontvangen', 'rentevergoeding', 'rentebijschrijving', 'spaarrente'],
-    rekening: '8500', naam: 'Rente-inkomsten',  zekerheid: 90 },
+    rekening: '8200', naam: 'Rentebaten', zekerheid: 90 },
 
   // ── Omzet inkomsten ──────────────────────────
   { keywords: ['factuur', 'factuurnummer', 'faktura', 'betaling factuur'],
-    rekening: '8000', naam: 'Omzet',            zekerheid: 75,
+    rekening: '8000', naam: 'Omzet belast 21% (hoog tarief)', zekerheid: 75,
     alleenInkomsten: true },
 
   // ── Investeringen / Apparatuur ───────────────
   { keywords: ['laptop', 'computer', 'macbook', 'ipad', 'server', 'monitor', 'camera',
-               'apparatuur', 'inventaris', 'machine', 'installatie'],
-    rekening: '0500', naam: 'Inventaris',       zekerheid: 72 },
+               'apparatuur', 'machine', 'installatie'],
+    rekening: '0240', naam: 'Computers en hardware', zekerheid: 72 },
+
+  // ── Inventaris (meubilair, inrichting) ───────
+  { keywords: ['inventaris', 'meubilair', 'bureau', 'stoel', 'kast', 'inrichting'],
+    rekening: '0230', naam: 'Inventaris en inrichting', zekerheid: 70 },
 ];
 
 // ─────────────────────────────────────────────

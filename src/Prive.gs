@@ -346,7 +346,12 @@ function openIbAangifteHelper() {
 
         var totaal = b1belasting + b2belasting + b3belasting;
 
-        var fmt = function(n) { return '€' + n.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.').replace('.', ',').replace(/(,\\d{2})(.*)/,'$1'); };
+        // NL-formaat: punt als duizendtalsep, komma als decimaal (bijv. €1.234,56)
+        var fmt = function(n) {
+          var parts = n.toFixed(2).split('.');
+          parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+          return '\u20AC' + parts.join(',');
+        };
 
         var html = '<h4 style="color:#1B5E20">Schatting inkomstenbelasting 2025</h4>' +
           '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
@@ -383,13 +388,14 @@ function beheerVermogensoverzicht() {
       .setValues([headers])
       .setBackground('#4A148C').setFontColor('#FFFFFF').setFontWeight('bold');
 
+    const peildatum = new Date(new Date().getFullYear(), 0, 1); // 1 jan huidig jaar
     const voorbeeldRijen = [
-      ['Betaalrekening',  'ING rekening',      0, new Date('2025-01-01'), ''],
-      ['Spaarrekening',   'ING spaarrekening', 0, new Date('2025-01-01'), ''],
-      ['Beleggingen',     'DeGiro portefeuille',0,new Date('2025-01-01'), ''],
-      ['Eigen woning WOZ','WOZ-waarde woning', 0, new Date('2025-01-01'), 'Alleen in Box 3 als 2e woning'],
-      ['Hypotheekschuld', 'Hypotheek bank',    0, new Date('2025-01-01'), 'Negatief bedrag'],
-      ['Overig',          '',                  0, new Date('2025-01-01'), ''],
+      ['Betaalrekening',  'ING rekening',       0, peildatum, ''],
+      ['Spaarrekening',   'ING spaarrekening',  0, peildatum, ''],
+      ['Beleggingen',     'DeGiro portefeuille',0, peildatum, ''],
+      ['Eigen woning WOZ','WOZ-waarde woning',  0, peildatum, 'Alleen in Box 3 als 2e woning'],
+      ['Hypotheekschuld', 'Hypotheek bank',     0, peildatum, 'Negatief bedrag'],
+      ['Overig',          '',                   0, peildatum, ''],
     ];
     sheet.getRange(2, 1, voorbeeldRijen.length, 5).setValues(voorbeeldRijen);
     sheet.getRange(2, 3, voorbeeldRijen.length, 1).setNumberFormat('€#,##0.00');

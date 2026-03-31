@@ -25,19 +25,7 @@ const HERHALENDE_TAB = 'Herhalende Kosten';
 function beheerHerhalendeKosten() {
   const ss = getSpreadsheet_();
   // Zorg dat tabblad bestaat
-  let sheet = ss.getSheetByName(HERHALENDE_TAB);
-  if (!sheet) {
-    sheet = ss.insertSheet(HERHALENDE_TAB);
-    sheet.setTabColor('#5C6BC0');
-    const headers = ['ID', 'Naam', 'Leverancier', 'Bedrag (excl.)', 'BTW', 'Frequentie', 'Volgende datum', 'Grootboekrekening', 'Status', 'Automatisch boeken', 'Notities'];
-    sheet.getRange(1, 1, 1, headers.length)
-      .setValues([headers])
-      .setBackground('#1A237E').setFontColor('#FFFFFF').setFontWeight('bold');
-    sheet.setFrozenRows(1);
-    sheet.setColumnWidth(2, 180);
-    sheet.setColumnWidth(3, 150);
-    sheet.setColumnWidth(8, 200);
-  }
+  maakHerhalendeKostenTab_(ss);
 
   const ui = SpreadsheetApp.getUi();
   const html = HtmlService.createHtmlOutput(`
@@ -161,13 +149,26 @@ function beheerHerhalendeKosten() {
 /**
  * Sla een nieuwe herhalende kost op in het tabblad.
  */
-function opslaanHerhalendeKost(data) {
-  const ss = getSpreadsheet_();
+function maakHerhalendeKostenTab_(ss) {
   let sheet = ss.getSheetByName(HERHALENDE_TAB);
   if (!sheet) {
-    beheerHerhalendeKosten(); // Maak tab aan
-    sheet = ss.getSheetByName(HERHALENDE_TAB);
+    sheet = ss.insertSheet(HERHALENDE_TAB);
+    sheet.setTabColor('#5C6BC0');
+    const headers = ['ID', 'Naam', 'Leverancier', 'Bedrag (excl.)', 'BTW', 'Frequentie', 'Volgende datum', 'Grootboekrekening', 'Status', 'Automatisch boeken', 'Notities'];
+    sheet.getRange(1, 1, 1, headers.length)
+      .setValues([headers])
+      .setBackground('#1A237E').setFontColor('#FFFFFF').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(2, 180);
+    sheet.setColumnWidth(3, 150);
+    sheet.setColumnWidth(8, 200);
   }
+  return sheet;
+}
+
+function opslaanHerhalendeKost(data) {
+  const ss = getSpreadsheet_();
+  const sheet = maakHerhalendeKostenTab_(ss);
 
   const huidigAantal = sheet.getLastRow();
   const id = 'HK' + String(huidigAantal).padStart(4, '0');
@@ -224,6 +225,7 @@ function verwerkHerhalendeKosten_() {
     const auto     = String(data[i][9] || 'Nee');
 
     // Is deze betaling vandaag of in het verleden?
+    let datumVoorKomend = volgende;
     if (volgende <= vandaag) {
       if (auto === 'Ja') {
         // Automatisch boeken als journaalpost
@@ -239,18 +241,19 @@ function verwerkHerhalendeKosten_() {
         geboekt++;
       }
 
-      // Volgende datum berekenen
+      // Volgende datum berekenen en opslaan
       const volgendeDatum = berekenVolgendeDatum_(volgende, freq);
       sheet.getRange(i + 1, 7).setValue(volgendeDatum);
+      datumVoorKomend = volgendeDatum; // Gebruik de nieuwe datum voor de "komend" check
     }
 
-    // Komende betalingen (volgende 30 dagen)
-    const dagenTot = Math.ceil((volgende - vandaag) / (1000 * 60 * 60 * 24));
+    // Komende betalingen (volgende 30 dagen — gebaseerd op nieuwe/huidige datum)
+    const dagenTot = Math.ceil((datumVoorKomend - vandaag) / (1000 * 60 * 60 * 24));
     if (dagenTot >= 0 && dagenTot <= 30) {
       komend.push({
         naam,
         bedrag,
-        datum: volgende,
+        datum: datumVoorKomend,
         dagenTot,
       });
     }

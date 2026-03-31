@@ -124,7 +124,7 @@ function berekenBelastingadvies_(ss) {
     const winstNaAftrekken = Math.max(0, winst - totaalAftrek);
     const mkbAftrek = rondBedrag_(winstNaAftrekken * BELASTING.MKB_WINSTVRIJSTELLING);
     aftrekken.push({
-      naam: 'MKB-winstvrijstelling (13,31%)',
+      naam: 'MKB-winstvrijstelling (12,70%)',
       bedrag: mkbAftrek,
       voorwaarde: 'Automatisch van toepassing voor ondernemers IB',
       code: '7990',
@@ -132,7 +132,7 @@ function berekenBelastingadvies_(ss) {
     adviezen.push({
       type: 'AFTREKPOST',
       titel: '✅ MKB-winstvrijstelling: ' + formatBedrag_(mkbAftrek),
-      tekst: `13,31% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
+      tekst: `12,70% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
              `Dit wordt automatisch meegenomen in uw aangifte.`,
       besparing: rondBedrag_(mkbAftrek * BELASTING.IB_SCHIJF_1_PCT),
     });
@@ -189,12 +189,16 @@ function berekenBelastingadvies_(ss) {
   // ── 7. BTW aangifte deadline check ───────────────────────────────────
   const vandaag = new Date();
   const maand = vandaag.getMonth() + 1;
+  // BTW deadlines: Q4→31 jan, Q1→30 apr, Q2→31 jul, Q3→31 okt
+  // Waarschuwing toont in de deadlinemaand zelf (maand 1, 4, 7 of 10)
+  const maandNamen = ['', 'januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                      'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
   const kwartaalDeadlines = { 1: 'Q4 vorig jaar', 4: 'Q1', 7: 'Q2', 10: 'Q3' };
   if (kwartaalDeadlines[maand] && vandaag.getDate() <= 28) {
     adviezen.push({
       type: 'ACTIE',
       titel: '📅 BTW aangifte: ' + kwartaalDeadlines[maand] + ' deadline nadert',
-      tekst: `De BTW aangifte voor ${kwartaalDeadlines[maand]} moet voor eind ${['', 'januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'][maand + 1] || 'deze maand'} worden ingediend. ` +
+      tekst: `De BTW aangifte voor ${kwartaalDeadlines[maand]} moet voor eind ${maandNamen[maand]} worden ingediend. ` +
              `Genereer uw aangifte via: Boekhouding → BTW.`,
       besparing: null,
     });
