@@ -197,8 +197,8 @@ function zetBtwAangifteOpSheet_(ss, aangifte, kwartaal, periode) {
   const startRij = 3;
   sheet.getRange(startRij, 1, rijen.length, 4).setValues(rijen);
 
-  // Opmaak sectietitels
-  [7, 14, 18].forEach(offset => {
+  // Opmaak sectietitels (indices 3=SECTIE A, 10=SECTIE B, 14=SECTIE C)
+  [3, 10, 14].forEach(offset => {
     sheet.getRange(startRij + offset, 1, 1, 4)
       .setBackground(KLEUREN.SECTIE_BG)
       .setFontWeight('bold');
@@ -208,8 +208,8 @@ function zetBtwAangifteOpSheet_(ss, aangifte, kwartaal, periode) {
   sheet.getRange(startRij + 1, 1, 1, 4)
     .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold');
 
-  // Opmaak saldo rij
-  const saldoRij = startRij + rijen.length - 5;
+  // Opmaak saldo rij (index 21 = rijen.length - 4)
+  const saldoRij = startRij + rijen.length - 4;
   sheet.getRange(saldoRij, 1, 1, 4)
     .setBackground(aangifte.saldo >= 0 ? '#FFCDD2' : '#C8E6C9')
     .setFontWeight('bold').setFontSize(12);
