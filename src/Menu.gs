@@ -16,8 +16,7 @@ function onOpen() {
   ui.createMenu('Boekhouding')
 
     // ── Dagelijks gebruik ─────────────────────
-    .addItem('📋 Nieuw invoeren (factuur / kosten / declaratie)', 'openNieuwInvoeren')
-    .addItem('📸 Bon of factuur uploaden (foto + AI)', 'openBonUploadMetAI')
+    .addItem('➕ Nieuwe boeking (factuur / kosten / declaratie / bon)', 'openNieuweBoeking')
     .addSeparator()
 
     // ── Facturen ──────────────────────────────
@@ -99,7 +98,7 @@ function onOpen() {
     .addSubMenu(ui.createMenu('Instellingen')
       .addItem('Eerste keer instellen (setup)', 'setup')
       .addSeparator()
-      .addItem('Formulierlink bekijken', 'toonFormulierLinks')
+      .addItem('🎨 Bedrijfsstijl (logo & kleur)', 'openBrandingInstellingen')
       .addItem('Google Drive mappen', 'toonDriveStructuur')
       .addItem('Koppeling met Zapier / Make / n8n', 'toonZapierInstructies')
       .addSeparator()
