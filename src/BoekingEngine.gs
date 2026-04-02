@@ -179,11 +179,12 @@ function _verwerkFactuur_(ss, s) {
 
   const result = verwerkInkomstenUitHoofdformulier_(ss, formData);
   schrijfAuditLog_('Factuur aangemaakt', 'klant: ' + s.klant);
+  const emailVerzonden = !!(result && result.emailVerzonden);
   return {
     ok: true,
-    bericht: 'Factuur aangemaakt!' + (s.email ? ' Verstuurd naar ' + s.email + '.' : ' Geen e-mail (geen adres ingevuld).'),
+    bericht: 'Factuur aangemaakt!' + (emailVerzonden ? ' Verstuurd naar ' + s.email + '.' : ' Geen e-mail (geen adres ingevuld).'),
     factuurnummer: result ? result.factuurnummer : null,
-    emailVerzonden: !!s.email,
+    emailVerzonden,
   };
 }
 
@@ -192,17 +193,16 @@ function _verwerkKosten_(ss, s, raw) {
   const bedragIncl = saniteerGetal_(raw.bedragIncl);
   const btwCalc    = berekenBtw(s.btw, 0, bedragIncl);
 
+  // Veldnamen MOETEN overeenkomen met wat verwerkUitgavenUitHoofdformulier_ leest
   const formData = {};
-  formData['Soort boeking']                = 'Inkoopfactuur / kosten';
-  formData['Leverancier / betaald aan']    = s.leverancier;
-  formData['Datum']                        = s.datum;
-  formData['Omschrijving kosten']          = s.omschr;
-  formData['Kostenrubriek']                = s.categorie || '';
-  formData['Bedrag excl. BTW']             = btwCalc.excl;
-  formData['BTW-tarief']                   = s.btw || '21% (hoog)';
-  formData['BTW-bedrag']                   = btwCalc.btw;
-  formData['Totaalbedrag incl. BTW']       = btwCalc.incl;
-  formData['Factuurnummer leverancier']    = s.factuurnrLev || '';
+  formData['Leveranciernaam']            = s.leverancier;          // L158: data['Leveranciernaam']
+  formData['Factuurdatum uitgave']       = s.datum;                // L160: data['Factuurdatum uitgave']
+  formData['Omschrijving uitgave']       = s.omschr;               // L177: data['Omschrijving uitgave']
+  formData['Categorie kosten']           = s.categorie || 'Overige kosten'; // L170: data['Categorie kosten']
+  formData['Bedrag excl. BTW']           = btwCalc.excl;           // L161: data['Bedrag excl. BTW']
+  formData['BTW tarief uitgave']         = s.btw || '21% (hoog)';  // L162: data['BTW tarief uitgave']
+  formData['BTW bedrag uitgave']         = btwCalc.btw;            // L163: data['BTW bedrag uitgave']
+  formData['Factuurnummer leverancier']  = s.factuurnrLev || '';   // L175: data['Factuurnummer leverancier']
 
   verwerkUitgavenUitHoofdformulier_(ss, formData);
 
@@ -212,22 +212,25 @@ function _verwerkKosten_(ss, s, raw) {
     bonUrl = _slaBonoOp_(raw.bonBase64, raw.bonMime, s.datum + '_' + s.leverancier);
   }
   schrijfAuditLog_('Kosten geboekt', s.leverancier + ' ' + bedragIncl);
-  return { ok: true, bericht: 'Kosten geboekt (€ ' + bedragIncl.toFixed(2).replace('.', ',') + ').' + (bonUrl ? ' Bon opgeslagen.' : ''), bonUrl: bonUrl };
+  return {
+    ok: true,
+    bericht: 'Kosten geboekt (\u20ac\u00a0' + bedragIncl.toFixed(2).replace('.', ',') + ').' + (bonUrl ? ' Bon opgeslagen in Drive.' : ''),
+    bonUrl: bonUrl,
+  };
 }
 
 // ─── DECLARATIE HANDLER ───────────────────────
 function _verwerkDeclaratie_(ss, s, raw) {
   const bedrag = saniteerGetal_(raw.bedrag);
+
+  // Veldnamen MOETEN overeenkomen met wat verwerkDeclaratieUitHoofdformulier_ leest
   const formData = {};
-  formData['Soort boeking']             = 'Declaratie';
-  formData['Omschrijving kosten']       = s.omschr;
-  formData['Datum']                     = s.datum;
-  formData['Totaalbedrag incl. BTW']    = bedrag;
-  formData['Bedrag excl. BTW']          = bedrag;
-  formData['BTW-tarief']                = '0% (nultarief)';
-  formData['BTW-bedrag']                = 0;
-  formData['Leverancier / betaald aan'] = s.betaaldDoor || getInstelling_('Bedrijfsnaam') || '';
-  formData['Notities']                  = s.toelichting || '';
+  formData['Omschrijving declaratie']      = s.omschr;             // L225: data['Omschrijving declaratie']
+  formData['Datum declaratie']             = s.datum;              // L213: data['Datum declaratie']
+  formData['Bedrag excl. BTW declaratie']  = bedrag;               // L214: data['Bedrag excl. BTW declaratie']
+  formData['BTW tarief declaratie']        = '0% (nultarief)';     // L215: data['BTW tarief declaratie']
+  formData['Categorie declaratie']         = 'Overige kosten';     // L218: data['Categorie declaratie']
+  formData['Betaald door (naam)']          = s.betaaldDoor || getInstelling_('Bedrijfsnaam') || ''; // L219
 
   verwerkDeclaratieUitHoofdformulier_(ss, formData);
 
@@ -236,7 +239,11 @@ function _verwerkDeclaratie_(ss, s, raw) {
     bonUrl = _slaBonoOp_(raw.bonBase64, raw.bonMime, s.datum + '_declaratie');
   }
   schrijfAuditLog_('Declaratie ingediend', s.omschr + ' ' + bedrag);
-  return { ok: true, bericht: 'Declaratie ingediend (€ ' + bedrag.toFixed(2).replace('.', ',') + ').', bonUrl: bonUrl };
+  return {
+    ok: true,
+    bericht: 'Declaratie ingediend (\u20ac\u00a0' + bedrag.toFixed(2).replace('.', ',') + ').',
+    bonUrl: bonUrl,
+  };
 }
 
 // ─── BON OPSLAAN ─────────────────────────────
