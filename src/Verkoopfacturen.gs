@@ -9,6 +9,10 @@
 function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regels, totalExcl, totalBtw, totalIncl, formData) {
   try {
     const bedrijf = getInstelling_('Bedrijfsnaam') || 'Ons Bedrijf';
+    // Branding: logo + bedrijfskleur (uit Branding.gs)
+    const logoDataUrl = (typeof getBedrijfsLogoVolledig_ === 'function') ? getBedrijfsLogoVolledig_() : null;
+    const pkKleur     = (typeof getBedrijfsKleur_ === 'function') ? getBedrijfsKleur_() : '#1A237E';
+    const pkLicht     = (typeof getBedrijfsKleurLicht_ === 'function') ? getBedrijfsKleurLicht_() : '#E8EAF6';
     const adres = getInstelling_('Adres') || '';
     const postcode = getInstelling_('Postcode') || '';
     const plaats = getInstelling_('Plaats') || '';
@@ -30,18 +34,18 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; font-size: 11pt; color: #333; padding: 40px; }
     .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
-    .bedrijfsnaam { font-size: 22pt; font-weight: bold; color: #1A237E; }
+    .bedrijfsnaam { font-size: 22pt; font-weight: bold; color: ${pkKleur}; }
     .factuur-info { text-align: right; }
-    .factuur-titel { font-size: 18pt; font-weight: bold; color: #1A237E; margin-bottom: 4px; }
+    .factuur-titel { font-size: 18pt; font-weight: bold; color: ${pkKleur}; margin-bottom: 4px; }
     .factuur-nr { font-size: 13pt; color: #555; }
-    .adressen { display: flex; gap: 40px; margin-bottom: 30px; padding-top: 20px; border-top: 2px solid #1A237E; }
+    .adressen { display: flex; gap: 40px; margin-bottom: 30px; padding-top: 20px; border-top: 2px solid ${pkKleur}; }
     .adres-blok { flex: 1; }
     .adres-titel { font-weight: bold; font-size: 9pt; text-transform: uppercase; color: #888; margin-bottom: 6px; letter-spacing: 1px; }
     .datums { background: #F5F5F5; padding: 10px 16px; border-radius: 4px; margin-bottom: 24px; display: flex; gap: 40px; }
     .datum-item label { font-size: 9pt; color: #888; display: block; }
     .datum-item span { font-weight: bold; }
     table.regels { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    table.regels th { background: #1A237E; color: white; padding: 8px 10px; text-align: left; font-size: 10pt; }
+    table.regels th { background: ${pkKleur}; color: white; padding: 8px 10px; text-align: left; font-size: 10pt; }
     table.regels td { padding: 7px 10px; border-bottom: 1px solid #E0E0E0; font-size: 10pt; }
     table.regels tr:nth-child(even) td { background: #FAFAFA; }
     table.regels td.getal { text-align: right; }
@@ -50,9 +54,9 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     .totalen td { padding: 5px 10px; font-size: 10pt; }
     .totalen td:last-child { text-align: right; }
     .totalen tr.subtotaal td { border-top: 1px solid #ccc; }
-    .totalen tr.totaal td { border-top: 2px solid #1A237E; font-weight: bold; font-size: 12pt; color: #1A237E; padding-top: 8px; }
-    .betaalinfo { background: #E8EAF6; padding: 14px 18px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #1A237E; }
-    .betaalinfo h4 { color: #1A237E; margin-bottom: 8px; }
+    .totalen tr.totaal td { border-top: 2px solid ${pkKleur}; font-weight: bold; font-size: 12pt; color: ${pkKleur}; padding-top: 8px; }
+    .betaalinfo { background: ${pkLicht}; padding: 14px 18px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid ${pkKleur}; }
+    .betaalinfo h4 { color: ${pkKleur}; margin-bottom: 8px; }
     .betaalinfo p { font-size: 10pt; line-height: 1.8; }
     .voettekst { font-size: 9pt; color: #888; text-align: center; border-top: 1px solid #E0E0E0; padding-top: 12px; }
     .bedrijfsinfo { font-size: 9pt; color: #666; text-align: center; margin-bottom: 8px; }
@@ -61,7 +65,9 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
 <body>
   <div class="header">
     <div>
-      <div class="bedrijfsnaam">${escHtml_(bedrijf)}</div>
+      ${logoDataUrl
+        ? `<img src="${logoDataUrl}" style="max-height:60px;max-width:220px;object-fit:contain;display:block;margin-bottom:4px" alt="${escHtml_(bedrijf)}">`
+        : `<div class="bedrijfsnaam" style="color:${pkKleur}">${escHtml_(bedrijf)}</div>`}
       <div style="font-size:10pt;color:#666;margin-top:4px">${escHtml_(adres)}<br>${escHtml_(postcode)} ${escHtml_(plaats)}</div>
       <div style="font-size:9pt;color:#888;margin-top:4px">KvK: ${escHtml_(kvk)} | BTW: ${escHtml_(btwNr)}</div>
     </div>

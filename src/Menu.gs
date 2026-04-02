@@ -16,8 +16,7 @@ function onOpen() {
   ui.createMenu('Boekhouding')
 
     // ── Dagelijks gebruik ─────────────────────
-    .addItem('📋 Nieuw invoeren (factuur / kosten / declaratie)', 'openHoofdFormulier')
-    .addItem('📸 Bon of factuur uploaden (foto)', 'openBonUpload')
+    .addItem('➕ Nieuwe boeking (factuur / kosten / declaratie / bon)', 'openNieuweBoeking')
     .addSeparator()
 
     // ── Facturen ──────────────────────────────
@@ -82,12 +81,16 @@ function onOpen() {
 
     // ── BTW ───────────────────────────────────
     .addSubMenu(ui.createMenu('BTW')
+      .addItem('🧾 BTW aangifte assistent (invulhulp)', 'toonBtwAangifteAssistent')
+      .addSeparator()
       .addItem('BTW-aangifte kwartaal 1 (jan-mrt)', 'genereerBtwAangifteQ1')
       .addItem('BTW-aangifte kwartaal 2 (apr-jun)', 'genereerBtwAangifteQ2')
       .addItem('BTW-aangifte kwartaal 3 (jul-sep)', 'genereerBtwAangifteQ3')
       .addItem('BTW-aangifte kwartaal 4 (okt-dec)', 'genereerBtwAangifteQ4')
       .addSeparator()
       .addItem('Kleineondernemersregeling (KOR) check', 'controleerKor')
+      .addSeparator()
+      .addItem('⏰ BTW reminder instellen', 'instelBtwReminderTrigger')
     )
 
     // ── Instellingen & Beheer ─────────────────
@@ -95,7 +98,7 @@ function onOpen() {
     .addSubMenu(ui.createMenu('Instellingen')
       .addItem('Eerste keer instellen (setup)', 'setup')
       .addSeparator()
-      .addItem('Formulierlink bekijken', 'toonFormulierLinks')
+      .addItem('🎨 Bedrijfsstijl (logo & kleur)', 'openBrandingInstellingen')
       .addItem('Google Drive mappen', 'toonDriveStructuur')
       .addItem('Koppeling met Zapier / Make / n8n', 'toonZapierInstructies')
       .addSeparator()

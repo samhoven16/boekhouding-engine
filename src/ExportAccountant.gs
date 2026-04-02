@@ -302,6 +302,8 @@ function exporteerAlsCsv_(ss, sheetNaam) {
       } else {
         waarde = String(cel === null || cel === undefined ? '' : cel);
       }
+      // Formula-injectie blokkeren (Excel/Sheets veiligheid)
+      if (/^[=+\-@\t\r]/.test(waarde)) waarde = "'" + waarde;
       // CSV escaping: omsluit met quotes als het komma's, quotes of newlines bevat
       if (waarde.includes(',') || waarde.includes('"') || waarde.includes('\n')) {
         waarde = '"' + waarde.replace(/"/g, '""') + '"';
