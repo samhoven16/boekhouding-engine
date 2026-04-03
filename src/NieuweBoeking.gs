@@ -208,6 +208,22 @@ input.ok{border-color:#2e7d32}
       <input type="text" id="f-notities" placeholder="Niet zichtbaar op factuur">
     </div>
   </div>
+  <div class="rij">
+    <div class="veld" style="flex:2">
+      <label>Factuuradres klant</label>
+      <input type="text" id="f-klantadres" placeholder="Straat, postcode, stad">
+    </div>
+  </div>
+  <div class="rij">
+    <div class="veld">
+      <label>KvK-nummer klant</label>
+      <input type="text" id="f-kvk" placeholder="Optioneel">
+    </div>
+    <div class="veld">
+      <label>BTW-nummer klant</label>
+      <input type="text" id="f-btwnr" placeholder="Bijv. NL000000000B01">
+    </div>
+  </div>
 </div>
 
 <!-- ════ KOSTEN ════ -->
@@ -289,6 +305,10 @@ input.ok{border-color:#2e7d32}
       <div class="foutmelding" id="fm-d-bedrag"></div>
     </div>
     <div class="veld">
+      <label>BTW tarief</label>
+      <select id="d-btw">${btwOpties}</select>
+    </div>
+    <div class="veld">
       <label>Betaald door</label>
       <input type="text" id="d-door" placeholder="Uw naam">
     </div>
@@ -347,10 +367,16 @@ input.ok{border-color:#2e7d32}
       </div>
       <div class="veld">
         <label>Boeken als</label>
-        <select id="u-type">
+        <select id="u-type" onchange="wisselUploadType()">
           <option value="kosten">💸 Kosten (zakelijk betaald)</option>
           <option value="declaratie">📤 Declaratie (privé betaald)</option>
         </select>
+      </div>
+    </div>
+    <div class="rij" id="u-door-rij" style="display:none">
+      <div class="veld">
+        <label>Betaald door</label>
+        <input type="text" id="u-door" placeholder="Uw naam">
       </div>
     </div>
   </div>
@@ -386,6 +412,7 @@ var HERKENNER = null;
   var btwStd = '${ctx.btwStandaard}';
   setSelect('f-btw', btwStd);
   setSelect('k-btw', btwStd);
+  setSelect('d-btw', btwStd);
   setSelect('u-btw', btwStd);
   herbereken();
 })();
@@ -499,9 +526,11 @@ function valideerTab(type) {
   var prefMap = { factuur:'f', kosten:'k', declaratie:'d' };
   var pref = prefMap[type] || type;
   var regels = REGELS[type] || {};
+  var idMap = { 'k-bedragIncl': 'k-incl' };
   var ok = true;
   Object.keys(regels).forEach(function(veld){
-    var elId = pref + '-' + veld;
+    var gebouwdId = pref + '-' + veld;
+    var elId = idMap[gebouwdId] || gebouwdId;
     var el = document.getElementById(elId);
     if(el && !valideerVeld(type, veld, el)) ok = false;
   });
@@ -524,6 +553,7 @@ function bevestig() {
       klant: val('f-klant'), datum: val('f-datum'), email: val('f-email'),
       termijn: val('f-termijn'), btw: val('f-btw'), referentie: val('f-ref'),
       notities: val('f-notities'),
+      klantAdres: val('f-klantadres'), kvkKlant: val('f-kvk'), btwNrKlant: val('f-btwnr'),
     };
     for(var i=1;i<=REGEL_TELLER;i++){
       var o=val('f-r'+i+'omschr'), p=val('f-r'+i+'prijs'), a=val('f-r'+i+'aantal');
@@ -543,7 +573,7 @@ function bevestig() {
     data = {
       omschr: val('d-omschr'), datum: val('d-datum'),
       bedrag: parseFloat(val('d-bedrag'))||0,
-      betaaldDoor: val('d-door'), toelichting: val('d-toelichting'),
+      btw: val('d-btw'), betaaldDoor: val('d-door'), toelichting: val('d-toelichting'),
     };
 
   } else if (type === 'upload') {
@@ -557,6 +587,7 @@ function bevestig() {
     };
     if (subType === 'declaratie') {
       data.bedrag = data.bedragIncl;
+      data.betaaldDoor = val('u-door');
     }
     type = subType;
   }
@@ -566,7 +597,7 @@ function bevestig() {
       toonKlaar(r);
     })
     .withFailureHandler(function(e) {
-      toonStatus('\u274c ' + e.message, '#c62828');
+      toonStatus('\u274c Opslaan mislukt. Controleer uw invoer en probeer opnieuw.', '#c62828');
       btn.disabled = false;
       btn.textContent = '\u2705 Opslaan';
     })
@@ -576,6 +607,11 @@ function bevestig() {
 function val(id) {
   var el = document.getElementById(id);
   return el ? el.value : '';
+}
+
+function wisselUploadType() {
+  var isDecl = val('u-type') === 'declaratie';
+  document.getElementById('u-door-rij').style.display = isDecl ? '' : 'none';
 }
 
 function toonStatus(tekst, kleur) {

@@ -145,8 +145,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   // Automatisch mailen naar klant
   let emailVerzonden = false;
   if (directMailen && klantEmail && pdfUrl) {
-    stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummerOpgemaakt, totalIncl, vervaldatum, pdfUrl, ublUrl);
-    emailVerzonden = true;
+    emailVerzonden = stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummerOpgemaakt, totalIncl, vervaldatum, pdfUrl, ublUrl) === true;
   }
 
   Logger.log(`Verkoopfactuur ${factuurNummerOpgemaakt} aangemaakt voor ${klantnaam}`);

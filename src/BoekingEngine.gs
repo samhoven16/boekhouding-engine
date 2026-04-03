@@ -78,6 +78,7 @@ function berekenBtw(tarief, bedragExcl, bedragIncl) {
   const pct = tarief && tarief.includes('21') ? 0.21
             : tarief && tarief.includes('9')  ? 0.09
             : 0;
+  const isVrijgesteld = !tarief || tarief.includes('Vrijgesteld') || tarief.includes('Verlegd');
   let excl, btw, incl;
   if (bedragExcl > 0) {
     excl  = Math.round(bedragExcl * 100) / 100;
@@ -90,7 +91,7 @@ function berekenBtw(tarief, bedragExcl, bedragIncl) {
   } else {
     excl = btw = incl = 0;
   }
-  return { excl: excl, btw: btw, incl: incl, tarief: pct };
+  return { excl: excl, btw: btw, incl: incl, tarief: isVrijgesteld ? null : pct };
 }
 
 // ─── CONTEXT VOOR DIALOG ──────────────────────
@@ -164,6 +165,8 @@ function _verwerkFactuur_(ss, s) {
   formData['Projectcode / Referentie']      = s.referentie || '';
   formData['Factuur direct e-mailen naar klant?'] = s.email ? 'Ja' : 'Nee';
   formData['Factuuradres klant']            = s.klantAdres || '';
+  formData['KvK-nummer klant']              = s.kvkKlant || '';
+  formData['BTW-nummer klant']              = s.btwNrKlant || '';
 
   // Regels 1-5
   for (let i = 1; i <= 5; i++) {
@@ -228,8 +231,8 @@ function _verwerkDeclaratie_(ss, s, raw) {
   formData['Omschrijving declaratie']      = s.omschr;             // L225: data['Omschrijving declaratie']
   formData['Datum declaratie']             = s.datum;              // L213: data['Datum declaratie']
   formData['Bedrag excl. BTW declaratie']  = bedrag;               // L214: data['Bedrag excl. BTW declaratie']
-  formData['BTW tarief declaratie']        = '0% (nultarief)';     // L215: data['BTW tarief declaratie']
-  formData['Categorie declaratie']         = 'Overige kosten';     // L218: data['Categorie declaratie']
+  formData['BTW tarief declaratie']        = s.btw || '0% (nultarief)';          // L215: data['BTW tarief declaratie']
+  formData['Categorie declaratie']         = s.categorie || 'Overige kosten';   // L218: data['Categorie declaratie']
   formData['Betaald door (naam)']          = s.betaaldDoor || getInstelling_('Bedrijfsnaam') || ''; // L219
 
   verwerkDeclaratieUitHoofdformulier_(ss, formData);
