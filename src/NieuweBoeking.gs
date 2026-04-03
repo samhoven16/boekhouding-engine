@@ -599,7 +599,7 @@ function bevestig() {
     .withFailureHandler(function(e) {
       toonStatus('\u274c Opslaan mislukt. Controleer uw invoer en probeer opnieuw.', '#c62828');
       btn.disabled = false;
-      btn.textContent = '\u2705 Opslaan';
+      btn.textContent = (ACTIEF_TAB === 'upload') ? '\u2705 Bon opslaan' : '\u2705 Opslaan';
     })
     .submitNieuweBoeking(type, data);
 }
@@ -689,6 +689,7 @@ function vulSpraakVelden(type, v) {
     if (v.r1prijs)  document.getElementById('f-r1prijs').value  = v.r1prijs;
     if (v.r1aantal) document.getElementById('f-r1aantal').value = v.r1aantal;
     if (v.email)    document.getElementById('f-email').value    = v.email;
+    if (v.btw)      setSelect('f-btw', v.btw);
     herbereken();
   } else if (type === 'kosten') {
     if (v.leverancier) document.getElementById('k-leverancier').value = v.leverancier;
@@ -754,6 +755,7 @@ function vulUploadVelden(s) {
   if (s.bedragIncl > 0) document.getElementById('u-incl').value    = s.bedragIncl;
   if (s.btwPercentage === 21) setSelect('u-btw','21% (hoog)');
   else if (s.btwPercentage === 9) setSelect('u-btw','9% (laag)');
+  else if (s.btwPercentage === 0) setSelect('u-btw','0% (nultarief)');
   if (s.categorie) setSelect('u-cat', s.categorie);
 }
 
