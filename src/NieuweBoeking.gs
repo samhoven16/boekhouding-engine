@@ -661,8 +661,13 @@ function startSpraak(type) {
     document.getElementById(statusId).textContent = 'Verwerken: \u201c' + tekst + '\u201d';
     google.script.run
       .withSuccessHandler(function(velden) {
-        vulSpraakVelden(type, velden);
-        document.getElementById(statusId).textContent = '\u2713 Ingevuld via spraak \u2014 controleer de gegevens';
+        var heeftVelden = velden && Object.keys(velden).length > 0;
+        if (heeftVelden) {
+          vulSpraakVelden(type, velden);
+          document.getElementById(statusId).textContent = '\u2713 Ingevuld via spraak \u2014 controleer de gegevens';
+        } else {
+          document.getElementById(statusId).textContent = 'Kon niet verwerken. Probeer opnieuw.';
+        }
       })
       .withFailureHandler(function() {
         document.getElementById(statusId).textContent = 'Kon niet verwerken. Probeer opnieuw.';
