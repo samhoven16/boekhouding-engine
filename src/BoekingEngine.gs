@@ -215,9 +215,11 @@ function _verwerkKosten_(ss, s, raw) {
     bonUrl = _slaBonoOp_(raw.bonBase64, raw.bonMime, s.datum + '_' + s.leverancier);
   }
   schrijfAuditLog_('Kosten geboekt', s.leverancier + ' ' + bedragIncl);
+  const bonBericht_k = bonUrl ? ' Bon opgeslagen in Drive.'
+                     : raw.bonBase64 ? ' Let op: bon kon niet worden opgeslagen in Drive.' : '';
   return {
     ok: true,
-    bericht: 'Kosten geboekt (\u20ac\u00a0' + bedragIncl.toFixed(2).replace('.', ',') + ').' + (bonUrl ? ' Bon opgeslagen in Drive.' : ''),
+    bericht: 'Kosten geboekt (\u20ac\u00a0' + bedragIncl.toFixed(2).replace('.', ',') + ').' + bonBericht_k,
     bonUrl: bonUrl,
   };
 }
@@ -242,9 +244,11 @@ function _verwerkDeclaratie_(ss, s, raw) {
     bonUrl = _slaBonoOp_(raw.bonBase64, raw.bonMime, s.datum + '_declaratie');
   }
   schrijfAuditLog_('Declaratie ingediend', s.omschr + ' ' + bedrag);
+  const bonBericht_d = bonUrl ? ' Bon opgeslagen in Drive.'
+                     : raw.bonBase64 ? ' Let op: bon kon niet worden opgeslagen in Drive.' : '';
   return {
     ok: true,
-    bericht: 'Declaratie ingediend (\u20ac\u00a0' + bedrag.toFixed(2).replace('.', ',') + ').',
+    bericht: 'Declaratie ingediend (\u20ac\u00a0' + bedrag.toFixed(2).replace('.', ',') + ').' + bonBericht_d,
     bonUrl: bonUrl,
   };
 }

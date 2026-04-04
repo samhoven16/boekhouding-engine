@@ -135,17 +135,21 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   // UBL genereren
   const ublUrl = genereerUBL_(factuurNr, klantnaam, klantAdres, regels, totalExcl, totalBtw, totalIncl, datum, vervaldatum, btwTarief);
 
-  // PDF & UBL URLs opslaan + status bijwerken
+  // PDF & UBL URLs opslaan
   if (pdfUrl) {
     vfSheet.getRange(nieuweRij, 20).setValue(pdfUrl);
-    const nieuweStatus = directMailen && klantEmail ? FACTUUR_STATUS.VERZONDEN : FACTUUR_STATUS.CONCEPT;
-    vfSheet.getRange(nieuweRij, 15).setValue(nieuweStatus);
   }
 
   // Automatisch mailen naar klant
   let emailVerzonden = false;
   if (directMailen && klantEmail && pdfUrl) {
     emailVerzonden = stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummerOpgemaakt, totalIncl, vervaldatum, pdfUrl, ublUrl) === true;
+  }
+
+  // Status na werkelijk email-resultaat zetten (niet op intentie)
+  if (pdfUrl) {
+    const nieuweStatus = emailVerzonden ? FACTUUR_STATUS.VERZONDEN : FACTUUR_STATUS.CONCEPT;
+    vfSheet.getRange(nieuweRij, 15).setValue(nieuweStatus);
   }
 
   Logger.log(`Verkoopfactuur ${factuurNummerOpgemaakt} aangemaakt voor ${klantnaam}`);

@@ -406,7 +406,7 @@ function getBtwPerMaand_(ss, jaar) {
 //  HELPERS BTW
 // ─────────────────────────────────────────────
 function parseBtwTarief_(label) {
-  if (!label) return 0.21;
+  if (!label) return null;
   const l = label.toLowerCase();
   if (l.includes('21')) return 0.21;
   if (l.includes('9%') || l.includes('laag')) return 0.09;
