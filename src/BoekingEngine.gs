@@ -247,6 +247,7 @@ function _verwerkDeclaratie_(ss, s, raw) {
   formData['Omschrijving declaratie']      = s.omschr;             // L225: data['Omschrijving declaratie']
   formData['Datum declaratie']             = s.datum;              // L213: data['Datum declaratie']
   formData['Bedrag excl. BTW declaratie']  = btwCalc.excl;         // L214: data['Bedrag excl. BTW declaratie']
+  formData['BTW bedrag declaratie']        = btwCalc.btw;           // pre-computed to avoid cascaded rounding
   formData['BTW tarief declaratie']        = s.btw || '0% (nultarief)';          // L215: data['BTW tarief declaratie']
   formData['Categorie declaratie']         = s.categorie || 'Overige kosten';   // L218: data['Categorie declaratie']
   formData['Betaald door (naam)']          = s.betaaldDoor || getInstelling_('Bedrijfsnaam') || ''; // L219

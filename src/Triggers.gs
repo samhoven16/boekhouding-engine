@@ -219,7 +219,12 @@ function verwerkDeclaratieUitHoofdformulier_(ss, data) {
   const datum      = data['Datum declaratie'] ? new Date(data['Datum declaratie']) : new Date();
   const bedragExcl = parseBedrag_(data['Bedrag excl. BTW declaratie'] || '0');
   const btwTarief  = parseBtwTarief_(data['BTW tarief declaratie'] || '0% (nultarief)');
-  const btwBedrag  = btwTarief !== null ? rondBedrag_(bedragExcl * btwTarief) : 0;
+  // Use pre-computed BTW bedrag if provided (avoids cascaded rounding errors from excl*rate);
+  // fall back to computed value for Forms submissions that don't include this field.
+  let btwBedrag = parseBedrag_(data['BTW bedrag declaratie'] || '0');
+  if (btwBedrag === 0 && btwTarief !== null) {
+    btwBedrag = rondBedrag_(bedragExcl * btwTarief);
+  }
   const bedragIncl = rondBedrag_(bedragExcl + btwBedrag);
   const categorie  = data['Categorie declaratie'] || 'Overige kosten';
   const betaaldDoor = data['Betaald door (naam)'] || 'Privé';
