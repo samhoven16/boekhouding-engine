@@ -183,9 +183,20 @@ function _verwerkFactuur_(ss, s) {
   const result = verwerkInkomstenUitHoofdformulier_(ss, formData);
   schrijfAuditLog_('Factuur aangemaakt', 'klant: ' + s.klant);
   const emailVerzonden = !!(result && result.emailVerzonden);
+  const heeftPdf       = !!(result && result.pdfUrl);
+  let emailInfo;
+  if (emailVerzonden) {
+    emailInfo = ' Verstuurd naar ' + s.email + '.';
+  } else if (!s.email) {
+    emailInfo = ' Geen e-mail (geen adres ingevuld).';
+  } else if (!heeftPdf) {
+    emailInfo = ' Let op: PDF kon niet worden gegenereerd \u2014 geen e-mail verstuurd.';
+  } else {
+    emailInfo = ' E-mail versturen mislukt.';
+  }
   return {
     ok: true,
-    bericht: 'Factuur aangemaakt!' + (emailVerzonden ? ' Verstuurd naar ' + s.email + '.' : ' Geen e-mail (geen adres ingevuld).'),
+    bericht: 'Factuur aangemaakt!' + emailInfo,
     factuurnummer: result ? result.factuurnummer : null,
     emailVerzonden,
   };

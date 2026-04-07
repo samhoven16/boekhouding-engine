@@ -153,7 +153,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   }
 
   Logger.log(`Verkoopfactuur ${factuurNummerOpgemaakt} aangemaakt voor ${klantnaam}`);
-  return { factuurnummer: factuurNummerOpgemaakt, emailVerzonden };
+  return { factuurnummer: factuurNummerOpgemaakt, emailVerzonden, pdfUrl };
 }
 
 // ─────────────────────────────────────────────
