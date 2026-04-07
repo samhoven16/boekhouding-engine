@@ -226,13 +226,16 @@ function _verwerkKosten_(ss, s, raw) {
 
 // ─── DECLARATIE HANDLER ───────────────────────
 function _verwerkDeclaratie_(ss, s, raw) {
-  const bedrag = saniteerGetal_(raw.bedrag);
+  // raw.bedrag is always the total (incl. BTW) the user or AI provided — same as bedragIncl in kosten.
+  // Back-calculate excl like _verwerkKosten_ does; never treat as excl directly.
+  const bedragIncl = saniteerGetal_(raw.bedrag);
+  const btwCalc    = berekenBtw(s.btw, 0, bedragIncl);
 
   // Veldnamen MOETEN overeenkomen met wat verwerkDeclaratieUitHoofdformulier_ leest
   const formData = {};
   formData['Omschrijving declaratie']      = s.omschr;             // L225: data['Omschrijving declaratie']
   formData['Datum declaratie']             = s.datum;              // L213: data['Datum declaratie']
-  formData['Bedrag excl. BTW declaratie']  = bedrag;               // L214: data['Bedrag excl. BTW declaratie']
+  formData['Bedrag excl. BTW declaratie']  = btwCalc.excl;         // L214: data['Bedrag excl. BTW declaratie']
   formData['BTW tarief declaratie']        = s.btw || '0% (nultarief)';          // L215: data['BTW tarief declaratie']
   formData['Categorie declaratie']         = s.categorie || 'Overige kosten';   // L218: data['Categorie declaratie']
   formData['Betaald door (naam)']          = s.betaaldDoor || getInstelling_('Bedrijfsnaam') || ''; // L219
@@ -243,12 +246,12 @@ function _verwerkDeclaratie_(ss, s, raw) {
   if (raw.bonBase64) {
     bonUrl = _slaBonoOp_(raw.bonBase64, raw.bonMime, s.datum + '_declaratie');
   }
-  schrijfAuditLog_('Declaratie ingediend', s.omschr + ' ' + bedrag);
+  schrijfAuditLog_('Declaratie ingediend', s.omschr + ' ' + bedragIncl);
   const bonBericht_d = bonUrl ? ' Bon opgeslagen in Drive.'
                      : raw.bonBase64 ? ' Let op: bon kon niet worden opgeslagen in Drive.' : '';
   return {
     ok: true,
-    bericht: 'Declaratie ingediend (\u20ac\u00a0' + bedrag.toFixed(2).replace('.', ',') + ').' + bonBericht_d,
+    bericht: 'Declaratie ingediend (\u20ac\u00a0' + bedragIncl.toFixed(2).replace('.', ',') + ').' + bonBericht_d,
     bonUrl: bonUrl,
   };
 }
