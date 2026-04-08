@@ -22,6 +22,8 @@ function onOpen() {
 
     // ── Facturen ──────────────────────────────
     .addSubMenu(ui.createMenu('Facturen & Betalingen')
+      .addItem('📋 Factuurlijst (open / vervallen / betaald)', 'openFactuurlijst')
+      .addSeparator()
       .addItem('Factuur per e-mail versturen', 'stuurVerkoopfactuurPdf')
       .addItem('Betalingsherinneringen versturen', 'stuurBetalingsherinneringen')
       .addSeparator()

@@ -604,3 +604,240 @@ function extractFileId_(url) {
   const m3 = url.match(/[-\w]{25,}/);
   return m3 ? m3[0] : '';
 }
+
+// ─────────────────────────────────────────────
+//  FACTUURLIJST DIALOG
+// ─────────────────────────────────────────────
+
+/**
+ * Opent de factuurlijst als HTML dialog met status-tabs.
+ * Menu: Boekhouding → Facturen & Betalingen → Factuurlijst openen
+ */
+function openFactuurlijst() {
+  const html = HtmlService.createHtmlOutput(_bouwFactuurlijstHtml_())
+    .setWidth(880)
+    .setHeight(580);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Factuurlijst');
+}
+
+/**
+ * Geeft alle verkoopfacturen terug voor de factuurlijst dialog.
+ * Publieke functie — aangeroepen via google.script.run.
+ */
+function getFactuurlijstData() {
+  const ss = getSpreadsheet_();
+  const data = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  const vandaag = new Date();
+  const facturen = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const r = data[i];
+    if (!r[1]) continue; // Geen factuurnummer = lege rij
+    const vervaldatum = r[3] ? new Date(r[3]) : null;
+    const datum       = r[2] ? new Date(r[2]) : null;
+    const status      = String(r[14] || '');
+    const bedragIncl  = parseFloat(r[12]) || 0;
+    const betaald     = parseFloat(r[13]) || 0;
+    const openBedrag  = rondBedrag_(bedragIncl - betaald);
+    const dagenVervallen = vervaldatum
+      ? Math.floor((vandaag - vervaldatum) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    facturen.push({
+      rij:           i + 1,
+      nr:            String(r[1] || ''),
+      datum:         datum ? formatDatum_(datum) : '',
+      vervaldatum:   vervaldatum ? formatDatum_(vervaldatum) : '',
+      klant:         String(r[5] || '–'),
+      bedragIncl,
+      betaald,
+      openBedrag,
+      status,
+      betaaldatum:   r[15] ? formatDatum_(new Date(r[15])) : '',
+      dagenVervallen: status === FACTUUR_STATUS.VERVALLEN ? dagenVervallen : 0,
+      pdfUrl:        String(r[17] || ''),
+    });
+  }
+
+  // Urgentiesortering: vervallen ouder eerst; open: vervaldatum oplopend
+  facturen.sort((a, b) => {
+    if (a.status === FACTUUR_STATUS.VERVALLEN && b.status !== FACTUUR_STATUS.VERVALLEN) return -1;
+    if (b.status === FACTUUR_STATUS.VERVALLEN && a.status !== FACTUUR_STATUS.VERVALLEN) return 1;
+    return b.dagenVervallen - a.dagenVervallen || a.vervaldatum.localeCompare(b.vervaldatum);
+  });
+
+  const tellers = {
+    alle:     facturen.length,
+    open:     facturen.filter(f => f.status === FACTUUR_STATUS.VERZONDEN || f.status === FACTUUR_STATUS.CONCEPT || f.status === FACTUUR_STATUS.DEELS_BETAALD).length,
+    vervallen: facturen.filter(f => f.status === FACTUUR_STATUS.VERVALLEN).length,
+    betaald:  facturen.filter(f => f.status === FACTUUR_STATUS.BETAALD || f.status === FACTUUR_STATUS.GECREDITEERD).length,
+  };
+
+  return { facturen, tellers };
+}
+
+/**
+ * Markeert een verkoopfactuur als volledig betaald.
+ * Aangeroepen via google.script.run vanuit de factuurlijst dialog.
+ * @param {string} factuurnr
+ * @param {string} betaaldatumStr  ISO-datum string (yyyy-mm-dd)
+ */
+function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
+  if (!factuurnr) throw new Error('Geen factuurnummer opgegeven');
+  const ss    = getSpreadsheet_();
+  const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  const data  = sheet.getDataRange().getValues();
+  const datum = betaaldatumStr ? parseDatum_(betaaldatumStr) : new Date();
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][1]) !== String(factuurnr)) continue;
+    const bedragIncl = parseFloat(data[i][12]) || 0;
+    sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag
+    sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.BETAALD);  // Status
+    sheet.getRange(i + 1, 16).setValue(datum);                   // Betaaldatum
+
+    // Journaalpost: Debiteuren → Bank
+    maakJournaalpost_(ss, {
+      datum,
+      omschr:  'Ontvangst factuur ' + factuurnr,
+      dagboek: 'Bankboek',
+      debet:   '1200',
+      credit:  '1100',
+      bedrag:  bedragIncl,
+      ref:     factuurnr,
+      type:    BOEKING_TYPE.BANKONTVANGST,
+    });
+
+    schrijfAuditLog_('Factuur betaald', factuurnr + ' via factuurlijst dialog');
+    return { ok: true, bericht: 'Factuur ' + factuurnr + ' gemarkeerd als betaald.' };
+  }
+  throw new Error('Factuurnummer ' + factuurnr + ' niet gevonden');
+}
+
+function _bouwFactuurlijstHtml_() {
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+    '<style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:Arial,sans-serif;font-size:13px;color:#212121;background:#F4F5F8;height:100vh;display:flex;flex-direction:column;overflow:hidden}' +
+    '.hdr{background:#1A237E;color:white;padding:11px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}' +
+    '.hdr h1{font-size:14px;font-weight:bold}' +
+    '.btn-ref{background:rgba(255,255,255,.15);border:none;color:white;padding:5px 11px;border-radius:4px;cursor:pointer;font-size:11px}' +
+    '.btn-ref:hover{background:rgba(255,255,255,.25)}' +
+    '.tabs{display:flex;background:white;border-bottom:2px solid #E5E7EB;flex-shrink:0}' +
+    '.tab{flex:1;padding:10px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:bold;color:#6B7280;border-bottom:3px solid transparent;transition:all .15s;user-select:none}' +
+    '.tab:hover{color:#1A237E;background:#F5F3FF}' +
+    '.tab.actief{color:#1A237E;border-bottom-color:#1A237E}' +
+    '.tab .cnt{display:inline-block;background:#E5E7EB;color:#374151;font-size:10px;padding:1px 6px;border-radius:20px;margin-left:4px;vertical-align:middle}' +
+    '.tab.actief .cnt{background:#DBEAFE;color:#1D4ED8}' +
+    '.tab.vervallen.actief .cnt{background:#FEE2E2;color:#991B1B}' +
+    '.body{flex:1;overflow-y:auto;padding:12px 16px}' +
+    'table{width:100%;border-collapse:collapse;background:white;border-radius:8px;border:1px solid #E5E7EB;overflow:hidden}' +
+    'th{background:#F9FAFB;font-size:10px;font-weight:bold;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;padding:9px 12px;text-align:left;border-bottom:1px solid #E5E7EB}' +
+    'td{padding:9px 12px;border-bottom:1px solid #F9FAFB;font-size:12px;vertical-align:middle}' +
+    'tr:last-child td{border-bottom:none}' +
+    'tr:hover td{background:#FAFAFA}' +
+    '.badge{font-size:10px;font-weight:bold;padding:2px 8px;border-radius:20px;white-space:nowrap}' +
+    '.b-open{background:#DBEAFE;color:#1D4ED8}' +
+    '.b-concept{background:#F3F4F6;color:#374151}' +
+    '.b-deels{background:#FEF9C3;color:#854D0E}' +
+    '.b-vervallen{background:#FEE2E2;color:#991B1B}' +
+    '.b-betaald{background:#DCFCE7;color:#166534}' +
+    '.b-gecrediteerd{background:#F3E8FF;color:#6B21A8}' +
+    '.btn-betaald{background:#15803D;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;white-space:nowrap}' +
+    '.btn-betaald:hover{background:#166534}' +
+    '.btn-betaald:disabled{background:#9CA3AF;cursor:not-allowed}' +
+    '.urgent{color:#B91C1C;font-weight:bold}' +
+    '.loading{text-align:center;padding:40px;color:#9CA3AF}' +
+    '.spin{display:inline-block;width:20px;height:20px;border:2px solid #E5E7EB;border-top-color:#1A237E;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}' +
+    '@keyframes spin{to{transform:rotate(360deg)}}' +
+    '.leeg{text-align:center;padding:30px;color:#9CA3AF;font-size:12px}' +
+    '.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#166534;color:white;padding:8px 18px;border-radius:6px;font-size:12px;display:none;z-index:99}' +
+    '</style></head><body>' +
+    '<div class="hdr"><h1>Verkoopfacturen</h1><button class="btn-ref" onclick="laad()">\u21bb Vernieuwen</button></div>' +
+    '<div class="tabs" id="tabs">' +
+    '  <div class="tab actief" data-tab="alle" onclick="wissel(\'alle\')">Alle<span class="cnt" id="cnt-alle">0</span></div>' +
+    '  <div class="tab" data-tab="open" onclick="wissel(\'open\')">Openstaand<span class="cnt" id="cnt-open">0</span></div>' +
+    '  <div class="tab vervallen" data-tab="vervallen" onclick="wissel(\'vervallen\')">Vervallen<span class="cnt" id="cnt-vervallen">0</span></div>' +
+    '  <div class="tab" data-tab="betaald" onclick="wissel(\'betaald\')">Betaald<span class="cnt" id="cnt-betaald">0</span></div>' +
+    '</div>' +
+    '<div class="body" id="body"><div class="loading"><div class="spin"></div><br>Even laden\u2026</div></div>' +
+    '<div class="toast" id="toast"></div>' +
+    '<script>' +
+    'var ALLE=[], ACTIEF_TAB="alle";' +
+    'function fmt(b){b=parseFloat(b)||0;return(b<0?"-\u20ac":"\u20ac")+Math.abs(b).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2});}' +
+    'function esc(s){return String(s||"").replace(/[&<>"\']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\\\"":"&quot;","\'":"&#39;"}[c];});}' +
+    'function badgeKls(s){var m={"Verzonden":"b-open","Concept":"b-concept","Deels betaald":"b-deels","Vervallen":"b-vervallen","Betaald":"b-betaald","Gecrediteerd":"b-gecrediteerd"};return m[s]||"b-concept";}' +
+    'function laad(){' +
+    '  document.getElementById("body").innerHTML=\'<div class="loading"><div class="spin"></div><br>Even laden\u2026</div>\';' +
+    '  google.script.run.withSuccessHandler(function(d){' +
+    '    ALLE=d.facturen;' +
+    '    document.getElementById("cnt-alle").textContent=d.tellers.alle;' +
+    '    document.getElementById("cnt-open").textContent=d.tellers.open;' +
+    '    document.getElementById("cnt-vervallen").textContent=d.tellers.vervallen;' +
+    '    document.getElementById("cnt-betaald").textContent=d.tellers.betaald;' +
+    '    render(ACTIEF_TAB);' +
+    '  }).withFailureHandler(function(e){' +
+    '    document.getElementById("body").innerHTML=\'<div class="loading" style="color:#B91C1C">Laden mislukt: \'+esc(e.message)+\'</div>\';' +
+    '  }).getFactuurlijstData();' +
+    '}' +
+    'function wissel(tab){' +
+    '  ACTIEF_TAB=tab;' +
+    '  document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("actief",t.dataset.tab===tab);});' +
+    '  render(tab);' +
+    '}' +
+    'function filter(tab){' +
+    '  if(tab==="alle") return ALLE;' +
+    '  if(tab==="open") return ALLE.filter(function(f){return f.status==="Verzonden"||f.status==="Concept"||f.status==="Deels betaald";});' +
+    '  if(tab==="vervallen") return ALLE.filter(function(f){return f.status==="Vervallen";});' +
+    '  if(tab==="betaald") return ALLE.filter(function(f){return f.status==="Betaald"||f.status==="Gecrediteerd";});' +
+    '  return ALLE;' +
+    '}' +
+    'function render(tab){' +
+    '  var rijen=filter(tab);' +
+    '  if(rijen.length===0){document.getElementById("body").innerHTML=\'<div class="leeg">\u2713 Geen facturen in dit overzicht</div>\';return;}' +
+    '  var h=\'<table><thead><tr>\'+' +
+    '    \'<th>Nummer</th><th>Datum</th><th>Klant</th><th>Bedrag incl.</th><th>Open</th><th>Vervaldatum</th><th>Status</th><th></th>\'+' +
+    '    \'</tr></thead><tbody>\';' +
+    '  rijen.forEach(function(f){' +
+    '    var urgent=f.status==="Vervallen"&&f.dagenVervallen>30;' +
+    '    var kanBetalen=f.status!=="Betaald"&&f.status!=="Gecrediteerd";' +
+    '    h+=\'<tr>\';' +
+    '    h+=\'<td style="font-weight:bold">\'+esc(f.nr)+\'</td>\';' +
+    '    h+=\'<td>\'+esc(f.datum)+\'</td>\';' +
+    '    h+=\'<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\'+esc(f.klant)+\'</td>\';' +
+    '    h+=\'<td>\'+fmt(f.bedragIncl)+\'</td>\';' +
+    '    h+=\'<td class="\'+( urgent?"urgent":"" )+\'">\'+fmt(f.openBedrag)+\'</td>\';' +
+    '    h+=\'<td class="\'+( urgent?"urgent":"" )+\'">\'+esc(f.vervaldatum)+\'</td>\';' +
+    '    h+=\'<td><span class="badge \'+badgeKls(f.status)+\'">\'+esc(f.status)+\'</span></td>\';' +
+    '    h+=\'<td>\';' +
+    '    if(kanBetalen){' +
+    '      h+=\'<button class="btn-betaald" id="btn-\'+esc(f.nr)+\'" onclick="betaal(\\\'\'+esc(f.nr)+\'\\\')">Betaald</button>\';' +
+    '    }' +
+    '    h+=\'</td></tr>\';' +
+    '  });' +
+    '  h+=\'</tbody></table>\';' +
+    '  document.getElementById("body").innerHTML=h;' +
+    '}' +
+    'function betaal(nr){' +
+    '  var btn=document.getElementById("btn-"+nr);' +
+    '  if(btn){btn.disabled=true;btn.textContent="\u23f3";}' +
+    '  var datum=new Date().toISOString().slice(0,10);' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(r){' +
+    '      toonToast(r.bericht||"Gemarkeerd als betaald");' +
+    '      laad();' +
+    '    })' +
+    '    .withFailureHandler(function(e){' +
+    '      if(btn){btn.disabled=false;btn.textContent="Betaald";}' +
+    '      alert("Fout: "+e.message);' +
+    '    })' +
+    '    .markeerVerkoopfactuurBetaald(nr,datum);' +
+    '}' +
+    'function toonToast(tekst){' +
+    '  var t=document.getElementById("toast");' +
+    '  t.textContent=tekst;t.style.display="block";' +
+    '  setTimeout(function(){t.style.display="none";},3000);' +
+    '}' +
+    'laad();' +
+    '<\/script></body></html>';
+}
