@@ -16,11 +16,14 @@ function onOpen() {
   ui.createMenu('Boekhouding')
 
     // ── Dagelijks gebruik ─────────────────────
+    .addItem('📊 Dashboard openen', 'openDashboard')
     .addItem('➕ Nieuwe boeking (factuur / kosten / declaratie / bon)', 'openNieuweBoeking')
     .addSeparator()
 
     // ── Facturen ──────────────────────────────
     .addSubMenu(ui.createMenu('Facturen & Betalingen')
+      .addItem('📋 Factuurlijst (open / vervallen / betaald)', 'openFactuurlijst')
+      .addSeparator()
       .addItem('Factuur per e-mail versturen', 'stuurVerkoopfactuurPdf')
       .addItem('Betalingsherinneringen versturen', 'stuurBetalingsherinneringen')
       .addSeparator()

@@ -480,40 +480,70 @@ function koppelTransactiesAanFacturen() {
 //  HELPERS NUMMERING
 // ─────────────────────────────────────────────
 function volgendFactuurnummer_() {
-  const props = PropertiesService.getScriptProperties();
-  let nr = parseInt(props.getProperty(PROP.VOLGEND_FACTUUR_NR) || '1');
-  props.setProperty(PROP.VOLGEND_FACTUUR_NR, String(nr + 1));
-  return nr;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    let nr = parseInt(props.getProperty(PROP.VOLGEND_FACTUUR_NR) || '1');
+    props.setProperty(PROP.VOLGEND_FACTUUR_NR, String(nr + 1));
+    return nr;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function volgendInkoopNummer_() {
-  const props = PropertiesService.getScriptProperties();
-  let nr = parseInt(props.getProperty(PROP.VOLGEND_INKOOP_NR) || '1');
-  props.setProperty(PROP.VOLGEND_INKOOP_NR, String(nr + 1));
-  return nr;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    let nr = parseInt(props.getProperty(PROP.VOLGEND_INKOOP_NR) || '1');
+    props.setProperty(PROP.VOLGEND_INKOOP_NR, String(nr + 1));
+    return nr;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function volgendBoekingId_() {
-  const props = PropertiesService.getScriptProperties();
-  let nr = parseInt(props.getProperty(PROP.VOLGEND_BOEKING_NR) || '1');
-  props.setProperty(PROP.VOLGEND_BOEKING_NR, String(nr + 1));
-  return 'BK' + String(nr).padStart(6, '0');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    let nr = parseInt(props.getProperty(PROP.VOLGEND_BOEKING_NR) || '1');
+    props.setProperty(PROP.VOLGEND_BOEKING_NR, String(nr + 1));
+    return 'BK' + String(nr).padStart(6, '0');
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function volgendTransactieId_() {
-  const props = PropertiesService.getScriptProperties();
-  const sleutel = 'volgendTransactieId';
-  let nr = parseInt(props.getProperty(sleutel) || '1');
-  props.setProperty(sleutel, String(nr + 1));
-  return 'TR' + String(nr).padStart(6, '0');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const sleutel = 'volgendTransactieId';
+    let nr = parseInt(props.getProperty(sleutel) || '1');
+    props.setProperty(sleutel, String(nr + 1));
+    return 'TR' + String(nr).padStart(6, '0');
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function volgendRelatieId_() {
-  const props = PropertiesService.getScriptProperties();
-  const sleutel = 'volgendRelatieId';
-  let nr = parseInt(props.getProperty(sleutel) || '1');
-  props.setProperty(sleutel, String(nr + 1));
-  return 'REL' + String(nr).padStart(4, '0');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const sleutel = 'volgendRelatieId';
+    let nr = parseInt(props.getProperty(sleutel) || '1');
+    props.setProperty(sleutel, String(nr + 1));
+    return 'REL' + String(nr).padStart(4, '0');
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -538,25 +568,33 @@ function zoekGrootboekBwType_(code) {
 //  HELPERS RELATIES
 // ─────────────────────────────────────────────
 function zoekOfMaakRelatie_(ss, naam, type, email) {
-  const sheet = ss.getSheetByName(SHEETS.RELATIES);
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][2]).toLowerCase() === naam.toLowerCase()) {
-      // Sla e-mail op als die nog niet bekend was (kolom 11 = index 10)
-      if (email && !data[i][10]) {
-        sheet.getRange(i + 1, 11).setValue(email);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = ss.getSheetByName(SHEETS.RELATIES);
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][2]).toLowerCase() === naam.toLowerCase()) {
+        // Sla e-mail op als die nog niet bekend was (kolom 11 = index 10)
+        if (email && !data[i][10]) {
+          sheet.getRange(i + 1, 11).setValue(email);
+        }
+        return data[i][0]; // Relatie ID
       }
-      return data[i][0]; // Relatie ID
     }
+    // Maak nieuwe relatie aan — ID inline gegenereerd (geen geneste lock)
+    const props = PropertiesService.getScriptProperties();
+    let nr = parseInt(props.getProperty('volgendRelatieId') || '1');
+    props.setProperty('volgendRelatieId', String(nr + 1));
+    const id = 'REL' + String(nr).padStart(4, '0');
+    sheet.appendRow([
+      id, type, naam, '', '', '', '', 'Nederland',
+      '', '', email || '', '', '', 30, '21% (hoog)', '', 'Ja', '', new Date()
+    ]);
+    return id;
+  } finally {
+    lock.releaseLock();
   }
-
-  // Maak nieuwe relatie aan
-  const id = volgendRelatieId_();
-  sheet.appendRow([
-    id, type, naam, '', '', '', '', 'Nederland',
-    '', '', email || '', '', '', 30, '21% (hoog)', '', 'Ja', '', new Date()
-  ]);
-  return id;
 }
 
 // ─────────────────────────────────────────────

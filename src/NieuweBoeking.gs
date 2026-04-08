@@ -208,6 +208,22 @@ input.ok{border-color:#2e7d32}
       <input type="text" id="f-notities" placeholder="Niet zichtbaar op factuur">
     </div>
   </div>
+  <div class="rij">
+    <div class="veld" style="flex:2">
+      <label>Factuuradres klant</label>
+      <input type="text" id="f-klantadres" placeholder="Straat, postcode, stad">
+    </div>
+  </div>
+  <div class="rij">
+    <div class="veld">
+      <label>KvK-nummer klant</label>
+      <input type="text" id="f-kvk" placeholder="Optioneel">
+    </div>
+    <div class="veld">
+      <label>BTW-nummer klant</label>
+      <input type="text" id="f-btwnr" placeholder="Bijv. NL000000000B01">
+    </div>
+  </div>
 </div>
 
 <!-- ════ KOSTEN ════ -->
@@ -289,6 +305,10 @@ input.ok{border-color:#2e7d32}
       <div class="foutmelding" id="fm-d-bedrag"></div>
     </div>
     <div class="veld">
+      <label>BTW tarief</label>
+      <select id="d-btw">${btwOpties}</select>
+    </div>
+    <div class="veld">
       <label>Betaald door</label>
       <input type="text" id="d-door" placeholder="Uw naam">
     </div>
@@ -347,10 +367,16 @@ input.ok{border-color:#2e7d32}
       </div>
       <div class="veld">
         <label>Boeken als</label>
-        <select id="u-type">
+        <select id="u-type" onchange="wisselUploadType()">
           <option value="kosten">💸 Kosten (zakelijk betaald)</option>
           <option value="declaratie">📤 Declaratie (privé betaald)</option>
         </select>
+      </div>
+    </div>
+    <div class="rij" id="u-door-rij" style="display:none">
+      <div class="veld">
+        <label>Betaald door</label>
+        <input type="text" id="u-door" placeholder="Uw naam">
       </div>
     </div>
   </div>
@@ -386,6 +412,7 @@ var HERKENNER = null;
   var btwStd = '${ctx.btwStandaard}';
   setSelect('f-btw', btwStd);
   setSelect('k-btw', btwStd);
+  setSelect('d-btw', btwStd);
   setSelect('u-btw', btwStd);
   herbereken();
 })();
@@ -499,9 +526,11 @@ function valideerTab(type) {
   var prefMap = { factuur:'f', kosten:'k', declaratie:'d' };
   var pref = prefMap[type] || type;
   var regels = REGELS[type] || {};
+  var idMap = { 'k-bedragIncl': 'k-incl' };
   var ok = true;
   Object.keys(regels).forEach(function(veld){
-    var elId = pref + '-' + veld;
+    var gebouwdId = pref + '-' + veld;
+    var elId = idMap[gebouwdId] || gebouwdId;
     var el = document.getElementById(elId);
     if(el && !valideerVeld(type, veld, el)) ok = false;
   });
@@ -524,6 +553,7 @@ function bevestig() {
       klant: val('f-klant'), datum: val('f-datum'), email: val('f-email'),
       termijn: val('f-termijn'), btw: val('f-btw'), referentie: val('f-ref'),
       notities: val('f-notities'),
+      klantAdres: val('f-klantadres'), kvkKlant: val('f-kvk'), btwNrKlant: val('f-btwnr'),
     };
     for(var i=1;i<=REGEL_TELLER;i++){
       var o=val('f-r'+i+'omschr'), p=val('f-r'+i+'prijs'), a=val('f-r'+i+'aantal');
@@ -543,7 +573,7 @@ function bevestig() {
     data = {
       omschr: val('d-omschr'), datum: val('d-datum'),
       bedrag: parseFloat(val('d-bedrag'))||0,
-      betaaldDoor: val('d-door'), toelichting: val('d-toelichting'),
+      btw: val('d-btw'), betaaldDoor: val('d-door'), toelichting: val('d-toelichting'),
     };
 
   } else if (type === 'upload') {
@@ -557,6 +587,7 @@ function bevestig() {
     };
     if (subType === 'declaratie') {
       data.bedrag = data.bedragIncl;
+      data.betaaldDoor = val('u-door');
     }
     type = subType;
   }
@@ -566,9 +597,14 @@ function bevestig() {
       toonKlaar(r);
     })
     .withFailureHandler(function(e) {
-      toonStatus('\u274c ' + e.message, '#c62828');
+      // Toon de feitelijke foutmelding van de server; val terug op generieke tekst
+      var serverMsg = (e && e.message) ? e.message : '';
+      var toon = serverMsg.length > 3
+        ? serverMsg
+        : 'Opslaan mislukt \u2014 controleer uw invoer en probeer opnieuw.';
+      toonStatus('\u274c ' + toon, '#c62828');
       btn.disabled = false;
-      btn.textContent = '\u2705 Opslaan';
+      btn.textContent = (ACTIEF_TAB === 'upload') ? '\u2705 Bon opslaan' : '\u2705 Opslaan';
     })
     .submitNieuweBoeking(type, data);
 }
@@ -578,10 +614,21 @@ function val(id) {
   return el ? el.value : '';
 }
 
+function wisselUploadType() {
+  var isDecl = val('u-type') === 'declaratie';
+  document.getElementById('u-door-rij').style.display = isDecl ? '' : 'none';
+}
+
 function toonStatus(tekst, kleur) {
   var el = document.getElementById('footer-status');
   el.textContent = tekst;
   el.style.color = kleur || '#555';
+  // Visuele achtergrond bij fouten voor betere leesbaarheid
+  var isFout = (kleur === '#c62828');
+  el.style.background    = isFout ? '#FFF5F5' : 'transparent';
+  el.style.padding       = tekst  ? '3px 7px' : '';
+  el.style.borderRadius  = '4px';
+  el.style.fontStyle     = isFout ? 'normal' : 'italic';
 }
 
 function toonKlaar(r) {
@@ -625,11 +672,17 @@ function startSpraak(type) {
     document.getElementById(statusId).textContent = 'Verwerken: \u201c' + tekst + '\u201d';
     google.script.run
       .withSuccessHandler(function(velden) {
-        vulSpraakVelden(type, velden);
-        document.getElementById(statusId).textContent = '\u2713 Ingevuld via spraak \u2014 controleer de gegevens';
+        var heeftVelden = velden && Object.keys(velden).length > 0;
+        if (heeftVelden) {
+          vulSpraakVelden(type, velden);
+          document.getElementById(statusId).textContent = '\u2713 Ingevuld via spraak \u2014 controleer de gegevens';
+        } else {
+          document.getElementById(statusId).textContent = 'Kon niet verwerken. Probeer opnieuw.';
+        }
       })
-      .withFailureHandler(function() {
-        document.getElementById(statusId).textContent = 'Kon niet verwerken. Probeer opnieuw.';
+      .withFailureHandler(function(e) {
+        var msg = (e && e.message) ? e.message : 'Verbindingsfout';
+        document.getElementById(statusId).textContent = '\u274c AI-verwerking mislukt: ' + msg;
       })
       .parseBoekingSpraakinvoer(type, tekst);
   };
@@ -653,6 +706,7 @@ function vulSpraakVelden(type, v) {
     if (v.r1prijs)  document.getElementById('f-r1prijs').value  = v.r1prijs;
     if (v.r1aantal) document.getElementById('f-r1aantal').value = v.r1aantal;
     if (v.email)    document.getElementById('f-email').value    = v.email;
+    if (v.btw)      setSelect('f-btw', v.btw);
     herbereken();
   } else if (type === 'kosten') {
     if (v.leverancier) document.getElementById('k-leverancier').value = v.leverancier;
@@ -718,6 +772,7 @@ function vulUploadVelden(s) {
   if (s.bedragIncl > 0) document.getElementById('u-incl').value    = s.bedragIncl;
   if (s.btwPercentage === 21) setSelect('u-btw','21% (hoog)');
   else if (s.btwPercentage === 9) setSelect('u-btw','9% (laag)');
+  else if (s.btwPercentage === 0) setSelect('u-btw','0% (nultarief)');
   if (s.categorie) setSelect('u-cat', s.categorie);
 }
 

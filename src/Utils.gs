@@ -268,15 +268,8 @@ function stuurRapportPerEmail_(titel, inhoud, ontvanger) {
 // ─────────────────────────────────────────────
 //  LOGGING
 // ─────────────────────────────────────────────
-
-/**
- * Schrijft een audit log naar properties
- */
-function auditLog_(actie, details) {
-  const tijdstip = formatDatumTijd_(new Date());
-  const gebruiker = Session.getActiveUser().getEmail() || 'systeem';
-  Logger.log(`[${tijdstip}] [${gebruiker}] ${actie}: ${details}`);
-}
+// auditLog_ is defined in BoekingEngine.gs (delegates to schrijfAuditLog_).
+// Geeft ook Logger.log output voor backward-compat. Niet hier herdefineren.
 
 // ─────────────────────────────────────────────
 //  HULPFUNCTIES VOOR PERIODES

@@ -453,3 +453,202 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
 
   return startRij;
 }
+
+// ─────────────────────────────────────────────
+//  DASHBOARD HTML DIALOG
+// ─────────────────────────────────────────────
+
+/**
+ * Opent het interactieve dashboard als HTML dialog.
+ * Menu: Boekhouding → Dashboard openen
+ */
+function openDashboard() {
+  const html = HtmlService.createHtmlOutput(_bouwDashboardHtml_())
+    .setWidth(880)
+    .setHeight(560);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Dashboard');
+}
+
+/**
+ * Geeft dashboard data terug voor de HTML dialog.
+ * Publieke functie — aangeroepen via google.script.run.
+ */
+function getDashboardData() {
+  const ss = getSpreadsheet_();
+  const nu = new Date();
+  const huidigeM = nu.getMonth();
+  const huidigeJ = nu.getFullYear();
+
+  const kpi = berekenKpiData_(ss);
+
+  // Maand-specifieke omzet + vervallen facturen uit Verkoopfacturen
+  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  let omzetMaand = 0;
+  const vervallenFacturen = [];
+  for (let i = 1; i < vfData.length; i++) {
+    const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
+    const status = String(vfData[i][14] || '');
+    if (datum && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
+      omzetMaand += parseFloat(vfData[i][12]) || 0;
+    }
+    if (status === FACTUUR_STATUS.VERVALLEN) {
+      vervallenFacturen.push({
+        nr:    String(vfData[i][1] || ''),
+        klant: String(vfData[i][5] || '–'),
+        bedrag: parseFloat(vfData[i][12]) || 0,
+        datum: datum ? formatDatum_(datum) : '–',
+      });
+    }
+  }
+
+  // Maand-specifieke kosten uit Inkoopfacturen (col 11 = bedrag incl.)
+  const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  let kostenMaand = 0;
+  for (let i = 1; i < ifData.length; i++) {
+    const datum = ifData[i][3] ? new Date(ifData[i][3]) : null;
+    if (datum && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
+      kostenMaand += parseFloat(ifData[i][11]) || 0;
+    }
+  }
+
+  return {
+    bedrijf:    getInstelling_('Bedrijfsnaam') || 'Mijn bedrijf',
+    bijgewerkt: formatDatumTijd_(nu),
+    kpi: {
+      aantalOpenFacturen: kpi.aantalOpenFacturen,
+      debiteurenOpen:     kpi.debiteurenOpen,
+      omzetMaand:         rondBedrag_(omzetMaand),
+      kostenMaand:        rondBedrag_(kostenMaand),
+      btwSaldo:           kpi.btwSaldo,
+      btwDeadline:        _berekenBtwDeadline_(),
+    },
+    vervallenFacturen: vervallenFacturen.slice(0, 10),
+  };
+}
+
+function _berekenBtwDeadline_() {
+  const nu = new Date();
+  const m = nu.getMonth() + 1; // 1–12
+  // Aangifte deadlines: Q1→30 apr, Q2→31 jul, Q3→31 okt, Q4→31 jan
+  const deadlines = [
+    { kwartaal: 'Q1', maandNr: 4,  dag: 30 },
+    { kwartaal: 'Q2', maandNr: 7,  dag: 31 },
+    { kwartaal: 'Q3', maandNr: 10, dag: 31 },
+    { kwartaal: 'Q4', maandNr: 1,  dag: 31 },
+  ];
+  let volgende = deadlines.find(d => d.maandNr >= m);
+  let jaar = nu.getFullYear();
+  if (!volgende) {
+    volgende = deadlines[3]; // Q4 → jan volgend jaar
+    jaar = nu.getFullYear() + 1;
+  }
+  const datum = new Date(jaar, volgende.maandNr - 1, volgende.dag);
+  const dagenOver = Math.ceil((datum - nu) / (1000 * 60 * 60 * 24));
+  return {
+    kwartaal: volgende.kwartaal,
+    datum:    formatDatum_(datum),
+    dagenOver,
+    urgent:   dagenOver <= 14,
+  };
+}
+
+function _bouwDashboardHtml_() {
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+    '<style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:Arial,sans-serif;font-size:13px;color:#212121;background:#F4F5F8;height:100vh;display:flex;flex-direction:column;overflow:hidden}' +
+    '.hdr{background:#1A237E;color:white;padding:11px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}' +
+    '.hdr h1{font-size:14px;font-weight:bold;letter-spacing:.3px}' +
+    '.hdr .meta{font-size:10px;opacity:.65;margin-top:2px}' +
+    '.btn-ref{background:rgba(255,255,255,.15);border:none;color:white;padding:5px 11px;border-radius:4px;cursor:pointer;font-size:11px}' +
+    '.btn-ref:hover{background:rgba(255,255,255,.25)}' +
+    '.body{flex:1;overflow-y:auto;padding:14px 16px}' +
+    '.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}' +
+    '.kpi{background:white;border-radius:8px;padding:13px 14px;border:1px solid #E5E7EB;box-shadow:0 1px 2px rgba(0,0,0,.05)}' +
+    '.kpi .lbl{font-size:10px;font-weight:bold;color:#6B7280;text-transform:uppercase;letter-spacing:.5px}' +
+    '.kpi .val{font-size:19px;font-weight:bold;color:#111827;margin:5px 0 3px;line-height:1}' +
+    '.kpi .sub{font-size:11px;color:#9CA3AF}' +
+    '.kpi.goed .val{color:#15803D}.kpi.warn .val{color:#B45309}.kpi.krit .val{color:#B91C1C}' +
+    '.sec{font-size:10px;font-weight:bold;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}' +
+    '.acties{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}' +
+    '.actie{background:white;border:2px solid #E5E7EB;border-radius:8px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}' +
+    '.actie:hover{border-color:#3730A3;background:#F5F3FF}' +
+    '.actie .icoon{font-size:22px;margin-bottom:6px}' +
+    '.actie .txt{font-size:12px;font-weight:bold;color:#1E1B4B;line-height:1.3}' +
+    '.actie.pr{background:#1A237E;border-color:#1A237E}.actie.pr .txt{color:white}.actie.pr:hover{background:#283593;border-color:#283593}' +
+    '.lijst{background:white;border-radius:8px;border:1px solid #E5E7EB;overflow:hidden;margin-bottom:14px}' +
+    '.rij{display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid #F9FAFB;gap:10px}' +
+    '.rij:last-child{border-bottom:none}' +
+    '.badge{font-size:10px;font-weight:bold;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;background:#FEE2E2;color:#991B1B}' +
+    '.hoofd{flex:1;min-width:0}' +
+    '.naam{font-weight:bold;color:#111827;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.sub2{font-size:10px;color:#9CA3AF;margin-top:1px}' +
+    '.bedrag{font-size:13px;font-weight:bold;color:#B91C1C;flex-shrink:0}' +
+    '.leeg{padding:18px;text-align:center;color:#9CA3AF;font-size:12px}' +
+    '.loading{text-align:center;padding:60px 20px;color:#9CA3AF}' +
+    '.spin{display:inline-block;width:22px;height:22px;border:2px solid #E5E7EB;border-top-color:#1A237E;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:10px}' +
+    '@keyframes spin{to{transform:rotate(360deg)}}' +
+    '</style></head><body>' +
+    '<div class="hdr">' +
+    '  <div><h1 id="h-nm">Dashboard laden\u2026</h1><div class="meta" id="h-tm"></div></div>' +
+    '  <button class="btn-ref" onclick="laad()">\u21bb Vernieuwen</button>' +
+    '</div>' +
+    '<div class="body" id="body"><div class="loading"><div class="spin"></div><br>Even laden\u2026</div></div>' +
+    '<script>' +
+    'function fmt(b){b=parseFloat(b)||0;return(b<0?"-\u20ac":"\u20ac")+Math.abs(b).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2});}' +
+    'function esc(s){return String(s||"").replace(/[&<>"\']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\\\"":"&quot;","\'":"&#39;"}[c];});}' +
+    'function laad(){' +
+    '  document.getElementById("body").innerHTML=\'<div class="loading"><div class="spin"></div><br>Even laden\u2026</div>\';' +
+    '  google.script.run.withSuccessHandler(render).withFailureHandler(function(e){' +
+    '    document.getElementById("body").innerHTML=\'<div class="loading" style="color:#B91C1C">Laden mislukt: \'+esc(e.message)+\'</div>\';' +
+    '  }).getDashboardData();' +
+    '}' +
+    'function render(d){' +
+    '  document.getElementById("h-nm").textContent=(d.bedrijf||"Dashboard")+" \u2014 Dashboard";' +
+    '  document.getElementById("h-tm").textContent="Bijgewerkt: "+d.bijgewerkt;' +
+    '  var k=d.kpi,btw=k.btwDeadline,h="";' +
+    '  h+=\'<div class="kpi-grid">\';' +
+    '  h+=kpi("Open facturen",k.aantalOpenFacturen+" stuks",fmt(k.debiteurenOpen),k.aantalOpenFacturen>0?"warn":"goed");' +
+    '  h+=kpi("Omzet deze maand",fmt(k.omzetMaand),"",k.omzetMaand>0?"goed":"");' +
+    '  h+=kpi("Kosten deze maand",fmt(k.kostenMaand),"","");' +
+    '  h+=kpi("BTW aangifte",btw.kwartaal+" \u2014 "+btw.datum,btw.dagenOver+" dagen over",btw.urgent?"krit":"");' +
+    '  h+=\'</div>\';' +
+    '  h+=\'<div class="sec">Snelle acties</div>\';' +
+    '  h+=\'<div class="acties">\';' +
+    '  h+=actie("\u2795","Nieuwe boeking","openNieuweBoeking",true);' +
+    '  h+=actie("\uD83D\uDCF7","Upload bon","openBonUpload",false);' +
+    '  h+=actie("\uD83D\uDCCB","Openstaande facturen","vernieuwDebiteurenOverzicht",false);' +
+    '  h+=\'</div>\';' +
+    '  h+=\'<div class="sec">Vervallen facturen (\'+(d.vervallenFacturen?d.vervallenFacturen.length:0)+\')</div>\';' +
+    '  h+=\'<div class="lijst">\';' +
+    '  if(d.vervallenFacturen&&d.vervallenFacturen.length>0){' +
+    '    d.vervallenFacturen.forEach(function(f){' +
+    '      h+=\'<div class="rij"><span class="badge">Vervallen</span>\';' +
+    '      h+=\'<div class="hoofd"><div class="naam">\'+esc(f.klant)+\'</div><div class="sub2">\'+esc(f.nr)+\' \u00b7 \'+esc(f.datum)+\'</div></div>\';' +
+    '      h+=\'<div class="bedrag">\'+fmt(f.bedrag)+\'</div></div>\';' +
+    '    });' +
+    '  }else{h+=\'<div class="leeg">\u2713 Geen vervallen facturen</div>\';}' +
+    '  h+=\'</div>\';' +
+    '  document.getElementById("body").innerHTML=h;' +
+    '}' +
+    'function kpi(lbl,val,sub,kls){' +
+    '  return \'<div class="kpi \'+(kls||"")+\'">\'+' +
+    '    \'<div class="lbl">\'+lbl+\'</div>\'+' +
+    '    \'<div class="val">\'+val+\'</div>\'+' +
+    '    (sub?\'<div class="sub">\'+sub+\'</div>\':"")+' +
+    '    \'</div>\';' +
+    '}' +
+    'function actie(icoon,txt,fn,pr){' +
+    '  return \'<div class="actie\'+(pr?" pr":"")+\'" onclick="roep(\\\'\'+ fn +\'\\\')">\'+' +
+    '    \'<div class="icoon">\'+icoon+\'</div>\'+' +
+    '    \'<div class="txt">\'+txt+\'</div></div>\';' +
+    '}' +
+    'function roep(fn){' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(){google.script.host.close();})' +
+    '    .withFailureHandler(function(e){alert("Fout: "+e.message);})' +
+    '    [fn]();' +
+    '}' +
+    'laad();' +
+    '<\/script></body></html>';
+}

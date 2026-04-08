@@ -85,7 +85,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     data['BTW-nummer klant'] || '',
     regels.map(r => r.omschr).join('; '),
     totalExcl,
-    btwTarief !== null ? (btwTarief * 100) + '%' : 'Vrijgesteld',
+    data['BTW tarief'] || (btwTarief !== null ? (btwTarief * 100) + '%' : 'Vrijgesteld'),
     totalBtw,
     totalIncl,
     0,
@@ -135,19 +135,25 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   // UBL genereren
   const ublUrl = genereerUBL_(factuurNr, klantnaam, klantAdres, regels, totalExcl, totalBtw, totalIncl, datum, vervaldatum, btwTarief);
 
-  // PDF & UBL URLs opslaan + status bijwerken
+  // PDF & UBL URLs opslaan
   if (pdfUrl) {
     vfSheet.getRange(nieuweRij, 20).setValue(pdfUrl);
-    const nieuweStatus = directMailen && klantEmail ? FACTUUR_STATUS.VERZONDEN : FACTUUR_STATUS.CONCEPT;
-    vfSheet.getRange(nieuweRij, 15).setValue(nieuweStatus);
   }
 
   // Automatisch mailen naar klant
+  let emailVerzonden = false;
   if (directMailen && klantEmail && pdfUrl) {
-    stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummerOpgemaakt, totalIncl, vervaldatum, pdfUrl, ublUrl);
+    emailVerzonden = stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummerOpgemaakt, totalIncl, vervaldatum, pdfUrl, ublUrl) === true;
+  }
+
+  // Status na werkelijk email-resultaat zetten (niet op intentie)
+  if (pdfUrl) {
+    const nieuweStatus = emailVerzonden ? FACTUUR_STATUS.VERZONDEN : FACTUUR_STATUS.CONCEPT;
+    vfSheet.getRange(nieuweRij, 15).setValue(nieuweStatus);
   }
 
   Logger.log(`Verkoopfactuur ${factuurNummerOpgemaakt} aangemaakt voor ${klantnaam}`);
+  return { factuurnummer: factuurNummerOpgemaakt, emailVerzonden, pdfUrl };
 }
 
 // ─────────────────────────────────────────────
@@ -176,7 +182,7 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
     levId, leverancier,
     data['Omschrijving uitgave'] || categorie,
     bedragExcl,
-    btwTarief !== null ? (btwTarief * 100) + '%' : 'Vrijgesteld',
+    data['BTW tarief uitgave'] || (btwTarief !== null ? (btwTarief * 100) + '%' : 'Vrijgesteld'),
     btwBedrag, bedragIncl,
     data['Betalingsstatus uitgave'] === 'Betaald' ? FACTUUR_STATUS.BETAALD : FACTUUR_STATUS.CONCEPT,
     '',
@@ -213,7 +219,12 @@ function verwerkDeclaratieUitHoofdformulier_(ss, data) {
   const datum      = data['Datum declaratie'] ? new Date(data['Datum declaratie']) : new Date();
   const bedragExcl = parseBedrag_(data['Bedrag excl. BTW declaratie'] || '0');
   const btwTarief  = parseBtwTarief_(data['BTW tarief declaratie'] || '0% (nultarief)');
-  const btwBedrag  = btwTarief !== null ? rondBedrag_(bedragExcl * btwTarief) : 0;
+  // Use pre-computed BTW bedrag if provided (avoids cascaded rounding errors from excl*rate);
+  // fall back to computed value for Forms submissions that don't include this field.
+  let btwBedrag = parseBedrag_(data['BTW bedrag declaratie'] || '0');
+  if (btwBedrag === 0 && btwTarief !== null) {
+    btwBedrag = rondBedrag_(bedragExcl * btwTarief);
+  }
   const bedragIncl = rondBedrag_(bedragExcl + btwBedrag);
   const categorie  = data['Categorie declaratie'] || 'Overige kosten';
   const betaaldDoor = data['Betaald door (naam)'] || 'Privé';
@@ -224,7 +235,7 @@ function verwerkDeclaratieUitHoofdformulier_(ss, data) {
     '', '', betaaldDoor,
     data['Omschrijving declaratie'] || categorie,
     bedragExcl,
-    btwTarief !== null ? (btwTarief * 100) + '%' : 'Vrijgesteld',
+    data['BTW tarief declaratie'] || (btwTarief !== null ? (btwTarief * 100) + '%' : 'Vrijgesteld'),
     btwBedrag, bedragIncl,
     data['Declaratie status'] === 'Terugbetaald' ? FACTUUR_STATUS.BETAALD : FACTUUR_STATUS.CONCEPT,
     '', data['Betaalmethode declaratie'] || '',
