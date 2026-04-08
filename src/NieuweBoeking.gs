@@ -597,7 +597,12 @@ function bevestig() {
       toonKlaar(r);
     })
     .withFailureHandler(function(e) {
-      toonStatus('\u274c Opslaan mislukt. Controleer uw invoer en probeer opnieuw.', '#c62828');
+      // Toon de feitelijke foutmelding van de server; val terug op generieke tekst
+      var serverMsg = (e && e.message) ? e.message : '';
+      var toon = serverMsg.length > 3
+        ? serverMsg
+        : 'Opslaan mislukt \u2014 controleer uw invoer en probeer opnieuw.';
+      toonStatus('\u274c ' + toon, '#c62828');
       btn.disabled = false;
       btn.textContent = (ACTIEF_TAB === 'upload') ? '\u2705 Bon opslaan' : '\u2705 Opslaan';
     })
@@ -618,6 +623,12 @@ function toonStatus(tekst, kleur) {
   var el = document.getElementById('footer-status');
   el.textContent = tekst;
   el.style.color = kleur || '#555';
+  // Visuele achtergrond bij fouten voor betere leesbaarheid
+  var isFout = (kleur === '#c62828');
+  el.style.background    = isFout ? '#FFF5F5' : 'transparent';
+  el.style.padding       = tekst  ? '3px 7px' : '';
+  el.style.borderRadius  = '4px';
+  el.style.fontStyle     = isFout ? 'normal' : 'italic';
 }
 
 function toonKlaar(r) {
@@ -669,8 +680,9 @@ function startSpraak(type) {
           document.getElementById(statusId).textContent = 'Kon niet verwerken. Probeer opnieuw.';
         }
       })
-      .withFailureHandler(function() {
-        document.getElementById(statusId).textContent = 'Kon niet verwerken. Probeer opnieuw.';
+      .withFailureHandler(function(e) {
+        var msg = (e && e.message) ? e.message : 'Verbindingsfout';
+        document.getElementById(statusId).textContent = '\u274c AI-verwerking mislukt: ' + msg;
       })
       .parseBoekingSpraakinvoer(type, tekst);
   };
