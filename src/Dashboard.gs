@@ -475,41 +475,59 @@ function openDashboard() {
  */
 function getDashboardData() {
   const ss = getSpreadsheet_();
+  if (!ss) throw new Error('Spreadsheet niet bereikbaar. Controleer de instellingen.');
   const nu = new Date();
   const huidigeM = nu.getMonth();
   const huidigeJ = nu.getFullYear();
 
-  const kpi = berekenKpiData_(ss);
+  // Wrap KPI berekening: bij ontbrekende sheets (b.v. verse installatie) geen crash
+  let kpi;
+  try {
+    kpi = berekenKpiData_(ss);
+  } catch (e) {
+    Logger.log('getDashboardData: KPI fout — ' + e.message);
+    kpi = { aantalOpenFacturen: 0, debiteurenOpen: 0 };
+  }
 
   // Maand-specifieke omzet + vervallen facturen uit Verkoopfacturen
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
   let omzetMaand = 0;
   const vervallenFacturen = [];
-  for (let i = 1; i < vfData.length; i++) {
-    const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
-    const status = String(vfData[i][14] || '');
-    if (datum && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
-      omzetMaand += parseFloat(vfData[i][12]) || 0;
+  try {
+    const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+    if (vfSheet) {
+      const vfData = vfSheet.getDataRange().getValues();
+      for (let i = 1; i < vfData.length; i++) {
+        const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
+        const status = String(vfData[i][14] || '');
+        if (datum && !isNaN(datum) && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
+          omzetMaand += parseFloat(vfData[i][12]) || 0;
+        }
+        if (status === FACTUUR_STATUS.VERVALLEN) {
+          vervallenFacturen.push({
+            nr:     String(vfData[i][1] || ''),
+            klant:  String(vfData[i][5] || '–'),
+            bedrag: parseFloat(vfData[i][12]) || 0,
+            datum:  datum && !isNaN(datum) ? formatDatum_(datum) : '–',
+          });
+        }
+      }
     }
-    if (status === FACTUUR_STATUS.VERVALLEN) {
-      vervallenFacturen.push({
-        nr:    String(vfData[i][1] || ''),
-        klant: String(vfData[i][5] || '–'),
-        bedrag: parseFloat(vfData[i][12]) || 0,
-        datum: datum ? formatDatum_(datum) : '–',
-      });
-    }
-  }
+  } catch (e) { Logger.log('getDashboardData: VF fout — ' + e.message); }
 
   // Maand-specifieke kosten uit Inkoopfacturen (col 11 = bedrag incl.)
-  const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
   let kostenMaand = 0;
-  for (let i = 1; i < ifData.length; i++) {
-    const datum = ifData[i][3] ? new Date(ifData[i][3]) : null;
-    if (datum && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
-      kostenMaand += parseFloat(ifData[i][11]) || 0;
+  try {
+    const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+    if (ifSheet) {
+      const ifData = ifSheet.getDataRange().getValues();
+      for (let i = 1; i < ifData.length; i++) {
+        const datum = ifData[i][3] ? new Date(ifData[i][3]) : null;
+        if (datum && !isNaN(datum) && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
+          kostenMaand += parseFloat(ifData[i][11]) || 0;
+        }
+      }
     }
-  }
+  } catch (e) { Logger.log('getDashboardData: IF fout — ' + e.message); }
 
   return {
     bedrijf:    getInstelling_('Bedrijfsnaam') || 'Mijn bedrijf',
@@ -528,25 +546,28 @@ function getDashboardData() {
 
 function _berekenBtwDeadline_() {
   const nu = new Date();
-  const m = nu.getMonth() + 1; // 1–12
-  // Aangifte deadlines: Q1→30 apr, Q2→31 jul, Q3→31 okt, Q4→31 jan
-  const deadlines = [
-    { kwartaal: 'Q1', maandNr: 4,  dag: 30 },
-    { kwartaal: 'Q2', maandNr: 7,  dag: 31 },
-    { kwartaal: 'Q3', maandNr: 10, dag: 31 },
-    { kwartaal: 'Q4', maandNr: 1,  dag: 31 },
+  const jaar = nu.getFullYear();
+
+  // Alle BTW-aangifte deadlines in chronologische volgorde binnen een jaar.
+  // Gebruik maandindex 0-based (JS Date). Jan=0, Apr=3, Jul=6, Okt=9.
+  // Q4-aangifte (voor okt-dec van vorig jaar) valt op 31 januari dit jaar.
+  // Voeg ook 31-jan volgend jaar toe als wrap-around voor Nov/Dec.
+  const kandidaten = [
+    { kwartaal: 'Q4 vorig jaar', datum: new Date(jaar,     0, 31) },
+    { kwartaal: 'Q1',            datum: new Date(jaar,     3, 30) },
+    { kwartaal: 'Q2',            datum: new Date(jaar,     6, 31) },
+    { kwartaal: 'Q3',            datum: new Date(jaar,     9, 31) },
+    { kwartaal: 'Q4',            datum: new Date(jaar + 1, 0, 31) },
   ];
-  let volgende = deadlines.find(d => d.maandNr >= m);
-  let jaar = nu.getFullYear();
-  if (!volgende) {
-    volgende = deadlines[3]; // Q4 → jan volgend jaar
-    jaar = nu.getFullYear() + 1;
-  }
-  const datum = new Date(jaar, volgende.maandNr - 1, volgende.dag);
-  const dagenOver = Math.ceil((datum - nu) / (1000 * 60 * 60 * 24));
+
+  // Einde van de dag als grens (inclusief de deadline-dag zelf)
+  const eindVanDag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate(), 23, 59, 59);
+  const volgende = kandidaten.find(k => k.datum >= eindVanDag);
+  // Altijd gevonden: worst-case is Q4 januari volgend jaar
+  const dagenOver = Math.ceil((volgende.datum - nu) / (1000 * 60 * 60 * 24));
   return {
     kwartaal: volgende.kwartaal,
-    datum:    formatDatum_(datum),
+    datum:    formatDatum_(volgende.datum),
     dagenOver,
     urgent:   dagenOver <= 14,
   };
@@ -604,9 +625,10 @@ function _bouwDashboardHtml_() {
     '  }).getDashboardData();' +
     '}' +
     'function render(d){' +
+    '  if(!d||!d.kpi){document.getElementById("body").innerHTML=\'<div class="loading" style="color:#B91C1C">Ongeldige data ontvangen. Probeer te vernieuwen.</div>\';return;}' +
     '  document.getElementById("h-nm").textContent=(d.bedrijf||"Dashboard")+" \u2014 Dashboard";' +
     '  document.getElementById("h-tm").textContent="Bijgewerkt: "+d.bijgewerkt;' +
-    '  var k=d.kpi,btw=k.btwDeadline,h="";' +
+    '  var k=d.kpi,btw=k.btwDeadline||{kwartaal:"?",datum:"?",dagenOver:"?",urgent:false},h="";' +
     '  h+=\'<div class="kpi-grid">\';' +
     '  h+=kpi("Open facturen",k.aantalOpenFacturen+" stuks",fmt(k.debiteurenOpen),k.aantalOpenFacturen>0?"warn":"goed");' +
     '  h+=kpi("Omzet deze maand",fmt(k.omzetMaand),"",k.omzetMaand>0?"goed":"");' +
