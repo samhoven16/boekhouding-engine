@@ -16,6 +16,7 @@ function onOpen() {
   ui.createMenu('Boekhouding')
 
     // ── Dagelijks gebruik ─────────────────────
+    .addItem('📊 Dashboard openen', 'openDashboard')
     .addItem('➕ Nieuwe boeking (factuur / kosten / declaratie / bon)', 'openNieuweBoeking')
     .addSeparator()
 
