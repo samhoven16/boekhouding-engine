@@ -15,6 +15,7 @@ function verwerkHoofdformulier(e) {
 
     const type = String(data['Wat wil je doen?'] || '');
     const ss = getSpreadsheet_();
+    schrijfAuditLog_('Formulier ontvangen', 'type: ' + type);
 
     if (type.includes('Inkomsten')) {
       verwerkInkomstenUitHoofdformulier_(ss, data);
@@ -23,12 +24,14 @@ function verwerkHoofdformulier(e) {
     } else if (type.includes('Declaratie')) {
       verwerkDeclaratieUitHoofdformulier_(ss, data);
     } else {
+      schrijfAuditLog_('Formulier ONBEKEND type', type);
       Logger.log('Onbekend formuliertype: ' + type);
     }
 
     vernieuwDashboard();
 
   } catch (err) {
+    schrijfAuditLog_('FOUT Formulier', err.message);
     Logger.log('Fout verwerkHoofdformulier: ' + err.message + '\n' + err.stack);
     stuurFoutEmail_('Hoofdformulier verwerking', err);
   }
@@ -59,8 +62,8 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   }
 
   if (regels.length === 0) {
-    Logger.log('Geen geldige factuurregels gevonden, inkomsten niet verwerkt.');
-    return;
+    schrijfAuditLog_('Factuur MISLUKT', 'Geen geldige factuurregels – nr. ' + factuurNr + ' niet aangemaakt');
+    throw new Error('Geen geldige factuurregels gevonden. Vul minimaal één omschrijving en bedrag in.');
   }
 
   const korting    = parseBedrag_(data['Korting (in €)'] || '0') || 0;
@@ -101,8 +104,19 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   ];
 
   const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+
+  // Idempotency: blokkeer dubbele verwerking van hetzelfde factuurnummer
+  const bestaandeRijen = vfSheet.getDataRange().getValues();
+  for (let i = 1; i < bestaandeRijen.length; i++) {
+    if (bestaandeRijen[i][0] === factuurNr) {
+      schrijfAuditLog_('Factuur DUBBEL geblokkeerd', factuurNummerOpgemaakt + ' bestaat al in sheet');
+      throw new Error('Factuur ' + factuurNummerOpgemaakt + ' bestaat al — dubbele verwerking geblokkeerd.');
+    }
+  }
+
   vfSheet.appendRow(factuurData);
   const nieuweRij = vfSheet.getLastRow();
+  schrijfAuditLog_('Factuur in sheet', factuurNummerOpgemaakt + ' | klant: ' + klantnaam + ' | excl: ' + totalExcl + ' | incl: ' + totalIncl);
 
   // Journaalposten
   const omschr = `Verkoopfactuur ${factuurNummerOpgemaakt} – ${klantnaam}`;
@@ -135,15 +149,25 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   // UBL genereren
   const ublUrl = genereerUBL_(factuurNr, klantnaam, klantAdres, regels, totalExcl, totalBtw, totalIncl, datum, vervaldatum, btwTarief);
 
-  // PDF & UBL URLs opslaan
+  // PDF URL opslaan; log expliciet als PDF ontbreekt
   if (pdfUrl) {
     vfSheet.getRange(nieuweRij, 20).setValue(pdfUrl);
+  } else {
+    schrijfAuditLog_('PDF MISLUKT', factuurNummerOpgemaakt + ' – PDF niet gegenereerd; factuur staat in sheet zonder PDF');
+    Logger.log('WAARSCHUWING: PDF niet gegenereerd voor ' + factuurNummerOpgemaakt);
   }
 
-  // Automatisch mailen naar klant
+  // Automatisch mailen naar klant — alleen als PDF aanwezig
   let emailVerzonden = false;
   if (directMailen && klantEmail && pdfUrl) {
     emailVerzonden = stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummerOpgemaakt, totalIncl, vervaldatum, pdfUrl, ublUrl) === true;
+    if (emailVerzonden) {
+      schrijfAuditLog_('Email verstuurd', factuurNummerOpgemaakt + ' → ' + klantEmail);
+    } else {
+      schrijfAuditLog_('Email MISLUKT', factuurNummerOpgemaakt + ' → ' + klantEmail + ' – versturen mislukt');
+    }
+  } else if (directMailen && klantEmail && !pdfUrl) {
+    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen PDF beschikbaar, email niet verzonden');
   }
 
   // Status na werkelijk email-resultaat zetten (niet op intentie)
@@ -153,7 +177,13 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   }
 
   Logger.log(`Verkoopfactuur ${factuurNummerOpgemaakt} aangemaakt voor ${klantnaam}`);
-  return { factuurnummer: factuurNummerOpgemaakt, emailVerzonden, pdfUrl };
+  return {
+    ok:             true,
+    factuurnummer:  factuurNummerOpgemaakt,
+    emailVerzonden: emailVerzonden,
+    pdfUrl:         pdfUrl || null,
+    sheetRij:       nieuweRij,
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -377,18 +407,11 @@ function verwerkVerkoopfactuurFormulier(e) {
       });
     }
 
-    // Voeg volledige boeking toe (debet totaal incl.)
-    maakJournaalpost_(ss, {
-      datum, omschr: omschr + ' (totaal)',
-      dagboek: 'Verkoopboek',
-      debet: '1100', credit: '1100',
-      bedrag: totalIncl,
-      ref: boekingRef,
-      type: BOEKING_TYPE.VERKOOPFACTUUR,
-      isHoofdpost: true,
-    });
+    // NOOT: de derde journaalpost (debet 1100 / credit 1100 voor totaal incl.) is verwijderd.
+    // Die post was een self-posting entry die het grootboek uit balans bracht.
+    // Correcte boekhouding: alleen omzet-post en BTW-post (zie boven).
 
-    // Genereer PDF en stuur e-mail
+    // Genereer PDF
     Utilities.sleep(500);
     const pdfUrl = genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regels, totalExcl, totalBtw, totalIncl, data);
 
@@ -401,6 +424,9 @@ function verwerkVerkoopfactuurFormulier(e) {
           break;
         }
       }
+      schrijfAuditLog_('Factuur aangemaakt (legacy)', getInstelling_('Factuurprefix') + factuurNr + ' | klant: ' + klantnaam);
+    } else {
+      schrijfAuditLog_('PDF MISLUKT (legacy)', 'factuur ' + factuurNr + ' – PDF niet gegenereerd');
     }
 
     // Dashboard vernieuwen
@@ -409,6 +435,7 @@ function verwerkVerkoopfactuurFormulier(e) {
     Logger.log(`Verkoopfactuur ${factuurNr} aangemaakt voor ${klantnaam}`);
 
   } catch (err) {
+    schrijfAuditLog_('FOUT legacy factuur', err.message);
     Logger.log('Fout verwerkVerkoopfactuurFormulier: ' + err.message + '\n' + err.stack);
     stuurFoutEmail_('Verkoopfactuur verwerking', err);
   }

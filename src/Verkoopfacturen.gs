@@ -172,6 +172,7 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
 
   } catch (err) {
     Logger.log('Fout genereerFactuurPdf_: ' + err.message);
+    try { schrijfAuditLog_('PDF FOUT', 'genereerFactuurPdf_ – ' + err.message); } catch(e2) {}
     return null;
   }
 }
@@ -253,11 +254,13 @@ function stuurVerkoopfactuurPdf() {
       }
     );
 
-    // Status bijwerken
+    // Status bijwerken en auditlog schrijven
     sheet.getRange(rij, 15).setValue(FACTUUR_STATUS.VERZONDEN);
+    schrijfAuditLog_('Email handmatig verstuurd', factuurnummer + ' → ' + email);
     ui.alert('Verstuurd!', `Factuur ${factuurnummer} is per e-mail verstuurd naar ${email}.`, ui.ButtonSet.OK);
 
   } catch (err) {
+    schrijfAuditLog_('Email MISLUKT (handmatig)', factuurnummer + ' → ' + email + ' – ' + err.message);
     // Bij fout: toon de PDF link zodat gebruiker het handmatig kan doen
     const pdfLink = pdfUrl || '';
     ui.alert('Versturen mislukt',
