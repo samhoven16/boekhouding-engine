@@ -78,6 +78,20 @@ function voerGezondheidCheckUit() {
     else aantalWaarsch++;
   });
 
+  // ── Check 6: TAX-BTW-001 — BTW aangifte deadline ─────────────────────
+  const btwDeadlineCheck = controleerTaxBtwDeadlineCheck_();
+  resultaten.push(btwDeadlineCheck);
+  if (btwDeadlineCheck.status === 'FOUT')        aantalFouten++;
+  else if (btwDeadlineCheck.status === 'OK')     aantalOk++;
+  else                                            aantalWaarsch++;
+
+  // ── Check 7: TAX-ADM-001 — Bewaarplicht administratie ────────────────
+  const bewaarplichtCheck = controleerTaxAdmBewaarplichtCheck_();
+  resultaten.push(bewaarplichtCheck);
+  if (bewaarplichtCheck.status === 'FOUT')       aantalFouten++;
+  else if (bewaarplichtCheck.status === 'OK')    aantalOk++;
+  else                                            aantalWaarsch++;
+
   // ── Gezondheidscore ───────────────────────────────────────────────────
   const totaal = aantalFouten + aantalWaarsch + aantalOk;
   const score  = totaal > 0 ? Math.round(((aantalOk + aantalWaarsch * 0.5) / totaal) * 100) : 100;

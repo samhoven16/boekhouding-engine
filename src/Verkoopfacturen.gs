@@ -626,7 +626,10 @@ function openFactuurlijst() {
  */
 function getFactuurlijstData() {
   const ss = getSpreadsheet_();
-  const data = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  if (!ss) throw new Error('Spreadsheet niet bereikbaar');
+  const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (!vfSheet) throw new Error('Tabblad "Verkoopfacturen" ontbreekt — voer de setup uit.');
+  const data = vfSheet.getDataRange().getValues();
   const vandaag = new Date();
   const facturen = [];
 
@@ -644,26 +647,28 @@ function getFactuurlijstData() {
       : 0;
 
     facturen.push({
-      rij:           i + 1,
-      nr:            String(r[1] || ''),
-      datum:         datum ? formatDatum_(datum) : '',
-      vervaldatum:   vervaldatum ? formatDatum_(vervaldatum) : '',
-      klant:         String(r[5] || '–'),
+      rij:            i + 1,
+      nr:             String(r[1] || ''),
+      datum:          datum ? formatDatum_(datum) : '',
+      vervaldatum:    vervaldatum ? formatDatum_(vervaldatum) : '',
+      vervaldatumTs:  vervaldatum ? vervaldatum.getTime() : 0,  // timestamp voor correcte sortering
+      klant:          String(r[5] || '–'),
       bedragIncl,
       betaald,
       openBedrag,
       status,
-      betaaldatum:   r[15] ? formatDatum_(new Date(r[15])) : '',
+      betaaldatum:    r[15] ? formatDatum_(new Date(r[15])) : '',
       dagenVervallen: status === FACTUUR_STATUS.VERVALLEN ? dagenVervallen : 0,
-      pdfUrl:        String(r[17] || ''),
+      pdfUrl:         String(r[17] || ''),
     });
   }
 
-  // Urgentiesortering: vervallen ouder eerst; open: vervaldatum oplopend
+  // Urgentiesortering: vervallen (oudste eerst), dan op vervaldatum timestamp
+  // GEEN string-vergelijking van dd-mm-yyyy (chronologisch onjuist)
   facturen.sort((a, b) => {
     if (a.status === FACTUUR_STATUS.VERVALLEN && b.status !== FACTUUR_STATUS.VERVALLEN) return -1;
     if (b.status === FACTUUR_STATUS.VERVALLEN && a.status !== FACTUUR_STATUS.VERVALLEN) return 1;
-    return b.dagenVervallen - a.dagenVervallen || a.vervaldatum.localeCompare(b.vervaldatum);
+    return b.dagenVervallen - a.dagenVervallen || a.vervaldatumTs - b.vervaldatumTs;
   });
 
   const tellers = {
@@ -691,12 +696,21 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
 
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][1]) !== String(factuurnr)) continue;
+
+    // Idempotentie-check: als al betaald, geen tweede journaalpost aanmaken
+    const huidigStatus = String(data[i][14] || '');
+    if (huidigStatus === FACTUUR_STATUS.BETAALD || huidigStatus === FACTUUR_STATUS.GECREDITEERD) {
+      return { ok: true, bericht: 'Factuur ' + factuurnr + ' was al gemarkeerd als betaald.' };
+    }
+
     const bedragIncl = parseFloat(data[i][12]) || 0;
+    if (bedragIncl <= 0) throw new Error('Factuur ' + factuurnr + ' heeft geen geldig bedrag');
+
     sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag
     sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.BETAALD);  // Status
     sheet.getRange(i + 1, 16).setValue(datum);                   // Betaaldatum
 
-    // Journaalpost: Debiteuren → Bank
+    // Journaalpost: Debiteuren → Bank (exact 1x per aanroep dankzij idempotentie-check)
     maakJournaalpost_(ss, {
       datum,
       omschr:  'Ontvangst factuur ' + factuurnr,
@@ -820,7 +834,8 @@ function _bouwFactuurlijstHtml_() {
     '}' +
     'function betaal(nr){' +
     '  var btn=document.getElementById("btn-"+nr);' +
-    '  if(btn){btn.disabled=true;btn.textContent="\u23f3";}' +
+    '  if(!btn||btn.disabled) return;' +  // dubbel-klik guard
+    '  btn.disabled=true;btn.textContent="\u23f3";' +
     '  var datum=new Date().toISOString().slice(0,10);' +
     '  google.script.run' +
     '    .withSuccessHandler(function(r){' +
@@ -828,8 +843,10 @@ function _bouwFactuurlijstHtml_() {
     '      laad();' +
     '    })' +
     '    .withFailureHandler(function(e){' +
-    '      if(btn){btn.disabled=false;btn.textContent="Betaald";}' +
-    '      alert("Fout: "+e.message);' +
+    '      // Heractiveer knop via fresh DOM lookup (btn-referentie kan stale zijn)' +
+    '      var b2=document.getElementById("btn-"+nr);' +
+    '      if(b2){b2.disabled=false;b2.textContent="Betaald";}' +
+    '      toonToast("\u274c Fout: "+(e.message||"Onbekend"));' +
     '    })' +
     '    .markeerVerkoopfactuurBetaald(nr,datum);' +
     '}' +
