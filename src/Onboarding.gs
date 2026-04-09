@@ -96,6 +96,9 @@ function toonWelkomstWizard() {
     ui.ButtonSet.OK
   );
 
+  // Bewaarplicht-tip tonen (TAX-ADM-001) — eenmalig, idempotent
+  toonTaxAdmOnboardingTip_();
+
   // Markeer onboarding als voltooid
   PropertiesService.getScriptProperties().setProperties({
     [ONBOARDING_PROP]: 'ja',
