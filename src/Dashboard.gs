@@ -54,6 +54,7 @@ function vernieuwDashboard() {
     { label: 'Open debiteuren', waarde: kpi.debiteurenOpen, format: 'bedrag', kleur: '#FFF3E0' },
     { label: 'Open crediteuren', waarde: kpi.crediteurenOpen, format: 'bedrag', kleur: '#FCE4EC' },
     { label: 'BTW saldo', waarde: kpi.btwSaldo, format: 'bedrag', kleur: '#F3E5F5' },
+    { label: 'Verwacht (30d)', waarde: kpi.verwachtIn30d, format: 'bedrag', kleur: '#E8EAF6' },
   ];
 
   // Rij 4: KPI titels, Rij 5: KPI waarden
@@ -327,7 +328,9 @@ function berekenKpiData_(ss) {
   let debiteurenOpen = 0;
   let aantalOpenFacturen = 0;
   let totaalDagenOpen = 0;
+  let verwachtIn30d = 0;
   const vandaag = new Date();
+  const over30d = new Date(vandaag.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   for (let i = 1; i < vfData.length; i++) {
     const status = vfData[i][14];
@@ -340,6 +343,9 @@ function berekenKpiData_(ss) {
     aantalOpenFacturen++;
     const datum = vfData[i][2] ? new Date(vfData[i][2]) : vandaag;
     totaalDagenOpen += Math.floor((vandaag - datum) / (1000 * 60 * 60 * 24));
+    // Verwacht binnen 30 dagen: vervaldatum (col 3) valt op of vóór 30d grens
+    const verval = vfData[i][3] ? new Date(vfData[i][3]) : null;
+    if (verval && !isNaN(verval.getTime()) && verval <= over30d) verwachtIn30d += open;
   }
 
   // Open crediteuren
@@ -372,6 +378,7 @@ function berekenKpiData_(ss) {
     solvabiliteit: kg.solvabiliteit,
     burnRate: netBurnRate,
     runway,
+    verwachtIn30d: rondBedrag_(verwachtIn30d),
   };
 }
 
