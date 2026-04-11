@@ -26,6 +26,15 @@ jobs:
       - name: clasp installeren
         run: npm install -g @google/clasp
 
+      - name: Projectafhankelijkheden installeren
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Tests (Jest)
+        run: npm test
+
       - name: Credentials normaliseren en schrijven
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}

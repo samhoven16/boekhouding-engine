@@ -45,7 +45,7 @@ function saniteer_(waarde) {
   // Blokkeer spreadsheet-formule-injectie
   if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   // Verwijder nul-bytes en control characters
-  s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // eslint-disable-line no-control-regex
   return s;
 }
 

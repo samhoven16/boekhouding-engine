@@ -1,0 +1,23 @@
+{
+  "name": "boekhouding-engine",
+  "version": "2.0.0",
+  "description": "Google Apps Script boekhoudprogramma",
+  "private": true,
+  "scripts": {
+    "lint": "eslint 'src/**/*.gs'",
+    "lint:fix": "eslint 'src/**/*.gs' --fix",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch --passWithNoTests",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "src/**/*.gs": "eslint"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.27.0",
+    "eslint": "^9.27.0",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.5.2"
+  }
+}
