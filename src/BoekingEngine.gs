@@ -45,7 +45,7 @@ function saniteer_(waarde) {
   // Blokkeer spreadsheet-formule-injectie
   if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   // Verwijder nul-bytes en control characters
-  s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // eslint-disable-line no-control-regex
   return s;
 }
 
@@ -181,9 +181,17 @@ function _verwerkFactuur_(ss, s) {
   }
 
   const result = verwerkInkomstenUitHoofdformulier_(ss, formData);
-  schrijfAuditLog_('Factuur aangemaakt', 'klant: ' + s.klant);
   const emailVerzonden = !!(result && result.emailVerzonden);
   const heeftPdf       = !!(result && result.pdfUrl);
+
+  // Audit log met volledig uitkomst-overzicht
+  schrijfAuditLog_('Factuur aangemaakt', [
+    'klant: ' + s.klant,
+    'nr: ' + (result ? result.factuurnummer : '?'),
+    'pdf: ' + (heeftPdf ? 'ja' : 'NEE'),
+    'email: ' + (emailVerzonden ? 'verzonden' : (s.email ? 'MISLUKT' : 'geen adres')),
+  ].join(' | '));
+
   let emailInfo;
   if (emailVerzonden) {
     emailInfo = ' Verstuurd naar ' + s.email + '.';
@@ -195,10 +203,12 @@ function _verwerkFactuur_(ss, s) {
     emailInfo = ' E-mail versturen mislukt.';
   }
   return {
-    ok: true,
-    bericht: 'Factuur aangemaakt!' + emailInfo,
+    ok:            true,
+    bericht:       'Factuur aangemaakt!' + emailInfo,
     factuurnummer: result ? result.factuurnummer : null,
-    emailVerzonden,
+    emailVerzonden: emailVerzonden,
+    pdfUrl:        result ? result.pdfUrl : null,
+    sheetRij:      result ? result.sheetRij : null,
   };
 }
 
