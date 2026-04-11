@@ -177,12 +177,38 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   }
 
   Logger.log(`Verkoopfactuur ${factuurNummerOpgemaakt} aangemaakt voor ${klantnaam}`);
+
+  // ── Financieel snapshot (zero extra sheet reads) ───────────────────────
+  // bestaandeRijen was loaded above for the idempotency check.
+  // We compute YTD excl. revenue and open debiteuren from existing rows,
+  // then add this new invoice's contribution.
+  const huidigJaar = new Date().getFullYear();
+  let ytdOmzetExcl = 0;
+  let debiteurenOpenNa = 0;
+  for (let i = 1; i < bestaandeRijen.length; i++) {
+    const r = bestaandeRijen[i];
+    const rDatum = r[2] ? new Date(r[2]) : null;
+    if (rDatum && rDatum.getFullYear() === huidigJaar) {
+      ytdOmzetExcl += parseFloat(r[9]) || 0;
+    }
+    const rStatus = r[14];
+    if (rStatus !== FACTUUR_STATUS.BETAALD && rStatus !== FACTUUR_STATUS.GECREDITEERD) {
+      const rOpen = rondBedrag_((parseFloat(r[12]) || 0) - (parseFloat(r[13]) || 0));
+      if (rOpen > 0) debiteurenOpenNa += rOpen;
+    }
+  }
+  // Add this new invoice (YTD + open debiteur)
+  ytdOmzetExcl = rondBedrag_(ytdOmzetExcl + totalExcl);
+  debiteurenOpenNa = rondBedrag_(debiteurenOpenNa + totalIncl);
+
   return {
-    ok:             true,
-    factuurnummer:  factuurNummerOpgemaakt,
-    emailVerzonden: emailVerzonden,
-    pdfUrl:         pdfUrl || null,
-    sheetRij:       nieuweRij,
+    ok:              true,
+    factuurnummer:   factuurNummerOpgemaakt,
+    emailVerzonden:  emailVerzonden,
+    pdfUrl:          pdfUrl || null,
+    sheetRij:        nieuweRij,
+    ytdOmzetExcl:    ytdOmzetExcl,
+    debiteurenOpen:  debiteurenOpenNa,
   };
 }
 
@@ -686,14 +712,34 @@ function verwerkJournaalpostFormulier(e) {
 function dagelijkseTaken() {
   const ss = getSpreadsheet_();
 
-  markeerVervallenFacturen_(ss);
-  stuurAutomatischeBetalingsherinneringen_(ss);
-
-  if (getInstelling_('BTW aangifte herinnering') === 'Ja') {
-    controleerBtwDeadlines_();
+  // Elke taak in eigen try-catch: één falende taak stopt de rest niet.
+  try {
+    markeerVervallenFacturen_(ss);
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT markeerVervallen: ' + e.message);
+    try { schrijfAuditLog_('FOUT dagelijkse taak', 'markeerVervallen: ' + e.message); } catch (_) {}
   }
 
-  vernieuwDashboard();
+  try {
+    stuurAutomatischeBetalingsherinneringen_(ss);
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT herinneringen: ' + e.message);
+    try { schrijfAuditLog_('FOUT dagelijkse taak', 'herinneringen: ' + e.message); } catch (_) {}
+  }
+
+  try {
+    if (getInstelling_('BTW aangifte herinnering') === 'Ja') controleerBtwDeadlines_();
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT BTW deadline: ' + e.message);
+  }
+
+  try {
+    vernieuwDashboard();
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT dashboard: ' + e.message);
+    try { schrijfAuditLog_('FOUT dagelijkse taak', 'dashboard/herhalende kosten: ' + e.message); } catch (_) {}
+  }
+
   Logger.log('Dagelijkse taken uitgevoerd: ' + new Date());
 }
 

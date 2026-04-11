@@ -13,6 +13,16 @@ function setup() {
   let ui = null;
   try { ui = SpreadsheetApp.getUi(); } catch (e) {}
 
+  // ── Idempotency guard ──────────────────────────────────────────────────
+  // Voorkomt dat een herhaalde setup alle instellingen en formulieren overschrijft.
+  if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) === 'true') {
+    alertOfLog_(ui, 'Setup al uitgevoerd',
+      'Het systeem is al geconfigureerd.\n\n' +
+      'Gebruik "Boekhouding → Beheer → Herstel / Herinstalleer" als u opzettelijk opnieuw wilt instellen.');
+    return;
+  }
+  // ──────────────────────────────────────────────────────────────────────
+
   if (!ss) {
     const naam = 'Boekhouding ' + new Date().getFullYear();
     ss = SpreadsheetApp.create(naam);
@@ -827,15 +837,25 @@ function zetHeaderRij_(sheet, headers) {
 // ─────────────────────────────────────────────
 //  INSTELLING OPHALEN UIT INSTELLINGEN TABBLAD
 // ─────────────────────────────────────────────
+// Session-level cache: one sheet read per GAS execution, not per call.
+// GAS module-level `let` persists within a single execution context
+// (one trigger invocation / one manual run) and resets between runs.
+let _instellingenCache = null;
+
 function getInstelling_(sleutel) {
-  const ss = getSpreadsheet_();
-  const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
-  if (!sheet) return null;
-  const data = sheet.getDataRange().getValues();
-  for (let i = 0; i < data.length; i++) {
-    if (data[i][0] === sleutel) return String(data[i][1]);
+  if (!_instellingenCache) {
+    const ss = getSpreadsheet_();
+    const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
+    if (!sheet) return null;
+    const data = sheet.getDataRange().getValues();
+    _instellingenCache = {};
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][0]) _instellingenCache[String(data[i][0])] = String(data[i][1] != null ? data[i][1] : '');
+    }
   }
-  return null;
+  return Object.prototype.hasOwnProperty.call(_instellingenCache, sleutel)
+    ? _instellingenCache[sleutel]
+    : null;
 }
 
 // ─────────────────────────────────────────────

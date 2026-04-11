@@ -202,13 +202,22 @@ function _verwerkFactuur_(ss, s) {
   } else {
     emailInfo = ' E-mail versturen mislukt.';
   }
+  // Financial snapshot suffix for the confirmation message
+  let snapshotInfo = '';
+  if (result && result.ytdOmzetExcl != null) {
+    snapshotInfo = '\n\nOmzet YTD (excl. BTW): ' + formatBedrag_(result.ytdOmzetExcl) +
+                  ' | Open debiteuren: ' + formatBedrag_(result.debiteurenOpen);
+  }
+
   return {
-    ok:            true,
-    bericht:       'Factuur aangemaakt!' + emailInfo,
-    factuurnummer: result ? result.factuurnummer : null,
+    ok:             true,
+    bericht:        'Factuur aangemaakt!' + emailInfo + snapshotInfo,
+    factuurnummer:  result ? result.factuurnummer : null,
     emailVerzonden: emailVerzonden,
-    pdfUrl:        result ? result.pdfUrl : null,
-    sheetRij:      result ? result.sheetRij : null,
+    pdfUrl:         result ? result.pdfUrl : null,
+    sheetRij:       result ? result.sheetRij : null,
+    ytdOmzetExcl:   result ? result.ytdOmzetExcl : null,
+    debiteurenOpen: result ? result.debiteurenOpen : null,
   };
 }
 
