@@ -226,6 +226,7 @@ const PROP = {
   FORM_JOURNAAL_ID:      'formJournaalId',
   SETUP_DONE:            'setupDone',
   BOEKJAAR:              'boekjaar',
+  KPI_SNAPSHOT:          'kpiSnapshot',   // CQRS-lite: precomputed financial state
 };
 
 // ─────────────────────────────────────────────

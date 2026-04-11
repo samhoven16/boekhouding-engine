@@ -16,8 +16,9 @@ function vernieuwDashboard() {
   const jaar = new Date().getFullYear();
   const nu = new Date();
 
-  // Bereken KPI's
+  // Bereken KPI's — authoritative recompute; result is written to snapshot for fast-path reads
   const kpi = berekenKpiData_(ss);
+  schrijfKpiSnapshot_(kpi);
   const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
   const btwJaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
   const btwData = getBtwPerMaand_(ss, btwJaar);
@@ -487,13 +488,18 @@ function getDashboardData() {
   const huidigeM = nu.getMonth();
   const huidigeJ = nu.getFullYear();
 
-  // Wrap KPI berekening: bij ontbrekende sheets (b.v. verse installatie) geen crash
-  let kpi;
-  try {
-    kpi = berekenKpiData_(ss);
-  } catch (e) {
-    Logger.log('getDashboardData: KPI fout — ' + e.message);
-    kpi = { aantalOpenFacturen: 0, debiteurenOpen: 0 };
+  // Fast path: use snapshot if fresh (avoids 4 sheet reads on every sidebar open).
+  // vernieuwDashboard() always writes a fresh snapshot, so this is correct after any trigger run.
+  // Slow path (snapshot missing or stale): full recompute + write new snapshot.
+  let kpi = leesKpiSnapshot_();
+  if (!kpi) {
+    try {
+      kpi = berekenKpiData_(ss);
+      schrijfKpiSnapshot_(kpi);
+    } catch (e) {
+      Logger.log('getDashboardData: KPI fout — ' + e.message);
+      kpi = { aantalOpenFacturen: 0, debiteurenOpen: 0 };
+    }
   }
 
   // Maand-specifieke omzet + vervallen facturen uit Verkoopfacturen

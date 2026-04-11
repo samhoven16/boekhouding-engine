@@ -377,3 +377,52 @@ function getVersieInfo() {
     ],
   };
 }
+
+// ─────────────────────────────────────────────
+//  CQRS-LITE: KPI SNAPSHOT IN SCRIPT PROPERTIES
+// ─────────────────────────────────────────────
+// The snapshot is the materialized read-model for financial KPIs.
+//
+// Write path: vernieuwDashboard() always computes fresh → schrijfKpiSnapshot_()
+// Read path:  getDashboardData() (sidebar) → leesKpiSnapshot_() → zero sheet reads
+//             Future AI layer → leesKpiSnapshot_() → send JSON to Claude (~400 bytes)
+//             Future webhook  → leesKpiSnapshot_() → emit on change
+//
+// Max snapshot age: KPI_SNAPSHOT_MAX_AGE_MS. Beyond this the reader falls back
+// to a full compute. This prevents stale data from persisting across business days.
+//
+// ScriptProperties value limit: 9 KB per key. Snapshot is ~400 bytes — safe.
+
+const KPI_SNAPSHOT_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Serialize a KPI object to ScriptProperties.
+ * Called after berekenKpiData_() produces a fresh result.
+ * Silent on failure — a missing snapshot is always safe (fallback = full compute).
+ */
+function schrijfKpiSnapshot_(kpiObj) {
+  try {
+    const payload = JSON.stringify({ ts: Date.now(), data: kpiObj });
+    PropertiesService.getScriptProperties().setProperty(PROP.KPI_SNAPSHOT, payload);
+  } catch (e) {
+    Logger.log('KPI snapshot schrijven mislukt: ' + e.message);
+  }
+}
+
+/**
+ * Read the KPI snapshot from ScriptProperties.
+ * Returns the deserialized KPI object if fresh, null if missing or stale.
+ * @param {number} [maxAgeMs] Override the default staleness window.
+ */
+function leesKpiSnapshot_(maxAgeMs) {
+  try {
+    const raw = PropertiesService.getScriptProperties().getProperty(PROP.KPI_SNAPSHOT);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.ts || !parsed.data) return null;
+    if ((Date.now() - parsed.ts) > (maxAgeMs || KPI_SNAPSHOT_MAX_AGE_MS)) return null;
+    return parsed.data;
+  } catch (e) {
+    return null; // corrupt snapshot — caller falls back to full compute
+  }
+}
