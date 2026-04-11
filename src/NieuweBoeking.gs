@@ -148,7 +148,8 @@ input.ok{border-color:#2e7d32}
     </div>
     <div class="veld">
       <label>Factuurdatum *</label>
-      <input type="date" id="f-datum" oninput="valideerVeld('factuur','datum',this)">
+      <input type="date" id="f-datum" oninput="valideerVeld('factuur','datum',this)" onchange="valideerVeld('factuur','datum',this)">
+      <div class="foutmelding" id="fm-f-datum"></div>
     </div>
   </div>
   <div class="rij">
@@ -240,7 +241,8 @@ input.ok{border-color:#2e7d32}
     </div>
     <div class="veld">
       <label>Datum *</label>
-      <input type="date" id="k-datum" oninput="valideerVeld('kosten','datum',this)">
+      <input type="date" id="k-datum" oninput="valideerVeld('kosten','datum',this)" onchange="valideerVeld('kosten','datum',this)">
+      <div class="foutmelding" id="fm-k-datum"></div>
     </div>
   </div>
   <div class="rij">
@@ -294,7 +296,8 @@ input.ok{border-color:#2e7d32}
     </div>
     <div class="veld">
       <label>Datum *</label>
-      <input type="date" id="d-datum" oninput="valideerVeld('declaratie','datum',this)">
+      <input type="date" id="d-datum" oninput="valideerVeld('declaratie','datum',this)" onchange="valideerVeld('declaratie','datum',this)">
+      <div class="foutmelding" id="fm-d-datum"></div>
     </div>
   </div>
   <div class="rij">
@@ -407,6 +410,11 @@ var HERKENNER = null;
   ['f-datum','k-datum','d-datum','u-datum'].forEach(function(id){
     var el = document.getElementById(id);
     if(el) el.value = vandaag;
+  });
+  // Pre-valideer datum velden zodat ze direct groen tonen
+  [['f-datum','factuur'],['k-datum','kosten'],['d-datum','declaratie']].forEach(function(pair){
+    var el = document.getElementById(pair[0]);
+    if(el && el.value) valideerVeld(pair[1], 'datum', el);
   });
   // BTW standaard
   var btwStd = '${ctx.btwStandaard}';
@@ -592,9 +600,10 @@ function bevestig() {
     type = subType;
   }
 
+  var emailKlantVoorKlaar = (type === 'factuur') ? (data.email || '') : '';
   google.script.run
     .withSuccessHandler(function(r) {
-      toonKlaar(r);
+      toonKlaar(r, emailKlantVoorKlaar);
     })
     .withFailureHandler(function(e) {
       // Toon de feitelijke foutmelding van de server; val terug op generieke tekst
@@ -631,7 +640,24 @@ function toonStatus(tekst, kleur) {
   el.style.fontStyle     = isFout ? 'normal' : 'italic';
 }
 
-function toonKlaar(r) {
+function toonKlaar(r, emailKlant) {
+  var pdfLink = r.pdfUrl
+    ? '<p style="margin-top:8px"><a href="' + escHtml(r.pdfUrl) + '" target="_blank" style="color:#1565C0">\ud83d\udcc4 Bekijk factuur PDF</a></p>'
+    : '';
+  var emailSectie = '';
+  if (r.factuurnummer && !r.emailVerzonden && r.pdfUrl) {
+    emailSectie = '<div id="email-sectie" style="margin-top:12px;padding:10px;background:#E8F5E9;border-radius:4px">'
+      + '<p style="margin:0 0 6px;font-weight:bold;font-size:12px">Factuur versturen via e-mail</p>'
+      + '<div style="display:flex;gap:8px;align-items:center">'
+      + '<input type="email" id="email-klant-input" placeholder="klant@voorbeeld.nl"'
+      + ' value="' + escHtml(emailKlant || '') + '"'
+      + ' style="flex:1;padding:6px;border:1px solid #ccc;border-radius:3px;font-size:12px">'
+      + '<button class="btn btn-pri" style="white-space:nowrap"'
+      + ' onclick="stuurFactuurUitKlaar(\'' + escHtml(r.factuurnummer) + '\')">Verstuur</button>'
+      + '</div>'
+      + '<div id="email-status" style="margin-top:4px;font-size:11px;color:#555"></div>'
+      + '</div>';
+  }
   // Vervang panels met succes-melding
   document.querySelector('.panels').innerHTML =
     '<div class="klaar">'
@@ -640,11 +666,29 @@ function toonKlaar(r) {
     + '<p>' + escHtml(r.bericht || '') + '</p>'
     + (r.emailVerzonden ? '<p style="margin-top:8px;color:#2e7d32">\ud83d\udce7 E-mail verstuurd!</p>' : '')
     + (r.bonUrl ? '<p style="margin-top:8px;color:#2e7d32">\ud83d\udcc4 Bon opgeslagen in Google Drive.</p>' : '')
+    + pdfLink
+    + emailSectie
     + '</div>';
   document.querySelector('.tabbar').style.display = 'none';
   var footer = document.querySelector('.footer');
   footer.innerHTML = '<button class="btn btn-pri" onclick="google.script.host.close()">Sluiten</button>'
     + '<button class="btn btn-sec" onclick="window.location.reload()">Nog een boeking</button>';
+}
+
+function stuurFactuurUitKlaar(factuurnummer) {
+  var emailEl = document.getElementById('email-klant-input');
+  var statusEl = document.getElementById('email-status');
+  var email = emailEl ? emailEl.value.trim() : '';
+  if (!email) { if (statusEl) statusEl.textContent = 'Vul een e-mailadres in.'; return; }
+  if (statusEl) statusEl.textContent = 'Verzenden\u2026';
+  google.script.run
+    .withSuccessHandler(function(ok) {
+      if (statusEl) statusEl.textContent = ok ? '\u2705 Verstuurd!' : '\u274c Versturen mislukt \u2014 controleer uw Gmail-toegang.';
+    })
+    .withFailureHandler(function() {
+      if (statusEl) statusEl.textContent = '\u274c Versturen mislukt.';
+    })
+    .stuurFactuurNaarEmailAdres(factuurnummer, email);
 }
 
 function escHtml(s) {
