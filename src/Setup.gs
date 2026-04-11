@@ -872,7 +872,8 @@ function resetSetup() {
 
   const props = PropertiesService.getScriptProperties();
   [PROP.FORM_HOOFD_ID, PROP.FORM_VERKOOP_ID, PROP.FORM_INKOOP_ID,
-   PROP.FORM_BANK_ID, PROP.FORM_RELATIE_ID, PROP.FORM_JOURNAAL_ID, PROP.SETUP_DONE
+   PROP.FORM_BANK_ID, PROP.FORM_RELATIE_ID, PROP.FORM_JOURNAAL_ID,
+   PROP.SETUP_DONE, PROP.KPI_SNAPSHOT,
   ].forEach(k => props.deleteProperty(k));
 
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));

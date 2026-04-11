@@ -726,6 +726,9 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
     });
 
     schrijfAuditLog_('Factuur betaald', factuurnr + ' via factuurlijst dialog');
+    // Invalidate snapshot: debiteurenOpen and aantalOpenFacturen have changed.
+    // The next snapshot read will recompute fresh (no vernieuwDashboard overhead here).
+    invalideerKpiSnapshot_();
     return { ok: true, bericht: 'Factuur ' + factuurnr + ' gemarkeerd als betaald.' };
   }
   throw new Error('Factuurnummer ' + factuurnr + ' niet gevonden');

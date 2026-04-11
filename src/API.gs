@@ -251,7 +251,9 @@ function slaKlantOpViaApi_(ss, p) {
 //  STATUS RESPONSE
 // ─────────────────────────────────────────────
 function statusResponse_(ss) {
-  const kpi = berekenKpiData_(ss);
+  // Fast path: API status calls are high-frequency; snapshot avoids 4 sheet reads.
+  // vernieuwDashboard() (runs daily + on every form submit) keeps the snapshot fresh.
+  const kpi = leesKpiSnapshot_() || berekenKpiData_(ss);
   return jsonResponse_({
     succes: true,
     status: 'actief',
