@@ -6,8 +6,14 @@
   "scripts": {
     "lint": "eslint 'src/**/*.gs'",
     "lint:fix": "eslint 'src/**/*.gs' --fix",
+    "lint:changed": "git diff --name-only HEAD | grep '\\.gs$' | xargs -r eslint",
     "test": "jest --passWithNoTests",
+    "test:unit": "jest --testPathPattern='tests/unit' --passWithNoTests",
+    "test:integration": "jest --testPathPattern='tests/integration' --passWithNoTests",
+    "test:flow": "jest --testNamePattern",
     "test:watch": "jest --watch --passWithNoTests",
+    "index": "node scripts/symbol-index.js",
+    "impact": "node scripts/impact.js",
     "prepare": "husky"
   },
   "lint-staged": {
