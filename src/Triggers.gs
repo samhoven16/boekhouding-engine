@@ -686,14 +686,34 @@ function verwerkJournaalpostFormulier(e) {
 function dagelijkseTaken() {
   const ss = getSpreadsheet_();
 
-  markeerVervallenFacturen_(ss);
-  stuurAutomatischeBetalingsherinneringen_(ss);
-
-  if (getInstelling_('BTW aangifte herinnering') === 'Ja') {
-    controleerBtwDeadlines_();
+  // Elke taak in eigen try-catch: één falende taak stopt de rest niet.
+  try {
+    markeerVervallenFacturen_(ss);
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT markeerVervallen: ' + e.message);
+    try { schrijfAuditLog_('FOUT dagelijkse taak', 'markeerVervallen: ' + e.message); } catch (_) {}
   }
 
-  vernieuwDashboard();
+  try {
+    stuurAutomatischeBetalingsherinneringen_(ss);
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT herinneringen: ' + e.message);
+    try { schrijfAuditLog_('FOUT dagelijkse taak', 'herinneringen: ' + e.message); } catch (_) {}
+  }
+
+  try {
+    if (getInstelling_('BTW aangifte herinnering') === 'Ja') controleerBtwDeadlines_();
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT BTW deadline: ' + e.message);
+  }
+
+  try {
+    vernieuwDashboard();
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT dashboard: ' + e.message);
+    try { schrijfAuditLog_('FOUT dagelijkse taak', 'dashboard/herhalende kosten: ' + e.message); } catch (_) {}
+  }
+
   Logger.log('Dagelijkse taken uitgevoerd: ' + new Date());
 }
 

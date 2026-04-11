@@ -216,7 +216,10 @@ function verwerkHerhalendeKosten_() {
     if (status !== 'Actief') continue;
 
     const volgende = data[i][6] ? new Date(data[i][6]) : null;
-    if (!volgende) continue;
+    if (!volgende || isNaN(volgende.getTime())) {
+      Logger.log('Herhalende kosten rij ' + (i + 1) + ': ongeldige datum, overgeslagen.');
+      continue;
+    }
 
     const naam     = data[i][1];
     const bedrag   = parseFloat(data[i][3]) || 0;

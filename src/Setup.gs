@@ -13,6 +13,16 @@ function setup() {
   let ui = null;
   try { ui = SpreadsheetApp.getUi(); } catch (e) {}
 
+  // ── Idempotency guard ──────────────────────────────────────────────────
+  // Voorkomt dat een herhaalde setup alle instellingen en formulieren overschrijft.
+  if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) === 'true') {
+    alertOfLog_(ui, 'Setup al uitgevoerd',
+      'Het systeem is al geconfigureerd.\n\n' +
+      'Gebruik "Boekhouding → Beheer → Herstel / Herinstalleer" als u opzettelijk opnieuw wilt instellen.');
+    return;
+  }
+  // ──────────────────────────────────────────────────────────────────────
+
   if (!ss) {
     const naam = 'Boekhouding ' + new Date().getFullYear();
     ss = SpreadsheetApp.create(naam);

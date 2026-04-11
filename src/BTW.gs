@@ -54,9 +54,14 @@ function genereerBtwAangifte(kwartaal) {
 //  BTW AANGIFTE BEREKENING (ALLE RUBRIEKEN)
 // ─────────────────────────────────────────────
 function berekenBtwAangifte_(ss, vanDatum, totDatum) {
-  const jpData = ss.getSheetByName(SHEETS.JOURNAALPOSTEN).getDataRange().getValues();
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
-  const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  // Null-guard: sheet kan ontbreken bij gedeeltelijke setup of verwijderde tab.
+  function sheetData_(naam) {
+    const s = ss.getSheetByName(naam);
+    return s ? s.getDataRange().getValues() : [[]];
+  }
+  const jpData = sheetData_(SHEETS.JOURNAALPOSTEN);
+  const vfData = sheetData_(SHEETS.VERKOOPFACTUREN);
+  const ifData = sheetData_(SHEETS.INKOOPFACTUREN);
 
   // Rubrieken conform Aangifte Omzetbelasting (OB):
   // 1a: Leveringen/diensten belast 21%
