@@ -112,6 +112,8 @@ function onOpen() {
       .addSeparator()
       .addItem('✅ Instellingen controleren', 'valideerEnMeldInstellingen')
       .addSeparator()
+      .addItem('🗂 Werkruimte opschonen (tabbladen)', 'herorganiseerWerkruimte')
+      .addSeparator()
       .addItem('Setup opnieuw uitvoeren (reset)', 'resetSetup')
     )
 

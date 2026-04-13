@@ -46,6 +46,8 @@ function setup() {
     zetInstellingen_(ss);
     maakFormuliersTabbladen_(ss);
     maakHoofdFormulier_(ss);
+    // Verberg automatisch aangemaakte "Form Responses N" tabs en herstel tabvolgorde
+    verbergFormResponseTabs_(ss);
     installeelTriggers_();
     // Drive mappenstructuur aanmaken
     const jaar = new Date().getFullYear();
@@ -157,6 +159,48 @@ function verbergTechnischeTabbladen_(ss) {
   // Verberg RESP_Hoofdformulier (alleen technisch nodig)
   const respHoofd = ss.getSheetByName('RESP_Hoofdformulier');
   if (respHoofd) respHoofd.hideSheet();
+}
+
+// ─────────────────────────────────────────────
+//  WERKRUIMTE OPSCHONEN
+// ─────────────────────────────────────────────
+/**
+ * Verbergt automatisch aangemaakte "Form Responses N" tabbladen die Google
+ * aanmaakt bij form.setDestination(), en zet de Dashboard-tab weer op pos. 1.
+ *
+ * Aanroepbaar via menu: Instellingen → Werkruimte opschonen.
+ * Veilig om meerdere keren uit te voeren (idempotent).
+ */
+function herorganiseerWerkruimte() {
+  const ss = getSpreadsheet_();
+  const ui = SpreadsheetApp.getUi();
+  verbergFormResponseTabs_(ss);
+  try {
+    const dash = ss.getSheetByName(SHEETS.DASHBOARD);
+    if (dash) { ss.setActiveSheet(dash); ss.moveActiveSheet(1); }
+  } catch (e) {}
+  ui.alert('Werkruimte opgeschoond',
+    'Formulier-responstabbladen zijn verborgen en het Dashboard staat weer op de eerste positie.',
+    ui.ButtonSet.OK);
+}
+
+/**
+ * Verbergt alle sheets waarvan de naam begint met "Form Responses"
+ * (automatisch aangemaakt door Google bij koppelen van een Form).
+ * @param {Spreadsheet} ss
+ */
+function verbergFormResponseTabs_(ss) {
+  ss.getSheets().forEach(function(sheet) {
+    const naam = sheet.getName();
+    if (/^Form Responses/i.test(naam) || naam.startsWith('Formulierreacties')) {
+      try { sheet.hideSheet(); } catch (e) {}
+    }
+  });
+  // Zet Dashboard terug op positie 1
+  try {
+    const dash = ss.getSheetByName(SHEETS.DASHBOARD);
+    if (dash) { ss.setActiveSheet(dash); ss.moveActiveSheet(1); }
+  } catch (e) {}
 }
 
 // ─────────────────────────────────────────────
