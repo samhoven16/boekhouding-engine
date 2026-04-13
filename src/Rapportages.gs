@@ -413,7 +413,9 @@ function zetRapportKoptekst_(sheet, titel, bedrijf, periode, aantalKolommen) {
 //  KENGETALLEN ANALYSE
 // ─────────────────────────────────────────────
 function berekenKengetallen_(ss) {
-  const gbData = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA).getDataRange().getValues();
+  // Null-guard: Grootboekschema kan ontbreken bij gedeeltelijke setup.
+  const _gbSheet = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
+  const gbData = _gbSheet ? _gbSheet.getDataRange().getValues() : [[]];
   const saldi = {};
   for (let i = 1; i < gbData.length; i++) {
     saldi[String(gbData[i][0])] = {

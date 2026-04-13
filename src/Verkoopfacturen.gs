@@ -316,9 +316,19 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   );
 
   if (ok) {
-    sheet.getRange(rij, 15).setValue(FACTUUR_STATUS.VERZONDEN);
+    // Alleen upgraden naar VERZONDEN als de factuur nog niet betaald of gecrediteerd is.
+    // Voorkomen dat een reeds betaalde factuur terugvalt naar een lagere status.
+    const huidigStatus = String(gevonden[14] || '');
+    const geenDowngrade = huidigStatus !== FACTUUR_STATUS.BETAALD
+                       && huidigStatus !== FACTUUR_STATUS.GECREDITEERD
+                       && huidigStatus !== FACTUUR_STATUS.DEELS_BETAALD;
+    if (geenDowngrade) {
+      sheet.getRange(rij, 15).setValue(FACTUUR_STATUS.VERZONDEN);
+    }
     schrijfAuditLog_('Factuur gemaild (succes-scherm)', gevonden[1] + ' → ' + email);
     invalideerKpiSnapshot_();
+  } else {
+    schrijfAuditLog_('Factuur email MISLUKT (succes-scherm)', (gevonden ? gevonden[1] : factuurnummer) + ' → ' + email);
   }
   return ok;
 }
