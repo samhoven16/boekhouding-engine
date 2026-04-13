@@ -9,7 +9,9 @@
 // ─────────────────────────────────────────────
 function openAssistent() {
   const ss = getSpreadsheet_();
-  const kpi = berekenKpiData_(ss);
+  // Fast path: use snapshot when fresh. The assistant shows current-year totals and
+  // open positions — 30-min staleness is acceptable for a Q&A context.
+  const kpi = leesKpiSnapshot_() || berekenKpiData_(ss);
   const bedrijf = getInstelling_('Bedrijfsnaam') || 'Uw bedrijf';
   const jaar = new Date().getFullYear();
   const btwPeriode = getInstelling_('BTW aangifteperiode') || 'Kwartaal';

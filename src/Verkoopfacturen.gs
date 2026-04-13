@@ -273,6 +273,57 @@ function stuurVerkoopfactuurPdf() {
 }
 
 // ─────────────────────────────────────────────
+//  FACTUUR STUREN VANUIT SUCCES-SCHERM
+// ─────────────────────────────────────────────
+/**
+ * Verstuurt een reeds aangemaakte factuur per e-mail op verzoek vanuit het
+ * succes-scherm van Nieuwe Boeking (niet via ui.prompt). Wordt aangeroepen
+ * via google.script.run vanuit de browser.
+ *
+ * @param {string} factuurnummer  Bijv. "F000001"
+ * @param {string} email          E-mailadres van de klant
+ * @return {boolean}              true als succesvol verstuurd
+ */
+function stuurFactuurNaarEmailAdres(factuurnummer, email) {
+  if (!factuurnummer || !email) return false;
+  const ss = getSpreadsheet_();
+  const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (!sheet) return false;
+
+  const data = sheet.getDataRange().getValues();
+  let gevonden = null;
+  let rij = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][1]) === factuurnummer || String(data[i][0]) === factuurnummer) {
+      gevonden = data[i];
+      rij = i + 1;
+      break;
+    }
+  }
+  if (!gevonden) { Logger.log('stuurFactuurNaarEmailAdres: factuur niet gevonden: ' + factuurnummer); return false; }
+
+  const pdfUrl = gevonden[19];
+  if (!pdfUrl) { Logger.log('stuurFactuurNaarEmailAdres: geen PDF voor ' + factuurnummer); return false; }
+
+  const ok = stuurFactuurEmailNaarKlant_(
+    email,
+    gevonden[5],   // klantnaam
+    gevonden[1],   // factuurnummer
+    gevonden[12],  // bedragIncl
+    gevonden[3],   // vervaldatum
+    pdfUrl,
+    null           // ublUrl — optioneel
+  );
+
+  if (ok) {
+    sheet.getRange(rij, 15).setValue(FACTUUR_STATUS.VERZONDEN);
+    schrijfAuditLog_('Factuur gemaild (succes-scherm)', gevonden[1] + ' → ' + email);
+    invalideerKpiSnapshot_();
+  }
+  return ok;
+}
+
+// ─────────────────────────────────────────────
 //  CREDITNOTA AANMAKEN
 // ─────────────────────────────────────────────
 function maakCreditnota(factuurNummer) {
@@ -726,6 +777,9 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
     });
 
     schrijfAuditLog_('Factuur betaald', factuurnr + ' via factuurlijst dialog');
+    // Invalidate snapshot: debiteurenOpen and aantalOpenFacturen have changed.
+    // The next snapshot read will recompute fresh (no vernieuwDashboard overhead here).
+    invalideerKpiSnapshot_();
     return { ok: true, bericht: 'Factuur ' + factuurnr + ' gemarkeerd als betaald.' };
   }
   throw new Error('Factuurnummer ' + factuurnr + ' niet gevonden');

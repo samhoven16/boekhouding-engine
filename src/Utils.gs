@@ -377,3 +377,115 @@ function getVersieInfo() {
     ],
   };
 }
+
+// ─────────────────────────────────────────────
+//  CQRS-LITE: KPI SNAPSHOT IN SCRIPT PROPERTIES
+// ─────────────────────────────────────────────
+// The snapshot is the materialized read-model for financial KPIs.
+//
+// Write path: vernieuwDashboard() always computes fresh → schrijfKpiSnapshot_()
+// Read path:  getDashboardData() (sidebar) → leesKpiSnapshot_() → zero sheet reads
+//             openAssistent()   (Q&A panel) → leesKpiSnapshot_()
+//             statusResponse_() (API)       → leesKpiSnapshot_()
+//             Future AI layer → leesKpiSnapshot_() → send JSON to Claude (~500 bytes)
+//             Future webhook  → leesKpiSnapshot_() → emit on change
+//
+// SCHEMA CONTRACT (v1):
+//   wrapper: { v: number, ts: number(epoch ms), data: KpiData }
+//   data:    { _v, _generatedAt, omzet, kosten, nettowinst, winstmarge,
+//              banksaldo, debiteurenOpen, crediteurenOpen, btwSaldo,
+//              aantalOpenFacturen, debiteurendagen, verwachtIn30d,
+//              burnRate, runway, liquiditeit, solvabiliteit, eigenVermogen }
+//   required numeric fields: omzet, kosten, nettowinst, banksaldo,
+//                             debiteurenOpen, btwSaldo
+//   nullable fields:         runway, liquiditeit, solvabiliteit
+//
+// ScriptProperties value limit: 9 KB per key. Snapshot is ~500 bytes — safe.
+
+const SNAPSHOT_SCHEMA_VERSION  = 1;
+const KPI_SNAPSHOT_MAX_AGE_MS  = 30 * 60 * 1000; // 30 minutes
+
+// Required numeric keys in data — used by leesKpiSnapshot_ for structural validation.
+// If any of these are missing or not a number, the snapshot is treated as corrupt.
+const _SNAPSHOT_REQUIRED_FIELDS = ['omzet', 'kosten', 'nettowinst', 'banksaldo', 'debiteurenOpen', 'btwSaldo'];
+
+/**
+ * Serialize a fresh KPI object to ScriptProperties.
+ * Adds _v (schema version) and _generatedAt (ISO timestamp) to the data
+ * so consumers have freshness metadata without unpacking the wrapper.
+ * Silent on failure — a missing snapshot is always safe (fallback = full compute).
+ *
+ * @param {Object} kpiObj  Result of berekenKpiData_()
+ */
+function schrijfKpiSnapshot_(kpiObj) {
+  try {
+    const data = Object.assign({}, kpiObj, {
+      _v:           SNAPSHOT_SCHEMA_VERSION,
+      _generatedAt: new Date().toISOString(),
+    });
+    const payload = JSON.stringify({ v: SNAPSHOT_SCHEMA_VERSION, ts: Date.now(), data });
+    PropertiesService.getScriptProperties().setProperty(PROP.KPI_SNAPSHOT, payload);
+  } catch (e) {
+    Logger.log('KPI snapshot schrijven mislukt: ' + e.message);
+  }
+}
+
+/**
+ * Read the KPI snapshot from ScriptProperties.
+ * Returns the deserialized KPI data object when ALL of the following hold:
+ *   1. A snapshot exists
+ *   2. JSON is valid
+ *   3. Schema version matches SNAPSHOT_SCHEMA_VERSION
+ *   4. Snapshot age ≤ maxAgeMs (default KPI_SNAPSHOT_MAX_AGE_MS)
+ *   5. All required numeric fields are present and numeric
+ *
+ * Returns null in any failure case — callers MUST fall back to berekenKpiData_().
+ *
+ * @param {number} [maxAgeMs]  Override staleness window (ms). Defaults to 30 min.
+ * @returns {Object|null}
+ */
+function leesKpiSnapshot_(maxAgeMs) {
+  try {
+    const raw = PropertiesService.getScriptProperties().getProperty(PROP.KPI_SNAPSHOT);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw); // throws on corrupt JSON → caught below
+    if (!parsed || !parsed.ts || !parsed.data) return null;
+
+    // Schema version guard — if we ever bump SNAPSHOT_SCHEMA_VERSION, old
+    // snapshots are automatically treated as invalid and recomputed.
+    if (parsed.v !== SNAPSHOT_SCHEMA_VERSION) return null;
+
+    // Staleness check
+    if ((Date.now() - parsed.ts) > (maxAgeMs || KPI_SNAPSHOT_MAX_AGE_MS)) return null;
+
+    // Required-field structural validation — a partial write or schema drift
+    // should never produce misleading KPI values to callers.
+    const data = parsed.data;
+    for (let i = 0; i < _SNAPSHOT_REQUIRED_FIELDS.length; i++) {
+      if (typeof data[_SNAPSHOT_REQUIRED_FIELDS[i]] !== 'number') return null;
+    }
+
+    return data;
+  } catch (e) {
+    // Corrupt JSON or unexpected error — always fail safe, never crash caller
+    return null;
+  }
+}
+
+/**
+ * Delete the KPI snapshot from ScriptProperties.
+ * Call this after any mutation that changes KPI state but does NOT call
+ * vernieuwDashboard() (which would write a fresh snapshot itself).
+ *
+ * Examples: markeerVerkoopfactuurBetaald, any future partial payment handler.
+ *
+ * Silent on failure — a missing snapshot is always safe (forces recompute).
+ */
+function invalideerKpiSnapshot_() {
+  try {
+    PropertiesService.getScriptProperties().deleteProperty(PROP.KPI_SNAPSHOT);
+  } catch (e) {
+    // Deletion is best-effort — a missing or stale snapshot is never a crash risk
+  }
+}
