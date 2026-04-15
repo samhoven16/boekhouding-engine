@@ -61,7 +61,7 @@ per ongeluk terugsluipt.
 - Menu-source regex-test bewijst dat `stuurVerkoopfactuurPdf` nergens
   meer in `src/Menu.gs` of `src/Verkoopfacturen.gs` voorkomt
 
-**Commit:** (zie git log na push)
+**Commit:** `8f2babe` (pushed to `claude/confident-shannon-lItmz`)
 
 **Blockers:** geen.
 
