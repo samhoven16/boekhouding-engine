@@ -687,6 +687,18 @@ function getFactuurlijstData() {
   const vandaag = new Date();
   const facturen = [];
 
+  // Build klantId → email map in ÉÉN pass van RELATIES (niet N lookups per rij).
+  // Null-safe: als RELATIES tab ontbreekt, email blijft leeg.
+  const emailPerKlant = {};
+  const relatiesSheet = ss.getSheetByName(SHEETS.RELATIES);
+  if (relatiesSheet) {
+    const relatiesData = relatiesSheet.getDataRange().getValues();
+    for (let i = 1; i < relatiesData.length; i++) {
+      const relatieId = String(relatiesData[i][0] || '');
+      if (relatieId) emailPerKlant[relatieId] = String(relatiesData[i][10] || '');
+    }
+  }
+
   for (let i = 1; i < data.length; i++) {
     const r = data[i];
     if (!r[1]) continue; // Geen factuurnummer = lege rij
@@ -699,6 +711,7 @@ function getFactuurlijstData() {
     const dagenVervallen = vervaldatum
       ? Math.floor((vandaag - vervaldatum) / (1000 * 60 * 60 * 24))
       : 0;
+    const klantId     = String(r[4] || '');
 
     facturen.push({
       rij:            i + 1,
@@ -707,13 +720,14 @@ function getFactuurlijstData() {
       vervaldatum:    vervaldatum ? formatDatum_(vervaldatum) : '',
       vervaldatumTs:  vervaldatum ? vervaldatum.getTime() : 0,  // timestamp voor correcte sortering
       klant:          String(r[5] || '–'),
+      klantEmail:     emailPerKlant[klantId] || '',
       bedragIncl,
       betaald,
       openBedrag,
       status,
       betaaldatum:    r[15] ? formatDatum_(new Date(r[15])) : '',
       dagenVervallen: status === FACTUUR_STATUS.VERVALLEN ? dagenVervallen : 0,
-      pdfUrl:         String(r[17] || ''),
+      pdfUrl:         String(r[19] || ''),  // [19] = PDF URL per sheet-schemas.md; was abusievelijk r[17] (Projectcode)
     });
   }
 
@@ -817,6 +831,9 @@ function _bouwFactuurlijstHtml_() {
     '.btn-betaald{background:#15803D;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;white-space:nowrap}' +
     '.btn-betaald:hover{background:#166534}' +
     '.btn-betaald:disabled{background:#9CA3AF;cursor:not-allowed}' +
+    '.btn-verstuur{background:#1D4ED8;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;white-space:nowrap;margin-right:4px}' +
+    '.btn-verstuur:hover{background:#1E40AF}' +
+    '.btn-verstuur:disabled{background:#9CA3AF;cursor:not-allowed}' +
     '.urgent{color:#B91C1C;font-weight:bold}' +
     '.loading{text-align:center;padding:40px;color:#9CA3AF}' +
     '.spin{display:inline-block;width:20px;height:20px;border:2px solid #E5E7EB;border-top-color:#1A237E;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}' +
@@ -872,6 +889,7 @@ function _bouwFactuurlijstHtml_() {
     '  rijen.forEach(function(f){' +
     '    var urgent=f.status==="Vervallen"&&f.dagenVervallen>30;' +
     '    var kanBetalen=f.status!=="Betaald"&&f.status!=="Gecrediteerd";' +
+    '    var kanVersturen=!!f.pdfUrl && f.status!=="Gecrediteerd";' +
     '    h+=\'<tr>\';' +
     '    h+=\'<td style="font-weight:bold">\'+esc(f.nr)+\'</td>\';' +
     '    h+=\'<td>\'+esc(f.datum)+\'</td>\';' +
@@ -880,7 +898,10 @@ function _bouwFactuurlijstHtml_() {
     '    h+=\'<td class="\'+( urgent?"urgent":"" )+\'">\'+fmt(f.openBedrag)+\'</td>\';' +
     '    h+=\'<td class="\'+( urgent?"urgent":"" )+\'">\'+esc(f.vervaldatum)+\'</td>\';' +
     '    h+=\'<td><span class="badge \'+badgeKls(f.status)+\'">\'+esc(f.status)+\'</span></td>\';' +
-    '    h+=\'<td>\';' +
+    '    h+=\'<td style="white-space:nowrap">\';' +
+    '    if(kanVersturen){' +
+    '      h+=\'<button class="btn-verstuur" id="vs-\'+esc(f.nr)+\'" onclick="verstuur(\\\'\'+esc(f.nr)+\'\\\',\\\'\'+esc(f.klantEmail||"")+\'\\\')">\u2709 Verstuur</button>\';' +
+    '    }' +
     '    if(kanBetalen){' +
     '      h+=\'<button class="btn-betaald" id="btn-\'+esc(f.nr)+\'" onclick="betaal(\\\'\'+esc(f.nr)+\'\\\')">Betaald</button>\';' +
     '    }' +
@@ -906,6 +927,29 @@ function _bouwFactuurlijstHtml_() {
     '      toonToast("\u274c Fout: "+(e.message||"Onbekend"));' +
     '    })' +
     '    .markeerVerkoopfactuurBetaald(nr,datum);' +
+    '}' +
+    'function verstuur(nr,bekendeEmail){' +
+    '  var email=prompt("Factuur "+nr+" per e-mail versturen naar:",bekendeEmail||"");' +
+    '  if(email===null) return;' +  // cancel
+    '  email=String(email||"").trim();' +
+    '  if(!email){toonToast("\u274c Geen e-mailadres ingevuld");return;}' +
+    '  var btn=document.getElementById("vs-"+nr);' +
+    '  if(btn){btn.disabled=true;btn.textContent="\u23f3";}' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(ok){' +
+    '      if(ok){toonToast("\u2705 Verstuurd naar "+email);laad();}' +
+    '      else {' +
+    '        var b2=document.getElementById("vs-"+nr);' +
+    '        if(b2){b2.disabled=false;b2.textContent="\u2709 Verstuur";}' +
+    '        toonToast("\u274c Versturen mislukt \u2014 controleer PDF en Gmail-toegang");' +
+    '      }' +
+    '    })' +
+    '    .withFailureHandler(function(e){' +
+    '      var b2=document.getElementById("vs-"+nr);' +
+    '      if(b2){b2.disabled=false;b2.textContent="\u2709 Verstuur";}' +
+    '      toonToast("\u274c Fout: "+(e.message||"Onbekend"));' +
+    '    })' +
+    '    .stuurFactuurNaarEmailAdres(nr,email);' +
     '}' +
     'function toonToast(tekst){' +
     '  var t=document.getElementById("toast");' +
