@@ -54,7 +54,7 @@ the existing `stuurFactuurNaarEmailAdres(nr, email)` server function.
 - Sheet-schemas.md column semantics opnieuw gevalideerd tegen
   `src/Triggers.gs` factuurData array (indices 0..22 één-op-één).
 
-**Commit:** _pending_
+**Commit:** `d98e8db` (pushed to `claude/confident-shannon-LBMux`)
 
 **Blockers:** geen.
 
