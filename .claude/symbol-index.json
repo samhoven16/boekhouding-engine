@@ -1344,56 +1344,56 @@
   "openHoofdFormulier": [
     {
       "file": "Menu.gs",
-      "line": 142,
+      "line": 141,
       "kind": "function"
     }
   ],
   "openBonUpload": [
     {
       "file": "Menu.gs",
-      "line": 180,
+      "line": 179,
       "kind": "function"
     }
   ],
   "verwerkBonUpload": [
     {
       "file": "Menu.gs",
-      "line": 293,
+      "line": 292,
       "kind": "function"
     }
   ],
   "openJournaalpostFormulier": [
     {
       "file": "Menu.gs",
-      "line": 323,
+      "line": 322,
       "kind": "function"
     }
   ],
   "toonFormulierLinks": [
     {
       "file": "Menu.gs",
-      "line": 340,
+      "line": 339,
       "kind": "function"
     }
   ],
   "herlaadGrootboekschema": [
     {
       "file": "Menu.gs",
-      "line": 365,
+      "line": 364,
       "kind": "function"
     }
   ],
   "vernieuwAlleRapporten": [
     {
       "file": "Menu.gs",
-      "line": 373,
+      "line": 372,
       "kind": "function"
     }
   ],
   "openBeginbalansDialoog": [
     {
       "file": "Menu.gs",
-      "line": 386,
+      "line": 385,
       "kind": "function"
     }
   ],
@@ -2524,101 +2524,94 @@
       "kind": "function"
     }
   ],
-  "stuurVerkoopfactuurPdf": [
-    {
-      "file": "Verkoopfacturen.gs",
-      "line": 183,
-      "kind": "function"
-    }
-  ],
   "stuurFactuurNaarEmailAdres": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 287,
+      "line": 196,
       "kind": "function"
     }
   ],
   "maakCreditnota": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 329,
+      "line": 238,
       "kind": "function"
     }
   ],
   "importeerBankafschrift": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 377,
+      "line": 286,
       "kind": "function"
     }
   ],
   "verwerkBankCsvImport": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 426,
+      "line": 335,
       "kind": "function"
     }
   ],
   "stuurFactuurEmailNaarKlant_": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 474,
+      "line": 383,
       "kind": "function"
     }
   ],
   "genereerUBL_": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 528,
+      "line": 437,
       "kind": "function"
     }
   ],
   "haalSepaQrBase64_": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 618,
+      "line": 527,
       "kind": "function"
     }
   ],
   "getOrMaakFactuurenMap_": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 645,
+      "line": 554,
       "kind": "function"
     }
   ],
   "extractFileId_": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 652,
+      "line": 561,
       "kind": "function"
     }
   ],
   "openFactuurlijst": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 670,
+      "line": 579,
       "kind": "function"
     }
   ],
   "getFactuurlijstData": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 681,
+      "line": 590,
       "kind": "function"
     }
   ],
   "markeerVerkoopfactuurBetaald": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 758,
+      "line": 667,
       "kind": "function"
     }
   ],
   "_bouwFactuurlijstHtml_": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 802,
+      "line": 711,
       "kind": "function"
     }
   ]
