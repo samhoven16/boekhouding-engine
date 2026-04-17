@@ -1,0 +1,431 @@
+/**
+ * Boekhouding Engine — Licentieverificatieserver
+ *
+ * Publiceer dit script als aparte Web App (eigen Google-account):
+ *   Implementeren → Nieuwe implementatie → Web-app
+ *   Uitvoeren als: Ik zelf  |  Toegang: Iedereen (anoniem)
+ *
+ * Vereiste Script Properties (Projectinstellingen → Script Properties):
+ *   LICENTIE_SHEET_ID   — ID van de licentie-spreadsheet (zie setupLicentieSheet())
+ *   MOLLIE_API_KEY      — test_xxx of live_xxx (dashboard.mollie.com)
+ *   ADMIN_WACHTWOORD    — wachtwoord voor het beheerpaneel
+ *   INSTALLER_URL       — URL van de installatie-webapp (Installer.gs doGet)
+ *   PRODUCT_NAAM        — bijv. "Boekhouding Engine"
+ *   PRODUCT_PRIJS       — bijv. "49.00"  (excl. BTW, in EUR)
+ *
+ * Vul na publicatie de Web App URL in als LICENTIE_SERVER_URL in de
+ * boekhouding-spreadsheet (tabblad Instellingen).
+ */
+
+// ─────────────────────────────────────────────
+//  ROUTING
+// ─────────────────────────────────────────────
+function doGet(e) {
+  const actie = (e && e.parameter && e.parameter.actie) || '';
+
+  if (actie === 'valideer')  return valideerEndpoint_(e);
+  if (actie === 'bedankt')   return bedanktPagina_(e);
+  if (actie === 'admin')     return adminPaneel_(e);
+
+  // Standaard: betaalpagina tonen
+  return betaalPagina_(e);
+}
+
+function doPost(e) {
+  // Mollie stuurt een POST-webhook als de betaalstatus wijzigt
+  try {
+    verwerkMollieWebhook_(e);
+  } catch (err) {
+    Logger.log('Webhook fout: ' + err.message);
+  }
+  return ContentService.createTextOutput('OK');
+}
+
+// ─────────────────────────────────────────────
+//  BETAALPAGINA (HTML — stap 1 van de flow)
+// ─────────────────────────────────────────────
+function betaalPagina_(e) {
+  const props = PropertiesService.getScriptProperties();
+  const naam  = props.getProperty('PRODUCT_NAAM')  || 'Boekhouding Engine';
+  const prijs = props.getProperty('PRODUCT_PRIJS') || '49.00';
+
+  const html = `<!DOCTYPE html><html lang="nl"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${naam} — Aankoop</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+       background:linear-gradient(135deg,#1A237E,#283593);min-height:100vh;
+       display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;border-radius:16px;padding:40px;max-width:440px;width:100%;
+        box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  h1{color:#1A237E;font-size:22px;margin-bottom:4px}
+  .prijs{font-size:36px;font-weight:700;color:#1A237E;margin:16px 0 4px}
+  .sub{color:#666;font-size:13px;margin-bottom:20px}
+  .voordelen{background:#E8EAF6;border-radius:8px;padding:14px 16px;margin-bottom:24px;
+             font-size:13px;line-height:2;color:#333}
+  label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:#333}
+  input{width:100%;padding:11px;border:1.5px solid #ddd;border-radius:8px;
+        font-size:14px;margin-bottom:14px;transition:border-color .2s}
+  input:focus{outline:none;border-color:#1A237E}
+  .btn{width:100%;padding:15px;background:#1A237E;color:#fff;border:none;
+       border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:background .2s}
+  .btn:hover{background:#283593} .btn:disabled{background:#999;cursor:not-allowed}
+  .fout{background:#FFEBEE;color:#c62828;padding:10px;border-radius:6px;
+        font-size:13px;margin-top:10px;display:none}
+  .veilig{text-align:center;font-size:11px;color:#999;margin-top:14px}
+</style></head><body>
+<div class="card">
+  <h1>📊 ${naam}</h1>
+  <div class="prijs">€${prijs}</div>
+  <div class="sub">Eenmalige aankoop — geen abonnement — altijd van u</div>
+  <div class="voordelen">
+    ✅ Volledige boekhouding in Google Spreadsheets<br>
+    ✅ PDF-facturen direct naar klanten sturen<br>
+    ✅ BTW-aangifte automatisch berekend<br>
+    ✅ Koppelbaar met uw website of webshop<br>
+    ✅ Uw data blijft op uw eigen Google Drive
+  </div>
+  <label>Uw naam *</label>
+  <input type="text" id="naam" placeholder="Jan Jansen" autocomplete="name">
+  <label>E-mailadres *</label>
+  <input type="email" id="email" placeholder="jan@uwbedrijf.nl" autocomplete="email">
+  <button class="btn" id="btn" onclick="betaal()">🔒 Veilig betalen met iDEAL →</button>
+  <div class="fout" id="fout"></div>
+  <div class="veilig">Betaling via Mollie — veilig en versleuteld</div>
+</div>
+<script>
+function betaal() {
+  var naam  = document.getElementById('naam').value.trim();
+  var email = document.getElementById('email').value.trim();
+  if (!naam)  { toonFout('Vul uw naam in.'); return; }
+  if (!email || !email.includes('@')) { toonFout('Vul een geldig e-mailadres in.'); return; }
+  var btn = document.getElementById('btn');
+  btn.disabled = true; btn.textContent = '⏳ Even geduld...';
+  document.getElementById('fout').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.checkoutUrl) { window.location.href = res.checkoutUrl; }
+      else { toonFout(res.fout || 'Betaling aanmaken mislukt.'); btn.disabled=false; btn.textContent='🔒 Veilig betalen met iDEAL →'; }
+    })
+    .withFailureHandler(function(e) { toonFout('Fout: '+e.message); btn.disabled=false; btn.textContent='🔒 Veilig betalen met iDEAL →'; })
+    .maakBetaling(naam, email);
+}
+function toonFout(t){var e=document.getElementById('fout');e.textContent=t;e.style.display='block';}
+</script></body></html>`;
+
+  return HtmlService.createHtmlOutput(html)
+    .setTitle(naam + ' — Aankoop')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ─────────────────────────────────────────────
+//  BETAALPAGINA: BETALING AANMAKEN (Mollie)
+// ─────────────────────────────────────────────
+function maakBetaling(klantnaam, klantEmail) {
+  klantnaam  = String(klantnaam  || '').trim();
+  klantEmail = String(klantEmail || '').trim().toLowerCase();
+  if (!klantnaam || !klantEmail) return { fout: 'Naam en e-mail zijn verplicht.' };
+
+  const props     = PropertiesService.getScriptProperties();
+  const mollieKey = props.getProperty('MOLLIE_API_KEY');
+  const prijs     = props.getProperty('PRODUCT_PRIJS') || '49.00';
+  const productnm = props.getProperty('PRODUCT_NAAM')  || 'Boekhouding Engine';
+  const webAppUrl = ScriptApp.getService().getUrl();
+
+  if (!mollieKey) return { fout: 'Betalingsprovider niet geconfigureerd. Neem contact op.' };
+
+  try {
+    const resp = UrlFetchApp.fetch('https://api.mollie.com/v2/payments', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + mollieKey },
+      payload: JSON.stringify({
+        amount:      { value: parseFloat(prijs).toFixed(2), currency: 'EUR' },
+        description: productnm + ' — ' + klantnaam,
+        redirectUrl: webAppUrl + '?actie=bedankt',
+        webhookUrl:  webAppUrl,
+        metadata:    { naam: klantnaam, email: klantEmail },
+        method:      ['ideal', 'creditcard', 'bancontact'],
+      }),
+      muteHttpExceptions: true,
+    });
+
+    const data = JSON.parse(resp.getContentText());
+    if (data.status >= 400 || !data._links) {
+      Logger.log('Mollie fout: ' + resp.getContentText());
+      return { fout: 'Betaling aanmaken mislukt. Probeer opnieuw.' };
+    }
+    return { checkoutUrl: data._links.checkout.href };
+  } catch (err) {
+    Logger.log('maakBetaling fout: ' + err.message);
+    return { fout: 'Netwerkfout bij betaling aanmaken.' };
+  }
+}
+
+// ─────────────────────────────────────────────
+//  MOLLIE WEBHOOK — betaling verwerken
+// ─────────────────────────────────────────────
+function verwerkMollieWebhook_(e) {
+  const paymentId = e && e.parameter && e.parameter.id;
+  if (!paymentId) return;
+
+  const props     = PropertiesService.getScriptProperties();
+  const mollieKey = props.getProperty('MOLLIE_API_KEY');
+  if (!mollieKey) return;
+
+  // Ophalen betaalstatus bij Mollie
+  const resp = UrlFetchApp.fetch('https://api.mollie.com/v2/payments/' + paymentId, {
+    headers: { Authorization: 'Bearer ' + mollieKey },
+    muteHttpExceptions: true,
+  });
+  const betaling = JSON.parse(resp.getContentText());
+
+  if (betaling.status !== 'paid') return; // Nog niet betaald of geannuleerd
+
+  // Controleer of we deze betaling al verwerkt hebben (idempotency)
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][8]) === paymentId) return; // Al verwerkt
+  }
+
+  // Genereer en sla licentiesleutel op
+  const meta    = betaling.metadata || {};
+  const naam    = String(meta.naam  || 'Klant');
+  const email   = String(meta.email || '');
+  const sleutel = genereerSleutel_();
+
+  const nieuweRij = [
+    sleutel, naam, email, 'Standaard', 'Actief', '',
+    '', new Date(), paymentId, new Date(),
+  ];
+  sheet.appendRow(nieuweRij);
+
+  // Stuur licentiecode per e-mail
+  if (email) stuurLicentiemail_(naam, email, sleutel);
+
+  Logger.log('Licentie aangemaakt: ' + sleutel + ' voor ' + email);
+}
+
+// ─────────────────────────────────────────────
+//  VALIDEER-ENDPOINT (aangeroepen door Licentie.gs)
+// ─────────────────────────────────────────────
+function valideerEndpoint_(e) {
+  const sleutel      = String((e.parameter.sleutel     || '')).trim().toUpperCase();
+  const installatieId = String((e.parameter.installatie || '')).trim();
+
+  if (!sleutel) return jsonResp_({ geldig: false, fout: 'Geen sleutel opgegeven.' });
+
+  try {
+    const sheet = getLicentieSheet_();
+    const data  = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).toUpperCase() !== sleutel) continue;
+
+      const status    = String(data[i][4]).toLowerCase();
+      const vervaldat = data[i][5] ? new Date(data[i][5]) : null;
+
+      if (status === 'ingetrokken') return jsonResp_({ geldig: false, fout: 'Licentie is ingetrokken.' });
+      if (vervaldat && vervaldat < new Date()) return jsonResp_({ geldig: false, fout: 'Licentie is verlopen.' });
+
+      // Registreer installatie-ID bij eerste activatie (één installatie per sleutel)
+      const huidigInstId = String(data[i][6] || '');
+      if (installatieId && !huidigInstId) {
+        sheet.getRange(i + 1, 7).setValue(installatieId);
+      } else if (huidigInstId && installatieId && huidigInstId !== installatieId) {
+        return jsonResp_({ geldig: false, fout: 'Licentie is al actief op een andere installatie.' });
+      }
+
+      // Update laatste validatie
+      sheet.getRange(i + 1, 10).setValue(new Date());
+
+      return jsonResp_({ geldig: true, naam: data[i][1], versie: data[i][3] || 'Standaard' });
+    }
+    return jsonResp_({ geldig: false, fout: 'Licentiesleutel niet gevonden.' });
+  } catch (err) {
+    Logger.log('Valideer fout: ' + err.message);
+    return jsonResp_({ geldig: false, fout: 'Serverfout: ' + err.message });
+  }
+}
+
+// ─────────────────────────────────────────────
+//  BEDANKT-PAGINA (na Mollie redirect)
+// ─────────────────────────────────────────────
+function bedanktPagina_(e) {
+  const html = `<!DOCTYPE html><html lang="nl"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Betaling ontvangen</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+       background:#E8F5E9;min-height:100vh;display:flex;align-items:center;
+       justify-content:center;padding:20px}
+  .card{background:#fff;border-radius:16px;padding:40px;max-width:460px;
+        width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+  h1{color:#2E7D32;font-size:26px;margin:16px 0 8px}
+  p{color:#555;font-size:14px;line-height:1.7;margin-bottom:12px}
+  .info{background:#F1F8E9;border-radius:8px;padding:14px;font-size:13px;color:#33691E;margin:16px 0}
+</style></head><body>
+<div class="card">
+  <div style="font-size:56px">🎉</div>
+  <h1>Bedankt voor uw aankoop!</h1>
+  <p>Uw betaling is ontvangen. U ontvangt binnen enkele minuten een e-mail met uw licentiesleutel en installatielink.</p>
+  <div class="info">
+    <strong>Controleer ook uw spam-map</strong> als u na 5 minuten nog niets heeft ontvangen.
+  </div>
+  <p style="font-size:12px;color:#999">U kunt dit venster sluiten.</p>
+</div></body></html>`;
+
+  return HtmlService.createHtmlOutput(html).setTitle('Betaling ontvangen');
+}
+
+// ─────────────────────────────────────────────
+//  ADMIN PANEEL
+// ─────────────────────────────────────────────
+function adminPaneel_(e) {
+  const ww    = PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '';
+  const input = String((e.parameter.ww || '')).trim();
+
+  if (!ww || input !== ww) {
+    return HtmlService.createHtmlOutput(
+      '<form style="font-family:Arial;padding:30px">' +
+      '<h3>Beheerpaneel</h3>' +
+      '<input name="ww" type="password" placeholder="Wachtwoord" style="padding:8px;margin-right:8px">' +
+      '<input name="actie" type="hidden" value="admin">' +
+      '<button type="submit">Inloggen</button></form>'
+    ).setTitle('Admin');
+  }
+
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  let rijen   = '';
+  for (let i = 1; i < data.length; i++) {
+    rijen += `<tr><td>${data[i][0]}</td><td>${data[i][1]}</td><td>${data[i][2]}</td>
+      <td>${data[i][4]}</td><td>${data[i][6] || '—'}</td>
+      <td>${data[i][9] ? new Date(data[i][9]).toLocaleDateString('nl-NL') : '—'}</td></tr>`;
+  }
+
+  return HtmlService.createHtmlOutput(`
+    <style>body{font-family:Arial;padding:20px;font-size:13px}
+    table{width:100%;border-collapse:collapse}th,td{padding:7px 10px;
+    border:1px solid #ddd;text-align:left}th{background:#1A237E;color:#fff}
+    tr:nth-child(even){background:#f5f5f5}</style>
+    <h3>Licenties (${data.length - 1} totaal)</h3>
+    <table><tr><th>Sleutel</th><th>Naam</th><th>Email</th>
+    <th>Status</th><th>Installatie-ID</th><th>Laatste validatie</th></tr>
+    ${rijen}</table>
+    <p style="margin-top:16px;font-size:11px;color:#999">
+      Licenties beheren: open de licentie-spreadsheet rechtstreeks in Google Drive.</p>
+  `).setTitle('Admin — Licentiebeheer');
+}
+
+// ─────────────────────────────────────────────
+//  E-MAIL NAAR KLANT
+// ─────────────────────────────────────────────
+function stuurLicentiemail_(naam, email, sleutel) {
+  const props       = PropertiesService.getScriptProperties();
+  const productnm   = props.getProperty('PRODUCT_NAAM')  || 'Boekhouding Engine';
+  const installerUrl = props.getProperty('INSTALLER_URL') || '';
+  const activatieLink = installerUrl
+    ? installerUrl + '?sleutel=' + encodeURIComponent(sleutel)
+    : '';
+
+  MailApp.sendEmail({
+    to: email,
+    subject: 'Uw ' + productnm + ' — licentiesleutel en installatielink',
+    htmlBody: `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>
+<body style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#333">
+  <div style="background:#1A237E;padding:24px;border-radius:8px 8px 0 0;text-align:center">
+    <h1 style="color:#fff;margin:0;font-size:20px">📊 ${productnm}</h1>
+    <p style="color:#C5CAE9;margin:6px 0 0;font-size:13px">Uw aankoop is bevestigd</p>
+  </div>
+  <div style="background:#f9f9f9;padding:24px;border:1px solid #eee;border-top:none">
+    <p>Beste ${naam},</p>
+    <p>Bedankt voor uw aankoop. Hieronder vindt u uw licentiesleutel en de link om direct aan de slag te gaan.</p>
+
+    <div style="background:#E8EAF6;border-radius:8px;padding:16px;margin:16px 0;text-align:center">
+      <p style="margin:0 0 6px;font-size:12px;color:#666">UW LICENTIESLEUTEL</p>
+      <code style="font-size:22px;font-weight:bold;color:#1A237E;letter-spacing:2px">${sleutel}</code>
+    </div>
+
+    <p style="font-size:13px">Bewaar deze e-mail — u heeft de sleutel nodig om de boekhouding te installeren.</p>
+
+    ${activatieLink ? `
+    <div style="text-align:center;margin:24px 0">
+      <a href="${activatieLink}" style="background:#1A237E;color:#fff;padding:14px 28px;
+         border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">
+        🚀 Boekhouding nu installeren →
+      </a>
+    </div>
+    <p style="font-size:12px;color:#999;word-break:break-all">
+      Of open deze link handmatig: ${activatieLink}</p>
+    ` : ''}
+
+    <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
+    <p style="font-size:12px;color:#888">
+      Vragen? Stuur een e-mail naar support@boekhouding-engine.nl</p>
+  </div>
+</body></html>`,
+  });
+}
+
+// ─────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────
+function genereerSleutel_() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function deel() {
+    let s = '';
+    for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+  }
+  return 'BKHE-' + deel() + '-' + deel() + '-' + deel();
+}
+
+function getLicentieSheet_() {
+  const id = PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID');
+  if (!id) throw new Error('LICENTIE_SHEET_ID niet ingesteld in Script Properties.');
+  const ss    = SpreadsheetApp.openById(id);
+  const sheet = ss.getSheets()[0];
+  // Zet headers als het een nieuw blad is
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(['Sleutel','Naam','Email','Versie','Status','Vervaldatum',
+                     'Installatie-ID','Aangemaakt op','Mollie betaling ID','Laatste validatie']);
+    sheet.getRange(1, 1, 1, 10).setFontWeight('bold')
+      .setBackground('#1A237E').setFontColor('#FFFFFF');
+  }
+  return sheet;
+}
+
+function jsonResp_(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ─────────────────────────────────────────────
+//  EENMALIGE SETUP (run handmatig in de editor)
+// ─────────────────────────────────────────────
+/**
+ * Maak een nieuwe licentie-spreadsheet aan en sla het ID op.
+ * Voer deze functie éénmalig uit in de Apps Script editor.
+ */
+function setupLicentieSheet() {
+  const ss = SpreadsheetApp.create('Boekhouding Engine — Licentiebeheer');
+  PropertiesService.getScriptProperties().setProperty('LICENTIE_SHEET_ID', ss.getId());
+  Logger.log('Licentie-spreadsheet aangemaakt: ' + ss.getUrl());
+  Logger.log('ID opgeslagen als LICENTIE_SHEET_ID.');
+}
+
+/**
+ * Handmatig een licentiesleutel genereren (bijv. voor een gratis of kortingsexemplaar).
+ * Voer uit in de editor; vul naam en email aan in de spreadsheet.
+ */
+function genereerHandmatigeLicentie() {
+  const sleutel = genereerSleutel_();
+  getLicentieSheet_().appendRow([
+    sleutel, 'Handmatig', '', 'Standaard', 'Actief', '', '', new Date(), 'HANDMATIG', '',
+  ]);
+  Logger.log('Nieuwe sleutel: ' + sleutel);
+  SpreadsheetApp.getUi().alert('Nieuwe licentiesleutel', sleutel, SpreadsheetApp.getUi().ButtonSet.OK);
+}
