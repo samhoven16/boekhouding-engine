@@ -14,12 +14,33 @@ function setup() {
   try { ui = SpreadsheetApp.getUi(); } catch (e) {}
 
   // ── Idempotency guard ──────────────────────────────────────────────────
-  // Voorkomt dat een herhaalde setup alle instellingen en formulieren overschrijft.
   if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) === 'true') {
     alertOfLog_(ui, 'Setup al uitgevoerd',
       'Het systeem is al geconfigureerd.\n\n' +
       'Gebruik "Boekhouding → Beheer → Herstel / Herinstalleer" als u opzettelijk opnieuw wilt instellen.');
     return;
+  }
+  // ──────────────────────────────────────────────────────────────────────
+
+  // ── Licentiecontrole ───────────────────────────────────────────────────
+  // Als er een licentieserver geconfigureerd is, verplicht de gebruiker
+  // een geldige sleutel in te voeren vóór de setup verder gaat.
+  if (getLicentieServerUrl_()) {
+    if (!isLicentieGeldig_()) {
+      if (ui) {
+        toonLicentieDialoog();
+        // Controleer nogmaals na de dialoog; gebruiker kan geannuleerd hebben
+        if (!isLicentieGeldig_()) {
+          alertOfLog_(ui, 'Licentie vereist',
+            'U heeft een geldige licentiesleutel nodig om de setup te starten.\n\n' +
+            'Ga naar Boekhouding → Licentie activeren en voer uw sleutel in.');
+          return;
+        }
+      } else {
+        Logger.log('Setup afgebroken: geen geldige licentie.');
+        return;
+      }
+    }
   }
   // ──────────────────────────────────────────────────────────────────────
 
@@ -48,6 +69,8 @@ function setup() {
     maakHoofdFormulier_(ss);
     // Zet tabs in vaste professionele volgorde en verberg alle rommel
     herorganiseerWerkruimteSilent_(ss);
+    // Bescherm kritieke cellen tegen onbedoeld overschrijven
+    beschermCellen_(ss);
     installeelTriggers_();
     // Drive mappenstructuur aanmaken
     const jaar = new Date().getFullYear();
@@ -217,6 +240,35 @@ function herorganiseerWerkruimteSilent_(ss) {
     const dash = ss.getSheetByName(SHEETS.DASHBOARD);
     if (dash) ss.setActiveSheet(dash);
   } catch (e) {}
+}
+
+// ─────────────────────────────────────────────
+//  CELBESCHERMING
+// ─────────────────────────────────────────────
+/**
+ * Zet een "waarschuwing bij bewerken" op het Dashboard en de Instellingen-tab.
+ * Gebruikers kunnen nog steeds bewerken maar krijgen een melding,
+ * wat voorkomt dat formules per ongeluk worden overschreven.
+ * @param {Spreadsheet} ss
+ */
+function beschermCellen_(ss) {
+  const teProtecteren = [
+    { naam: SHEETS.DASHBOARD,    omschr: 'Dashboard — automatisch gegenereerd, niet handmatig bewerken' },
+    { naam: SHEETS.JOURNAALPOSTEN, omschr: 'Journaalposten — alleen via het menu toevoegen' },
+  ];
+  teProtecteren.forEach(function(def) {
+    const sheet = ss.getSheetByName(def.naam);
+    if (!sheet) return;
+    // Verwijder eventuele bestaande beschermingen op dit blad
+    sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET)
+      .forEach(function(p) { try { p.remove(); } catch (e) {} });
+    // Voeg nieuwe bescherming toe (alleen waarschuwing — niet geblokkeerd)
+    try {
+      sheet.protect().setWarningOnly(true).setDescription(def.omschr);
+    } catch (e) {
+      Logger.log('Bescherming mislukt voor ' + def.naam + ': ' + e.message);
+    }
+  });
 }
 
 /**
