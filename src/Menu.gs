@@ -13,11 +13,18 @@ function onOpen() {
   // Onboarding wizard bij eerste gebruik + update-melding bij terugkerende gebruikers
   try { controleerOnboarding_(); } catch (e) { Logger.log('Onboarding check fout: ' + e.message); }
 
+  // Verberg automatisch aangemaakte formulier-responstabbladen (stil, geen popup)
+  try {
+    const _ss = getSpreadsheet_();
+    if (_ss) verbergFormResponseTabs_(_ss);
+  } catch (e) { Logger.log('onOpen werkruimte fout: ' + e.message); }
+
   ui.createMenu('Boekhouding')
 
     // ── Dagelijks gebruik ─────────────────────
     .addItem('📊 Dashboard openen', 'openDashboard')
     .addItem('➕ Nieuwe boeking (factuur / kosten / declaratie / bon)', 'openNieuweBoeking')
+    .addItem('📧 Factuur per e-mail versturen', 'stuurVerkoopfactuurPdf')
     .addSeparator()
 
     // ── Facturen ──────────────────────────────
@@ -56,6 +63,7 @@ function onOpen() {
     .addSubMenu(ui.createMenu('Controle & Export')
       .addItem('✅ Gezondheidscheck uitvoeren', 'voerGezondheidCheckUit')
       .addSeparator()
+      .addItem('💾 Backup maken (XLSX naar Drive)', 'maakBackup')
       .addItem('📦 Accountantspakket exporteren', 'exporteerAccountantsPakket')
       .addItem('📧 Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
       .addSeparator()
@@ -102,7 +110,7 @@ function onOpen() {
       .addSeparator()
       .addItem('🎨 Bedrijfsstijl (logo & kleur)', 'openBrandingInstellingen')
       .addItem('Google Drive mappen', 'toonDriveStructuur')
-      .addItem('Koppeling met Zapier / Make / n8n', 'toonZapierInstructies')
+      .addItem('🔗 Website / webshop koppelen (API)', 'toonZapierInstructies')
       .addSeparator()
       .addItem('Nieuw boekjaar starten', 'maakNieuwBoekjaar')
       .addItem('Rekeningschema opnieuw laden', 'herlaadGrootboekschema')
@@ -110,6 +118,9 @@ function onOpen() {
       .addItem('Saldi herberekenen (bij fouten)', 'herberekeningGrootboekSaldi')
       .addSeparator()
       .addItem('✅ Instellingen controleren', 'valideerEnMeldInstellingen')
+      .addSeparator()
+      .addItem('🔑 Licentie activeren', 'toonLicentieDialoog')
+      .addItem('ℹ️ Licentie-informatie', 'toonLicentieInfo')
       .addSeparator()
       .addItem('🗂 Werkruimte opschonen (tabbladen)', 'herorganiseerWerkruimte')
       .addSeparator()

@@ -171,8 +171,7 @@ describe('verwerkHerhalendeKosten_ (HerhalendeKosten.gs)', () => {
 // ──────────────────────────────────────────────────────────────────────────────
 describe('setup() idempotency guard (Setup.gs)', () => {
   test('stopt vroeg en roept alertOfLog_ aan als SETUP_DONE al true is', () => {
-    // Laad Config + Utils + Setup; post-run overschrijf de afhankelijkheden
-    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Setup.gs']);
+    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Licentie.gs', 'Setup.gs']);
 
     // PROP.SETUP_DONE = 'setupDone' (zie Config.gs)
     ctx.PropertiesService.getScriptProperties().getProperty
@@ -206,23 +205,25 @@ describe('setup() idempotency guard (Setup.gs)', () => {
   });
 
   test('voert setup wél uit als SETUP_DONE niet gezet is', () => {
-    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Setup.gs']);
+    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Licentie.gs', 'Setup.gs']);
 
-    // SETUP_DONE NIET aanwezig
+    // SETUP_DONE en LICENTIE_SERVER_URL niet aanwezig → licentiecheck slaat over
     ctx.PropertiesService.getScriptProperties().getProperty
       .mockImplementation(() => null);
 
     ctx.alertOfLog_ = jest.fn();
-    ctx.maakTabbladen_             = jest.fn();
+    ctx.maakTabbladen_              = jest.fn();
     ctx.verbergTechnischeTabbladen_ = jest.fn();
-    ctx.vulGrootboekschema_        = jest.fn();
-    ctx.zetInstellingen_           = jest.fn();
-    ctx.maakFormuliersTabbladen_   = jest.fn();
-    ctx.maakHoofdFormulier_        = jest.fn();
-    ctx.installeelTriggers_        = jest.fn();
-    ctx.maakDriveStructuur_        = jest.fn();
+    ctx.vulGrootboekschema_         = jest.fn();
+    ctx.zetInstellingen_            = jest.fn();
+    ctx.maakFormuliersTabbladen_    = jest.fn();
+    ctx.maakHoofdFormulier_         = jest.fn();
+    ctx.herorganiseerWerkruimteSilent_ = jest.fn();
+    ctx.beschermCellen_             = jest.fn();
+    ctx.installeelTriggers_         = jest.fn();
+    ctx.maakDriveStructuur_         = jest.fn();
     ctx.slaDriverLinksOpInInstellingen_ = jest.fn();
-    ctx.vernieuwDashboard          = jest.fn();
+    ctx.vernieuwDashboard           = jest.fn();
     ctx.getSpreadsheet_ = jest.fn(() => ({
       getUrl: jest.fn(() => 'https://test'),
       getSheetByName: jest.fn(() => null),
