@@ -13,11 +13,18 @@ function onOpen() {
   // Onboarding wizard bij eerste gebruik + update-melding bij terugkerende gebruikers
   try { controleerOnboarding_(); } catch (e) { Logger.log('Onboarding check fout: ' + e.message); }
 
+  // Verberg automatisch aangemaakte formulier-responstabbladen (stil, geen popup)
+  try {
+    const _ss = getSpreadsheet_();
+    if (_ss) verbergFormResponseTabs_(_ss);
+  } catch (e) { Logger.log('onOpen werkruimte fout: ' + e.message); }
+
   ui.createMenu('Boekhouding')
 
     // ── Dagelijks gebruik ─────────────────────
     .addItem('📊 Dashboard openen', 'openDashboard')
     .addItem('➕ Nieuwe boeking (factuur / kosten / declaratie / bon)', 'openNieuweBoeking')
+    .addItem('📧 Factuur per e-mail versturen', 'stuurVerkoopfactuurPdf')
     .addSeparator()
 
     // ── Facturen ──────────────────────────────

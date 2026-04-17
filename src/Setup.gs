@@ -46,8 +46,8 @@ function setup() {
     zetInstellingen_(ss);
     maakFormuliersTabbladen_(ss);
     maakHoofdFormulier_(ss);
-    // Verberg automatisch aangemaakte "Form Responses N" tabs en herstel tabvolgorde
-    verbergFormResponseTabs_(ss);
+    // Zet tabs in vaste professionele volgorde en verberg alle rommel
+    herorganiseerWerkruimteSilent_(ss);
     installeelTriggers_();
     // Drive mappenstructuur aanmaken
     const jaar = new Date().getFullYear();
@@ -172,16 +172,51 @@ function verbergTechnischeTabbladen_(ss) {
  * Veilig om meerdere keren uit te voeren (idempotent).
  */
 function herorganiseerWerkruimte() {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const ui = SpreadsheetApp.getUi();
+  herorganiseerWerkruimteSilent_(ss);
+  ui.alert('Werkruimte opgeschoond',
+    'Tabbladen staan nu in de juiste volgorde:\n\n' +
+    ZICHTBARE_TABS.join(' → ') + '\n\n' +
+    'Technische tabbladen zijn verborgen en bereikbaar via het menu.',
+    ui.ButtonSet.OK);
+}
+
+/**
+ * Stille versie: geen popup. Aanroepbaar vanuit onOpen en setup.
+ * Zet zichtbare tabs in de vaste volgorde, verbergt de rest.
+ * @param {Spreadsheet} ss
+ */
+function herorganiseerWerkruimteSilent_(ss) {
+  // Verberg Form Response tabs
   verbergFormResponseTabs_(ss);
+
+  // Zet de 7 zichtbare tabs in de juiste volgorde
+  ZICHTBARE_TABS.forEach(function(naam, i) {
+    const sheet = ss.getSheetByName(naam);
+    if (sheet) {
+      try {
+        sheet.showSheet();
+        ss.setActiveSheet(sheet);
+        ss.moveActiveSheet(i + 1);
+      } catch (e) {}
+    }
+  });
+
+  // Verberg technische tabs (komen na de zichtbare, op onbekende posities)
+  [SHEETS.JOURNAALPOSTEN, SHEETS.GROOTBOEKSCHEMA, SHEETS.BALANS,
+   SHEETS.WV_REKENING, SHEETS.CASHFLOW, SHEETS.DEBITEUREN,
+   SHEETS.CREDITEUREN, SHEETS.JAARREKENING].forEach(function(naam) {
+    const sheet = ss.getSheetByName(naam);
+    if (sheet) try { sheet.hideSheet(); } catch (e) {}
+  });
+
+  // Activeer Dashboard
   try {
     const dash = ss.getSheetByName(SHEETS.DASHBOARD);
-    if (dash) { ss.setActiveSheet(dash); ss.moveActiveSheet(1); }
+    if (dash) ss.setActiveSheet(dash);
   } catch (e) {}
-  ui.alert('Werkruimte opgeschoond',
-    'Formulier-responstabbladen zijn verborgen en het Dashboard staat weer op de eerste positie.',
-    ui.ButtonSet.OK);
 }
 
 /**
