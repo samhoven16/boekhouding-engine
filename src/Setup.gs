@@ -391,19 +391,19 @@ function zetInstellingen_(ss) {
 
   const data = [
     ['BEDRIJFSGEGEVENS', ''],
-    ['Bedrijfsnaam', '← Vul hier uw bedrijfsnaam in'],
+    ['Bedrijfsnaam', ''],
     ['Rechtsvorm', 'Eenmanszaak'],
-    ['Adres', '← Uw straatnaam + huisnummer'],
-    ['Postcode', '← Postcode'],
-    ['Plaats', '← Woonplaats'],
+    ['Adres', ''],
+    ['Postcode', ''],
+    ['Plaats', ''],
     ['Land', 'Nederland'],
-    ['KvK-nummer', '← 8-cijferig KvK-nummer'],
-    ['BTW-nummer', '← NL + 9 cijfers + B + 2 cijfers'],
-    ['IBAN', '← NL + bankrekeningnummer'],
-    ['BIC', '← BIC/SWIFT code van uw bank'],
-    ['Email', '← uw@emailadres.nl'],
-    ['Telefoon', '← Uw telefoonnummer'],
-    ['Website', '← www.uwwebsite.nl (optioneel)'],
+    ['KvK-nummer', ''],
+    ['BTW-nummer', ''],
+    ['IBAN', ''],
+    ['BIC', ''],
+    ['Email', ''],
+    ['Telefoon', ''],
+    ['Website', ''],
     ['', ''],
     ['BOEKHOUDINSTELLINGEN', ''],
     ['Boekjaar start', '01-01-' + new Date().getFullYear()],
@@ -427,11 +427,31 @@ function zetInstellingen_(ss) {
     ['BTW aangifte herinnering', 'Ja'],
     ['', ''],
     ['INTEGRATIES & API', ''],
-    ['Webhook API sleutel', '← Kies een sterk wachtwoord (bijv. mijnbedrijf-2026-geheim)'],
-    ['Web App URL', '← Plak hier de Web App URL na publicatie (zie Zapier instructies)'],
+    ['Webhook API sleutel', ''],
+    ['Web App URL', ''],
   ];
 
   sheet.getRange(1, 1, data.length, 2).setValues(data);
+
+  // Plaatshouder-notities (verschijnen als tooltip op lege cellen)
+  const notities = [
+    [2, 'Uw officiële handelsnaam — wordt verwerkt in facturen, dashboard en bestandsnaam'],
+    [4, 'Uw straatnaam + huisnummer (bijv. Hoofdstraat 12)'],
+    [5, 'Postcode (bijv. 1234 AB)'],
+    [6, 'Plaatsnaam'],
+    [8, '8-cijferig KvK-nummer (te vinden op kvk.nl)'],
+    [9, 'BTW-nummer: NL + 9 cijfers + B + 2 cijfers (bijv. NL123456789B01)'],
+    [10, 'IBAN-nummer: NL + 2 cijfers + 4 letters + 10 cijfers'],
+    [11, 'BIC/SWIFT-code van uw bank (bijv. ABNANL2A)'],
+    [12, 'Uw zakelijk e-mailadres'],
+    [13, 'Uw telefoonnummer (bijv. 06-12345678)'],
+    [14, 'Uw website (optioneel, bijv. www.uwbedrijf.nl)'],
+    [30, 'Kies een sterk wachtwoord voor de API-koppeling (bijv. mijnbedrijf-2026-geheim)'],
+    [31, 'Vul hier de Web App URL in na publicatie — zie Boekhouding → Koppeling Zapier'],
+  ];
+  notities.forEach(function(n) {
+    sheet.getRange(n[0], 2).setNote(n[1]);
+  });
 
   // Opmaak sectietitels
   [1, 16, 27, 33, 37].forEach(rij => {
@@ -981,7 +1001,11 @@ function getInstelling_(sleutel) {
     const data = sheet.getDataRange().getValues();
     _instellingenCache = {};
     for (let i = 0; i < data.length; i++) {
-      if (data[i][0]) _instellingenCache[String(data[i][0])] = String(data[i][1] != null ? data[i][1] : '');
+      if (data[i][0]) {
+        const val = String(data[i][1] != null ? data[i][1] : '');
+        // Verouderde placeholder-tekst (begint met ←) behandelen als leeg
+        _instellingenCache[String(data[i][0])] = val.startsWith('←') ? '' : val;
+      }
     }
   }
   return Object.prototype.hasOwnProperty.call(_instellingenCache, sleutel)
