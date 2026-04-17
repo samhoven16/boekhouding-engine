@@ -152,6 +152,7 @@ function herberekeningGrootboekSaldi() {
 //  GROOTBOEKKAART EXPORTEREN (PER REKENING)
 // ─────────────────────────────────────────────
 function exporteerGrootboekkaart() {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const ui = SpreadsheetApp.getUi();
 
@@ -244,6 +245,7 @@ function genereerGrootboekkaart_(ss, code, naam) {
 //  AFSCHRIJVINGEN BOEKEN
 // ─────────────────────────────────────────────
 function boekAfschrijvingen() {
+  if (!controleerSetupGedaan_()) return;
   const ui = SpreadsheetApp.getUi();
   const ss = getSpreadsheet_();
 
@@ -338,6 +340,7 @@ function verwerkAfschrijvingen(data) {
 //  DEBITEUREN OVERZICHT
 // ─────────────────────────────────────────────
 function vernieuwDebiteurenOverzicht() {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.DEBITEUREN);
   sheet.clearContents();
@@ -393,6 +396,7 @@ function vernieuwDebiteurenOverzicht() {
 //  CREDITEUREN OVERZICHT
 // ─────────────────────────────────────────────
 function vernieuwCrediteurenOverzicht() {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.CREDITEUREN);
   sheet.clearContents();
@@ -454,6 +458,7 @@ function vernieuwCrediteurenOverzicht() {
 //  TRANSACTIES KOPPELEN AAN FACTUREN
 // ─────────────────────────────────────────────
 function koppelTransactiesAanFacturen() {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const btData = ss.getSheetByName(SHEETS.BANKTRANSACTIES).getDataRange().getValues();
   let gekoppeld = 0;

@@ -7,6 +7,7 @@
 //  DASHBOARD VERNIEUWEN (HOOFDFUNCTIE)
 // ─────────────────────────────────────────────
 function vernieuwDashboard() {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.DASHBOARD);
   sheet.clearContents();
@@ -127,7 +128,8 @@ function vernieuwDashboard() {
     .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold');
   rij++;
 
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  const _vfS = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  const vfData = _vfS ? _vfS.getDataRange().getValues() : [[]];
   const recenteVf = vfData.slice(1).filter(r => r[0]).slice(-10).reverse();
 
   recenteVf.forEach(r => {

@@ -248,6 +248,7 @@ function berekenBelastingadvies_(ss) {
 //  BELASTINGADVIES TABBLAD GENEREREN
 // ─────────────────────────────────────────────
 function genereerBelastingadvies() {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const bladNaam = 'Belastingadvies';
   let sheet = ss.getSheetByName(bladNaam);

@@ -27,6 +27,7 @@
 // ─────────────────────────────────────────────
 
 function voerGezondheidCheckUit() {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const ui = SpreadsheetApp.getUi();
 

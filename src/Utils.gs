@@ -489,3 +489,23 @@ function invalideerKpiSnapshot_() {
     // Deletion is best-effort — a missing or stale snapshot is never a crash risk
   }
 }
+
+/**
+ * Gate voor menu-functies die sheet-data nodig hebben.
+ * Toont een vriendelijke melding als de eenmalige setup nog niet is uitgevoerd.
+ * @return {boolean} true als setup klaar is, false als geblokkeerd
+ */
+function controleerSetupGedaan_() {
+  if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) === 'true') {
+    return true;
+  }
+  try {
+    SpreadsheetApp.getUi().alert(
+      'Instellen vereist',
+      'Dit onderdeel is pas beschikbaar nadat het systeem is ingesteld.\n\n' +
+      'Ga naar:\nBoekhouding → Instellingen → Eerste keer instellen (setup)',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  } catch (e) { Logger.log('controleerSetupGedaan_: UI niet beschikbaar'); }
+  return false;
+}
