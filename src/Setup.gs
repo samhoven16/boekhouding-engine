@@ -992,6 +992,7 @@ function zetHeaderRij_(sheet, headers) {
 // GAS module-level `let` persists within a single execution context
 // (one trigger invocation / one manual run) and resets between runs.
 let _instellingenCache = null;
+function wisInstellingenCache_() { _instellingenCache = null; }
 
 function getInstelling_(sleutel) {
   if (!_instellingenCache) {
