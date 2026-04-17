@@ -111,7 +111,7 @@ function onOpen() {
       .addSeparator()
       .addItem('🎨 Bedrijfsstijl (logo & kleur)', 'openBrandingInstellingen')
       .addItem('Google Drive mappen', 'toonDriveStructuur')
-      .addItem('Koppeling met Zapier / Make / n8n', 'toonZapierInstructies')
+      .addItem('🔗 Website / webshop koppelen (API)', 'toonZapierInstructies')
       .addSeparator()
       .addItem('Nieuw boekjaar starten', 'maakNieuwBoekjaar')
       .addItem('Rekeningschema opnieuw laden', 'herlaadGrootboekschema')

@@ -271,57 +271,106 @@ function statusResponse_(ss) {
 // ─────────────────────────────────────────────
 function toonZapierInstructies() {
   const ui = SpreadsheetApp.getUi();
+  const apiSleutel = getInstelling_('Webhook API sleutel') || 'UW-API-SLEUTEL-HIER';
+  const webAppUrl  = getInstelling_('Web App URL') || 'https://script.google.com/macros/s/XXXXXX/exec';
+
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body{font-family:Arial,sans-serif;padding:20px;font-size:13px}
-      h3{color:#1A237E}
-      code{background:#F5F5F5;padding:2px 6px;border-radius:3px;font-size:12px}
-      pre{background:#F5F5F5;padding:12px;border-radius:4px;overflow:auto;font-size:11px}
-      .stap{background:#E8EAF6;padding:10px;border-radius:4px;margin:8px 0}
-      .tip{background:#FFF8E1;padding:8px;border-radius:4px;font-size:11px}
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+           padding:20px;font-size:13px;color:#333;line-height:1.5}
+      h3{color:#1A237E;font-size:16px;margin-bottom:4px}
+      h4{color:#283593;margin:16px 0 6px}
+      p{margin-bottom:10px}
+      code{background:#F5F5F5;padding:2px 6px;border-radius:3px;font-size:11px;
+           font-family:monospace;word-break:break-all}
+      pre{background:#1E1E1E;color:#D4D4D4;padding:14px;border-radius:6px;
+          overflow:auto;font-size:11px;font-family:monospace;margin:6px 0 14px}
+      .kw{color:#569CD6} .str{color:#CE9178} .prop{color:#9CDCFE}
+      .num{color:#B5CEA8} .cmt{color:#6A9955}
+      .stap{background:#E8EAF6;border-left:3px solid #1A237E;padding:10px 14px;
+            border-radius:0 6px 6px 0;margin:10px 0}
+      .ok{background:#E8F5E9;border-left:3px solid #2E7D32;padding:8px 14px;
+          border-radius:0 6px 6px 0;margin:10px 0}
+      .url-box{background:#F5F5F5;padding:10px;border-radius:6px;word-break:break-all;
+               font-family:monospace;font-size:11px;margin:6px 0}
+      .badge{display:inline-block;background:#1A237E;color:white;border-radius:3px;
+             padding:1px 7px;font-size:11px;font-weight:bold;margin-right:4px}
+      hr{border:none;border-top:1px solid #eee;margin:16px 0}
     </style>
-    <h3>Koppelen met andere programma's</h3>
-    <p>U kunt uw boekhouding automatisch laten bijwerken vanuit andere programma's zoals Zapier, Make of n8n.</p>
 
-    <div class="stap"><b>Stap 1:</b> Publiceer uw script als Web App<br>
-    Open de Apps Script editor → klik op <b>Implementeren → Nieuwe implementatie → Web App</b><br>
-    Kies: Uitvoeren als <b>"Ik zelf"</b> en Toegang <b>"Iedereen"</b><br>
-    Kopieer de URL die verschijnt</div>
+    <h3>🔗 Website koppelen aan uw boekhouding</h3>
+    <p style="color:#555">Uw boekhouding heeft een ingebouwde API. Elke website of webshop
+    kan er direct mee communiceren — <b>geen Zapier, geen abonnement, geen kosten</b>.</p>
 
-    <div class="stap"><b>Stap 2 (aanbevolen):</b> Stel een beveiligingscode in<br>
-    Ga naar het tabblad <b>Instellingen</b> en vul een wachtwoord in bij <code>Webhook API sleutel</code>.<br>
-    Dit voorkomt dat anderen uw boekhouding kunnen aanpassen.</div>
+    <div class="stap">
+      <b>Stap 1 — Publiceer de Web App (eenmalig)</b><br>
+      Open <b>Extensies → Apps Script</b> → klik rechtsboven op <b>Implementeren → Nieuwe implementatie</b><br>
+      Type: <b>Web-app</b> &nbsp;|&nbsp; Uitvoeren als: <b>Ik zelf</b> &nbsp;|&nbsp; Toegang: <b>Iedereen</b><br>
+      Kopieer de URL en plak deze in het Instellingen-tabblad bij <code>Web App URL</code>.
+    </div>
 
-    <div class="stap"><b>Stap 3:</b> Stel Zapier / Make in<br>
-    Kies als actie: <b>Webhooks → POST</b><br>
-    Plak de Web App URL<br>
-    Body type: <b>JSON</b></div>
+    <div class="ok">
+      <b>Uw huidige Web App URL:</b><br>
+      <div class="url-box">${webAppUrl}</div>
+      ${webAppUrl.includes('XXXXXX') ? '<span style="color:#c62828">⚠ Nog niet ingesteld — voer stap 1 uit</span>' : '<span style="color:#2E7D32">✓ Klaar voor gebruik</span>'}
+    </div>
 
-    <p><b>Voorbeeld: automatisch een factuur aanmaken</b></p>
-    <pre>{
-  "actie": "factuur",
-  "klantnaam": "Bedrijf BV",
-  "klantEmail": "klant@bedrijf.nl",
-  "omschrijving": "Consultancy januari",
-  "aantal": 8,
-  "prijsPerEenheid": 95,
-  "btwTarief": "21% (hoog)",
-  "directMailen": true
-}</pre>
+    <hr>
+    <h4>Factuur boeken vanuit uw website</h4>
+    <p>Plak dit in de JavaScript van uw website (bijv. bij een betaalbevestiging of contactformulier):</p>
+    <pre><span class="cmt">// Na een aankoop op uw website:</span>
+<span class="kw">fetch</span>(<span class="str">'${webAppUrl}'</span>, {
+  <span class="prop">method</span>: <span class="str">'POST'</span>,
+  <span class="prop">headers</span>: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+  <span class="prop">body</span>: <span class="kw">JSON.stringify</span>({
+    <span class="prop">actie</span>:          <span class="str">'factuur'</span>,
+    <span class="prop">apikey</span>:         <span class="str">'${apiSleutel}'</span>,
+    <span class="prop">klantnaam</span>:      <span class="str">'Jan Jansen'</span>,       <span class="cmt">// uit uw bestelformulier</span>
+    <span class="prop">klantEmail</span>:     <span class="str">'jan@voorbeeld.nl'</span>,
+    <span class="prop">omschrijving</span>:   <span class="str">'Aankoop product XYZ'</span>,
+    <span class="prop">aantal</span>:         <span class="num">1</span>,
+    <span class="prop">prijsPerEenheid</span>: <span class="num">99.00</span>,             <span class="cmt">// excl. BTW</span>
+    <span class="prop">btwTarief</span>:      <span class="str">'21% (hoog)'</span>,
+    <span class="prop">directMailen</span>:   <span class="kw">true</span>                <span class="cmt">// factuur direct naar klant</span>
+  })
+})
+.<span class="kw">then</span>(r =&gt; r.<span class="kw">json</span>())
+.<span class="kw">then</span>(res =&gt; console.<span class="kw">log</span>(res)); <span class="cmt">// { succes: true, factuurnummer: "F2026001" }</span></pre>
 
-    <p><b>Voorbeeld: kosten automatisch boeken</b></p>
-    <pre>{
-  "actie": "kosten",
-  "leverancier": "Adobe Systems",
-  "bedragExcl": 49.99,
-  "btwTarief": "21% (hoog)",
-  "categorie": "Software & Abonnementen",
-  "omschrijving": "Adobe CC abonnement"
-}</pre>
+    <h4>Kosten boeken (bijv. automatische abonnementen)</h4>
+    <pre><span class="kw">fetch</span>(<span class="str">'${webAppUrl}'</span>, {
+  <span class="prop">method</span>: <span class="str">'POST'</span>,
+  <span class="prop">headers</span>: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+  <span class="prop">body</span>: <span class="kw">JSON.stringify</span>({
+    <span class="prop">actie</span>:       <span class="str">'kosten'</span>,
+    <span class="prop">apikey</span>:      <span class="str">'${apiSleutel}'</span>,
+    <span class="prop">leverancier</span>: <span class="str">'Shopify'</span>,
+    <span class="prop">bedragExcl</span>:  <span class="num">24.17</span>,
+    <span class="prop">btwTarief</span>:   <span class="str">'21% (hoog)'</span>,
+    <span class="prop">categorie</span>:   <span class="str">'Software &amp; Abonnementen'</span>
+  })
+});</pre>
 
-    <div class="tip"><b>Geavanceerd:</b> U kunt ook een AI-tool (bijv. Claude of ChatGPT) automatisch bonnetjes laten verwerken en naar uw boekhouding sturen via deze koppeling.</div>
-  `).setWidth(600).setHeight(520);
-  ui.showModalDialog(html, 'Koppelen met andere programma\'s');
+    <hr>
+    <h4>Beschikbare acties</h4>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tr style="background:#E8EAF6">
+        <th style="padding:6px;text-align:left">actie</th>
+        <th style="padding:6px;text-align:left">Wat het doet</th>
+      </tr>
+      <tr><td style="padding:5px"><code>factuur</code></td><td style="padding:5px">Verkoopfactuur aanmaken + PDF + e-mail naar klant</td></tr>
+      <tr style="background:#fafafa"><td style="padding:5px"><code>kosten</code></td><td style="padding:5px">Inkoopfactuur / kosten boeken</td></tr>
+      <tr><td style="padding:5px"><code>declaratie</code></td><td style="padding:5px">Declaratie registreren</td></tr>
+      <tr style="background:#fafafa"><td style="padding:5px"><code>status</code> (GET)</td><td style="padding:5px">Omzet, BTW-saldo, openstaande facturen ophalen</td></tr>
+      <tr><td style="padding:5px"><code>klant_opslaan</code></td><td style="padding:5px">Klant toevoegen aan relatiebestand</td></tr>
+    </table>
+
+    <p style="font-size:11px;color:#888;margin-top:16px">
+      <b>Zapier / Make / n8n?</b> Werkt ook — gebruik Webhooks → POST met dezelfde JSON-structuur.
+    </p>
+  `).setWidth(680).setHeight(620);
+  ui.showModalDialog(html, 'Website koppelen aan uw boekhouding');
 }
 
 // ─────────────────────────────────────────────
