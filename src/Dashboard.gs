@@ -7,6 +7,7 @@
 //  DASHBOARD VERNIEUWEN (HOOFDFUNCTIE)
 // ─────────────────────────────────────────────
 function vernieuwDashboard() {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.DASHBOARD);
   sheet.clearContents();
@@ -127,7 +128,8 @@ function vernieuwDashboard() {
     .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold');
   rij++;
 
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  const _vfS = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  const vfData = _vfS ? _vfS.getDataRange().getValues() : [[]];
   const recenteVf = vfData.slice(1).filter(r => r[0]).slice(-10).reverse();
 
   recenteVf.forEach(r => {
@@ -270,8 +272,11 @@ function vernieuwDashboard() {
 //  ROI DATA BEREKENEN
 // ─────────────────────────────────────────────
 function berekenRoiData_(ss, kpi) {
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
-  const jrData = ss.getSheetByName(SHEETS.JOURNAALPOSTEN).getDataRange().getValues();
+  // Null-guards: tabbbladen kunnen ontbreken bij gedeeltelijke setup.
+  const _vfS = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  const _jrS = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  const vfData = _vfS ? _vfS.getDataRange().getValues() : [[]];
+  const jrData = _jrS ? _jrS.getDataRange().getValues() : [[]];
   const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
   const boekjaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
 
@@ -324,8 +329,9 @@ function berekenKpiData_(ss) {
   const kg = berekenKengetallen_(ss);
   const jaar = new Date().getFullYear();
 
-  // Open debiteuren
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  // Open debiteuren — null-guard: tabblad kan ontbreken bij gedeeltelijke setup.
+  const _vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  const vfData = _vfSheet ? _vfSheet.getDataRange().getValues() : [[]];
   let debiteurenOpen = 0;
   let aantalOpenFacturen = 0;
   let totaalDagenOpen = 0;
@@ -349,8 +355,9 @@ function berekenKpiData_(ss) {
     if (verval && !isNaN(verval.getTime()) && verval <= over30d) verwachtIn30d += open;
   }
 
-  // Open crediteuren
-  const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  // Open crediteuren — null-guard: tabblad kan ontbreken bij gedeeltelijke setup.
+  const _ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  const ifData = _ifSheet ? _ifSheet.getDataRange().getValues() : [[]];
   let crediteurenOpen = 0;
   for (let i = 1; i < ifData.length; i++) {
     if (ifData[i][12] === FACTUUR_STATUS.BETAALD) continue;
