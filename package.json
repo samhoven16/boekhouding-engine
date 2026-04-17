@@ -14,12 +14,15 @@
     "test:watch": "jest --watch --passWithNoTests",
     "index": "node scripts/symbol-index.js",
     "impact": "node scripts/impact.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "push:gas": "node scripts/clasp-push.js",
+    "deploy": "npm test && npm run push:gas"
   },
   "lint-staged": {
     "src/**/*.gs": "eslint"
   },
   "devDependencies": {
+    "@google/clasp": "^2.4.2",
     "@eslint/js": "^9.27.0",
     "eslint": "^9.27.0",
     "husky": "^9.1.7",
