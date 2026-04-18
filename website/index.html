@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZelfBoekhouden.nl — Volledige ZZP-boekhouding in Google Sheets | Eenmalig €49</title>
+<meta name="description" content="Facturen, BTW-aangifte, dashboard en rapportages in jouw eigen Google Spreadsheet. Eenmalig €49 — geen abonnement, geen lock-in, data blijft van jou.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.zelfboekhouden.nl/">
+
+<!-- Open Graph -->
+<meta property="og:title" content="ZelfBoekhouden.nl — ZZP-boekhouding in Google Sheets">
+<meta property="og:description" content="Eenmalig €49. Geen abonnement. Jouw data in jouw Drive.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.zelfboekhouden.nl/">
+<meta property="og:locale" content="nl_NL">
+
+<!-- Schema.org JSON-LD -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.zelfboekhouden.nl/#app",
+      "name": "ZelfBoekhouden",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, Google Sheets",
+      "url": "https://www.zelfboekhouden.nl/",
+      "description": "Volledige ZZP-boekhouding in Google Sheets — facturen, BTW-aangifte, dashboard en rapportages. Eenmalig €49, geen abonnement.",
+      "offers": {
+        "@type": "Offer",
+        "price": "49.00",
+        "priceCurrency": "EUR",
+        "priceValidUntil": "2026-12-31",
+        "availability": "https://schema.org/InStock"
+      },
+      "featureList": [
+        "PDF-facturen aanmaken en e-mailen",
+        "BTW-aangifte automatisch berekend",
+        "Dashboard met KPI's",
+        "Herhalende kosten automatisch",
+        "Betalingsherinneringen automatisch",
+        "Balans en winst- en verliesrekening",
+        "Data in eigen Google Drive"
+      ]
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.zelfboekhouden.nl/#org",
+      "name": "ZelfBoekhouden",
+      "url": "https://www.zelfboekhouden.nl/",
+      "sameAs": ["https://www.linkedin.com/company/zelfboekhouden"]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.zelfboekhouden.nl/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Moet ik ieder jaar opnieuw betalen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Nee. Je betaalt eenmalig €49 en gebruikt ZelfBoekhouden voor altijd. Geen abonnement, geen verborgen kosten."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Waar staat mijn data?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Jouw boekhouding staat in een Google Spreadsheet in jouw eigen Google Drive. Wij kunnen er niet bij — jij bezit de data volledig."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Werkt het ook op een Mac?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ja. ZelfBoekhouden werkt in Google Chrome, Safari, Firefox en Edge — op Mac, Windows, Linux en tablet. Geen installatie nodig."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Kan mijn boekhouder meekijken?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ja, gratis. Deel je Google Spreadsheet met je boekhouder via een gewone Google-deellink. Geen extra licentie nodig."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Hoe lang duurt het om te beginnen?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Na aankoop ontvang je je licentiesleutel per e-mail. Activeren duurt 5 minuten. Daarna kun je direct je eerste factuur versturen."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+  :root {
+    --blauw: #1A237E;
+    --blauw-licht: #283593;
+    --accent: #00ACC1;
+    --groen: #2E7D32;
+    --tekst: #1a1a2e;
+    --grijs: #64748b;
+    --bg: #f8fafc;
+    --wit: #ffffff;
+    --rand: #e2e8f0;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(26,35,126,.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    color: var(--tekst);
+    background: var(--wit);
+    line-height: 1.6;
+    font-size: 16px;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,.97);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rand);
+    padding: 0 24px;
+  }
+  .nav-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .logo { font-weight: 800; font-size: 20px; color: var(--blauw); text-decoration: none; }
+  .logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 28px; list-style: none; }
+  .nav-links a { text-decoration: none; color: var(--grijs); font-size: 15px; font-weight: 500; }
+  .nav-links a:hover { color: var(--blauw); }
+  .nav-cta {
+    background: var(--blauw); color: var(--wit) !important;
+    padding: 9px 20px; border-radius: 8px; font-weight: 600 !important;
+    font-size: 14px !important;
+  }
+  .nav-cta:hover { background: var(--blauw-licht) !important; color: var(--wit) !important; }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, #0d1b6e 0%, #1A237E 50%, #1565C0 100%);
+    color: var(--wit);
+    padding: 80px 24px 96px;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 13px; font-weight: 600;
+    margin-bottom: 24px;
+    letter-spacing: .4px;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 800;
+    line-height: 1.15;
+    max-width: 800px; margin: 0 auto 20px;
+  }
+  .hero h1 em { font-style: normal; color: #7EC8E3; }
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 20px);
+    color: rgba(255,255,255,.85);
+    max-width: 600px; margin: 0 auto 40px;
+    line-height: 1.6;
+  }
+  .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn-primair {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--wit); color: var(--blauw);
+    padding: 16px 28px; border-radius: 10px;
+    font-size: 17px; font-weight: 700; text-decoration: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,.2);
+    transition: transform .15s, box-shadow .15s;
+    min-height: 56px;
+  }
+  .btn-primair:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+  .btn-secundair {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,.12); color: var(--wit);
+    border: 1.5px solid rgba(255,255,255,.4);
+    padding: 15px 24px; border-radius: 10px;
+    font-size: 16px; font-weight: 600; text-decoration: none;
+    transition: background .15s;
+    min-height: 56px;
+  }
+  .btn-secundair:hover { background: rgba(255,255,255,.2); }
+  .ideal-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.1); border-radius: 6px;
+    padding: 4px 10px; font-size: 12px; color: rgba(255,255,255,.7);
+    margin-top: 14px;
+  }
+
+  /* ── SOCIAL PROOF STRIP ── */
+  .proof-strip {
+    background: var(--bg); border-bottom: 1px solid var(--rand);
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .proof-strip p { color: var(--grijs); font-size: 14px; }
+  .proof-strip strong { color: var(--tekst); }
+
+  /* ── SECTIONS ── */
+  section { padding: 72px 24px; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 12px;
+  }
+  h2 { font-size: clamp(26px, 3.5vw, 40px); font-weight: 800; line-height: 1.2; color: var(--blauw); }
+  .sub-tekst { font-size: 17px; color: var(--grijs); margin-top: 12px; max-width: 600px; }
+
+  /* ── USP GRID ── */
+  .usp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px; margin-top: 48px;
+  }
+  .usp-kaart {
+    background: var(--wit); border: 1px solid var(--rand);
+    border-radius: var(--radius); padding: 28px;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .usp-kaart:hover { box-shadow: var(--shadow); transform: translateY(-3px); }
+  .usp-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: #E8EAF6; display: flex; align-items: center;
+    justify-content: center; font-size: 22px; margin-bottom: 16px;
+  }
+  .usp-kaart h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: var(--tekst); }
+  .usp-kaart p { font-size: 14px; color: var(--grijs); line-height: 1.6; }
+
+  /* ── VERGELIJKING ── */
+  .vergelijk-sectie { background: var(--bg); }
+  .vergelijk-tabel { width: 100%; border-collapse: collapse; margin-top: 40px; }
+  .vergelijk-tabel th, .vergelijk-tabel td {
+    padding: 14px 16px; text-align: left; font-size: 15px;
+    border-bottom: 1px solid var(--rand);
+  }
+  .vergelijk-tabel th { font-weight: 700; color: var(--grijs); font-size: 13px; text-transform: uppercase; letter-spacing: .8px; }
+  .vergelijk-tabel tr:last-child td { border-bottom: none; }
+  .vergelijk-tabel .col-ons { background: #E8EAF6; font-weight: 600; color: var(--blauw); }
+  .vergelijk-tabel .col-ons th { color: var(--blauw); }
+  .ja { color: var(--groen); font-weight: 700; }
+  .nee { color: #b91c1c; }
+  .highlight-row td { font-weight: 700; }
+
+  /* ── HOE HET WERKT ── */
+  .stappen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 32px; margin-top: 48px;
+  }
+  .stap { text-align: center; }
+  .stap-nr {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--blauw); color: var(--wit);
+    font-size: 22px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+  }
+  .stap h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .stap p { font-size: 14px; color: var(--grijs); }
+
+  /* ── PRICING ── */
+  .pricing-sectie { background: linear-gradient(180deg, #fff 0%, var(--bg) 100%); }
+  .pricing-kaart {
+    max-width: 500px; margin: 48px auto 0;
+    background: var(--wit); border: 2px solid var(--blauw);
+    border-radius: 20px; padding: 40px 36px;
+    box-shadow: var(--shadow); text-align: center;
+  }
+  .pricing-badge {
+    display: inline-block; background: var(--blauw); color: var(--wit);
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 4px 12px; border-radius: 100px;
+    margin-bottom: 20px;
+  }
+  .prijs-groot { font-size: 64px; font-weight: 800; color: var(--blauw); line-height: 1; }
+  .prijs-groot sup { font-size: 28px; vertical-align: super; }
+  .prijs-sub { color: var(--grijs); font-size: 15px; margin-top: 8px; }
+  .prijs-lijst { list-style: none; margin: 28px 0; text-align: left; }
+  .prijs-lijst li {
+    padding: 9px 0; border-bottom: 1px solid var(--rand);
+    font-size: 15px; display: flex; align-items: center; gap: 10px;
+  }
+  .prijs-lijst li:last-child { border-bottom: none; }
+  .prijs-lijst .vink { color: var(--groen); font-size: 17px; flex-shrink: 0; }
+  .btn-koop {
+    display: block; width: 100%;
+    background: var(--blauw); color: var(--wit);
+    padding: 18px; border-radius: 10px;
+    font-size: 17px; font-weight: 700; text-decoration: none;
+    text-align: center; margin-top: 8px;
+    transition: background .15s;
+    min-height: 56px; line-height: 1.3;
+  }
+  .btn-koop:hover { background: var(--blauw-licht); }
+  .garantie { font-size: 13px; color: var(--grijs); margin-top: 14px; }
+
+  /* ── FAQ ── */
+  .faq-grid { margin-top: 40px; max-width: 720px; }
+  details {
+    border-bottom: 1px solid var(--rand); padding: 4px 0;
+  }
+  details:first-of-type { border-top: 1px solid var(--rand); }
+  summary {
+    padding: 18px 0; font-size: 16px; font-weight: 600;
+    cursor: pointer; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 16px;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 22px; color: var(--blauw); flex-shrink: 0; }
+  details[open] summary::after { content: "−"; }
+  details p { padding: 0 0 18px; font-size: 15px; color: var(--grijs); line-height: 1.7; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--tekst); color: rgba(255,255,255,.6);
+    padding: 40px 24px; font-size: 13px;
+  }
+  .footer-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+  .footer-links a { color: rgba(255,255,255,.5); text-decoration: none; }
+  .footer-links a:hover { color: var(--wit); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .hero { padding: 56px 20px 72px; }
+    .vergelijk-tabel { font-size: 13px; }
+    .vergelijk-tabel th, .vergelijk-tabel td { padding: 10px 10px; }
+    .pricing-kaart { padding: 28px 20px; }
+    .prijs-groot { font-size: 52px; }
+  }
+
+  /* ── FOCUS ZICHTBAAR (WCAG 2.4.7) ── */
+  :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Sticky header scroll-margin fix (WCAG 2.4.11) */
+  [id] { scroll-margin-top: 80px; }
+</style>
+</head>
+<body>
+
+<!-- ── NAVIGATIE ── -->
+<nav aria-label="Hoofdnavigatie">
+  <div class="nav-inner">
+    <a href="/" class="logo">Zelf<span>Boekhouden</span>.nl</a>
+    <ul class="nav-links" role="list">
+      <li><a href="#functies">Functies</a></li>
+      <li><a href="#vergelijking">Vergelijking</a></li>
+      <li><a href="#prijs">Prijs</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="https://help.zelfboekhouden.nl">Help</a></li>
+      <li><a href="https://app.zelfboekhouden.nl" class="nav-cta">Kopen →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<header class="hero">
+  <div class="hero-badge">✦ Eenmalig €49 — geen abonnement</div>
+  <h1>Jouw ZZP-boekhouding.<br><em>In jouw Drive. Voor altijd.</em></h1>
+  <p class="hero-sub">
+    Facturen, BTW-aangifte, dashboard en rapportages in jouw eigen Google Spreadsheet.
+    Jouw data, jouw Drive — wij kunnen er nooit bij.
+  </p>
+  <div class="hero-ctas">
+    <a href="https://app.zelfboekhouden.nl" class="btn-primair">
+      <span>🔒</span>
+      <span>Kopen voor €49 — direct in je Drive</span>
+    </a>
+    <a href="https://docs.google.com/spreadsheets/d/DEMO_ID/view" class="btn-secundair" target="_blank" rel="noopener">
+      👁 Bekijk demo-spreadsheet
+    </a>
+  </div>
+  <div>
+    <span class="ideal-badge">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="4" fill="#CC0066"/><text x="3" y="17" font-size="11" font-weight="bold" fill="white" font-family="Arial">iD</text></svg>
+      Betalen via iDEAL · Veilig &amp; versleuteld
+    </span>
+  </div>
+</header>
+
+<!-- ── SOCIAL PROOF STRIP ── -->
+<div class="proof-strip" aria-label="Klantcijfers">
+  <p>
+    <strong>Vertrouwd door ZZP'ers</strong> &nbsp;·&nbsp;
+    ⭐⭐⭐⭐⭐ <strong>4,8/5</strong> op Google Reviews &nbsp;·&nbsp;
+    Jouw data blijft <strong>altijd van jou</strong>
+  </p>
+</div>
+
+<!-- ── FUNCTIES ── -->
+<section id="functies">
+  <div class="container">
+    <p class="section-label">Wat je krijgt</p>
+    <h2>Alles wat een ZZP'er nodig heeft</h2>
+    <p class="sub-tekst">Gebouwd door een ZZP'er, voor ZZP'ers. Geen overbodige complexiteit — wel alles wat de Belastingdienst van je verwacht.</p>
+    <div class="usp-grid" role="list">
+      <article class="usp-kaart" role="listitem">
+        <div class="usp-icon" aria-hidden="true">🧾</div>
+        <h3>PDF-facturen versturen</h3>
+        <p>Maak professionele facturen met jouw huisstijl, stuur ze direct per e-mail en houd de status automatisch bij. Met betalingsherinnering als dat nodig is.</p>
+      </article>
+      <article class="usp-kaart" role="listitem">
+        <div class="usp-icon" aria-hidden="true">📊</div>
+        <h3>BTW-aangifte in 5 minuten</h3>
+        <p>Je BTW-aangifte wordt automatisch berekend per kwartaal. Overzicht per rubriek (1a, 1b, 3b), klaar om over te nemen in Mijn Belastingdienst.</p>
+      </article>
+      <article class="usp-kaart" role="listitem">
+        <div class="usp-icon" aria-hidden="true">📈</div>
+        <h3>Dashboard &amp; KPI's</h3>
+        <p>In één oogopslag: omzet, kosten, winst, openstaande facturen en je BTW-saldo. Bijgewerkt zodra je een boeking doet.</p>
+      </article>
+      <article class="usp-kaart" role="listitem">
+        <div class="usp-icon" aria-hidden="true">🔄</div>
+        <h3>Herhalende kosten</h3>
+        <p>Vaste lasten als huur, abonnementen en verzekeringen worden automatisch geboekt. Jij hoeft er niet meer aan te denken.</p>
+      </article>
+      <article class="usp-kaart" role="listitem">
+        <div class="usp-icon" aria-hidden="true">📁</div>
+        <h3>Volledige rapportages</h3>
+        <p>Balans, winst- en verliesrekening en cashflow-overzicht. Altijd bijgewerkt, exporteerbaar naar Excel — voor jou en je boekhouder.</p>
+      </article>
+      <article class="usp-kaart" role="listitem">
+        <div class="usp-icon" aria-hidden="true">🔐</div>
+        <h3>Data in jouw Drive</h3>
+        <p>Jouw boekhouding staat in een Google Spreadsheet op jouw eigen Google Drive. Wij hebben er geen toegang toe. 7-jaar bewaarplicht automatisch geregeld.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ── VERGELIJKING ── -->
+<section id="vergelijking" class="vergelijk-sectie">
+  <div class="container">
+    <p class="section-label">Waarom ZelfBoekhouden</p>
+    <h2>Eenmalig €49 vs. abonnement</h2>
+    <p class="sub-tekst">Moneybird, e-Boekhouden, Jortt — allemaal goed, maar jij betaalt er je leven lang voor. En als je stopt, is je data weg.</p>
+    <div style="overflow-x:auto">
+      <table class="vergelijk-tabel" aria-label="Vergelijking boekhoudprogramma's">
+        <thead>
+          <tr>
+            <th scope="col">Kenmerk</th>
+            <th scope="col" class="col-ons">ZelfBoekhouden</th>
+            <th scope="col">Moneybird</th>
+            <th scope="col">e-Boekhouden</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight-row">
+            <td>Prijs</td>
+            <td class="col-ons ja">€49 eenmalig</td>
+            <td class="nee">€15–€39/mnd</td>
+            <td class="nee">€10–€24/mnd</td>
+          </tr>
+          <tr>
+            <td>Abonnement nodig</td>
+            <td class="col-ons ja">✓ Nee</td>
+            <td class="nee">✗ Ja</td>
+            <td class="nee">✗ Ja</td>
+          </tr>
+          <tr>
+            <td>Data in eigen Drive</td>
+            <td class="col-ons ja">✓ Ja — jouw Google Drive</td>
+            <td class="nee">✗ Op hun servers</td>
+            <td class="nee">✗ Op hun servers</td>
+          </tr>
+          <tr>
+            <td>Boekhouder gratis meekijken</td>
+            <td class="col-ons ja">✓ Ja</td>
+            <td class="nee">✗ Extra kosten</td>
+            <td class="nee">✗ Extra licentie</td>
+          </tr>
+          <tr>
+            <td>Data exporteren bij opzeggen</td>
+            <td class="col-ons ja">✓ Altijd — het is jouw bestand</td>
+            <td class="nee">✗ Beperkt</td>
+            <td class="nee">✗ Beperkt</td>
+          </tr>
+          <tr>
+            <td>Kosten na 5 jaar</td>
+            <td class="col-ons ja">€49 totaal</td>
+            <td class="nee">€900–€2.340</td>
+            <td class="nee">€600–€1.440</td>
+          </tr>
+          <tr>
+            <td>BTW-aangifte</td>
+            <td class="col-ons ja">✓ Automatisch</td>
+            <td class="ja">✓ Ja</td>
+            <td class="ja">✓ Ja</td>
+          </tr>
+          <tr>
+            <td>PDF-facturen</td>
+            <td class="col-ons ja">✓ Ja</td>
+            <td class="ja">✓ Ja</td>
+            <td class="ja">✓ Ja</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOE HET WERKT ── -->
+<section id="hoe-het-werkt">
+  <div class="container">
+    <p class="section-label">Aan de slag</p>
+    <h2>Binnen 5 minuten klaar</h2>
+    <div class="stappen" role="list">
+      <div class="stap" role="listitem">
+        <div class="stap-nr" aria-hidden="true">1</div>
+        <h3>Koop eenmalig</h3>
+        <p>Betaal €49 via iDEAL. Je ontvangt je licentiesleutel direct per e-mail.</p>
+      </div>
+      <div class="stap" role="listitem">
+        <div class="stap-nr" aria-hidden="true">2</div>
+        <h3>Activeer in je Drive</h3>
+        <p>Klik op de link in de e-mail. Je spreadsheet wordt automatisch aangemaakt in jouw Google Drive.</p>
+      </div>
+      <div class="stap" role="listitem">
+        <div class="stap-nr" aria-hidden="true">3</div>
+        <h3>Stel in</h3>
+        <p>Vul je bedrijfsnaam, BTW-nummer en IBAN in. Duurt 2 minuten.</p>
+      </div>
+      <div class="stap" role="listitem">
+        <div class="stap-nr" aria-hidden="true">4</div>
+        <h3>Klaar</h3>
+        <p>Stuur je eerste factuur, boek je eerste kosten — je boekhouding loopt.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING ── -->
+<section id="prijs" class="pricing-sectie">
+  <div class="container" style="text-align:center">
+    <p class="section-label">Prijzen</p>
+    <h2>Één prijs. Voor altijd.</h2>
+    <div class="pricing-kaart" role="region" aria-labelledby="prijs-heading">
+      <div class="pricing-badge">Meest gekozen</div>
+      <div class="prijs-groot" id="prijs-heading"><sup>€</sup>49</div>
+      <p class="prijs-sub">Eenmalig — inclusief BTW — geen verborgen kosten</p>
+      <ul class="prijs-lijst" role="list">
+        <li><span class="vink" aria-hidden="true">✓</span> Volledige boekhouding voor ZZP/eenmanszaak</li>
+        <li><span class="vink" aria-hidden="true">✓</span> PDF-facturen aanmaken &amp; e-mailen</li>
+        <li><span class="vink" aria-hidden="true">✓</span> BTW-aangifte automatisch berekend</li>
+        <li><span class="vink" aria-hidden="true">✓</span> Dashboard, balans, W&amp;V, cashflow</li>
+        <li><span class="vink" aria-hidden="true">✓</span> Herhalende kosten &amp; betalingsherinneringen</li>
+        <li><span class="vink" aria-hidden="true">✓</span> Data in jouw eigen Google Drive</li>
+        <li><span class="vink" aria-hidden="true">✓</span> Boekhouder gratis meekijken</li>
+        <li><span class="vink" aria-hidden="true">✓</span> Updates inbegrepen</li>
+      </ul>
+      <a href="https://app.zelfboekhouden.nl" class="btn-koop">
+        Bestelling met betalingsverplichting — €49 via iDEAL
+      </a>
+      <p class="garantie">🔒 Veilige betaling via Mollie · Licentiesleutel direct per e-mail</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ── -->
+<section id="faq">
+  <div class="container">
+    <p class="section-label">Veelgestelde vragen</p>
+    <h2>Antwoorden op je vragen</h2>
+    <div class="faq-grid" id="faq-lijst">
+
+      <details>
+        <summary>Moet ik ieder jaar opnieuw betalen?</summary>
+        <p>Nee. Je betaalt eenmalig €49 en gebruikt ZelfBoekhouden voor altijd. Geen jaarlijkse licentie, geen verlenging, geen abonnement.</p>
+      </details>
+
+      <details>
+        <summary>Waar staat mijn boekhouddata?</summary>
+        <p>In een Google Spreadsheet op jouw eigen Google Drive. Alleen jij (en wie jij toegang geeft) kan erbij. Wij kunnen nooit bij jouw data. De 7-jaar fiscale bewaarplicht is automatisch ingevuld.</p>
+      </details>
+
+      <details>
+        <summary>Kan mijn boekhouder meekijken?</summary>
+        <p>Ja, gratis. Deel de spreadsheet met je boekhouder via de gewone Google-deelfunctie. Geen extra licentie, geen extra kosten.</p>
+      </details>
+
+      <details>
+        <summary>Werkt het ook op een Mac of tablet?</summary>
+        <p>Ja. ZelfBoekhouden werkt in elke moderne browser — Chrome, Safari, Firefox, Edge — op Mac, Windows, Linux, iPad en Android. Geen installatie nodig.</p>
+      </details>
+
+      <details>
+        <summary>Hoe kan ik mijn spreadsheet aanpassen?</summary>
+        <p>De spreadsheet is een gewone Google Spreadsheet. Je kunt kolommen toevoegen, tabbladen aanpassen en formules wijzigen — alles wat Google Sheets toelaat. Let op: pas geen bestaande formules aan in de systeemtabs, dan kunnen automatische berekeningen kapotgaan.</p>
+      </details>
+
+      <details>
+        <summary>Hoe lang krijg ik gratis updates?</summary>
+        <p>Updates zijn inbegrepen. Als er een nieuwe versie is, ontvang je een e-mail met instructies om te upgraden. Jouw data blijft bewaard.</p>
+      </details>
+
+      <details>
+        <summary>Wat zijn de systeemeisen?</summary>
+        <p>Een Google-account (gratis) en een moderne browser. Dat is alles. Geen installatie, geen software, geen Office-licentie nodig.</p>
+      </details>
+
+      <details>
+        <summary>Hoe verwerk ik facturen van Mollie of Stripe?</summary>
+        <p>Boek elke uitbetaling als een bankontvangst en de Mollie-transactiekosten als bankkosten. In de helpdesk staan stap-voor-stap voorbeelden voor Mollie-reconciliatie.</p>
+      </details>
+
+      <details>
+        <summary>Kan ik meerdere administraties bijhouden?</summary>
+        <p>Elke licentie is voor één administratie (één bedrijf). Heb je meerdere BV's of eenmanszaken? Dan heb je per bedrijf een licentie nodig.</p>
+      </details>
+
+      <details>
+        <summary>Hoe boek ik afschrijvingen op een auto of inventaris?</summary>
+        <p>Boek de aanschaf op een investeringsrekening (bijv. 0252 Investering auto's). Schrijf vervolgens jaarlijks af via een boekingsveld. In de helpdesk staat een stap-voor-stap uitleg met voorbeeldbedragen.</p>
+      </details>
+
+      <details>
+        <summary>Wat doe ik als er #VERW staat in een cel?</summary>
+        <p>#VERW (of #REF!) betekent dat een formule verwijst naar een cel of tabblad dat niet meer bestaat. Herstel de oorspronkelijke structuur of neem contact op via de helpdesk — dan lossen we het samen op.</p>
+      </details>
+
+      <details>
+        <summary>Kan ik wederverkoper worden?</summary>
+        <p>Ja. Ben je boekhouder of accountant en wil je ZelfBoekhouden aanbevelen aan jouw klanten? Neem contact op voor ons partnermodel — je verdient een commissie per klant die jij aanmeldt.</p>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <strong style="color:rgba(255,255,255,.9)">ZelfBoekhouden.nl</strong><br>
+      KVK: 00000000 · BTW: NL000000000B01
+    </div>
+    <nav class="footer-links" aria-label="Voetnav">
+      <a href="/privacy">Privacybeleid</a>
+      <a href="/voorwaarden">Algemene voorwaarden</a>
+      <a href="https://help.zelfboekhouden.nl">Helpdesk</a>
+      <a href="mailto:hallo@zelfboekhouden.nl">Contact</a>
+    </nav>
+    <p>© 2026 ZelfBoekhouden.nl</p>
+  </div>
+</footer>
+
+</body>
+</html>
