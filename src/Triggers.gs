@@ -47,11 +47,8 @@ function verwerkBedrijfsnaamWijziging_(naam) {
     Logger.log('Hernoemen spreadsheet mislukt: ' + e.message);
   }
 
-  // Wis de instellingen-cache zodat nieuwe waarden direct worden gelezen
-  if (typeof _instellingenCache !== 'undefined') {
-    // eslint-disable-next-line no-global-assign
-    _instellingenCache = null;
-  }
+  // Wis de instellingen-cache via de helper in Setup.gs
+  try { wisInstellingenCache_(); } catch (e) {}
 
   // Update Dashboard-koptekst direct (zonder volledige herberekening)
   try {
