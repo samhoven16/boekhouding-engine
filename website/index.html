@@ -351,14 +351,61 @@
   .footer-links a { color: rgba(255,255,255,.5); text-decoration: none; }
   .footer-links a:hover { color: var(--wit); }
 
+  /* ── HAMBURGERMENU ── */
+  .nav-toggle {
+    display: none;
+    background: none; border: none; cursor: pointer;
+    padding: 8px; color: var(--blauw);
+  }
+  .nav-toggle svg { display: block; }
+  .nav-toggle[aria-expanded="true"] .icon-open  { display: none; }
+  .nav-toggle[aria-expanded="false"] .icon-close { display: none; }
+
   /* ── RESPONSIVE ── */
-  @media (max-width: 640px) {
-    .nav-links { display: none; }
-    .hero { padding: 56px 20px 72px; }
-    .vergelijk-tabel { font-size: 13px; }
+  @media (max-width: 768px) {
+    section { padding: 52px 20px; }
+
+    .nav-toggle { display: flex; align-items: center; }
+
+    .nav-links {
+      display: none; flex-direction: column; gap: 0;
+      position: absolute; top: 64px; left: 0; right: 0;
+      background: var(--wit); border-bottom: 1px solid var(--rand);
+      padding: 8px 0; box-shadow: 0 8px 24px rgba(0,0,0,.08);
+      z-index: 99;
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 14px 24px; font-size: 16px; border-bottom: 1px solid var(--rand); }
+    .nav-links li:last-child a { border-bottom: none; }
+    .nav-cta {
+      margin: 8px 20px 4px; border-radius: 8px;
+      text-align: center; display: block;
+    }
+
+    .hero { padding: 48px 20px 60px; }
+    .hero-ctas { flex-direction: column; align-items: stretch; gap: 12px; }
+    .btn-primair, .btn-secundair { justify-content: center; width: 100%; }
+
+    .usp-grid { grid-template-columns: 1fr; gap: 16px; margin-top: 32px; }
+
+    .stappen { grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px; }
+
+    .vergelijk-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .vergelijk-tabel { font-size: 13px; min-width: 540px; }
     .vergelijk-tabel th, .vergelijk-tabel td { padding: 10px 10px; }
+
     .pricing-kaart { padding: 28px 20px; }
     .prijs-groot { font-size: 52px; }
+    .btn-koop { font-size: 15px; padding: 16px; }
+
+    .footer-inner { flex-direction: column; text-align: center; }
+    .footer-links { justify-content: center; }
+  }
+
+  @media (max-width: 420px) {
+    .stappen { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 28px; }
+    .hero-badge { font-size: 12px; }
   }
 
   /* ── FOCUS ZICHTBAAR (WCAG 2.4.7) ── */
@@ -377,8 +424,12 @@
 <!-- ── NAVIGATIE ── -->
 <nav aria-label="Hoofdnavigatie">
   <div class="nav-inner">
-    <a href="/" class="logo">Zelf<span>Boekhouden</span>.nl</a>
-    <ul class="nav-links" role="list">
+    <a href="/" class="logo">Boekhoud<span>baar</span></a>
+    <button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
+      <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+    </button>
+    <ul class="nav-links" id="nav-menu" role="list">
       <li><a href="#functies">Functies</a></li>
       <li><a href="#vergelijking">Vergelijking</a></li>
       <li><a href="#prijs">Prijs</a></li>
@@ -470,7 +521,7 @@
     <p class="section-label">Waarom Boekhoudbaar</p>
     <h2>Eenmalig €49 vs. abonnement</h2>
     <p class="sub-tekst">Moneybird, e-Boekhouden, Jortt — allemaal goed, maar jij betaalt er je leven lang voor. En als je stopt, is je data weg.</p>
-    <div style="overflow-x:auto">
+    <div class="vergelijk-wrap">
       <table class="vergelijk-tabel" aria-label="Vergelijking boekhoudprogramma's">
         <thead>
           <tr>
@@ -680,5 +731,22 @@
   </div>
 </footer>
 
+<script>
+  (function() {
+    var btn = document.querySelector('.nav-toggle');
+    var menu = document.getElementById('nav-menu');
+    if (!btn || !menu) return;
+    btn.addEventListener('click', function() {
+      var open = menu.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    menu.querySelectorAll('a').forEach(function(a) {
+      a.addEventListener('click', function() {
+        menu.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      });
+    });
+  })();
+</script>
 </body>
 </html>
