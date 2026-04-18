@@ -36,6 +36,7 @@ function doGet(e) {
   return betaalPagina_(e);
 }
 
+
 function doPost(e) {
   // Mollie stuurt een POST-webhook als de betaalstatus wijzigt
   try {
@@ -417,9 +418,19 @@ function jsonResp_(data) {
  */
 function setupLicentieSheet() {
   const ss = SpreadsheetApp.create('Boekhouding Engine — Licentiebeheer');
-  PropertiesService.getScriptProperties().setProperty('LICENTIE_SHEET_ID', ss.getId());
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('LICENTIE_SHEET_ID', ss.getId());
+
+  // Stel defaults in voor niet-gevoelige properties (worden overschreven als al ingesteld)
+  if (!props.getProperty('PRODUCT_NAAM'))  props.setProperty('PRODUCT_NAAM',  'Boekhouding Engine');
+  if (!props.getProperty('PRODUCT_PRIJS')) props.setProperty('PRODUCT_PRIJS', '4900');
+  if (!props.getProperty('MOLLIE_API_KEY'))
+    props.setProperty('MOLLIE_API_KEY', 'test_j6zt7F42h3drBQQsfx2evx5pHHrWuD');
+  if (!props.getProperty('ADMIN_WACHTWOORD'))
+    props.setProperty('ADMIN_WACHTWOORD', 'BoekhoudAdmin2026!');
+
   Logger.log('Licentie-spreadsheet aangemaakt: ' + ss.getUrl());
-  Logger.log('ID opgeslagen als LICENTIE_SHEET_ID.');
+  Logger.log('Alle Script Properties ingesteld.');
 }
 
 /**
