@@ -21,6 +21,11 @@
 //  ROUTING
 // ─────────────────────────────────────────────
 function doGet(e) {
+  // Auto-initialize licence sheet on first request
+  if (!PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID')) {
+    try { setupLicentieSheet(); } catch (err) { Logger.log('Auto-setup fout: ' + err.message); }
+  }
+
   const actie = (e && e.parameter && e.parameter.actie) || '';
 
   if (actie === 'valideer')  return valideerEndpoint_(e);
