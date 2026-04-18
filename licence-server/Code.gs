@@ -385,49 +385,103 @@ function adminPaneel_(e) {
 //  E-MAIL NAAR KLANT
 // ─────────────────────────────────────────────
 function stuurLicentiemail_(naam, email, sleutel) {
-  const props       = PropertiesService.getScriptProperties();
-  const productnm   = props.getProperty('PRODUCT_NAAM')  || 'Boekhouding Engine';
-  const installerUrl = props.getProperty('INSTALLER_URL') || '';
+  const props        = PropertiesService.getScriptProperties();
+  const productnm    = props.getProperty('PRODUCT_NAAM')   || 'BoekhoudzelfNL';
+  const installerUrl = props.getProperty('INSTALLER_URL')  || '';
+  const brevoKey     = props.getProperty('BREVO_API_KEY')  || '';
+  const vanEmail     = props.getProperty('VAN_EMAIL')      || 'hallo@boekhoudzelf.nl';
+  const vanNaam      = props.getProperty('VAN_NAAM')       || 'Sam van BoekhoudzelfNL';
+
   const activatieLink = installerUrl
     ? installerUrl + '?sleutel=' + encodeURIComponent(sleutel)
     : '';
 
-  MailApp.sendEmail({
-    to: email,
-    subject: 'Uw ' + productnm + ' — licentiesleutel en installatielink',
-    htmlBody: `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>
-<body style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#333">
-  <div style="background:#1A237E;padding:24px;border-radius:8px 8px 0 0;text-align:center">
-    <h1 style="color:#fff;margin:0;font-size:20px">📊 ${productnm}</h1>
-    <p style="color:#C5CAE9;margin:6px 0 0;font-size:13px">Uw aankoop is bevestigd</p>
+  const htmlBody = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#1a1a2e;background:#f8fafc">
+  <div style="background:#1A237E;padding:28px 24px;border-radius:10px 10px 0 0;text-align:center">
+    <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800">📊 ${productnm}</h1>
+    <p style="color:#C5CAE9;margin:6px 0 0;font-size:14px">Bestelling bevestigd — jouw licentiesleutel staat hieronder</p>
   </div>
-  <div style="background:#f9f9f9;padding:24px;border:1px solid #eee;border-top:none">
-    <p>Beste ${naam},</p>
-    <p>Bedankt voor uw aankoop. Hieronder vindt u uw licentiesleutel en de link om direct aan de slag te gaan.</p>
+  <div style="background:#fff;padding:28px 24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px">
+    <p style="font-size:16px">Hoi ${naam},</p>
+    <p>Gefeliciteerd — je boekhouding staat nu klaar om te activeren. Bewaar deze e-mail goed.</p>
 
-    <div style="background:#E8EAF6;border-radius:8px;padding:16px;margin:16px 0;text-align:center">
-      <p style="margin:0 0 6px;font-size:12px;color:#666">UW LICENTIESLEUTEL</p>
-      <code style="font-size:22px;font-weight:bold;color:#1A237E;letter-spacing:2px">${sleutel}</code>
+    <div style="background:#E8EAF6;border-radius:10px;padding:20px;margin:20px 0;text-align:center">
+      <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:1.5px;color:#666;text-transform:uppercase">Jouw licentiesleutel</p>
+      <code style="font-size:26px;font-weight:800;color:#1A237E;letter-spacing:3px">${sleutel}</code>
     </div>
-
-    <p style="font-size:13px">Bewaar deze e-mail — u heeft de sleutel nodig om de boekhouding te installeren.</p>
 
     ${activatieLink ? `
-    <div style="text-align:center;margin:24px 0">
-      <a href="${activatieLink}" style="background:#1A237E;color:#fff;padding:14px 28px;
-         border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">
-        🚀 Boekhouding nu installeren →
+    <div style="text-align:center;margin:28px 0">
+      <a href="${activatieLink}" style="background:#1A237E;color:#fff;padding:16px 32px;
+         border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block">
+        🚀 Boekhouding activeren →
       </a>
     </div>
-    <p style="font-size:12px;color:#999;word-break:break-all">
-      Of open deze link handmatig: ${activatieLink}</p>
+    <p style="font-size:12px;color:#94a3b8;text-align:center;word-break:break-all">
+      Of kopieer deze link: ${activatieLink}</p>
     ` : ''}
 
-    <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
-    <p style="font-size:12px;color:#888">
-      Vragen? Stuur een e-mail naar support@boekhouding-engine.nl</p>
+    <p style="font-size:14px;color:#64748b;margin-top:24px">
+      <strong>Volgende stap:</strong> klik op de knop hierboven. Je Google Spreadsheet wordt
+      automatisch aangemaakt in jouw Drive. Activeren duurt 5 minuten.
+    </p>
+
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+    <p style="font-size:13px;color:#94a3b8">
+      Vragen? Stuur een e-mail naar <a href="mailto:${vanEmail}" style="color:#1A237E">${vanEmail}</a>.<br>
+      Helpdesk: <a href="https://help.boekhoudzelf.nl" style="color:#1A237E">help.boekhoudzelf.nl</a>
+    </p>
+    <p style="font-size:12px;color:#cbd5e1">
+      ${productnm} · KVK 00000000 · <a href="https://www.boekhoudzelf.nl/privacy" style="color:#94a3b8">Privacybeleid</a>
+    </p>
   </div>
-</body></html>`,
+</body></html>`;
+
+  if (brevoKey) {
+    // Stuur via Brevo API (geen GAS-quota, 300/dag gratis)
+    const payload = {
+      sender:     { name: vanNaam, email: vanEmail },
+      to:         [{ email: email, name: naam }],
+      subject:    'Je ' + productnm + ' licentiesleutel 🎉',
+      htmlContent: htmlBody,
+      tags:       ['licentie', 'dag0'],
+      params:     { naam: naam, sleutel: sleutel },
+    };
+    UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'api-key': brevoKey },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true,
+    });
+  } else {
+    // Fallback: GAS MailApp (max 100/dag op consumer-account)
+    MailApp.sendEmail({ to: email, subject: 'Je licentiesleutel — ' + productnm, htmlBody: htmlBody });
+  }
+
+  // Voeg contact toe in Brevo voor automatisatie-sequentie
+  if (brevoKey) maakBrevoContact_(naam, email, sleutel, brevoKey);
+}
+
+function maakBrevoContact_(naam, email, sleutel, brevoKey) {
+  const payload = {
+    email:      email,
+    attributes: {
+      FIRSTNAME:        naam.split(' ')[0],
+      LASTNAME:         naam.split(' ').slice(1).join(' ') || '',
+      LICENTIESLEUTEL:  sleutel,
+      ACTIVATIE_DATUM:  new Date().toISOString().split('T')[0],
+    },
+    listIds:         [2],
+    updateEnabled:   true,
+  };
+  UrlFetchApp.fetch('https://api.brevo.com/v3/contacts', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'api-key': brevoKey },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true,
   });
 }
 
