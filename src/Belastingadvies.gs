@@ -4,36 +4,59 @@
  * Het systeem detecteert zelf welke aftrekposten van toepassing zijn
  * en waarschuwt proactief wanneer actie nodig is.
  *
- * Verwerkte regelingen (2025):
+ * Verwerkte regelingen (2025) — zakelijk:
  *  - Zelfstandigenaftrek            €2.470  (ZZP, ≥1225 uur — stapsgewijs verlaagd)
  *  - Startersaftrek                 €2.123  (eerste 3 jaar ZZP)
  *  - MKB-winstvrijstelling          12,70%  (na aftrekken)
  *  - KOR                            €0 BTW  (omzet < €20.000)
  *  - KIA                            28%     (investeringen €2.801–€353.973)
+ *  - FOR                            9,44%   (max €10.786 per jaar)
+ *  - MIA/VAMIL                      45,5%   (milieu-investeringen)
  *  - Reiskosten eigen vervoer       €0,23/km
- *  - Thuiswerkvergoeding            €2,35/dag
+ *  - Thuiswerkvergoeding            €2,40/dag
  *  - Representatiekosten            73,5% aftrekbaar
+ *  - Urencriterium                  1.225 uur
+ *  - Afschrijvingskandidaten        ≥ €450 (automatisch gesignaleerd)
+ *
+ * Verwerkte regelingen (2025) — privé:
+ *  - Lijfrente                      tot 30% van de premiegrondslag (max €35.987)
+ *  - Giftenaftrek (ANBI)            1%–10% van het drempelinkomen
+ *  - Box 3 groensparen              €65.072 vrijgesteld + 0,7% heffingskorting
+ *  - Eigen woning hypotheekrente    aftrekbaar in box 1
  */
 
 // ─────────────────────────────────────────────
 //  BELASTING TARIEVEN EN GRENZEN (2025)
 // ─────────────────────────────────────────────
 const BELASTING = {
-  ZELFSTANDIGENAFTREK:    2470,    // 2025: €2.470 (was €3.750 in 2024, daalt jaarlijks richting €900 in 2027)
+  ZELFSTANDIGENAFTREK:    2470,    // 2025: €2.470 (daalt jaarlijks richting €900 in 2027)
   STARTERSAFTREK:         2123,    // 2025: ongewijzigd
   MKB_WINSTVRIJSTELLING:  0.1270,  // 2025: 12,70% (was 13,31% in 2024)
-  KOR_GRENS:              20000,   // ongewijzigd
-  KIA_MIN:                2801,    // ongewijzigd
-  KIA_MAX:                353973,  // ongewijzigd
-  KIA_PCT:                0.28,    // ongewijzigd
-  REISKOSTEN_PER_KM:      0.23,    // 2025: ongewijzigd (zal stijgen)
+  KOR_GRENS:              20000,
+  KIA_MIN:                2801,
+  KIA_MAX:                353973,
+  KIA_PCT:                0.28,
+  FOR_PCT:                0.0944,  // 9,44% van de winst
+  FOR_MAX:                10786,   // 2025: max €10.786
+  MIA_PCT:                0.455,   // Milieu-investeringsaftrek: 45,5%
+  MIA_MIN:                2500,    // Minimale investeringsomvang voor MIA
+  URENCRITERIUM:          1225,
+  ACTIVEER_GRENS:         450,     // Investeringen ≥ €450 moeten worden geactiveerd
+  REISKOSTEN_PER_KM:      0.23,
   THUISWERK_PER_DAG:      2.40,    // 2025: €2,40/dag (was €2,35)
-  REPRESENTATIE_AFTREK:   0.735,   // 73,5% aftrekbaar — ongewijzigd
-  IB_SCHIJF_1_MAX:        76817,   // 2025: €76.817 (was €75.518)
-  IB_SCHIJF_1_PCT:        0.3582,  // 2025: 35,82% (was 36,97% — verlaagd)
-  IB_SCHIJF_2_PCT:        0.495,   // 2025: ongewijzigd
-  HEFFINGSKORTING_MAX:    3068,    // 2025: max €3.068 (inkomensafhankelijk)
-  ARBEIDSKORTING_MAX:     5625,    // 2025: max €5.625
+  REPRESENTATIE_AFTREK:   0.735,   // 73,5% aftrekbaar
+  LIJFRENTE_MAX:          35987,   // 2025: max €35.987 per jaar
+  LIJFRENTE_PCT:          0.30,    // 30% van premiegrondslag (inkomen minus AOW-franchise)
+  AOW_FRANCHISE:          14110,   // 2025: AOW-franchise voor lijfrenteberekening
+  GIFTEN_DREMPEL_PCT:     0.01,    // min 1% van drempelinkomen
+  GIFTEN_MAX_PCT:         0.10,    // max 10% van drempelinkomen
+  BOX3_GROEN_VRIJSTELLING: 65072,  // 2025: per persoon (€130.144 voor partners)
+  BOX3_GROEN_KORTING_PCT:  0.007,  // 0,7% heffingskorting over vrijgesteld bedrag
+  IB_SCHIJF_1_MAX:        76817,
+  IB_SCHIJF_1_PCT:        0.3582,
+  IB_SCHIJF_2_PCT:        0.495,
+  HEFFINGSKORTING_MAX:    3068,
+  ARBEIDSKORTING_MAX:     5625,
 };
 
 // ─────────────────────────────────────────────
@@ -204,6 +227,124 @@ function berekenBelastingadvies_(ss) {
     });
   }
 
+  // ── 8a. FOR — Fiscale OudedagsReserve ────────────────────────────────
+  if (isZzp && winst > 0) {
+    const forBedrag = Math.min(rondBedrag_(winst * BELASTING.FOR_PCT), BELASTING.FOR_MAX);
+    adviezen.push({
+      type: 'VOORDEEL',
+      titel: '💰 FOR – Fiscale OudedagsReserve: ' + formatBedrag_(forBedrag),
+      tekst: `U kunt 9,44% van uw winst (max €10.786) toevoegen aan de FOR: ${formatBedrag_(forBedrag)}. ` +
+             `Dit verlaagt uw belastbare winst nu. Let op: de FOR valt bij staken vrij en is dan belast. ` +
+             `Overweeg alternatief een lijfrentepolis. Bespreek met uw accountant.`,
+      besparing: rondBedrag_(forBedrag * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  }
+
+  // ── 8b. MIA/VAMIL (milieu-investeringen) ─────────────────────────────
+  // Kijk of er milieu-gerelateerde investeringen zijn (rekening 026x/027x)
+  const gbDataMia = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA) ? ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA).getDataRange().getValues() : [[]];
+  let milieu = 0;
+  gbDataMia.slice(1).forEach(r => {
+    if (r[0] && /^02[67]/.test(String(r[0])) && parseFloat(r[5]) > 0) milieu += parseFloat(r[5]);
+  });
+  if (milieu >= BELASTING.MIA_MIN) {
+    const miaAftrek = rondBedrag_(milieu * BELASTING.MIA_PCT);
+    aftrekken.push({ naam: 'MIA – Milieu-investeringsaftrek (45,5%)', bedrag: miaAftrek, voorwaarde: `Milieu-investeringen ≥ €2.500 op de RVO-milieulijst`, code: '7990' });
+    totaalAftrek += miaAftrek;
+    adviezen.push({
+      type: 'AFTREKPOST',
+      titel: '✅ MIA – Milieu-investeringsaftrek: ' + formatBedrag_(miaAftrek),
+      tekst: `${formatBedrag_(milieu)} aan milieu-investeringen gedetecteerd. MIA geeft 45,5% extra aftrek: ${formatBedrag_(miaAftrek)}. ` +
+             `Investeringen moeten op de RVO-milieulijst staan én vóór aanschaf gemeld bij RVO. Combineerbaar met KIA.`,
+      besparing: rondBedrag_(miaAftrek * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  } else if (milieu === 0) {
+    adviezen.push({
+      type: 'TIP',
+      titel: '🌱 Tip: MIA/VAMIL – 45,5% extra aftrek bij milieu-investeringen',
+      tekst: `Investeert u in zonnepanelen, elektrische auto, warmtepomp of andere milieu-investeringen? ` +
+             `Dan geeft MIA 45,5% extra aftrek bóvenop de normale afschrijving. Meld vóór aankoop bij RVO.nl.`,
+      besparing: null,
+    });
+  }
+
+  // ── 8c. Thuiswerkaftrek ────────────────────────────────────────────────
+  const thuiswerkDagen = parseInt(getInstelling_('Thuiswerk dagen per jaar') || '0');
+  if (thuiswerkDagen > 0) {
+    const thuiswerkAftrek = rondBedrag_(thuiswerkDagen * BELASTING.THUISWERK_PER_DAG);
+    aftrekken.push({ naam: `Thuiswerkvergoeding (${thuiswerkDagen} dagen × €${BELASTING.THUISWERK_PER_DAG})`, bedrag: thuiswerkAftrek, voorwaarde: 'Werkdagen vanuit huis', code: '7350' });
+    totaalAftrek += thuiswerkAftrek;
+    adviezen.push({
+      type: 'AFTREKPOST',
+      titel: '✅ Thuiswerkaftrek: ' + formatBedrag_(thuiswerkAftrek),
+      tekst: `Op basis van ${thuiswerkDagen} thuiswerkdagen à €${BELASTING.THUISWERK_PER_DAG}/dag: ${formatBedrag_(thuiswerkAftrek)}. ` +
+             `Pas het aantal dagen aan via Instellingen → "Thuiswerk dagen per jaar".`,
+      besparing: rondBedrag_(thuiswerkAftrek * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  } else {
+    adviezen.push({
+      type: 'TIP',
+      titel: '💡 Thuiswerkaftrek: €2,40 per werkdag aftrekbaar',
+      tekst: `Werkt u vanuit huis? Dan is €2,40 per werkdag aftrekbaar (ca. €624 bij 260 werkdagen). ` +
+             `Vul "Thuiswerk dagen per jaar" in via Instellingen om dit automatisch te berekenen.`,
+      besparing: null,
+    });
+  }
+
+  // ── 8d. Urencriterium voortgang ───────────────────────────────────────
+  if (isZzp) {
+    const uren = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0');
+    if (uren > 0) {
+      const pct = Math.min(100, Math.round((uren / BELASTING.URENCRITERIUM) * 100));
+      const resterend = Math.max(0, BELASTING.URENCRITERIUM - uren);
+      adviezen.push({
+        type: uren >= BELASTING.URENCRITERIUM ? 'AFTREKPOST' : 'ACTIE',
+        titel: uren >= BELASTING.URENCRITERIUM
+          ? `✅ Urencriterium gehaald! (${uren}/1.225 uur)`
+          : `⏱️ Urencriterium: ${uren}/1.225 uur (${pct}%)`,
+        tekst: uren >= BELASTING.URENCRITERIUM
+          ? `U heeft het urencriterium gehaald. Zelfstandigenaftrek en startersaftrek zijn van toepassing. Bewaar uw urenregistratie als bewijs voor de Belastingdienst.`
+          : `Nog ${resterend} uur nodig voor zelfstandigenaftrek (€2.470) en startersaftrek. ` +
+            `Update "Gewerkte uren dit jaar" in Instellingen. Houd een urenregistratie bij als bewijs.`,
+        besparing: null,
+      });
+    } else {
+      adviezen.push({
+        type: 'ACTIE',
+        titel: '⏱️ Urenregistratie vereist voor zelfstandigenaftrek',
+        tekst: `Vul "Gewerkte uren dit jaar" in via Instellingen. Zonder 1.225 uur geen recht op ` +
+               `zelfstandigenaftrek (€2.470) of startersaftrek (€2.123). Houd een urenadministratie bij.`,
+        besparing: null,
+      });
+    }
+  }
+
+  // ── 8e. Privégebruik zakelijke middelen ───────────────────────────────
+  adviezen.push({
+    type: 'INFO',
+    titel: 'ℹ️ Privégebruik zakelijke middelen — controleer correcties',
+    tekst: `Telefoon/laptop zakelijk maar ook privé gebruikt? Bijtelling verplicht of zakelijk aftrekbaar als ≥10% zakelijk. ` +
+           `Auto van de zaak: bijtelling 16–22% van cataloguswaarde per jaar (EV: 16%). ` +
+           `Kilometer­registratie bij privéauto: €0,23/km aftrekbaar. ` +
+           `Gebruik rekening 7900 (Privé-onttrekkingen) voor correcties. Bespreek met uw accountant.`,
+    besparing: null,
+  });
+
+  // ── 8f. Afschrijvingskandidaten ───────────────────────────────────────
+  const kandidaten = scanAfschrijvingskandidaten_(ss);
+  if (kandidaten.length > 0) {
+    const totaalKandidaten = kandidaten.reduce((s, k) => s + k.bedrag, 0);
+    adviezen.push({
+      type: 'ACTIE',
+      titel: `📦 ${kandidaten.length} mogelijke afschrijvingskandidaa${kandidaten.length === 1 ? 't' : 'ten'} (totaal ${formatBedrag_(totaalKandidaten)})`,
+      tekst: kandidaten.slice(0, 5).map(k => `• ${formatBedrag_(k.bedrag)} – ${k.omschr} (${k.leverancier})`).join('\n') +
+             (kandidaten.length > 5 ? `\n• … en ${kandidaten.length - 5} meer` : '') +
+             `\n\nAankopen ≥ €${BELASTING.ACTIVEER_GRENS} moeten worden geactiveerd als investering (niet direct als kosten). ` +
+             `Boek ze op een 0xxx-rekening en schrijf jaarlijks af. Dit geeft recht op KIA (28% extra aftrek).`,
+      besparing: null,
+    });
+  }
+
   // ── 8. Representatiekosten controle ──────────────────────────────────
   const reprKosten = getGrootboekSaldo_(ss, '7520');
   if (reprKosten > 0) {
@@ -348,6 +489,27 @@ function genereerBelastingadvies() {
     rij += 2;
   });
 
+  // ── Privé belastingvoordelen ──────────────────────────────────────────
+  rij++;
+  const prive = berekenPriveBelastingvoordelen_(advies.winstVoorAftrek);
+  sheet.getRange(rij, 1, 1, 3).merge()
+    .setValue('PRIVÉ BELASTINGVOORDELEN').setBackground('#4A148C').setFontColor('#FFFFFF').setFontWeight('bold');
+  rij++;
+
+  prive.forEach(a => {
+    const bg = typeKleuren[a.type] || '#FAFAFA';
+    sheet.getRange(rij, 1, 1, 3).merge()
+      .setValue(a.titel).setBackground(bg).setFontWeight('bold').setWrap(true);
+    rij++;
+    sheet.getRange(rij, 1, 1, 3).merge()
+      .setValue(a.tekst).setBackground(bg).setWrap(true).setFontSize(10);
+    if (a.besparing) {
+      sheet.getRange(rij, 3).setValue('Belastingbesparing: ' + formatBedrag_(a.besparing))
+        .setFontWeight('bold').setFontColor('#1B5E20');
+    }
+    rij += 2;
+  });
+
   // Kolombreedte
   sheet.setColumnWidth(1, 220);
   sheet.setColumnWidth(2, 140);
@@ -356,10 +518,129 @@ function genereerBelastingadvies() {
 
   ss.setActiveSheet(sheet);
 
+  const totaalBesparing = advies.aftrekken.reduce((s, a) => s + rondBedrag_(a.bedrag * BELASTING.IB_SCHIJF_1_PCT), 0);
   SpreadsheetApp.getUi().alert(
     'Belastingadvies bijgewerkt',
-    `${advies.adviezen.length} adviezen / ${advies.aftrekken.length} aftrekposten gevonden.\n\n` +
-    `Geschatte belastingbesparing via aftrekken: ${formatBedrag_(advies.aftrekken.reduce((s, a) => s + (a.bedrag * BELASTING.IB_SCHIJF_1_PCT), 0))}`,
+    `${advies.adviezen.length + prive.length} adviezen / ${advies.aftrekken.length} aftrekposten gevonden.\n\n` +
+    `Geschatte belastingbesparing via zakelijke aftrekken: ${formatBedrag_(totaalBesparing)}`,
     SpreadsheetApp.getUi().ButtonSet.OK
   );
+}
+
+// ─────────────────────────────────────────────
+//  AFSCHRIJVINGSKANDIDATEN SCAN
+//  Zoekt inkoopfacturen ≥ €450 die NIET op een
+//  activarekening (0xxx) zijn geboekt.
+// ─────────────────────────────────────────────
+function scanAfschrijvingskandidaten_(ss) {
+  const sheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  const kandidaten = [];
+  const huidigJaar = new Date().getFullYear();
+
+  data.slice(1).forEach(r => {
+    const bedrag = parseFloat(r[8]) || 0;           // [8] = bedrag excl. BTW
+    const kostenRek = String(r[15] || '');           // [15] = kostenrekening
+    const datum = r[3] instanceof Date ? r[3] : new Date(r[3]);
+    if (bedrag < BELASTING.ACTIVEER_GRENS) return;
+    if (isNaN(datum.getTime()) || datum.getFullYear() < huidigJaar) return;
+    if (kostenRek.startsWith('0')) return;           // al geactiveerd
+    kandidaten.push({
+      bedrag,
+      omschr:     String(r[7] || ''),
+      leverancier: String(r[6] || ''),
+      datum,
+    });
+  });
+  return kandidaten;
+}
+
+// ─────────────────────────────────────────────
+//  PROACTIEVE AFSCHRIJVINGSMELDING
+//  Aanroepen vanuit Triggers.gs na elke
+//  inkoopfactuur ≥ €450.
+// ─────────────────────────────────────────────
+function signaleerAfschrijvingskandidaat_(ss, bedrag, leverancier, omschr) {
+  try {
+    schrijfAuditLog_('AFSCHRIJVING KANDIDAAT',
+      `Aankoop ${formatBedrag_(bedrag)} bij ${leverancier} – "${omschr}" kan worden geactiveerd (≥ €${BELASTING.ACTIVEER_GRENS}). ` +
+      `Boek op 0xxx-rekening + jaarlijkse afschrijving voor KIA (28% extra aftrek).`);
+  } catch (_) {}
+}
+
+// ─────────────────────────────────────────────
+//  PRIVÉ BELASTINGVOORDELEN
+// ─────────────────────────────────────────────
+function berekenPriveBelastingvoordelen_(winst) {
+  const adviezen = [];
+  const inkomen = winst || 0;
+
+  // Lijfrente
+  const premiegrondslag = Math.max(0, inkomen - BELASTING.AOW_FRANCHISE);
+  const lijfrenteMax = Math.min(
+    rondBedrag_(premiegrondslag * BELASTING.LIJFRENTE_PCT),
+    BELASTING.LIJFRENTE_MAX
+  );
+  if (lijfrenteMax > 0) {
+    adviezen.push({
+      type: 'VOORDEEL',
+      titel: `💼 Lijfrente: tot ${formatBedrag_(lijfrenteMax)} aftrekbaar`,
+      tekst: `U kunt maximaal 30% van uw premiegrondslag (${formatBedrag_(premiegrondslag)}) inleggen in een ` +
+             `lijfrente en dit aftrekken van uw IB: maximaal ${formatBedrag_(lijfrenteMax)} dit jaar. ` +
+             `Sluit een bancaire lijfrente of lijfrenteverzekering af. Vervangt deels de FOR. ` +
+             `Vraag uw bank of verzekeraar om de jaarnota voor uw aangifte.`,
+      besparing: rondBedrag_(lijfrenteMax * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  }
+
+  // Box 3 groensparen
+  adviezen.push({
+    type: 'VOORDEEL',
+    titel: `🌿 Groensparen/groenbeleggen: tot ${formatBedrag_(BELASTING.BOX3_GROEN_VRIJSTELLING)} vrijgesteld in box 3`,
+    tekst: `Groensparen en groenbeleggen zijn vrijgesteld van box 3 tot €${(BELASTING.BOX3_GROEN_VRIJSTELLING).toLocaleString('nl-NL')} ` +
+           `per persoon (€${(BELASTING.BOX3_GROEN_VRIJSTELLING * 2).toLocaleString('nl-NL')} met fiscaal partner). ` +
+           `Bovendien geeft het een heffingskorting van 0,7% over het vrijgestelde bedrag: ` +
+           `max ${formatBedrag_(rondBedrag_(BELASTING.BOX3_GROEN_VRIJSTELLING * BELASTING.BOX3_GROEN_KORTING_PCT))} per persoon. ` +
+           `Vraag uw bank naar een groenspaarrekening of -beleggingsfonds met CBF-keurmerk.`,
+    besparing: rondBedrag_(BELASTING.BOX3_GROEN_VRIJSTELLING * BELASTING.BOX3_GROEN_KORTING_PCT),
+  });
+
+  // Giftenaftrek (ANBI)
+  if (inkomen > 0) {
+    const drempel = rondBedrag_(inkomen * BELASTING.GIFTEN_DREMPEL_PCT);
+    const maxGift = rondBedrag_(inkomen * BELASTING.GIFTEN_MAX_PCT);
+    adviezen.push({
+      type: 'TIP',
+      titel: `❤️ Giftenaftrek (ANBI): tot ${formatBedrag_(maxGift)} per jaar aftrekbaar`,
+      tekst: `Giften aan goede doelen met ANBI-status zijn aftrekbaar voor het deel boven 1% van uw drempelinkomen ` +
+             `(${formatBedrag_(drempel)}), tot maximaal 10% (${formatBedrag_(maxGift)}). ` +
+             `Periodieke giften (minimaal 5 jaar, notarieel of schriftelijk vastgelegd) zijn VOLLEDIG aftrekbaar zonder drempel.`,
+      besparing: null,
+    });
+  }
+
+  // Eigen woning
+  adviezen.push({
+    type: 'TIP',
+    titel: '🏠 Eigen woning – hypotheekrente aftrekbaar in box 1',
+    tekst: `Hypotheekrente op uw eigen woning is aftrekbaar in box 1. Aftrek wordt beperkt tot het belastingtarief ` +
+           `van de laagste schijf (35,82% in 2025). Eigenwoningforfait (0,35% WOZ bij WOZ €75k–€1,2M) telt als ` +
+           `fictief inkomen. Als u geen rente meer betaalt (annuïteit bijna klaar), overweeg dan de Hillen-aftrek. ` +
+           `Houd uw jaaropgave hypotheekrente bij de hand voor de aangifte.`,
+    besparing: null,
+  });
+
+  // Zonnepanelen / saldering
+  adviezen.push({
+    type: 'TIP',
+    titel: '☀️ Zonnepanelen – belasting besparen én salderen (t/m 2027)',
+    tekst: `Zonnepanelen op uw eigen woning zijn BTW-vrij (0% BTW bij aankoop, mits u terugleverd). ` +
+           `Terugleversubsidie (saldering) loopt door t/m 2027, daarna afgebouwd. ` +
+           `Zakelijk geplaatste zonnepanelen komen in aanmerking voor KIA (28%) en eventueel MIA (45,5%). ` +
+           `Dien de BTW-melding in bij de Belastingdienst binnen 6 maanden na installatie.`,
+    besparing: null,
+  });
+
+  return adviezen;
 }
