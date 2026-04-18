@@ -61,8 +61,8 @@ jobs:
                   "token": {
                       "access_token":  d.get("access_token", ""),
                       "refresh_token": d.get("refresh_token", ""),
-                      "token_type":    "Bearer",
-                      "expiry_date":   0
+                      "token_type":    d.get("token_type", "Bearer"),
+                      "expiry_date":   d.get("expiry_date", 0)
                   },
                   "oauth2ClientSettings": {
                       "clientId":     d.get("client_id", ""),
@@ -71,12 +71,18 @@ jobs:
                   },
                   "isLocalCreds": False
               }
-              print("✓ Credential-formaat geconverteerd (tokens.default → clasp formaat)")
+              import time
+              exp = d.get("expiry_date", 0)
+              geldig = "nog geldig" if exp > time.time() * 1000 else "verlopen — refresh_token wordt gebruikt"
+              print(f"✓ Credential-formaat geconverteerd (tokens.default → clasp formaat) — token: {geldig}")
 
           # Formaat B: standaard clasp formaat {"token": {...}}
           elif 'token' in creds:
               clasp_creds = creds
-              print("✓ Credentials al in clasp-formaat")
+              import time
+              exp = creds.get("token", {}).get("expiry_date", 0)
+              geldig = "nog geldig" if exp > time.time() * 1000 else "verlopen — refresh_token wordt gebruikt"
+              print(f"✓ Credentials al in clasp-formaat — token: {geldig}")
 
           else:
               print(f"::error title=Onbekend formaat::Sleutels gevonden: {list(creds.keys())}. Verwacht: 'token' of 'tokens'.")
@@ -90,9 +96,12 @@ jobs:
           PYTHON
 
       - name: clasp push
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
         run: |
           echo "clasp versie: $(clasp --version)"
           echo "Script ID:    $(python3 -c "import json; print(json.load(open('.clasp.json'))['scriptId'])")"
+          echo "rootDir:      $(python3 -c "import json; print(json.load(open('.clasp.json')).get('rootDir','.'))")"
 
           set +e
           OUTPUT=$(clasp push --force 2>&1)
@@ -101,8 +110,12 @@ jobs:
           echo "$OUTPUT"
 
           if [ $EXIT -ne 0 ]; then
-            FOUT=$(echo "$OUTPUT" | head -3 | tr '\n' ' ')
-            echo "::error title=clasp push mislukt::$FOUT"
+            FOUT=$(echo "$OUTPUT" | head -5 | tr '\n' ' ')
+            if echo "$OUTPUT" | grep -qi "login\|auth\|401\|403\|credential"; then
+              echo "::error title=Authenticatie mislukt::Vernieuw het CLASP_CREDENTIALS secret in GitHub Settings → Secrets → Actions. Zie README voor instructies."
+            else
+              echo "::error title=clasp push mislukt::$FOUT"
+            fi
             exit $EXIT
           fi
           echo "✅ Deployment geslaagd"
