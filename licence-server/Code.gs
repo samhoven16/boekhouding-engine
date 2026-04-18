@@ -386,11 +386,11 @@ function adminPaneel_(e) {
 // ─────────────────────────────────────────────
 function stuurLicentiemail_(naam, email, sleutel) {
   const props        = PropertiesService.getScriptProperties();
-  const productnm    = props.getProperty('PRODUCT_NAAM')   || 'BoekhoudzelfNL';
+  const productnm    = props.getProperty('PRODUCT_NAAM')   || 'Boekhoudbaar';
   const installerUrl = props.getProperty('INSTALLER_URL')  || '';
   const brevoKey     = props.getProperty('BREVO_API_KEY')  || '';
-  const vanEmail     = props.getProperty('VAN_EMAIL')      || 'hallo@boekhoudzelf.nl';
-  const vanNaam      = props.getProperty('VAN_NAAM')       || 'Sam van BoekhoudzelfNL';
+  const vanEmail     = props.getProperty('VAN_EMAIL')      || 'hallo@boekhoudbaar.nl';
+  const vanNaam      = props.getProperty('VAN_NAAM')       || 'Sam van Boekhoudbaar';
 
   const activatieLink = installerUrl
     ? installerUrl + '?sleutel=' + encodeURIComponent(sleutel)
@@ -430,10 +430,10 @@ function stuurLicentiemail_(naam, email, sleutel) {
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
     <p style="font-size:13px;color:#94a3b8">
       Vragen? Stuur een e-mail naar <a href="mailto:${vanEmail}" style="color:#1A237E">${vanEmail}</a>.<br>
-      Helpdesk: <a href="https://help.boekhoudzelf.nl" style="color:#1A237E">help.boekhoudzelf.nl</a>
+      Helpdesk: <a href="https://help.boekhoudbaar.nl" style="color:#1A237E">help.boekhoudbaar.nl</a>
     </p>
     <p style="font-size:12px;color:#cbd5e1">
-      ${productnm} · KVK 00000000 · <a href="https://www.boekhoudzelf.nl/privacy" style="color:#94a3b8">Privacybeleid</a>
+      ${productnm} · KVK 00000000 · <a href="https://www.boekhoudbaar.nl/privacy" style="color:#94a3b8">Privacybeleid</a>
     </p>
   </div>
 </body></html>`;
