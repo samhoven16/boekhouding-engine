@@ -28,6 +28,7 @@ function doGet(e) {
 
   const actie = (e && e.parameter && e.parameter.actie) || '';
 
+  if (actie === 'health')    return healthEndpoint_();
   if (actie === 'valideer')  return valideerEndpoint_(e);
   if (actie === 'bedankt')   return bedanktPagina_(e);
   if (actie === 'admin')     return adminPaneel_(e);
@@ -38,18 +39,40 @@ function doGet(e) {
 
 
 function doPost(e) {
-  // Mollie stuurt een POST-webhook als de betaalstatus wijzigt
   try {
     verwerkMollieWebhook_(e);
+    return ContentService.createTextOutput('OK');
   } catch (err) {
     Logger.log('Webhook fout: ' + err.message);
+    // Non-200 triggers Mollie retry (max 10x over 26 uur)
+    return ContentService.createTextOutput('ERROR: ' + err.message)
+      .setMimeType(ContentService.MimeType.TEXT);
   }
-  return ContentService.createTextOutput('OK');
 }
 
 // ─────────────────────────────────────────────
-//  BETAALPAGINA (HTML — stap 1 van de flow)
+//  HEALTH-ENDPOINT
 // ─────────────────────────────────────────────
+function healthEndpoint_() {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty('LICENTIE_SHEET_ID');
+  let licenseCount = 0;
+  try {
+    if (sheetId) {
+      const ss = SpreadsheetApp.openById(sheetId);
+      const sheet = ss.getSheetByName('Licenties');
+      licenseCount = sheet ? Math.max(0, sheet.getLastRow() - 1) : 0;
+    }
+  } catch (_) {}
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'ok',
+    ts: new Date().toISOString(),
+    version: '1.0.3',
+    licenses: licenseCount,
+    mollie: !!props.getProperty('MOLLIE_API_KEY'),
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
 function betaalPagina_(e) {
   const props = PropertiesService.getScriptProperties();
   const naam  = props.getProperty('PRODUCT_NAAM')  || 'Boekhouding Engine';
@@ -96,9 +119,19 @@ function betaalPagina_(e) {
   <input type="text" id="naam" placeholder="Jan Jansen" autocomplete="name">
   <label>E-mailadres *</label>
   <input type="email" id="email" placeholder="jan@uwbedrijf.nl" autocomplete="email">
-  <button class="btn" id="btn" onclick="betaal()">🔒 Veilig betalen met iDEAL →</button>
+  <div style="background:#F3F4F6;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#444;line-height:1.6">
+    <label style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;margin-bottom:8px">
+      <input type="checkbox" id="cb1" style="width:auto;margin-top:2px;flex-shrink:0">
+      <span>Ik verzoek uitdrukkelijk om directe levering van de digitale inhoud vóór het verstrijken van de herroepingstermijn.</span>
+    </label>
+    <label style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;margin-bottom:0">
+      <input type="checkbox" id="cb2" style="width:auto;margin-top:2px;flex-shrink:0">
+      <span>Ik begrijp dat ik hiermee mijn herroepingsrecht verlies zodra de levering is gestart.</span>
+    </label>
+  </div>
+  <button class="btn" id="btn" onclick="betaal()">Bestelling met betalingsverplichting — €${prijs} iDEAL</button>
   <div class="fout" id="fout"></div>
-  <div class="veilig">Betaling via Mollie — veilig en versleuteld</div>
+  <div class="veilig">Betaling via Mollie · Veilig &amp; versleuteld · Factuur per e-mail</div>
 </div>
 <script>
 function betaal() {
@@ -106,6 +139,8 @@ function betaal() {
   var email = document.getElementById('email').value.trim();
   if (!naam)  { toonFout('Vul uw naam in.'); return; }
   if (!email || !email.includes('@')) { toonFout('Vul een geldig e-mailadres in.'); return; }
+  if (!document.getElementById('cb1').checked) { toonFout('Vink het eerste vakje aan om door te gaan.'); return; }
+  if (!document.getElementById('cb2').checked) { toonFout('Vink het tweede vakje aan om door te gaan.'); return; }
   var btn = document.getElementById('btn');
   btn.disabled = true; btn.textContent = '⏳ Even geduld...';
   document.getElementById('fout').style.display = 'none';
@@ -178,40 +213,60 @@ function verwerkMollieWebhook_(e) {
 
   const props     = PropertiesService.getScriptProperties();
   const mollieKey = props.getProperty('MOLLIE_API_KEY');
-  if (!mollieKey) return;
+  if (!mollieKey) throw new Error('MOLLIE_API_KEY niet ingesteld');
 
-  // Ophalen betaalstatus bij Mollie
-  const resp = UrlFetchApp.fetch('https://api.mollie.com/v2/payments/' + paymentId, {
-    headers: { Authorization: 'Bearer ' + mollieKey },
-    muteHttpExceptions: true,
-  });
-  const betaling = JSON.parse(resp.getContentText());
+  // Snelle idempotency-check via CacheService (6 uur TTL)
+  const cache    = CacheService.getScriptCache();
+  const cacheKey = 'mollie_paid_' + paymentId;
+  if (cache.get(cacheKey) === 'done') return;
 
-  if (betaling.status !== 'paid') return; // Nog niet betaald of geannuleerd
+  // Exclusieve lock — voorkomt race-condition bij gelijktijdige webhooks
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) throw new Error('Lock timeout voor ' + paymentId);
 
-  // Controleer of we deze betaling al verwerkt hebben (idempotency)
-  const sheet = getLicentieSheet_();
-  const data  = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][8]) === paymentId) return; // Al verwerkt
+  try {
+    // Haal status op bij Mollie (webhook bevat alleen id, geen status)
+    const resp = UrlFetchApp.fetch('https://api.mollie.com/v2/payments/' + paymentId, {
+      headers: { Authorization: 'Bearer ' + mollieKey },
+      muteHttpExceptions: true,
+    });
+    if (resp.getResponseCode() !== 200) throw new Error('Mollie API ' + resp.getResponseCode());
+    const betaling = JSON.parse(resp.getContentText());
+
+    if (betaling.status !== 'paid') return; // Openstaand of geannuleerd — geen actie
+
+    // Dubbele check in sheet (CacheService kan verlopen zijn na GAS-restart)
+    const sheet = getLicentieSheet_();
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][8]) === paymentId) {
+        cache.put(cacheKey, 'done', 21600);
+        return; // Al verwerkt
+      }
+    }
+
+    // Genereer en sla licentiesleutel op
+    const meta    = betaling.metadata || {};
+    const naam    = String(meta.naam  || 'Klant');
+    const email   = String(meta.email || '');
+    const sleutel = genereerSleutel_();
+
+    sheet.appendRow([
+      sleutel, naam, email, 'Standaard', 'Actief', '',
+      '', new Date(), paymentId, new Date(),
+    ]);
+
+    // Sla op in cache zodat retries direct stoppen
+    cache.put(cacheKey, 'done', 21600);
+
+    // Stuur licentiecode per e-mail
+    if (email) stuurLicentiemail_(naam, email, sleutel);
+
+    Logger.log('Licentie aangemaakt: ' + sleutel + ' voor ' + email);
+
+  } finally {
+    lock.releaseLock();
   }
-
-  // Genereer en sla licentiesleutel op
-  const meta    = betaling.metadata || {};
-  const naam    = String(meta.naam  || 'Klant');
-  const email   = String(meta.email || '');
-  const sleutel = genereerSleutel_();
-
-  const nieuweRij = [
-    sleutel, naam, email, 'Standaard', 'Actief', '',
-    '', new Date(), paymentId, new Date(),
-  ];
-  sheet.appendRow(nieuweRij);
-
-  // Stuur licentiecode per e-mail
-  if (email) stuurLicentiemail_(naam, email, sleutel);
-
-  Logger.log('Licentie aangemaakt: ' + sleutel + ' voor ' + email);
 }
 
 // ─────────────────────────────────────────────
