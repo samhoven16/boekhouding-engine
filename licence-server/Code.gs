@@ -75,8 +75,8 @@ function healthEndpoint_() {
 
 function betaalPagina_(e) {
   const props = PropertiesService.getScriptProperties();
-  const naam  = props.getProperty('PRODUCT_NAAM')  || 'Boekhouding Engine';
-  const prijs = props.getProperty('PRODUCT_PRIJS') || '49.00';
+  const naam  = props.getProperty('PRODUCT_NAAM')  || 'Boekhoudbaar';
+  const prijs = props.getProperty('PRODUCT_PRIJS') || '49';
 
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -109,11 +109,11 @@ function betaalPagina_(e) {
   <div class="prijs">€${prijs}</div>
   <div class="sub">Eenmalige aankoop — geen abonnement — altijd van u</div>
   <div class="voordelen">
-    ✅ Volledige boekhouding in Google Spreadsheets<br>
-    ✅ PDF-facturen direct naar klanten sturen<br>
+    ✅ Volledige ZZP-boekhouding in Google Spreadsheets<br>
+    ✅ PDF-facturen aanmaken en direct e-mailen<br>
     ✅ BTW-aangifte automatisch berekend<br>
-    ✅ Koppelbaar met uw website of webshop<br>
-    ✅ Uw data blijft op uw eigen Google Drive
+    ✅ Belastingvoordelen automatisch gesignaleerd<br>
+    ✅ Uw data blijft altijd op uw eigen Google Drive
   </div>
   <label>Uw naam *</label>
   <input type="text" id="naam" placeholder="Jan Jansen" autocomplete="name">
