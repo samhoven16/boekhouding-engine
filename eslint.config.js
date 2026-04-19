@@ -84,7 +84,8 @@ module.exports = [
       'no-unused-vars': ['warn', {
         // GAS entry-point functies (openNieuweBoeking, onOpen, enz.) worden
         // door GAS/menu/trigger aangeroepen maar lijken unused voor ESLint
-        varsIgnorePattern: '^(on[A-Z]|open|toon|stuur|beheer|importeer|exporteer|genereer|bereken|verwerk|controleer|instell|instel|maak|reset|sla)',
+        // GAS entry points + cross-file helpers (suffix _ is GAS shared-scope convention)
+        varsIgnorePattern: '^(on[A-Z]|do[A-Z]|open|toon|stuur|sluit|beheer|importeer|exporteer|genereer|bereken|verwerk|controleer|instell|instel|maak|reset|sla)|\\w+_$',
         argsIgnorePattern: '^_',
       }],
       // Modern JavaScript stijl

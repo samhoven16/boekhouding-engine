@@ -60,7 +60,6 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     const s = ss.getSheetByName(naam);
     return s ? s.getDataRange().getValues() : [[]];
   }
-  const jpData = sheetData_(SHEETS.JOURNAALPOSTEN);
   const vfData = sheetData_(SHEETS.VERKOOPFACTUREN);
   const ifData = sheetData_(SHEETS.INKOOPFACTUREN);
 
