@@ -325,6 +325,13 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
     });
   }
   Logger.log(`Inkoopfactuur IK${inkoopNr} geregistreerd voor ${leverancier}`);
+
+  // Proactief signaal: aankoop ≥ €450 kan worden geactiveerd als investering.
+  if (bedragExcl >= 450) {
+    try {
+      signaleerAfschrijvingskandidaat_(ss, bedragExcl, leverancier, data['Omschrijving uitgave'] || categorie);
+    } catch (_) {}
+  }
 }
 
 // ─────────────────────────────────────────────

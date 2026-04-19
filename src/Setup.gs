@@ -425,6 +425,8 @@ function zetInstellingen_(ss) {
     ['Dashboard vernieuwen bij openen', 'Ja'],
     ['Email rapporten naar', 'eigenaar@mijnbedrijf.nl'],
     ['BTW aangifte herinnering', 'Ja'],
+    ['Gewerkte uren dit jaar', '0'],
+    ['Thuiswerk dagen per jaar', '0'],
     ['', ''],
     ['INTEGRATIES & API', ''],
     ['Webhook API sleutel', ''],

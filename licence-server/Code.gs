@@ -554,3 +554,182 @@ function genereerHandmatigeLicentie() {
   Logger.log('Nieuwe sleutel: ' + sleutel);
   SpreadsheetApp.getUi().alert('Nieuwe licentiesleutel', sleutel, SpreadsheetApp.getUi().ButtonSet.OK);
 }
+
+// ─────────────────────────────────────────────────────────────
+//  BREVO FOLLOW-UP SEQUENTIES
+//  Dag 3 / 7 / 14 / 30 / 60 / 90 na activatie
+//  Trigger: dagelijkse GAS time-based trigger (zie installeelFollowUpTrigger_)
+// ─────────────────────────────────────────────────────────────
+
+const FOLLOWUP_SCHEMA = [
+  {
+    dag: 3,
+    onderwerp: 'Je eerste BTW-aangifte met Boekhoudbaar',
+    html: (naam) => `<p>Hoi ${naam},</p>
+<p>Je hebt Boekhoudbaar nu 3 dagen. Tijd voor je eerste BTW-aangifte tip:</p>
+<ul>
+  <li>Ga naar <strong>Boekhouding → BTW → Genereer BTW-aangifte</strong></li>
+  <li>Kies het juiste kwartaal</li>
+  <li>Kopieer de bedragen naar Mijn Belastingdienst</li>
+</ul>
+<p>Duurt letterlijk 5 minuten. 💪</p>
+<p>Heb je vragen? Stuur gewoon een reply op deze mail.</p>`,
+  },
+  {
+    dag: 7,
+    onderwerp: 'Heb je al je eerste factuur verstuurd?',
+    html: (naam) => `<p>Hoi ${naam},</p>
+<p>Een week geleden heb je Boekhoudbaar geactiveerd. Heb je al je eerste factuur verstuurd?</p>
+<p>Zo maak je een factuur:</p>
+<ol>
+  <li>Open je spreadsheet</li>
+  <li>Klik op <strong>Boekhouding → Nieuwe boeking → Verkoopfactuur</strong></li>
+  <li>Vul klantgegevens en bedrag in</li>
+  <li>Klik op Verzenden — je klant ontvangt direct een PDF</li>
+</ol>
+<p>Tip: sla je klantgegevens één keer op in het Relaties-tabblad, daarna worden ze automatisch ingevuld.</p>`,
+  },
+  {
+    dag: 14,
+    onderwerp: 'Belastingvoordelen die je (waarschijnlijk) misloopt',
+    html: (naam) => `<p>Hoi ${naam},</p>
+<p>Als ZZP-er heb je recht op aftrekposten die veel ondernemers vergeten:</p>
+<ul>
+  <li><strong>Zelfstandigenaftrek</strong> — €2.470 als je ≥1.225 uur werkt</li>
+  <li><strong>Thuiswerkaftrek</strong> — €2,40 per dag dat je thuis werkt</li>
+  <li><strong>KIA</strong> — 28% extra aftrek op investeringen ≥€2.801</li>
+  <li><strong>MKB-winstvrijstelling</strong> — 12,7% van je winst is vrijgesteld</li>
+</ul>
+<p>Boekhoudbaar berekent dit automatisch via <strong>Boekhouding → Belastingadvies → Genereer belastingadvies</strong>.</p>`,
+  },
+  {
+    dag: 30,
+    onderwerp: 'Je eerste maand — hoe staat je boekhouding ervoor?',
+    html: (naam) => `<p>Hoi ${naam},</p>
+<p>Je gebruikt Boekhoudbaar nu een maand. Goed moment voor een check:</p>
+<ul>
+  <li>✅ Alle facturen van deze maand geboekt?</li>
+  <li>✅ Kosten geboekt (abonnementen, materialen, reiskosten)?</li>
+  <li>✅ Dashboard bekeken? (<strong>Boekhouding → Dashboard openen</strong>)</li>
+  <li>✅ Bankafschriften vergeleken?</li>
+</ul>
+<p>Een maand bijwerken duurt 15-30 minuten. Als je dat elke maand doet, heb je aan het einde van het jaar geen stress.</p>`,
+  },
+  {
+    dag: 60,
+    onderwerp: 'Kwartaal bijna voorbij — BTW aangifte checklist',
+    html: (naam) => `<p>Hoi ${naam},</p>
+<p>Het kwartaal loopt bijna af. Checklist voor je BTW-aangifte:</p>
+<ol>
+  <li>Alle verkoopfacturen geboekt? Check je Verkoopfacturen-tab</li>
+  <li>Alle inkoopfacturen (met BTW) geboekt? Check je Inkoopfacturen-tab</li>
+  <li>Genereer je aangifte: <strong>Boekhouding → BTW → Genereer BTW-aangifte</strong></li>
+  <li>Dien in via mijn.belastingdienst.nl voor het einde van de maand</li>
+</ol>
+<p>Deadline Q1: 30 april · Q2: 31 juli · Q3: 31 oktober · Q4: 31 januari</p>`,
+  },
+  {
+    dag: 90,
+    onderwerp: 'Drie maanden Boekhoudbaar — wat heb je al bespaard?',
+    html: (naam) => `<p>Hoi ${naam},</p>
+<p>Je gebruikt Boekhoudbaar al 3 maanden. Wat je al hebt bespaard vs. een abonnement:</p>
+<ul>
+  <li>Moneybird zou nu al €45–€117 gekost hebben</li>
+  <li>e-Boekhouden: €30–€72</li>
+  <li>Jij: €49 eenmalig — en dat blijft zo</li>
+</ul>
+<p>Tevreden? Help een andere ZZP-er door Boekhoudbaar te delen. Of word partner (commissie per doorverwezen klant) — stuur een reply.</p>`,
+  },
+];
+
+/**
+ * Controleert alle actieve licenties en stuurt follow-up emails op de juiste dag.
+ * Aanroepen via een dagelijkse GAS time-based trigger.
+ */
+function verwerkFollowUpEmails() {
+  const props = PropertiesService.getScriptProperties();
+  const brevoKey = props.getProperty('BREVO_API_KEY') || '';
+  const vanEmail = props.getProperty('VAN_EMAIL') || 'hallo@boekhoudbaar.nl';
+  const vanNaam  = props.getProperty('VAN_NAAM')  || 'Sam van Boekhoudbaar';
+
+  if (!brevoKey) {
+    Logger.log('verwerkFollowUpEmails: BREVO_API_KEY niet ingesteld, overgeslagen.');
+    return;
+  }
+
+  const ss = getSpreadsheet_();
+  if (!ss) return;
+  const sheet = ss.getSheetByName('Licenties');
+  if (!sheet) return;
+
+  const data = sheet.getDataRange().getValues();
+  const vandaag = new Date();
+  vandaag.setHours(0, 0, 0, 0);
+
+  // Kolom-indices op basis van setupLicentieSheet (0-based):
+  // [0]=LicentieID [1]=Sleutel [2]=Naam [3]=Email [4]=Status [5]=ActivatieDatum
+  data.slice(1).forEach((rij, idx) => {
+    const status       = String(rij[4] || '').toLowerCase();
+    const naam         = String(rij[2] || 'ondernemer');
+    const email        = String(rij[3] || '');
+    const activatieDag = rij[5] instanceof Date ? rij[5] : new Date(rij[5]);
+
+    if (status !== 'actief' || !email || isNaN(activatieDag.getTime())) return;
+
+    activatieDag.setHours(0, 0, 0, 0);
+    const dagenSindsActivatie = Math.round((vandaag - activatieDag) / (1000 * 60 * 60 * 24));
+
+    FOLLOWUP_SCHEMA.forEach(seq => {
+      if (dagenSindsActivatie !== seq.dag) return;
+
+      const sentKey = 'followup_' + String(rij[1]) + '_dag' + seq.dag;
+      if (props.getProperty(sentKey) === 'sent') return;  // idempotency
+
+      try {
+        const payload = {
+          sender:      { email: vanEmail, name: vanNaam },
+          to:          [{ email, name: naam }],
+          subject:     seq.onderwerp,
+          htmlContent: seq.html(naam.split(' ')[0] || naam),
+          tags:        ['followup', 'dag' + seq.dag],
+        };
+
+        const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'post',
+          contentType: 'application/json',
+          headers: { 'api-key': brevoKey },
+          payload: JSON.stringify(payload),
+          muteHttpExceptions: true,
+        });
+
+        if (resp.getResponseCode() === 201) {
+          props.setProperty(sentKey, 'sent');
+          Logger.log('Follow-up dag ' + seq.dag + ' verstuurd naar ' + email);
+        } else {
+          Logger.log('Follow-up dag ' + seq.dag + ' FOUT voor ' + email + ': ' + resp.getContentText());
+        }
+      } catch (e) {
+        Logger.log('Follow-up dag ' + seq.dag + ' EXCEPTION voor ' + email + ': ' + e.message);
+      }
+    });
+  });
+}
+
+/**
+ * Installeert de dagelijkse follow-up trigger (idempotent).
+ * Eénmalig uitvoeren na deployment.
+ */
+function installeelFollowUpTrigger_() {
+  const triggers = ScriptApp.getProjectTriggers();
+  const alAanwezig = triggers.some(t => t.getHandlerFunction() === 'verwerkFollowUpEmails');
+  if (alAanwezig) {
+    Logger.log('Follow-up trigger al aanwezig.');
+    return;
+  }
+  ScriptApp.newTrigger('verwerkFollowUpEmails')
+    .timeBased()
+    .everyDays(1)
+    .atHour(9)
+    .create();
+  Logger.log('Follow-up trigger aangemaakt: dagelijks 09:00.');
+}
