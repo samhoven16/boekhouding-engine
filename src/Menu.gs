@@ -10,6 +10,19 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
+  // Licentie- en kopiecheck — bij kopie: vergrendelt + minimaal menu; bij niet-geactiveerd: dialoog + minimaal menu
+  let licentieOk = false;
+  try { licentieOk = controleerLicentieEnKopie_(); } catch (e) { Logger.log('Licentie check fout: ' + e.message); }
+
+  if (!licentieOk) {
+    ui.createMenu('📊 Boekhoudbaar')
+      .addItem('🔑 Licentie activeren', 'toonLicentieDialoog')
+      .addSeparator()
+      .addItem('ℹ️ Licentie-informatie', 'toonLicentieInfo')
+      .addToUi();
+    return;
+  }
+
   // Onboarding wizard bij eerste gebruik + update-melding bij terugkerende gebruikers
   try { controleerOnboarding_(); } catch (e) { Logger.log('Onboarding check fout: ' + e.message); }
 
