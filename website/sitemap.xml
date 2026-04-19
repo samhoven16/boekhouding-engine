@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://boekhoudbaar.nl/</loc>
+    <loc>https://www.boekhoudbaar.nl/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://boekhoudbaar.nl/privacy</loc>
+    <loc>https://www.boekhoudbaar.nl/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://boekhoudbaar.nl/voorwaarden</loc>
+    <loc>https://www.boekhoudbaar.nl/voorwaarden</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

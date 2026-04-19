@@ -1,39 +1,78 @@
-name: Auto Deploy naar Google Apps Script
+name: CI/CD — Boekhoudbaar
 
 on:
   push:
     branches:
       - main
       - claude/google-forms-accounting-system-0N1Mx
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
+# Annuleer oudere runs op dezelfde branch (geen dubbele deploys)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  deploy:
-    name: Deployen naar Apps Script
+
+  # ── JOB 1: LINT ──────────────────────────────────────────────
+  lint:
+    name: Lint (ESLint)
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
     steps:
-      - name: Code ophalen
-        uses: actions/checkout@v4
-
-      - name: Node.js installeren
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: 'npm'
+      - name: Installeer dependencies
+        run: npm ci
+      - name: ESLint
+        run: npm run lint
+
+  # ── JOB 2: TESTS ─────────────────────────────────────────────
+  test:
+    name: Tests (Jest)
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Installeer dependencies
+        run: npm ci
+      - name: Jest
+        run: npm test
+
+  # ── JOB 3: DEPLOY (alleen op production branches) ────────────
+  deploy:
+    name: Deploy naar Apps Script
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    # Alleen deployen vanuit production branches, niet vanuit PR's
+    if: github.event_name != 'pull_request'
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
 
       - name: clasp installeren
         run: npm install -g @google/clasp
 
       - name: Projectafhankelijkheden installeren
         run: npm ci
-
-      - name: Lint (ESLint)
-        run: npm run lint
-
-      - name: Tests (Jest)
-        run: npm test
 
       - name: Credentials normaliseren en schrijven
         env:
@@ -48,13 +87,12 @@ jobs:
               sys.exit(1)
 
           try:
-              # raw_decode pakt het eerste geldige JSON-object en negeert trailing content
               creds, _ = json.JSONDecoder().raw_decode(raw)
           except json.JSONDecodeError as e:
-              print(f"::error title=Ongeldige JSON::JSON-fout: {e}. Zorg dat de inhoud begint met {{ en correct afgesloten is.")
+              print(f"::error title=Ongeldige JSON::JSON-fout: {e}.")
               sys.exit(1)
 
-          # Formaat A: {"tokens": {"default": {...}}} — van gcloud of nieuwe clasp versie
+          # Formaat A: {"tokens": {"default": {...}}} — gcloud / nieuwe clasp
           if 'tokens' in creds and 'default' in creds.get('tokens', {}):
               d = creds['tokens']['default']
               clasp_creds = {
@@ -74,18 +112,18 @@ jobs:
               import time
               exp = d.get("expiry_date", 0)
               geldig = "nog geldig" if exp > time.time() * 1000 else "verlopen — refresh_token wordt gebruikt"
-              print(f"✓ Credential-formaat geconverteerd (tokens.default → clasp formaat) — token: {geldig}")
+              print(f"✓ Credential-formaat geconverteerd — token: {geldig}")
 
-          # Formaat B: standaard clasp formaat {"token": {...}}
+          # Formaat B: standaard clasp {"token": {...}}
           elif 'token' in creds:
               clasp_creds = creds
               import time
               exp = creds.get("token", {}).get("expiry_date", 0)
               geldig = "nog geldig" if exp > time.time() * 1000 else "verlopen — refresh_token wordt gebruikt"
-              print(f"✓ Credentials al in clasp-formaat — token: {geldig}")
+              print(f"✓ Credentials in clasp-formaat — token: {geldig}")
 
           else:
-              print(f"::error title=Onbekend formaat::Sleutels gevonden: {list(creds.keys())}. Verwacht: 'token' of 'tokens'.")
+              print(f"::error title=Onbekend formaat::Sleutels: {list(creds.keys())}. Verwacht 'token' of 'tokens'.")
               sys.exit(1)
 
           path = os.path.expanduser('~/.clasprc.json')
@@ -101,7 +139,6 @@ jobs:
         run: |
           echo "clasp versie: $(clasp --version)"
           echo "Script ID:    $(python3 -c "import json; print(json.load(open('.clasp.json'))['scriptId'])")"
-          echo "rootDir:      $(python3 -c "import json; print(json.load(open('.clasp.json')).get('rootDir','.'))")"
 
           set +e
           OUTPUT=$(clasp push --force 2>&1)
@@ -110,11 +147,10 @@ jobs:
           echo "$OUTPUT"
 
           if [ $EXIT -ne 0 ]; then
-            FOUT=$(echo "$OUTPUT" | head -5 | tr '\n' ' ')
             if echo "$OUTPUT" | grep -qi "login\|auth\|401\|403\|credential"; then
-              echo "::error title=Authenticatie mislukt::Vernieuw het CLASP_CREDENTIALS secret in GitHub Settings → Secrets → Actions. Zie README voor instructies."
+              echo "::error title=Authenticatie mislukt::Vernieuw CLASP_CREDENTIALS in GitHub Settings → Secrets → Actions."
             else
-              echo "::error title=clasp push mislukt::$FOUT"
+              echo "::error title=clasp push mislukt::$(echo "$OUTPUT" | head -3 | tr '\n' ' ')"
             fi
             exit $EXIT
           fi
