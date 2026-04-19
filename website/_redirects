@@ -1,2 +1,5 @@
 # www naar non-www
 https://www.boekhoudbaar.nl/* https://boekhoudbaar.nl/:splat 301
+
+# Checkout — wijst naar licentieserver GAS Web App
+/kopen https://script.google.com/macros/s/AKfycbyq5Xrvh4bFXkcjpjsdaPS-UJm3b7h-X7kGyfdTnDNcNS2brUX0q86pRU7Q2nSMCOWsMg/exec 302

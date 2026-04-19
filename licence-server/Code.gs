@@ -28,10 +28,12 @@ function doGet(e) {
 
   const actie = (e && e.parameter && e.parameter.actie) || '';
 
-  if (actie === 'health')    return healthEndpoint_();
-  if (actie === 'valideer')  return valideerEndpoint_(e);
-  if (actie === 'bedankt')   return bedanktPagina_(e);
-  if (actie === 'admin')     return adminPaneel_(e);
+  if (actie === 'health')        return healthEndpoint_();
+  if (actie === 'valideer')      return valideerEndpoint_(e);
+  if (actie === 'aanvraag-otp')  return aanvraagOtpEndpoint_(e);
+  if (actie === 'activeer-otp')  return activeerOtpEndpoint_(e);
+  if (actie === 'bedankt')       return bedanktPagina_(e);
+  if (actie === 'admin')         return adminPaneel_(e);
 
   // Standaard: betaalpagina tonen
   return betaalPagina_(e);
@@ -75,8 +77,8 @@ function healthEndpoint_() {
 
 function betaalPagina_(e) {
   const props = PropertiesService.getScriptProperties();
-  const naam  = props.getProperty('PRODUCT_NAAM')  || 'Boekhouding Engine';
-  const prijs = props.getProperty('PRODUCT_PRIJS') || '49.00';
+  const naam  = props.getProperty('PRODUCT_NAAM')  || 'Boekhoudbaar';
+  const prijs = props.getProperty('PRODUCT_PRIJS') || '49';
 
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -109,11 +111,11 @@ function betaalPagina_(e) {
   <div class="prijs">€${prijs}</div>
   <div class="sub">Eenmalige aankoop — geen abonnement — altijd van u</div>
   <div class="voordelen">
-    ✅ Volledige boekhouding in Google Spreadsheets<br>
-    ✅ PDF-facturen direct naar klanten sturen<br>
+    ✅ Volledige ZZP-boekhouding in Google Spreadsheets<br>
+    ✅ PDF-facturen aanmaken en direct e-mailen<br>
     ✅ BTW-aangifte automatisch berekend<br>
-    ✅ Koppelbaar met uw website of webshop<br>
-    ✅ Uw data blijft op uw eigen Google Drive
+    ✅ Belastingvoordelen automatisch gesignaleerd<br>
+    ✅ Uw data blijft altijd op uw eigen Google Drive
   </div>
   <label>Uw naam *</label>
   <input type="text" id="naam" placeholder="Jan Jansen" autocomplete="name">
@@ -270,6 +272,131 @@ function verwerkMollieWebhook_(e) {
 }
 
 // ─────────────────────────────────────────────
+//  OTP — STAP 1: CODE AANVRAGEN
+// ─────────────────────────────────────────────
+function aanvraagOtpEndpoint_(e) {
+  const email = String((e.parameter.email || '')).trim().toLowerCase();
+  if (!email.includes('@')) return jsonResp_({ ok: false, fout: 'Ongeldig e-mailadres.' });
+
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  let gevonden = false;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][2]).toLowerCase() === email &&
+        String(data[i][4]).toLowerCase() === 'actief') { gevonden = true; break; }
+  }
+  if (!gevonden) {
+    return jsonResp_({ ok: false, fout: 'Dit e-mailadres is niet bekend als klant. Controleer het e-mailadres waarmee je hebt gekocht.' });
+  }
+
+  // Rate limit: max 1 aanvraag per 60 seconden
+  const props  = PropertiesService.getScriptProperties();
+  const lastTs = parseInt(props.getProperty('otp_ts_' + email) || '0');
+  if (Date.now() - lastTs < 60000) {
+    return jsonResp_({ ok: false, fout: 'Even wachten — je kunt eens per minuut een code aanvragen.' });
+  }
+
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  props.setProperty('otp_' + email, JSON.stringify({ code: otp, expiry: Date.now() + 15 * 60 * 1000 }));
+  props.setProperty('otp_ts_' + email, String(Date.now()));
+  stuurOtpMail_(email, otp);
+  return jsonResp_({ ok: true });
+}
+
+// ─────────────────────────────────────────────
+//  OTP — STAP 2: ACTIVEREN MET CODE
+// ─────────────────────────────────────────────
+function activeerOtpEndpoint_(e) {
+  const email = String((e.parameter.email || '')).trim().toLowerCase();
+  const otp   = String((e.parameter.otp   || '')).trim();
+  const ssId  = String((e.parameter.ssId  || '')).trim();
+
+  if (!email || !otp) return jsonResp_({ ok: false, fout: 'E-mail en code zijn verplicht.' });
+
+  const props  = PropertiesService.getScriptProperties();
+  const otpRaw = props.getProperty('otp_' + email);
+  if (!otpRaw) return jsonResp_({ ok: false, fout: 'Geen code aangevraagd of al gebruikt. Vraag opnieuw een code aan.' });
+
+  let otpObj;
+  try { otpObj = JSON.parse(otpRaw); } catch (_) { return jsonResp_({ ok: false, fout: 'Ongeldige code.' }); }
+
+  if (Date.now() > otpObj.expiry) {
+    props.deleteProperty('otp_' + email);
+    return jsonResp_({ ok: false, fout: 'Code verlopen (geldig 15 min). Vraag een nieuwe code aan.' });
+  }
+  if (otpObj.code !== otp) return jsonResp_({ ok: false, fout: 'Onjuiste code. Controleer je e-mail.' });
+
+  // Eenmalig gebruik — code direct verwijderen
+  props.deleteProperty('otp_' + email);
+  props.deleteProperty('otp_ts_' + email);
+
+  // Zoek actieve licentie voor dit e-mailadres
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][2]).toLowerCase() !== email) continue;
+    if (String(data[i][4]).toLowerCase() !== 'actief') continue;
+
+    const sleutel    = String(data[i][0]);
+    const naam       = String(data[i][1]);
+    const huidigSsId = String(data[i][6] || '');
+
+    if (ssId) {
+      if (!huidigSsId) {
+        sheet.getRange(i + 1, 7).setValue(ssId); // Eerste activatie — bind spreadsheet-ID
+      } else if (huidigSsId !== ssId) {
+        return jsonResp_({ ok: false, fout: 'Licentie is al actief op een andere spreadsheet. Neem contact op via hallo@boekhoudbaar.nl' });
+      }
+    }
+    sheet.getRange(i + 1, 10).setValue(new Date());
+    return jsonResp_({ ok: true, sleutel, naam });
+  }
+  return jsonResp_({ ok: false, fout: 'Geen actieve licentie gevonden voor dit e-mailadres.' });
+}
+
+// ─────────────────────────────────────────────
+//  OTP E-MAIL
+// ─────────────────────────────────────────────
+function stuurOtpMail_(email, otp) {
+  const props    = PropertiesService.getScriptProperties();
+  const brevoKey = props.getProperty('BREVO_API_KEY') || '';
+  const vanEmail = props.getProperty('VAN_EMAIL')     || 'hallo@boekhoudbaar.nl';
+  const vanNaam  = props.getProperty('VAN_NAAM')      || 'Boekhoudbaar';
+
+  const html = `<!DOCTYPE html><html lang="nl"><body style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:20px;background:#f8fafc">
+  <div style="background:#1A237E;padding:20px 24px;border-radius:10px 10px 0 0;text-align:center">
+    <h2 style="color:#fff;margin:0;font-size:18px">📊 Boekhoudbaar — Activeringscode</h2>
+  </div>
+  <div style="background:#fff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px">
+    <p>Je activeringscode:</p>
+    <div style="background:#E8EAF6;border-radius:10px;padding:20px;text-align:center;margin:16px 0">
+      <code style="font-size:36px;font-weight:800;color:#1A237E;letter-spacing:8px">${otp}</code>
+    </div>
+    <p style="color:#666;font-size:13px">Geldig voor <strong>15 minuten</strong>. Voer de code in de spreadsheet in.</p>
+    <p style="color:#999;font-size:11px;margin-top:12px">Heb je geen code aangevraagd? Negeer dit bericht.</p>
+  </div></body></html>`;
+
+  if (brevoKey) {
+    try {
+      UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'post', contentType: 'application/json',
+        headers: { 'api-key': brevoKey, 'accept': 'application/json' },
+        payload: JSON.stringify({
+          sender: { name: vanNaam, email: vanEmail },
+          to: [{ email }],
+          subject: 'Je activeringscode Boekhoudbaar: ' + otp,
+          htmlContent: html,
+        }),
+        muteHttpExceptions: true,
+      });
+      return;
+    } catch (_) {}
+  }
+  MailApp.sendEmail(email, 'Activeringscode Boekhoudbaar: ' + otp,
+    'Code: ' + otp + '\n\nGeldig 15 minuten. Voer in via de spreadsheet.', { htmlBody: html });
+}
+
+// ─────────────────────────────────────────────
 //  VALIDEER-ENDPOINT (aangeroepen door Licentie.gs)
 // ─────────────────────────────────────────────
 function valideerEndpoint_(e) {
@@ -385,52 +512,52 @@ function adminPaneel_(e) {
 //  E-MAIL NAAR KLANT
 // ─────────────────────────────────────────────
 function stuurLicentiemail_(naam, email, sleutel) {
-  const props        = PropertiesService.getScriptProperties();
-  const productnm    = props.getProperty('PRODUCT_NAAM')   || 'Boekhoudbaar';
-  const installerUrl = props.getProperty('INSTALLER_URL')  || '';
-  const brevoKey     = props.getProperty('BREVO_API_KEY')  || '';
-  const vanEmail     = props.getProperty('VAN_EMAIL')      || 'hallo@boekhoudbaar.nl';
-  const vanNaam      = props.getProperty('VAN_NAAM')       || 'Sam van Boekhoudbaar';
+  const props       = PropertiesService.getScriptProperties();
+  const productnm   = props.getProperty('PRODUCT_NAAM')    || 'Boekhoudbaar';
+  const templateId  = props.getProperty('TEMPLATE_SS_ID')  || '';
+  const brevoKey    = props.getProperty('BREVO_API_KEY')   || '';
+  const vanEmail    = props.getProperty('VAN_EMAIL')       || 'hallo@boekhoudbaar.nl';
+  const vanNaam     = props.getProperty('VAN_NAAM')        || 'Sam van Boekhoudbaar';
 
-  const activatieLink = installerUrl
-    ? installerUrl + '?sleutel=' + encodeURIComponent(sleutel)
+  // Klant krijgt een "Maak een kopie"-link naar het master-sjabloon.
+  // Na het openen vult de klant zijn e-mailadres in, ontvangt een OTP en activeert.
+  const kopieerLink = templateId
+    ? 'https://docs.google.com/spreadsheets/d/' + templateId + '/copy'
     : '';
+
+  const stappenHtml = kopieerLink ? `
+    <div style="background:#E8EAF6;border-radius:10px;padding:20px;margin:20px 0">
+      <p style="margin:0 0 12px;font-weight:700;color:#1A237E">In 3 stappen aan de slag:</p>
+      <p style="margin:0 0 8px;font-size:14px">① Klik op de knop hieronder om je spreadsheet te openen</p>
+      <p style="margin:0 0 8px;font-size:14px">② Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode</p>
+      <p style="margin:0;font-size:14px">③ Voer de code in en je boekhouding is direct klaar voor gebruik</p>
+    </div>
+    <div style="text-align:center;margin:24px 0">
+      <a href="${kopieerLink}" style="background:#1A237E;color:#fff;padding:16px 32px;
+         border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block">
+        🚀 Open mijn boekhouding →
+      </a>
+    </div>
+    <p style="font-size:12px;color:#94a3b8;text-align:center;word-break:break-all">
+      Werkt de knop niet? Kopieer: ${kopieerLink}</p>
+  ` : `
+    <p style="font-size:14px;color:#64748b">Je ontvangt binnenkort een link om je boekhouding te openen.
+    Vragen? Mail naar <a href="mailto:${vanEmail}" style="color:#1A237E">${vanEmail}</a>.</p>
+  `;
 
   const htmlBody = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#1a1a2e;background:#f8fafc">
   <div style="background:#1A237E;padding:28px 24px;border-radius:10px 10px 0 0;text-align:center">
     <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800">📊 ${productnm}</h1>
-    <p style="color:#C5CAE9;margin:6px 0 0;font-size:14px">Bestelling bevestigd — jouw licentiesleutel staat hieronder</p>
+    <p style="color:#C5CAE9;margin:6px 0 0;font-size:14px">Bestelling bevestigd — je boekhouding staat klaar</p>
   </div>
   <div style="background:#fff;padding:28px 24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px">
     <p style="font-size:16px">Hoi ${naam},</p>
-    <p>Gefeliciteerd — je boekhouding staat nu klaar om te activeren. Bewaar deze e-mail goed.</p>
-
-    <div style="background:#E8EAF6;border-radius:10px;padding:20px;margin:20px 0;text-align:center">
-      <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:1.5px;color:#666;text-transform:uppercase">Jouw licentiesleutel</p>
-      <code style="font-size:26px;font-weight:800;color:#1A237E;letter-spacing:3px">${sleutel}</code>
-    </div>
-
-    ${activatieLink ? `
-    <div style="text-align:center;margin:28px 0">
-      <a href="${activatieLink}" style="background:#1A237E;color:#fff;padding:16px 32px;
-         border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block">
-        🚀 Boekhouding activeren →
-      </a>
-    </div>
-    <p style="font-size:12px;color:#94a3b8;text-align:center;word-break:break-all">
-      Of kopieer deze link: ${activatieLink}</p>
-    ` : ''}
-
-    <p style="font-size:14px;color:#64748b;margin-top:24px">
-      <strong>Volgende stap:</strong> klik op de knop hierboven. Je Google Spreadsheet wordt
-      automatisch aangemaakt in jouw Drive. Activeren duurt 5 minuten.
-    </p>
-
+    <p>Gefeliciteerd met je aankoop van ${productnm}! Je boekhouding staat klaar om te activeren.</p>
+    ${stappenHtml}
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
     <p style="font-size:13px;color:#94a3b8">
-      Vragen? Stuur een e-mail naar <a href="mailto:${vanEmail}" style="color:#1A237E">${vanEmail}</a>.<br>
-      Helpdesk: <a href="https://help.boekhoudbaar.nl" style="color:#1A237E">help.boekhoudbaar.nl</a>
+      Vragen? Stuur een e-mail naar <a href="mailto:${vanEmail}" style="color:#1A237E">${vanEmail}</a>.
     </p>
     <p style="font-size:12px;color:#cbd5e1">
       ${productnm} · KVK 00000000 · <a href="https://www.boekhoudbaar.nl/privacy" style="color:#94a3b8">Privacybeleid</a>
@@ -439,28 +566,24 @@ function stuurLicentiemail_(naam, email, sleutel) {
 </body></html>`;
 
   if (brevoKey) {
-    // Stuur via Brevo API (geen GAS-quota, 300/dag gratis)
-    const payload = {
-      sender:     { name: vanNaam, email: vanEmail },
-      to:         [{ email: email, name: naam }],
-      subject:    'Je ' + productnm + ' licentiesleutel 🎉',
-      htmlContent: htmlBody,
-      tags:       ['licentie', 'dag0'],
-      params:     { naam: naam, sleutel: sleutel },
-    };
     UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'post',
       contentType: 'application/json',
       headers: { 'api-key': brevoKey },
-      payload: JSON.stringify(payload),
+      payload: JSON.stringify({
+        sender:      { name: vanNaam, email: vanEmail },
+        to:          [{ email: email, name: naam }],
+        subject:     'Je ' + productnm + ' is klaar — activeer nu 🚀',
+        htmlContent: htmlBody,
+        tags:        ['licentie', 'dag0'],
+        params:      { naam: naam },
+      }),
       muteHttpExceptions: true,
     });
   } else {
-    // Fallback: GAS MailApp (max 100/dag op consumer-account)
-    MailApp.sendEmail({ to: email, subject: 'Je licentiesleutel — ' + productnm, htmlBody: htmlBody });
+    MailApp.sendEmail({ to: email, subject: 'Je ' + productnm + ' is klaar — activeer nu', htmlBody: htmlBody });
   }
 
-  // Voeg contact toe in Brevo voor automatisatie-sequentie
   if (brevoKey) maakBrevoContact_(naam, email, sleutel, brevoKey);
 }
 
