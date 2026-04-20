@@ -170,11 +170,23 @@
 
   /* ── HERO ── */
   .hero {
-    background: linear-gradient(135deg, #0d1b6e 0%, #1A237E 50%, #1565C0 100%);
+    position: relative;
+    background: linear-gradient(160deg, #0D1B4E 0%, #132661 55%, #1A3A7E 100%);
     color: var(--wit);
-    padding: 80px 24px 96px;
+    padding: 104px 24px 112px;
     text-align: center;
+    overflow: hidden;
   }
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(600px 320px at 18% 15%, rgba(46,196,182,.18), transparent 60%),
+      radial-gradient(520px 280px at 82% 85%, rgba(46,196,182,.12), transparent 65%);
+    pointer-events: none;
+  }
+  .hero > * { position: relative; }
   .hero-badge {
     display: inline-block;
     background: rgba(255,255,255,.15);
