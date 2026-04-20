@@ -27,10 +27,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '22'
           cache: 'npm'
       - name: Installeer dependencies
         run: npm ci
+        env:
+          HUSKY: '0'
       - name: ESLint
         run: npm run lint
 
@@ -44,10 +46,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '22'
           cache: 'npm'
       - name: Installeer dependencies
         run: npm ci
+        env:
+          HUSKY: '0'
       - name: Jest
         run: npm test
 
@@ -65,7 +69,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '22'
           cache: 'npm'
 
       - name: clasp installeren
@@ -74,12 +78,12 @@ jobs:
       - name: Projectafhankelijkheden installeren
         run: npm ci
 
-      - name: Credentials normaliseren en schrijven
+      - name: Credentials normaliseren en token vernieuwen
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
         run: |
           python3 << 'PYTHON'
-          import json, os, sys
+          import json, os, sys, time, urllib.request, urllib.parse
 
           raw = os.environ.get('CLASP_CREDENTIALS', '').strip()
           if not raw:
@@ -92,45 +96,64 @@ jobs:
               print(f"::error title=Ongeldige JSON::JSON-fout: {e}.")
               sys.exit(1)
 
+          # Normaliseer naar clasp-formaat
           # Formaat A: {"tokens": {"default": {...}}} — gcloud / nieuwe clasp
           if 'tokens' in creds and 'default' in creds.get('tokens', {}):
               d = creds['tokens']['default']
-              clasp_creds = {
-                  "token": {
-                      "access_token":  d.get("access_token", ""),
-                      "refresh_token": d.get("refresh_token", ""),
-                      "token_type":    d.get("token_type", "Bearer"),
-                      "expiry_date":   d.get("expiry_date", 0)
-                  },
-                  "oauth2ClientSettings": {
-                      "clientId":     d.get("client_id", ""),
-                      "clientSecret": d.get("client_secret", ""),
-                      "redirectUri":  "http://localhost"
-                  },
-                  "isLocalCreds": False
-              }
-              import time
-              exp = d.get("expiry_date", 0)
-              geldig = "nog geldig" if exp > time.time() * 1000 else "verlopen — refresh_token wordt gebruikt"
-              print(f"✓ Credential-formaat geconverteerd — token: {geldig}")
-
+              token_data    = { "access_token": d.get("access_token",""), "refresh_token": d.get("refresh_token",""),
+                                "token_type": d.get("token_type","Bearer"), "expiry_date": d.get("expiry_date",0) }
+              oauth_settings = { "clientId": d.get("client_id",""), "clientSecret": d.get("client_secret",""),
+                                 "redirectUri": "http://localhost" }
           # Formaat B: standaard clasp {"token": {...}}
           elif 'token' in creds:
-              clasp_creds = creds
-              import time
-              exp = creds.get("token", {}).get("expiry_date", 0)
-              geldig = "nog geldig" if exp > time.time() * 1000 else "verlopen — refresh_token wordt gebruikt"
-              print(f"✓ Credentials in clasp-formaat — token: {geldig}")
-
+              token_data    = creds['token']
+              oauth_settings = creds.get('oauth2ClientSettings', {})
           else:
               print(f"::error title=Onbekend formaat::Sleutels: {list(creds.keys())}. Verwacht 'token' of 'tokens'.")
               sys.exit(1)
+
+          refresh_token  = token_data.get('refresh_token', '')
+          client_id      = oauth_settings.get('clientId', '')
+          client_secret  = oauth_settings.get('clientSecret', '')
+
+          if not refresh_token:
+              print("::error title=Geen refresh_token::CLASP_CREDENTIALS mist een refresh_token. Zie INFRA.md §Clasp.")
+              sys.exit(1)
+
+          # Vernieuw access_token via Google OAuth2 — zodat CI nooit faalt door een verlopen token
+          new_access  = token_data.get('access_token', '')
+          new_expiry  = token_data.get('expiry_date', 0)
+
+          if client_id and client_secret:
+              try:
+                  body = urllib.parse.urlencode({
+                      'client_id': client_id, 'client_secret': client_secret,
+                      'refresh_token': refresh_token, 'grant_type': 'refresh_token',
+                  }).encode()
+                  req = urllib.request.Request('https://oauth2.googleapis.com/token', data=body, method='POST')
+                  with urllib.request.urlopen(req, timeout=20) as resp:
+                      new_token = json.loads(resp.read())
+                  new_access = new_token['access_token']
+                  new_expiry = int(time.time() * 1000) + new_token.get('expires_in', 3600) * 1000
+                  print(f"✓ Access token vernieuwd (geldig {new_token.get('expires_in',3600)}s)")
+              except Exception as e:
+                  print(f"::warning::Token-refresh mislukt ({e}) — clasp probeert zelf te vernieuwen")
+          else:
+              # Geen OAuth-app-credentials in secret — clasp gebruikt ingebouwde credentials
+              print("ℹ️  Geen clientId/clientSecret in secret; clasp vernieuwt intern (standaard clasp-login)")
+
+          clasp_creds = {
+              "token": { "access_token": new_access, "refresh_token": refresh_token,
+                         "token_type": "Bearer", "expiry_date": new_expiry },
+              "oauth2ClientSettings": oauth_settings,
+              "isLocalCreds": False
+          }
 
           path = os.path.expanduser('~/.clasprc.json')
           with open(path, 'w') as f:
               json.dump(clasp_creds, f)
           os.chmod(path, 0o600)
-          print("✓ ~/.clasprc.json geschreven")
+          print("✓ ~/.clasprc.json geschreven met vers token")
           PYTHON
 
       - name: clasp push

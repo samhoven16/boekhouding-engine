@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 244 52" role="img" aria-label="Boekhoudbaar">
+  <title>Boekhoudbaar</title>
+  <rect width="52" height="52" rx="10" fill="#0D1B4E"/>
+  <rect x="9" y="8" width="34" height="4.5" rx="2" fill="rgba(255,255,255,.7)"/>
+  <rect x="9" y="15.5" width="24" height="4.5" rx="2" fill="rgba(255,255,255,.7)"/>
+  <rect x="9" y="23" width="34" height="4.5" rx="2" fill="#2EC4B6"/>
+  <rect x="9" y="30.5" width="28" height="4.5" rx="2" fill="rgba(255,255,255,.7)"/>
+  <rect x="9" y="38" width="18" height="4.5" rx="2" fill="rgba(255,255,255,.7)"/>
+  <rect x="9" y="45.5" width="26" height="4.5" rx="2" fill="rgba(255,255,255,.7)"/>
+  <polyline points="38,13 44,7 44,13" stroke="#2EC4B6" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="38" y1="13" x2="44" y2="7" stroke="#2EC4B6" stroke-width="2" stroke-linecap="round"/>
+  <text x="62" y="37" font-family="Inter,-apple-system,BlinkMacSystemFont,Helvetica Neue,sans-serif" font-weight="800" font-size="26" letter-spacing="-0.8">
+    <tspan fill="#0D1B4E">Boekhoud</tspan><tspan fill="#2EC4B6">baar</tspan>
+  </text>
+</svg>

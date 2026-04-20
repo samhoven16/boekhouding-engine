@@ -83,7 +83,7 @@ function controleerBtwDeadline_() {
     } else if (aangifte.saldo < -0.005) {
       saldoTekst = `\n\nVoorafinschatting: U kunt mogelijk € ${Math.abs(aangifte.saldo).toFixed(2).replace('.', ',')} terugvragen.`;
     }
-  } catch(e) { /* geen berekening beschikbaar */ }
+  } catch(_e) { /* geen berekening beschikbaar */ }
 
   const onderwerp = `⏰ BTW aangifte herinnering — ${kw.naam} (deadline ${kw.deadline.toLocaleDateString('nl-NL')})`;
   const body = `Beste,

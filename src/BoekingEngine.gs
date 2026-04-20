@@ -299,7 +299,7 @@ function _slaBonoOp_(base64Data, mimeType, naam) {
     const decoded = Utilities.base64Decode(base64Data);
     const mime    = mimeType || 'image/jpeg';
     const ext     = mime.includes('pdf') ? 'pdf' : (mime.split('/')[1] || 'jpg');
-    const blob    = Utilities.newBlob(decoded, mime, naam.replace(/[\/\\:*?"<>|]/g, '_') + '.' + ext);
+    const blob    = Utilities.newBlob(decoded, mime, naam.replace(/[/\\:*?"<>|]/g, '_') + '.' + ext);
     let folder;
     const mappen = DriveApp.getFoldersByName('Bonnetjes & Ontvangstbewijzen');
     folder = mappen.hasNext() ? mappen.next() : DriveApp.createFolder('Bonnetjes & Ontvangstbewijzen');
