@@ -66,7 +66,6 @@ function berekenBelastingadvies_(ss) {
   const jaar = new Date().getFullYear();
   const kg = berekenKengetallen_(ss);
   const omzet = kg.omzet;
-  const kosten = kg.kosten;
   const winst = kg.nettowinst;
   const rechtsvorm = getInstelling_('Rechtsvorm') || 'Eenmanszaak';
   const isZzp = ['Eenmanszaak', 'ZZP', 'VOF'].includes(rechtsvorm);
@@ -566,7 +565,7 @@ function signaleerAfschrijvingskandidaat_(ss, bedrag, leverancier, omschr) {
     schrijfAuditLog_('AFSCHRIJVING KANDIDAAT',
       `Aankoop ${formatBedrag_(bedrag)} bij ${leverancier} – "${omschr}" kan worden geactiveerd (≥ €${BELASTING.ACTIVEER_GRENS}). ` +
       `Boek op 0xxx-rekening + jaarlijkse afschrijving voor KIA (28% extra aftrek).`);
-  } catch (_) {}
+  } catch (_e) {}
 }
 
 // ─────────────────────────────────────────────
