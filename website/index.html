@@ -366,6 +366,18 @@
   details[open] summary::after { content: "−"; }
   details p { padding: 0 0 18px; font-size: 15px; color: var(--grijs); line-height: 1.7; }
 
+  /* ── CTA BANNER ── */
+  .cta-banner {
+    background: linear-gradient(160deg, #0D1B4E 0%, #132661 100%);
+    color: var(--wit);
+    text-align: center;
+    padding: 72px 24px;
+  }
+  .cta-banner h2 { color: var(--wit); margin-bottom: 10px; }
+  .cta-banner p { color: rgba(255,255,255,.78); max-width: 520px; margin: 0 auto 28px; }
+  .cta-banner .btn-primair { background: var(--accent); color: var(--blauw); }
+  .cta-banner .btn-primair:hover { background: #3ED1C3; }
+
   /* ── FOOTER ── */
   footer {
     background: var(--tekst); color: rgba(255,255,255,.6);
@@ -739,6 +751,13 @@
 
     </div>
   </div>
+</section>
+
+<!-- ── CTA BANNER ── -->
+<section class="cta-banner" aria-labelledby="cta-heading">
+  <h2 id="cta-heading">Klaar om je boekhouding over te nemen?</h2>
+  <p>Eenmalig €49. Jouw data blijft op jouw Drive.</p>
+  <a href="/kopen" class="btn-primair"><span>Start met Boekhoudbaar</span></a>
 </section>
 
 <!-- ── FOOTER ── -->
