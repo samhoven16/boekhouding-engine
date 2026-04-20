@@ -332,6 +332,37 @@
   .stap h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
   .stap p { font-size: 14px; color: var(--grijs); }
 
+  /* ── OPRICHTER ── */
+  .oprichter-sectie { background: var(--bg); }
+  .oprichter-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 40px;
+    margin-top: 40px;
+    align-items: start;
+  }
+  .oprichter-foto {
+    width: 200px; height: 200px; border-radius: 50%;
+    object-fit: cover;
+    background: var(--rand);
+    border: 4px solid var(--wit);
+    box-shadow: var(--shadow);
+  }
+  .oprichter-quote {
+    font-size: 22px; font-weight: 600; line-height: 1.4;
+    color: var(--blauw); margin-bottom: 20px;
+    border-left: 3px solid var(--accent);
+    padding-left: 18px;
+  }
+  .oprichter-tekst p { margin-bottom: 14px; color: var(--tekst); font-size: 16px; line-height: 1.7; }
+  .oprichter-naam { margin-top: 18px; font-size: 14px; color: var(--grijs); }
+  .oprichter-naam strong { color: var(--tekst); }
+  @media (max-width: 720px) {
+    .oprichter-grid { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+    .oprichter-quote { border-left: none; border-top: 3px solid var(--accent); padding-left: 0; padding-top: 14px; text-align: left; }
+    .oprichter-tekst { text-align: left; }
+  }
+
   /* ── PRICING ── */
   .pricing-sectie { background: linear-gradient(180deg, #fff 0%, var(--bg) 100%); }
   .pricing-kaart {
@@ -692,6 +723,23 @@
         <div class="stap-nr" aria-hidden="true">4</div>
         <h3>Klaar</h3>
         <p>Stuur je eerste factuur, boek je eerste kosten — je boekhouding loopt.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── OPRICHTER ── -->
+<section class="oprichter-sectie" aria-labelledby="oprichter-heading">
+  <div class="container">
+    <p class="section-label">Wie hier achter zit</p>
+    <h2 id="oprichter-heading">Gemaakt door één zelfstandige, voor zelfstandigen</h2>
+    <div class="oprichter-grid">
+      <img src="/sam-hoven.jpg" alt="Sam Hoven, oprichter van Boekhoudbaar" class="oprichter-foto" width="200" height="200" loading="lazy">
+      <div class="oprichter-tekst">
+        <p class="oprichter-quote">"Ik wilde een boekhouding die ik snapte, die van mij was, en waar ik nooit meer een abonnement voor hoef af te sluiten."</p>
+        <p>Boekhoudbaar is ontstaan uit frustratie met mijn eigen administratie. Ieder jaar €300 betalen voor software die ik een paar keer per maand gebruikte, met een interface die vooral voor accountants geschreven leek — dat voelde niet goed.</p>
+        <p>Dus heb ik het zelf gebouwd, in Google Sheets, zodat het bestand voor altijd van mij blijft. Geen abonnement, geen vendor lock-in, geen verrassingen. Het werkt voor mij — en inmiddels voor een paar honderd andere zelfstandigen ook.</p>
+        <p class="oprichter-naam"><strong>Sam Hoven</strong> · oprichter</p>
       </div>
     </div>
   </div>
