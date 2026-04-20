@@ -258,6 +258,25 @@
   h2 { font-size: clamp(26px, 3.5vw, 40px); font-weight: 800; line-height: 1.2; color: var(--blauw); }
   .sub-tekst { font-size: 17px; color: var(--grijs); margin-top: 12px; max-width: 600px; }
 
+  /* ── PROBLEEM ── */
+  .probleem-sectie { background: #0D1B4E; color: rgba(255,255,255,.88); }
+  .probleem-sectie .section-label { color: var(--accent); }
+  .probleem-sectie h2 { color: var(--wit); }
+  .probleem-sectie .sub-tekst { color: rgba(255,255,255,.7); }
+  .probleem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px; margin-top: 40px;
+  }
+  .probleem-kaart {
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .probleem-kaart h3 { font-size: 16px; font-weight: 700; color: var(--wit); margin-bottom: 6px; }
+  .probleem-kaart p { font-size: 14px; color: rgba(255,255,255,.7); line-height: 1.6; }
+
   /* ── USP GRID ── */
   .usp-grid {
     display: grid;
@@ -512,6 +531,29 @@
     Jouw data blijft <strong>altijd van jou</strong>
   </p>
 </div>
+
+<!-- ── PROBLEEM ── -->
+<section class="probleem-sectie" aria-labelledby="probleem-heading">
+  <div class="container">
+    <p class="section-label">Waarom het beter kan</p>
+    <h2 id="probleem-heading">Boekhoudsoftware is duur, gesloten en niet voor jou gebouwd</h2>
+    <p class="sub-tekst">Moneybird, e-Boekhouden en Jortt zijn prima — maar ze zijn niet gemaakt met de zelfstandige in gedachten.</p>
+    <div class="probleem-grid" role="list">
+      <div class="probleem-kaart" role="listitem">
+        <h3>€300+ per jaar, elk jaar opnieuw</h3>
+        <p>Een abonnement dat doorloopt zolang je onderneemt. Na vijf jaar heb je €1.500 tot €2.500 betaald — voor iets dat in de kern een spreadsheet is.</p>
+      </div>
+      <div class="probleem-kaart" role="listitem">
+        <h3>Je data staat op hún server</h3>
+        <p>Stop je met het abonnement, dan verlies je je toegang. Exporteren kan vaak alleen in hun formaat. Jouw zeven jaar administratie zit vast in hun systeem.</p>
+      </div>
+      <div class="probleem-kaart" role="listitem">
+        <h3>Gebouwd voor accountants, niet voor jou</h3>
+        <p>Dubbel boekhouden, grootboekrekeningen, debet/credit. Prima als je accountant bent — onnodig complex als je gewoon je eigen boekhouding wilt bijhouden.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- ── FUNCTIES ── -->
 <section id="functies">
