@@ -37,7 +37,6 @@ function onOpen() {
     // ── Dagelijks gebruik ─────────────────────
     .addItem('📊 Dashboard openen', 'openDashboard')
     .addItem('➕ Nieuwe boeking (factuur / kosten / declaratie / bon)', 'openNieuweBoeking')
-    .addItem('📧 Factuur per e-mail versturen', 'stuurVerkoopfactuurPdf')
     .addSeparator()
 
     // ── Facturen ──────────────────────────────
