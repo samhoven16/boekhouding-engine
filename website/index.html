@@ -489,15 +489,24 @@
 
   /* ── CTA BANNER ── */
   .cta-banner {
+    position: relative;
     background: linear-gradient(160deg, #0D1B4E 0%, #132661 100%);
     color: var(--wit);
     text-align: center;
-    padding: 72px 24px;
+    padding: 88px 24px;
+    overflow: hidden;
   }
-  .cta-banner h2 { color: var(--wit); margin-bottom: 10px; }
-  .cta-banner p { color: rgba(255,255,255,.78); max-width: 520px; margin: 0 auto 28px; }
+  .cta-banner::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(420px 220px at 50% 120%, rgba(46,196,182,.22), transparent 70%);
+    pointer-events: none;
+  }
+  .cta-banner > * { position: relative; }
+  .cta-banner h2 { color: var(--wit); margin-bottom: 12px; }
+  .cta-banner p { color: rgba(255,255,255,.78); max-width: 520px; margin: 0 auto 30px; }
   .cta-banner .btn-primair { background: var(--accent); color: var(--blauw); }
-  .cta-banner .btn-primair:hover { background: #3ED1C3; }
+  .cta-banner .btn-primair:hover { background: #3ED1C3; box-shadow: 0 8px 28px rgba(46,196,182,.35); }
 
   /* ── FOOTER ── */
   footer {
