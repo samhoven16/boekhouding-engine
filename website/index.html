@@ -178,8 +178,8 @@
   .logo { text-decoration: none; display: inline-flex; align-items: center; height: 32px; }
   .logo img { height: 28px; width: auto; display: block; }
   .nav-links { display: flex; gap: 28px; list-style: none; }
-  .nav-links a { text-decoration: none; color: var(--grijs); font-size: 15px; font-weight: 500; }
-  .nav-links a:hover { color: var(--blauw); }
+  .nav-links a { text-decoration: none; color: var(--grijs); font-size: 15px; font-weight: 500; transition: color .15s ease; }
+  .nav-links a:not(.nav-cta):hover { color: var(--blauw); }
   .nav-cta {
     background: var(--blauw); color: var(--wit) !important;
     padding: 9px 20px; border-radius: 8px; font-weight: 600 !important;
