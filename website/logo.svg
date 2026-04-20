@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 40" role="img" aria-label="Boekhoudbaar">
+  <g fill="none" stroke="#0D1B4E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="6" width="28" height="28" rx="5"/>
+    <path d="M10 14h16M10 20h16M10 26h10"/>
+  </g>
+  <circle cx="29" cy="31" r="4.5" fill="#2EC4B6"/>
+  <text x="44" y="27" font-family="Inter, -apple-system, 'Segoe UI', Arial, sans-serif" font-size="19" font-weight="800" fill="#0D1B4E" letter-spacing="-0.3">Boekhoud<tspan fill="#2EC4B6">baar</tspan></text>
+</svg>
