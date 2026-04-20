@@ -558,6 +558,16 @@
     border-radius: 4px;
   }
 
+  /* ── SKIP-LINK (WCAG 2.4.1) ── */
+  .skip-link {
+    position: absolute; left: -9999px; top: auto;
+    background: var(--blauw); color: var(--wit);
+    padding: 10px 16px; border-radius: 6px;
+    font-weight: 600; text-decoration: none;
+    z-index: 1000;
+  }
+  .skip-link:focus { left: 16px; top: 16px; }
+
   /* Sticky header scroll-margin fix (WCAG 2.4.11) */
   [id] { scroll-margin-top: 80px; }
 
@@ -572,6 +582,8 @@
 </style>
 </head>
 <body>
+
+<a href="#main" class="skip-link">Direct naar inhoud</a>
 
 <!-- ── NAVIGATIE ── -->
 <nav aria-label="Hoofdnavigatie">
