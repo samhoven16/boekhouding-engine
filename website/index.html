@@ -436,7 +436,12 @@
     font-size: 15px; display: flex; align-items: center; gap: 10px;
   }
   .prijs-lijst li:last-child { border-bottom: none; }
-  .prijs-lijst .vink { color: var(--groen); font-size: 17px; flex-shrink: 0; }
+  .prijs-lijst .vink {
+    color: var(--accent); font-size: 16px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(46,196,182,.14);
+  }
   .btn-koop {
     display: block; width: 100%;
     background: var(--blauw); color: var(--wit);
