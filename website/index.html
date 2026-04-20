@@ -176,8 +176,9 @@
     display: flex; align-items: center; justify-content: space-between;
     height: 64px;
   }
-  .logo { text-decoration: none; display: inline-flex; align-items: center; height: 32px; }
-  .logo img { height: 28px; width: auto; display: block; }
+  .logo { text-decoration: none; display: inline-flex; align-items: center; height: 36px; }
+  .logo img { height: 32px; width: auto; display: block; transition: opacity .15s ease; }
+  .logo:hover img { opacity: .85; }
   .nav-links { display: flex; gap: 28px; list-style: none; }
   .nav-links a { text-decoration: none; color: var(--grijs); font-size: 15px; font-weight: 500; transition: color .15s ease; }
   .nav-links a:not(.nav-cta):hover { color: var(--blauw); }
