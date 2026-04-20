@@ -594,6 +594,17 @@
     }
   }
 </style>
+<noscript>
+  <style>
+    /* Without JS the scroll listener never fires, so force the
+       white-on-scroll nav appearance on load. */
+    nav { background: rgba(255,255,255,.94); border-bottom-color: var(--rand); }
+    nav .logo img { filter: none; }
+    nav .nav-links a { color: var(--grijs); }
+    nav .nav-cta { background: var(--blauw); color: var(--wit) !important; }
+    nav .nav-toggle { color: var(--blauw); }
+  </style>
+</noscript>
 </head>
 <body>
 
