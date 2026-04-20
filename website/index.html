@@ -254,12 +254,16 @@
 
   /* ── SOCIAL PROOF STRIP ── */
   .proof-strip {
-    background: var(--bg); border-bottom: 1px solid var(--rand);
-    padding: 20px 24px;
+    background: var(--wit); border-bottom: 1px solid var(--rand);
+    padding: 22px 24px;
     text-align: center;
   }
-  .proof-strip p { color: var(--grijs); font-size: 14px; }
-  .proof-strip strong { color: var(--tekst); }
+  .proof-strip p {
+    color: var(--grijs); font-size: 14px;
+    max-width: 1100px; margin: 0 auto;
+    line-height: 1.8;
+  }
+  .proof-strip strong { color: var(--tekst); font-weight: 600; }
 
   /* ── SECTIONS ── */
   section { padding: 72px 24px; }
