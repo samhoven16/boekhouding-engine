@@ -370,10 +370,23 @@
   .oprichter-foto {
     width: 200px; height: 200px; border-radius: 50%;
     object-fit: cover;
-    background: var(--rand);
+    background: linear-gradient(135deg, #0D1B4E 0%, #1A3A7E 100%);
     border: 4px solid var(--wit);
     box-shadow: var(--shadow);
   }
+  .oprichter-foto[data-fallback="true"] { display: none; }
+  .oprichter-foto-initial {
+    width: 200px; height: 200px; border-radius: 50%;
+    background: linear-gradient(135deg, #0D1B4E 0%, #1A3A7E 100%);
+    color: var(--wit);
+    display: none;
+    align-items: center; justify-content: center;
+    font-size: 72px; font-weight: 800; letter-spacing: -0.02em;
+    border: 4px solid var(--wit);
+    box-shadow: var(--shadow);
+  }
+  .oprichter-foto.failed { display: none; }
+  .oprichter-foto.failed + .oprichter-foto-initial { display: flex; }
   .oprichter-quote {
     font-size: 22px; font-weight: 600; line-height: 1.4;
     color: var(--blauw); margin-bottom: 20px;
@@ -785,7 +798,8 @@
     <p class="section-label">Wie hier achter zit</p>
     <h2 id="oprichter-heading">Gemaakt door één zelfstandige, voor zelfstandigen</h2>
     <div class="oprichter-grid">
-      <img src="/sam-hoven.jpg" alt="Sam Hoven, oprichter van Boekhoudbaar" class="oprichter-foto" width="200" height="200" loading="lazy">
+      <img src="/sam-hoven.jpg" alt="Sam Hoven, oprichter van Boekhoudbaar" class="oprichter-foto" width="200" height="200" loading="lazy" onerror="this.classList.add('failed')">
+      <div class="oprichter-foto-initial" aria-hidden="true">SH</div>
       <div class="oprichter-tekst">
         <p class="oprichter-quote">"Ik wilde een boekhouding die ik snapte, die van mij was, en waar ik nooit meer een abonnement voor hoef af te sluiten."</p>
         <p>Boekhoudbaar is ontstaan uit frustratie met mijn eigen administratie. Ieder jaar €300 betalen voor software die ik een paar keer per maand gebruikte, met een interface die vooral voor accountants geschreven leek — dat voelde niet goed.</p>
