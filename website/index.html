@@ -527,6 +527,15 @@
 
   /* Sticky header scroll-margin fix (WCAG 2.4.11) */
   [id] { scroll-margin-top: 80px; }
+
+  /* Respect reduced-motion preference (WCAG 2.3.3) */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      transition-duration: .01ms !important;
+      animation-duration: .01ms !important;
+    }
+  }
 </style>
 </head>
 <body>
