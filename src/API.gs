@@ -376,7 +376,7 @@ function toonZapierInstructies() {
 // ─────────────────────────────────────────────
 //  JSON HELPERS
 // ─────────────────────────────────────────────
-function jsonResponse_(data, statusCode) {
+function jsonResponse_(data, _statusCode) {
   const output = ContentService.createTextOutput(JSON.stringify(data));
   output.setMimeType(ContentService.MimeType.JSON);
   return output;
@@ -384,5 +384,5 @@ function jsonResponse_(data, statusCode) {
 
 function safeJsonParse_(str) {
   try { return JSON.parse(str) || {}; }
-  catch (e) { return {}; }
+  catch (_e) { return {}; }
 }
