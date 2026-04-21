@@ -529,22 +529,38 @@ function bedanktPagina_(e) {
 <title>Betaling ontvangen</title>
 <style>
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
-       background:#E8F5E9;min-height:100vh;display:flex;align-items:center;
-       justify-content:center;padding:20px}
-  .card{background:#fff;border-radius:16px;padding:40px;max-width:460px;
-        width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.12)}
-  h1{color:#2E7D32;font-size:26px;margin:16px 0 8px}
-  p{color:#555;font-size:14px;line-height:1.7;margin-bottom:12px}
-  .info{background:#F1F8E9;border-radius:8px;padding:14px;font-size:13px;color:#33691E;margin:16px 0}
+       background:#F7F9FC;min-height:100vh;display:flex;align-items:center;
+       justify-content:center;padding:20px;color:#1A1A1A}
+  .card{background:#fff;border-radius:16px;padding:40px;max-width:520px;
+        width:100%;text-align:left;box-shadow:0 8px 32px rgba(13,27,78,.10)}
+  h1{color:#0D1B4E;font-size:24px;margin:8px 0 6px;text-align:center}
+  .sub{color:#5F6B7A;font-size:14px;text-align:center;margin-bottom:18px}
+  .info{background:#F7F9FC;border:1px solid #E5EAF2;border-radius:8px;padding:14px;font-size:13px;color:#1A1A1A;margin:14px 0}
+  .heads-up{background:#FFF8E1;border:1px solid #FFECB3;border-radius:10px;padding:14px 18px;margin:18px 0;font-size:13px;line-height:1.6;color:#5A3F00}
+  .heads-up strong{color:#5A3F00}
+  .heads-up ol{margin:6px 0 0;padding-left:20px}
+  .heads-up li{margin:3px 0}
+  .heads-up .google-note{margin-top:10px;padding-top:10px;border-top:1px dashed #E0D08A}
+  p{color:#5F6B7A;font-size:13px;line-height:1.7;margin:8px 0}
 </style></head><body>
 <div class="card">
-  <div style="font-size:56px">🎉</div>
-  <h1>Bedankt voor uw aankoop!</h1>
-  <p>Uw betaling is ontvangen. U ontvangt binnen enkele minuten een e-mail met uw licentiesleutel en installatielink.</p>
-  <div class="info">
-    <strong>Controleer ook uw spam-map</strong> als u na 5 minuten nog niets heeft ontvangen.
+  <div style="font-size:44px;text-align:center">🎉</div>
+  <h1>Bedankt voor je aankoop!</h1>
+  <p class="sub">Je betaling is ontvangen. Binnen enkele minuten staat er een e-mail in je inbox met je licentiesleutel en activatielink.</p>
+  <div class="info"><strong>Nog niets binnen na 5 minuten?</strong> Check je spam-map en zoek op <em>"Boekhoudbaar"</em>.</div>
+
+  <div class="heads-up">
+    <strong>Wat gebeurt er zo:</strong>
+    <ol>
+      <li>Je klikt op de activatielink in de mail.</li>
+      <li>Google vraagt je toestemming om een kopie in <strong>jouw Drive</strong> te zetten en <strong>namens jou mail te sturen</strong> (voor facturen).</li>
+      <li>Je ziet mogelijk <em>"Deze app is niet geverifieerd door Google"</em> — dat klopt, Boekhoudbaar is een éénpersoonszaak. Klik op <strong>Geavanceerd → Doorgaan</strong>.</li>
+      <li>Je boekhoudbestand opent. Vul je e-mail in, ontvang een 6-cijferige code, voer 'm in, klaar.</li>
+    </ol>
+    <p class="google-note" style="margin:10px 0 0">Je data blijft 100% op jouw eigen Drive. Wij hebben er geen toegang toe.</p>
   </div>
-  <p style="font-size:12px;color:#999">U kunt dit venster sluiten.</p>
+
+  <p style="text-align:center;font-size:12px;color:#94a3b8">Dit venster kun je sluiten.</p>
 </div></body></html>`;
 
   return HtmlService.createHtmlOutput(html).setTitle('Betaling ontvangen');
@@ -728,6 +744,18 @@ function stuurLicentiemail_(naam, email, sleutel) {
       <p style="margin:0 0 8px;font-size:14px">② Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode</p>
       <p style="margin:0;font-size:14px">③ Voer de code in en je boekhouding is direct klaar voor gebruik</p>
     </div>
+
+    <div style="background:#FFF8E1;border:1px solid #FFECB3;border-radius:10px;padding:16px 20px;margin:20px 0;font-size:13px;line-height:1.7;color:#5f4b14">
+      <p style="margin:0 0 8px;font-weight:700;color:#5A3F00">Wat Google je zo gaat vragen:</p>
+      <p style="margin:0 0 6px"><strong>1.</strong> Toegang tot <strong>je eigen Google&nbsp;Drive</strong> — precies de bedoeling: dáár komt jouw boekhoudbestand te staan.</p>
+      <p style="margin:0 0 6px"><strong>2.</strong> Toestemming om <strong>namens jou e-mail te sturen</strong> — zodat je facturen direct uit de sheet verstuurt.</p>
+      <p style="margin:0 0 10px"><strong>3.</strong> Verbinding met <strong>externe diensten</strong> — voor licentie-validatie en (optioneel) bank/Mollie-koppelingen.</p>
+      <p style="margin:0;padding-top:10px;border-top:1px dashed #E0D08A">
+        Google toont mogelijk <em>"Deze app is niet geverifieerd door Google"</em>. Dat klopt — Boekhoudbaar is een éénpersoonszaak, geen Google-partner.
+        Klik op <strong>Geavanceerd → Ga naar Boekhoudbaar (onveilig)</strong>. Je data blijft 100% op jóuw Drive; wij kunnen er niet bij.
+      </p>
+    </div>
+
     <div style="text-align:center;margin:24px 0">
       <a href="${kopieerLink}" style="background:#1A237E;color:#fff;padding:16px 32px;
          border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block">
