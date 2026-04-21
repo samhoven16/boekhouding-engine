@@ -72,6 +72,8 @@ function healthEndpoint_() {
     version: '1.0.3',
     licenses: licenseCount,
     mollie: !!props.getProperty('MOLLIE_API_KEY'),
+    templateReady: !!props.getProperty('TEMPLATE_SS_ID'),
+    brevo: !!props.getProperty('BREVO_API_KEY'),
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -485,6 +487,26 @@ function adminPaneel_(e) {
     ).setTitle('Admin');
   }
 
+  const props = PropertiesService.getScriptProperties();
+  const templateReady = !!props.getProperty('TEMPLATE_SS_ID');
+  const mollieReady   = !!props.getProperty('MOLLIE_API_KEY');
+  const brevoReady    = !!props.getProperty('BREVO_API_KEY');
+
+  let banners = '';
+  if (!templateReady) {
+    banners += '<div class="banner err"><strong>⚠ TEMPLATE_SS_ID ontbreekt.</strong> ' +
+               'De copy-link in de klant-e-mail is dan leeg. Vul Script Properties → ' +
+               '<code>TEMPLATE_SS_ID</code> met het ID van je master-spreadsheet.</div>';
+  }
+  if (!mollieReady) {
+    banners += '<div class="banner err"><strong>⚠ MOLLIE_API_KEY ontbreekt.</strong> ' +
+               'Betaalpagina werkt niet. Vul Script Properties.</div>';
+  }
+  if (!brevoReady) {
+    banners += '<div class="banner warn">Brevo niet geconfigureerd — transactionele e-mail ' +
+               'valt terug op <code>MailApp.sendEmail</code> (lagere deliverability).</div>';
+  }
+
   const sheet = getLicentieSheet_();
   const data  = sheet.getDataRange().getValues();
   let rijen   = '';
@@ -496,9 +518,14 @@ function adminPaneel_(e) {
 
   return HtmlService.createHtmlOutput(`
     <style>body{font-family:Arial;padding:20px;font-size:13px}
+    .banner{border-radius:6px;padding:10px 14px;margin-bottom:10px;font-size:13px}
+    .banner.err{background:#FDECEC;color:#B91C1C;border:1px solid #F5B3B3}
+    .banner.warn{background:#FFF8E1;color:#8B5A00;border:1px solid #E6D8A8}
+    code{background:#F1F3F5;padding:1px 6px;border-radius:3px;font-size:12px}
     table{width:100%;border-collapse:collapse}th,td{padding:7px 10px;
-    border:1px solid #ddd;text-align:left}th{background:#1A237E;color:#fff}
+    border:1px solid #ddd;text-align:left}th{background:#0D1B4E;color:#fff}
     tr:nth-child(even){background:#f5f5f5}</style>
+    ${banners}
     <h3>Licenties (${data.length - 1} totaal)</h3>
     <table><tr><th>Sleutel</th><th>Naam</th><th>Email</th>
     <th>Status</th><th>Installatie-ID</th><th>Laatste validatie</th></tr>
@@ -518,6 +545,26 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const brevoKey    = props.getProperty('BREVO_API_KEY')   || '';
   const vanEmail    = props.getProperty('VAN_EMAIL')       || 'hallo@boekhoudbaar.nl';
   const vanNaam     = props.getProperty('VAN_NAAM')        || 'Sam van Boekhoudbaar';
+
+  // Guard — zonder TEMPLATE_SS_ID kan de klant de copy-link niet gebruiken.
+  // Stuur een alert naar de eigenaar en markeer de licentie-rij zichtbaar.
+  if (!templateId) {
+    Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' (' + sleutel + ') wacht op activatielink.');
+    try { markeerTemplateOntbreekt_(sleutel); } catch (_) {}
+    try {
+      MailApp.sendEmail({
+        to: vanEmail,
+        subject: '⚠ Boekhoudbaar — TEMPLATE_SS_ID ontbreekt (' + email + ' wacht)',
+        htmlBody: '<p>Nieuwe klant <strong>' + naam + '</strong> (' + email + ') heeft betaald ' +
+                  'maar de copy-link kan niet worden opgebouwd omdat <code>TEMPLATE_SS_ID</code> ' +
+                  'ontbreekt in Script Properties.</p>' +
+                  '<p>Licentiesleutel: <code>' + sleutel + '</code></p>' +
+                  '<p>Vul <code>TEMPLATE_SS_ID</code> en run <code>herstuurLicentiemailHandmatig(&quot;' +
+                  sleutel + '&quot;)</code> in de editor.</p>',
+      });
+    } catch (_) {}
+    return;
+  }
 
   // Klant krijgt een "Maak een kopie"-link naar het master-sjabloon.
   // Na het openen vult de klant zijn e-mailadres in, ontvangt een OTP en activeert.
@@ -585,6 +632,47 @@ function stuurLicentiemail_(naam, email, sleutel) {
   }
 
   if (brevoKey) maakBrevoContact_(naam, email, sleutel, brevoKey);
+}
+
+/**
+ * Markeert een licentie-rij wanneer de eerste mail niet verstuurd kon worden
+ * wegens ontbrekende TEMPLATE_SS_ID. Admin-paneel toont de aangepaste status.
+ */
+function markeerTemplateOntbreekt_(sleutel) {
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === sleutel) {
+      sheet.getRange(i + 1, 5).setValue('Actief — wacht op TEMPLATE_SS_ID');
+      return;
+    }
+  }
+}
+
+/**
+ * Handmatig opnieuw de activatiemail versturen. Gebruiken wanneer de eerste
+ * mail faalde (bv. TEMPLATE_SS_ID stond toen nog niet ingesteld).
+ * Run in de editor: herstuurLicentiemailHandmatig("BKHE-XXXX-XXXX-XXXX")
+ */
+function herstuurLicentiemailHandmatig(sleutel) {
+  sleutel = String(sleutel || '').trim().toUpperCase();
+  if (!sleutel) throw new Error('Geef een licentiesleutel op.');
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).toUpperCase() !== sleutel) continue;
+    const naam  = String(data[i][1] || 'Klant');
+    const email = String(data[i][2] || '');
+    if (!email) throw new Error('Rij heeft geen e-mailadres.');
+    stuurLicentiemail_(naam, email, sleutel);
+    // Status normaliseren als 'm op de fallback stond
+    if (String(data[i][4]).indexOf('wacht op TEMPLATE') !== -1) {
+      sheet.getRange(i + 1, 5).setValue('Actief');
+    }
+    Logger.log('Mail opnieuw verstuurd naar ' + email);
+    return;
+  }
+  throw new Error('Sleutel niet gevonden: ' + sleutel);
 }
 
 function maakBrevoContact_(naam, email, sleutel, brevoKey) {
