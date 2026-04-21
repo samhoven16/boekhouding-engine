@@ -999,16 +999,23 @@ function setupLicentieSheet() {
   const props = PropertiesService.getScriptProperties();
   props.setProperty('LICENTIE_SHEET_ID', ss.getId());
 
-  // Stel defaults in voor niet-gevoelige properties (worden overschreven als al ingesteld)
+  // Stel alleen niet-gevoelige defaults in. Gevoelige properties
+  // (MOLLIE_API_KEY, ADMIN_WACHTWOORD, BREVO_API_KEY, TEMPLATE_SS_ID,
+  // KVK_NUMMER, BTW_NUMMER) moeten handmatig worden ingevuld per
+  // environment — nooit hardcoden.
   if (!props.getProperty('PRODUCT_NAAM'))  props.setProperty('PRODUCT_NAAM',  'Boekhouding Engine');
   if (!props.getProperty('PRODUCT_PRIJS')) props.setProperty('PRODUCT_PRIJS', '4900');
-  if (!props.getProperty('MOLLIE_API_KEY'))
-    props.setProperty('MOLLIE_API_KEY', 'test_j6zt7F42h3drBQQsfx2evx5pHHrWuD');
-  if (!props.getProperty('ADMIN_WACHTWOORD'))
-    props.setProperty('ADMIN_WACHTWOORD', 'BoekhoudAdmin2026!');
+
+  const ontbrekend = [];
+  if (!props.getProperty('MOLLIE_API_KEY'))    ontbrekend.push('MOLLIE_API_KEY');
+  if (!props.getProperty('ADMIN_WACHTWOORD'))  ontbrekend.push('ADMIN_WACHTWOORD');
+  if (!props.getProperty('TEMPLATE_SS_ID'))    ontbrekend.push('TEMPLATE_SS_ID');
 
   Logger.log('Licentie-spreadsheet aangemaakt: ' + ss.getUrl());
-  Logger.log('Alle Script Properties ingesteld.');
+  if (ontbrekend.length) {
+    Logger.log('::warning:: Verplichte Script Properties ontbreken nog: ' + ontbrekend.join(', '));
+    Logger.log('Vul ze in via Project Settings → Script Properties voordat je deployt.');
+  }
 }
 
 /**
