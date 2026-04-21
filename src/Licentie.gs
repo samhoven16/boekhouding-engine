@@ -369,6 +369,37 @@ function isLicentieGeldig_() {
 }
 
 /**
+ * Toont het globale bericht uit de centrale config (indien aanwezig en
+ * nog niet vandaag getoond voor dit exacte bericht). Non-intrusieve
+ * toast-notificatie rechtsonder in de spreadsheet. Faalt stil.
+ *
+ * Owner-workflow: Apps Script editor → Script Properties → zet
+ * GLOBAL_BERICHT op de tekst die je naar alle actieve klanten wilt
+ * sturen. Binnen 24u zien ze de toast bij het openen van hun sheet.
+ * Leeg laten = geen bericht.
+ */
+function toonGlobaalBerichtIndienNieuw_() {
+  const cfg = haalConfigOp_();
+  if (!cfg || !cfg.bericht) return;
+
+  const bericht = String(cfg.bericht).trim();
+  if (!bericht) return;
+
+  const userProps = PropertiesService.getUserProperties();
+  // Fingerprint: bericht + datum van vandaag. Bij wijziging OF nieuwe dag:
+  // opnieuw tonen. Zo ziet de klant hetzelfde bericht max 1×/dag.
+  const vandaag = new Date().toISOString().slice(0, 10);
+  const hash = String(bericht).length + '-' + bericht.substring(0, 40);
+  const fingerprint = vandaag + '|' + hash;
+  if (userProps.getProperty('globaalBerichtLaatst') === fingerprint) return;
+
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast(bericht, 'Boekhoudbaar', 10);
+    userProps.setProperty('globaalBerichtLaatst', fingerprint);
+  } catch (_) { /* toast niet beschikbaar in trigger-context, OK */ }
+}
+
+/**
  * Haalt centrale product-config op (versie, bericht, flags) en cachet
  * 24 uur in UserProperties. Returnt null wanneer offline of geen server.
  *
