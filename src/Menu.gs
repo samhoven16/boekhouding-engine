@@ -26,6 +26,9 @@ function onOpen() {
   // Onboarding wizard bij eerste gebruik + update-melding bij terugkerende gebruikers
   try { controleerOnboarding_(); } catch (e) { Logger.log('Onboarding check fout: ' + e.message); }
 
+  // Globaal bericht van licentieserver (bv. onderhoud, nieuwe versie) — max 1×/dag/bericht.
+  try { toonGlobaalBerichtIndienNieuw_(); } catch (e) { Logger.log('Globaal bericht overgeslagen: ' + e.message); }
+
   // Verberg automatisch aangemaakte formulier-responstabbladen (stil, geen popup)
   try {
     const _ss = getSpreadsheet_();
