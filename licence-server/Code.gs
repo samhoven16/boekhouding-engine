@@ -368,13 +368,13 @@ function stuurOtpMail_(email, otp) {
   const vanNaam  = props.getProperty('VAN_NAAM')      || 'Boekhoudbaar';
 
   const html = `<!DOCTYPE html><html lang="nl"><body style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:20px;background:#f8fafc">
-  <div style="background:#1A237E;padding:20px 24px;border-radius:10px 10px 0 0;text-align:center">
-    <h2 style="color:#fff;margin:0;font-size:18px">📊 Boekhoudbaar — Activeringscode</h2>
+  <div style="background:#0D1B4E;padding:24px;border-radius:10px 10px 0 0;text-align:center">
+    <h2 style="color:#fff;margin:0;font-size:18px;font-weight:700;letter-spacing:-0.01em">Boekhoudbaar — Activeringscode</h2>
   </div>
-  <div style="background:#fff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px">
-    <p>Je activeringscode:</p>
-    <div style="background:#E8EAF6;border-radius:10px;padding:20px;text-align:center;margin:16px 0">
-      <code style="font-size:36px;font-weight:800;color:#1A237E;letter-spacing:8px">${otp}</code>
+  <div style="background:#fff;padding:26px 24px;border:1px solid #E5EAF2;border-top:none;border-radius:0 0 10px 10px">
+    <p style="color:#1A1A1A;margin:0 0 14px">Je activeringscode:</p>
+    <div style="background:#F7F9FC;border:1px solid #E5EAF2;border-radius:10px;padding:20px;text-align:center;margin:16px 0">
+      <code style="font-size:36px;font-weight:800;color:#0D1B4E;letter-spacing:8px">${otp}</code>
     </div>
     <p style="color:#666;font-size:13px">Geldig voor <strong>15 minuten</strong>. Voer de code in de spreadsheet in.</p>
     <p style="color:#999;font-size:11px;margin-top:12px">Heb je geen code aangevraagd? Negeer dit bericht.</p>
@@ -738,11 +738,11 @@ function stuurLicentiemail_(naam, email, sleutel) {
     : '';
 
   const stappenHtml = kopieerLink ? `
-    <div style="background:#E8EAF6;border-radius:10px;padding:20px;margin:20px 0">
-      <p style="margin:0 0 12px;font-weight:700;color:#1A237E">In 3 stappen aan de slag:</p>
-      <p style="margin:0 0 8px;font-size:14px">① Klik op de knop hieronder om je spreadsheet te openen</p>
-      <p style="margin:0 0 8px;font-size:14px">② Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode</p>
-      <p style="margin:0;font-size:14px">③ Voer de code in en je boekhouding is direct klaar voor gebruik</p>
+    <div style="background:#F7F9FC;border:1px solid #E5EAF2;border-left:3px solid #2EC4B6;border-radius:10px;padding:20px;margin:20px 0">
+      <p style="margin:0 0 12px;font-weight:700;color:#0D1B4E">In 3 stappen aan de slag:</p>
+      <p style="margin:0 0 8px;font-size:14px;color:#1A1A1A">① Klik op de knop hieronder om je spreadsheet te openen</p>
+      <p style="margin:0 0 8px;font-size:14px;color:#1A1A1A">② Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode</p>
+      <p style="margin:0;font-size:14px;color:#1A1A1A">③ Voer de code in en je boekhouding is direct klaar voor gebruik</p>
     </div>
 
     <div style="background:#FFF8E1;border:1px solid #FFECB3;border-radius:10px;padding:16px 20px;margin:20px 0;font-size:13px;line-height:1.7;color:#5f4b14">
@@ -757,23 +757,23 @@ function stuurLicentiemail_(naam, email, sleutel) {
     </div>
 
     <div style="text-align:center;margin:24px 0">
-      <a href="${kopieerLink}" style="background:#1A237E;color:#fff;padding:16px 32px;
-         border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block">
-        🚀 Open mijn boekhouding →
+      <a href="${kopieerLink}" style="background:#0D1B4E;color:#fff;padding:16px 32px;
+         border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;letter-spacing:.1px">
+        Open mijn boekhouding →
       </a>
     </div>
     <p style="font-size:12px;color:#94a3b8;text-align:center;word-break:break-all">
       Werkt de knop niet? Kopieer: ${kopieerLink}</p>
   ` : `
     <p style="font-size:14px;color:#64748b">Je ontvangt binnenkort een link om je boekhouding te openen.
-    Vragen? Mail naar <a href="mailto:${vanEmail}" style="color:#1A237E">${vanEmail}</a>.</p>
+    Vragen? Mail naar <a href="mailto:${vanEmail}" style="color:#0D1B4E">${vanEmail}</a>.</p>
   `;
 
   const htmlBody = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#1a1a2e;background:#f8fafc">
-  <div style="background:#1A237E;padding:28px 24px;border-radius:10px 10px 0 0;text-align:center">
-    <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800">📊 ${productnm}</h1>
-    <p style="color:#C5CAE9;margin:6px 0 0;font-size:14px">Bestelling bevestigd — je boekhouding staat klaar</p>
+  <div style="background:#0D1B4E;padding:28px 24px;border-radius:10px 10px 0 0;text-align:center">
+    <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800;letter-spacing:-0.01em">${productnm}</h1>
+    <p style="color:#B8C2D1;margin:6px 0 0;font-size:14px">Bestelling bevestigd — je boekhouding staat klaar</p>
   </div>
   <div style="background:#fff;padding:28px 24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px">
     <p style="font-size:16px">Hoi ${naam},</p>
@@ -781,7 +781,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
     ${stappenHtml}
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
     <p style="font-size:13px;color:#94a3b8">
-      Vragen? Stuur een e-mail naar <a href="mailto:${vanEmail}" style="color:#1A237E">${vanEmail}</a>.
+      Vragen? Stuur een e-mail naar <a href="mailto:${vanEmail}" style="color:#0D1B4E">${vanEmail}</a>.
     </p>
     <p style="font-size:12px;color:#cbd5e1">
       ${productnm}${kvk ? ' · KVK ' + kvk : ''} · <a href="${privacyUrl}" style="color:#94a3b8">Privacybeleid</a>
