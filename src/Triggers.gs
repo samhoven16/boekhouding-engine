@@ -5,6 +5,66 @@
  */
 
 // ─────────────────────────────────────────────
+//  ON EDIT: BEDRIJFSNAAM DOORVOEREN
+// ─────────────────────────────────────────────
+/**
+ * Eenvoudige trigger — wordt automatisch aangeroepen bij elke celbewerking.
+ * Detecteert wijziging van "Bedrijfsnaam" in het Instellingen tabblad en
+ * past dan de spreadsheet-naam en het Dashboard-hoofd bij.
+ */
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    const sheet = e.range.getSheet();
+    if (sheet.getName() !== SHEETS.INSTELLINGEN) return;
+
+    // Alleen kolom B (waarden), label in kolom A
+    if (e.range.getColumn() !== 2) return;
+    const label = sheet.getRange(e.range.getRow(), 1).getValue();
+    if (String(label) !== 'Bedrijfsnaam') return;
+
+    const nieuwNaam = String(e.value || '').trim();
+    if (!nieuwNaam || nieuwNaam.startsWith('←')) return;
+
+    verwerkBedrijfsnaamWijziging_(nieuwNaam);
+  } catch (err) {
+    Logger.log('onEdit fout: ' + err.message);
+  }
+}
+
+/**
+ * Past de spreadsheet-naam en de Dashboard-koptekst aan op de nieuwe bedrijfsnaam.
+ * @param {string} naam
+ */
+function verwerkBedrijfsnaamWijziging_(naam) {
+  const ss = getSpreadsheet_();
+  const jaar = new Date().getFullYear();
+
+  // Hernoem het spreadsheet-bestand
+  try {
+    ss.rename('Boekhouding ' + naam + ' ' + jaar);
+  } catch (e) {
+    Logger.log('Hernoemen spreadsheet mislukt: ' + e.message);
+  }
+
+  // Wis de instellingen-cache via de helper in Setup.gs
+  try { wisInstellingenCache_(); } catch (e) {}
+
+  // Update Dashboard-koptekst direct (zonder volledige herberekening)
+  try {
+    const dash = ss.getSheetByName(SHEETS.DASHBOARD);
+    if (dash) {
+      const huidigeWaarde = String(dash.getRange(1, 1).getValue());
+      if (huidigeWaarde.includes('DASHBOARD')) {
+        dash.getRange(1, 1).setValue('FINANCIEEL DASHBOARD \u2013 ' + naam.toUpperCase());
+      }
+    }
+  } catch (e) {
+    Logger.log('Dashboard-koptekst bijwerken mislukt: ' + e.message);
+  }
+}
+
+// ─────────────────────────────────────────────
 //  UNIFIED FORM HANDLER (alles-in-één formulier)
 // ─────────────────────────────────────────────
 function verwerkHoofdformulier(e) {
@@ -265,6 +325,13 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
     });
   }
   Logger.log(`Inkoopfactuur IK${inkoopNr} geregistreerd voor ${leverancier}`);
+
+  // Proactief signaal: aankoop ≥ €450 kan worden geactiveerd als investering.
+  if (bedragExcl >= 450) {
+    try {
+      signaleerAfschrijvingskandidaat_(ss, bedragExcl, leverancier, data['Omschrijving uitgave'] || categorie);
+    } catch (_) {}
+  }
 }
 
 // ─────────────────────────────────────────────

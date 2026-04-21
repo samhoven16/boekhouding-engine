@@ -178,103 +178,12 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
 }
 
 // ─────────────────────────────────────────────
-//  FACTUUR OPNIEUW GENEREREN EN MAILEN
+//  FACTUUR STUREN VANUIT SUCCES-SCHERM / FACTUURLIJST
 // ─────────────────────────────────────────────
-function stuurVerkoopfactuurPdf() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = getSpreadsheet_();
-
-  const resp = ui.prompt(
-    'Factuur per e-mail versturen',
-    'Typ het factuurnummer (bijv. F000001):',
-    ui.ButtonSet.OK_CANCEL
-  );
-  if (resp.getSelectedButton() !== ui.Button.OK) return;
-
-  const zoekNr = resp.getResponseText().trim();
-  const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
-  const data = sheet.getDataRange().getValues();
-
-  let gevonden = null;
-  let rij = -1;
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][1]) === zoekNr || String(data[i][0]) === zoekNr) {
-      gevonden = data[i];
-      rij = i + 1;
-      break;
-    }
-  }
-
-  if (!gevonden) {
-    ui.alert('Niet gevonden', 'Factuur "' + zoekNr + '" is niet gevonden. Controleer het nummer en probeer opnieuw.', ui.ButtonSet.OK);
-    return;
-  }
-
-  // Klant e-mail ophalen
-  const klantId = gevonden[4];
-  const klantEmail = haalRelatieEmail_(ss, klantId);
-
-  const emailResp = ui.prompt(
-    'Factuur per e-mail versturen',
-    `Naar welk e-mailadres wilt u de factuur sturen?\n\nKlant: ${gevonden[5]}\nBekend e-mailadres: ${klantEmail || '(niet ingevuld)'}`,
-    ui.ButtonSet.OK_CANCEL
-  );
-  if (emailResp.getSelectedButton() !== ui.Button.OK) return;
-
-  const email = emailResp.getResponseText().trim() || klantEmail;
-  if (!email) {
-    ui.alert('Geen e-mailadres', 'U heeft geen e-mailadres ingevuld. De factuur kan niet worden verstuurd.', ui.ButtonSet.OK);
-    return;
-  }
-
-  // PDF URL ophalen of opnieuw genereren
-  let pdfUrl = gevonden[19]; // PDF URL kolom
-  if (!pdfUrl) {
-    ui.alert('Geen PDF', 'Er is nog geen PDF beschikbaar voor deze factuur. Maak de factuur opnieuw aan via het formulier.', ui.ButtonSet.OK);
-    return;
-  }
-
-  // Verstuur e-mail met PDF als bijlage
-  try {
-    const pdfFile = DriveApp.getFileById(extractFileId_(pdfUrl));
-    const bedrijf = getInstelling_('Bedrijfsnaam') || '';
-    const factuurnummer = gevonden[1];
-    const bedragIncl = formatBedrag_(gevonden[12]);
-    const vervaldatum = formatDatum_(gevonden[3]);
-
-    GmailApp.sendEmail(
-      email,
-      `Factuur ${factuurnummer} van ${bedrijf}`,
-      `Geachte ${gevonden[5]},\n\nHierbij ontvangt u factuur ${factuurnummer} voor een bedrag van ${bedragIncl}.\n` +
-      `Wij verzoeken u vriendelijk dit bedrag te voldoen vóór ${vervaldatum}.\n\n` +
-      `Met vriendelijke groet,\n${bedrijf}`,
-      {
-        attachments: [pdfFile.getAs('application/pdf')],
-        name: bedrijf,
-      }
-    );
-
-    // Status bijwerken en auditlog schrijven
-    sheet.getRange(rij, 15).setValue(FACTUUR_STATUS.VERZONDEN);
-    schrijfAuditLog_('Email handmatig verstuurd', factuurnummer + ' → ' + email);
-    ui.alert('Verstuurd!', `Factuur ${factuurnummer} is per e-mail verstuurd naar ${email}.`, ui.ButtonSet.OK);
-
-  } catch (err) {
-    schrijfAuditLog_('Email MISLUKT (handmatig)', factuurnummer + ' → ' + email + ' – ' + err.message);
-    // Bij fout: toon de PDF link zodat gebruiker het handmatig kan doen
-    const pdfLink = pdfUrl || '';
-    ui.alert('Versturen mislukt',
-      `De factuur kon niet per e-mail worden verstuurd.\n\nFout: ${err.message}\n\n` +
-      `U kunt de factuur-PDF handmatig downloaden en versturen:\n${pdfLink}\n\n` +
-      `Let op: e-mail versturen werkt alleen vanuit een Gmail-account. Gebruikt u een ander e-mailprogramma (bijv. Outlook, ProtonMail)? ` +
-      `Download dan de PDF via bovenstaande link en verstuur deze zelf.`,
-      ui.ButtonSet.OK);
-  }
-}
-
-// ─────────────────────────────────────────────
-//  FACTUUR STUREN VANUIT SUCCES-SCHERM
-// ─────────────────────────────────────────────
+// NB: het oude ui.prompt-tweemaal pad is verwijderd in Phase 3K.
+// Factuurlijst (openFactuurlijst) is nu de enige trusted plek voor
+// post-hoc versturen. Beide entry-points (succes-scherm van
+// NieuweBoeking en Factuurlijst) roepen `stuurFactuurNaarEmailAdres` aan.
 /**
  * Verstuurt een reeds aangemaakte factuur per e-mail op verzoek vanuit het
  * succes-scherm van Nieuwe Boeking (niet via ui.prompt). Wordt aangeroepen
@@ -316,9 +225,19 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   );
 
   if (ok) {
-    sheet.getRange(rij, 15).setValue(FACTUUR_STATUS.VERZONDEN);
+    // Alleen upgraden naar VERZONDEN als de factuur nog niet betaald of gecrediteerd is.
+    // Voorkomen dat een reeds betaalde factuur terugvalt naar een lagere status.
+    const huidigStatus = String(gevonden[14] || '');
+    const geenDowngrade = huidigStatus !== FACTUUR_STATUS.BETAALD
+                       && huidigStatus !== FACTUUR_STATUS.GECREDITEERD
+                       && huidigStatus !== FACTUUR_STATUS.DEELS_BETAALD;
+    if (geenDowngrade) {
+      sheet.getRange(rij, 15).setValue(FACTUUR_STATUS.VERZONDEN);
+    }
     schrijfAuditLog_('Factuur gemaild (succes-scherm)', gevonden[1] + ' → ' + email);
     invalideerKpiSnapshot_();
+  } else {
+    schrijfAuditLog_('Factuur email MISLUKT (succes-scherm)', (gevonden ? gevonden[1] : factuurnummer) + ' → ' + email);
   }
   return ok;
 }

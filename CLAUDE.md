@@ -128,6 +128,47 @@ Before changing ANY of these, run `node scripts/impact.js <name>` and read ALL c
 
 ---
 
+## THINK BEFORE CODING
+
+Assumptions silently made are bugs waiting to happen.
+
+**When the task is ambiguous:**
+- State your interpretation explicitly before writing code
+- If two reasonable interpretations exist, ask — don't pick silently
+- If a simpler approach exists than what was asked, say so before implementing
+
+**When confused:**
+- Name what is unclear; ask for clarification
+- Do not invent a plausible interpretation and proceed
+
+**Before any non-trivial change, state in one sentence:**
+- What you are changing and why
+- What success looks like (test passes, behavior X is observable, etc.)
+
+---
+
+## SIMPLICITY CEILING
+
+If a solution would exceed ~100 lines and a ~30-line version could work, propose the simpler version first and wait for approval. Never build:
+
+- Abstractions for a single use case
+- Configurability that wasn't requested
+- Error handling for scenarios that cannot occur
+- Features adjacent to what was asked
+
+---
+
+## SURGICAL CHANGES — ORPHAN RULE
+
+When your changes make existing code unreachable (unused import, dead variable, superseded function):
+
+- **Remove it** — if YOUR edit created the orphan
+- **Leave it and note it** — if it was already dead before your change
+
+Do not refactor, rename, or reformat code that your task does not touch, even if you would do it differently.
+
+---
+
 ## ARCHITECTURE IN 60 SECONDS
 
 ```

@@ -286,6 +286,53 @@ Gegenereerd via Boekhouding Engine op ${formatDatumTijd_(new Date())}.
 }
 
 // ─────────────────────────────────────────────
+//  BACKUP NAAR DRIVE
+// ─────────────────────────────────────────────
+/**
+ * Exporteert de volledige spreadsheet als XLSX naar de map "Boekhouding Backups"
+ * in Google Drive. Bestandsnaam bevat datum voor traceerbaarheid.
+ * Voldoet aan de 7-jaar bewaarplicht: backups worden nooit automatisch verwijderd.
+ */
+function maakBackup() {
+  if (!controleerSetupGedaan_()) return;
+  const ui = SpreadsheetApp.getUi();
+  const ss = getSpreadsheet_();
+  const ssId = ss.getId();
+  const bedrijf = (getInstelling_('Bedrijfsnaam') || 'Boekhouding')
+    .replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+  const datum = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd_HH-mm');
+  const bestandsnaam = 'Backup_' + bedrijf + '_' + datum + '.xlsx';
+
+  try {
+    // XLSX export via de Google Sheets export-URL (vereist OAuth-token van de eigenaar)
+    const exportUrl = 'https://docs.google.com/spreadsheets/d/' + ssId +
+                      '/export?format=xlsx&access_token=' +
+                      encodeURIComponent(ScriptApp.getOAuthToken());
+    const blob = UrlFetchApp.fetch(
+      'https://docs.google.com/spreadsheets/d/' + ssId + '/export?format=xlsx',
+      { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+        muteHttpExceptions: true }
+    ).getBlob().setName(bestandsnaam);
+
+    // Sla op in de map "Boekhouding Backups" (aanmaken als die niet bestaat)
+    const mappen = DriveApp.getFoldersByName('Boekhouding Backups');
+    const map = mappen.hasNext() ? mappen.next() : DriveApp.createFolder('Boekhouding Backups');
+    const file = map.createFile(blob);
+
+    ui.alert('Backup gemaakt',
+      'Backup opgeslagen als:\n' + bestandsnaam +
+      '\n\nLocatie: Google Drive \u2192 Boekhouding Backups\n\n' +
+      'Tip: maak maandelijks een backup om te voldoen aan de 7-jaar bewaarplicht.',
+      ui.ButtonSet.OK);
+
+    Logger.log('Backup aangemaakt: ' + file.getUrl());
+  } catch (e) {
+    Logger.log('Backup mislukt: ' + e.message);
+    ui.alert('Backup mislukt', 'Er ging iets mis: ' + e.message, ui.ButtonSet.OK);
+  }
+}
+
+// ─────────────────────────────────────────────
 //  HELPER: SHEET → CSV
 // ─────────────────────────────────────────────
 

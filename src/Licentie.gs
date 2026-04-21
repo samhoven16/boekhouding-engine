@@ -1,151 +1,365 @@
 /**
  * Licentie.gs
- * Licentiebeheer voor het Boekhouding Engine product.
+ * Licentiebeheer — activering via e-mail + OTP, kopieerbeveiliging.
  *
- * Hoe het werkt:
- *  1. Klant koopt het product → ontvangt een unieke licentiesleutel per e-mail
- *  2. Bij eerste gebruik voert de klant de sleutel in via de setup-wizard
- *  3. De sleutel wordt gevalideerd tegen de centrale licentieserver (Google Sheet)
- *  4. Geldige licenties worden lokaal gecached (24 uur geldig)
- *  5. Bij verlopen licentie of upgrade: nieuwe sleutel invoeren
+ * Klantflow:
+ *  1. Klant ontvangt e-mail met "Maak een kopie"-link naar master-sjabloon
+ *  2. Bij eerste open: activatiedialoog verschijnt automatisch
+ *  3. Klant vult e-mailadres in → ontvangt 6-cijferige OTP per e-mail
+ *  4. Klant voert OTP in → licentie gebonden aan deze spreadsheet-ID
+ *  5. Setup draait automatisch — klant is direct aan de slag
  *
- * Voor de ontwikkelaar (u):
- *  - Centrale licentiesheet: zie LICENTIE_SHEET_URL in Config.gs
- *  - Nieuwe klant toevoegen: voeg rij toe aan de sheet
- *  - Licentie intrekken: zet status op 'Ingetrokken' in de sheet
+ * Kopieerbeveiliging:
+ *  - Bij "Maak een kopie" worden Script Properties NIET meegekopieerd
+ *  - De kopie opent zonder licentie-binding → vergrendelscherm
+ *  - Alle sheets worden beschermd (read-only) met link naar boekhoudbaar.nl
  */
 
 // ─────────────────────────────────────────────
 //  CONSTANTEN
 // ─────────────────────────────────────────────
-const LICENTIE_PROP_KEY      = 'licentiesleutel';
-const LICENTIE_CACHE_KEY     = 'licentieCacheGeldigTot';
-const LICENTIE_KLANT_KEY     = 'licentieKlantnaam';
-const LICENTIE_VERSIE_KEY    = 'licentieVersie';
-const LICENTIE_CACHE_UREN    = 24;
+const LICENTIE_PROP_KEY   = 'licentiesleutel';
+const LICENTIE_CACHE_KEY  = 'licentieCacheGeldigTot';
+const LICENTIE_KLANT_KEY  = 'licentieKlantnaam';
+const LICENTIE_VERSIE_KEY = 'licentieVersie';
+const LICENTIE_SS_ID_KEY  = 'licentieSsId';        // Gebonden spreadsheet-ID
+const LICENTIE_CACHE_UREN = 24;
 
-// URL van de centrale licentieserver — lazy geladen (niet op module-niveau,
-// want PropertiesService aanroepen tijdens script-parsing kan falen in
-// bepaalde GAS-contexten zoals bibliotheekimports of editor-tests).
 function getLicentieServerUrl_() {
   return PropertiesService.getScriptProperties()
     .getProperty('LICENTIE_SERVER_URL') || '';
 }
 
 // ─────────────────────────────────────────────
-//  LICENTIE DIALOOG TONEN
+//  ONOPEN-CHECK: LICENTIE EN KOPIE
 // ─────────────────────────────────────────────
-function toonLicentieDialoog() {
-  const ui = SpreadsheetApp.getUi();
-  const huidig = PropertiesService.getScriptProperties().getProperty(LICENTIE_PROP_KEY) || '';
+/**
+ * Aanroepen vanuit onOpen. Retourneert true als licentie geldig en spreadsheet origineel.
+ * Bij kopie: vergrendelt en retourneert false. Bij niet-geactiveerd: toont dialoog.
+ */
+function controleerLicentieEnKopie_() {
+  const props      = PropertiesService.getScriptProperties();
+  const sleutel    = props.getProperty(LICENTIE_PROP_KEY);
+  const regSsId    = props.getProperty(LICENTIE_SS_ID_KEY);
+  const huidigSsId = SpreadsheetApp.getActiveSpreadsheet().getId();
 
-  const html = HtmlService.createHtmlOutput(`
-    <style>
-      body{font-family:Arial,sans-serif;padding:20px;font-size:13px}
-      h3{color:#1A237E;margin-bottom:6px}
-      input{width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:13px;
-            font-family:monospace;letter-spacing:1px;margin:6px 0}
-      .btn{background:#1A237E;color:white;border:none;padding:10px 20px;border-radius:4px;
-           cursor:pointer;font-size:14px;width:100%;margin-top:8px}
-      .btn:hover{background:#283593}
-      .info{background:#E8EAF6;padding:10px;border-radius:4px;font-size:11px;margin:8px 0}
-      .fout{background:#FFEBEE;padding:8px;border-radius:4px;color:#c62828;display:none}
-      .ok{background:#E8F5E9;padding:8px;border-radius:4px;color:#2E7D32;display:none}
-    </style>
-    <h3>Licentie activeren</h3>
-    <div class="info">
-      U heeft een licentiesleutel ontvangen per e-mail na uw aankoop.<br>
-      Voer deze hieronder in om het programma te activeren.
-    </div>
-    <label><b>Uw licentiesleutel:</b></label>
-    <input type="text" id="sleutel" value="${huidig}"
-           placeholder="BKHE-XXXX-XXXX-XXXX" autocomplete="off">
-    <div class="fout" id="fout"></div>
-    <div class="ok" id="ok"></div>
-    <button class="btn" id="btn" onclick="activeer()">Licentie activeren</button>
-    <p style="text-align:center;font-size:11px;color:#888;margin-top:10px">
-      Geen sleutel? <a href="mailto:info@boekhouding-engine.nl" target="_blank">Neem contact op</a>
-    </p>
-    <script>
-    function activeer() {
-      var sleutel = document.getElementById('sleutel').value.trim().toUpperCase();
-      if (!sleutel) { toonFout('Voer uw licentiesleutel in.'); return; }
-      document.getElementById('btn').disabled = true;
-      document.getElementById('btn').textContent = 'Valideren...';
-      document.getElementById('fout').style.display = 'none';
-      document.getElementById('ok').style.display = 'none';
+  // Geval 1: Kopie gedetecteerd — gebonden ID bestaat maar komt niet overeen
+  if (regSsId && regSsId !== huidigSsId) {
+    vergrendelKopie_();
+    return false;
+  }
 
-      google.script.run
-        .withSuccessHandler(function(res) {
-          if (res.geldig) {
-            toonOk('Licentie geactiveerd voor ' + res.naam + '! Dit venster sluit automatisch...');
-            setTimeout(function() { google.script.host.close(); }, 2000);
-          } else {
-            toonFout(res.fout || 'Ongeldige licentiesleutel. Controleer de sleutel en probeer opnieuw.');
-            document.getElementById('btn').disabled = false;
-            document.getElementById('btn').textContent = 'Licentie activeren';
-          }
-        })
-        .withFailureHandler(function(err) {
-          toonFout('Fout: ' + err.message);
-          document.getElementById('btn').disabled = false;
-          document.getElementById('btn').textContent = 'Licentie activeren';
-        })
-        .activeerLicentie(sleutel);
+  // Geval 2: Nog niet geactiveerd
+  if (!sleutel) {
+    try { toonActivatieDialog_(); } catch (_) {}
+    return false;
+  }
+
+  // Geval 3: Geactiveerd — periodiek server-validatie (1× per dag, stil)
+  try {
+    const userProps = PropertiesService.getUserProperties();
+    const lastCheck = parseInt(userProps.getProperty('licentieLastCheck') || '0');
+    if (Date.now() - lastCheck > LICENTIE_CACHE_UREN * 3600 * 1000) {
+      const res = valideerLicentieOpServer_(sleutel);
+      if (res.geldig) {
+        userProps.setProperty('licentieLastCheck', String(Date.now()));
+      } else if (!res.offline) {
+        // Server zegt expliciet ongeldig (niet offline) → nieuwe activatie
+        props.deleteProperty(LICENTIE_PROP_KEY);
+        props.deleteProperty(LICENTIE_SS_ID_KEY);
+        try { toonActivatieDialog_(); } catch (_) {}
+        return false;
+      }
     }
-    function toonFout(t) { var e=document.getElementById('fout'); e.textContent=t; e.style.display='block'; }
-    function toonOk(t) { var e=document.getElementById('ok'); e.textContent=t; e.style.display='block'; }
-    </script>
-  `).setWidth(440).setHeight(360);
+  } catch (_) {}
 
-  ui.showModalDialog(html, 'Licentie activeren');
+  return true;
 }
 
 // ─────────────────────────────────────────────
-//  LICENTIE ACTIVEREN (server-side)
+//  KOPIE VERGRENDELEN
 // ─────────────────────────────────────────────
-function activeerLicentie(sleutel) {
-  const props = PropertiesService.getScriptProperties();
-  sleutel = String(sleutel || '').trim().toUpperCase();
+function vergrendelKopie_() {
+  const ss  = SpreadsheetApp.getActiveSpreadsheet();
+  const mij = Session.getEffectiveUser().getEmail();
 
-  if (!sleutel) return { geldig: false, fout: 'Geen sleutel opgegeven.' };
+  ss.getSheets().forEach(function(sheet) {
+    try {
+      const prot = sheet.protect();
+      prot.setDescription('Boekhoudbaar — licentie vereist');
+      // Verwijder alle editors behalve eigenaar (onszelf)
+      const editors = prot.getEditors();
+      if (editors.length > 0) prot.removeEditors(editors);
+      if (mij) prot.addEditor(mij);
+      prot.setUnprotectedRanges([]);
+    } catch (_) {}
+  });
 
-  // Valideer via server
-  const resultaat = valideerLicentieOpServer_(sleutel);
+  try {
+    const html = HtmlService.createHtmlOutput(`
+      <!DOCTYPE html><html lang="nl"><body style="font-family:Arial,sans-serif;padding:24px;text-align:center;color:#1a1a2e">
+        <div style="font-size:52px;margin-bottom:12px">🔒</div>
+        <h2 style="color:#1A237E;margin-bottom:8px">Licentie vereist</h2>
+        <p style="color:#555;margin-bottom:16px">Dit bestand is een kopie van een gelicenseerde Boekhoudbaar-spreadsheet.<br>
+        Elke spreadsheet heeft een eigen licentie nodig.</p>
+        <a href="https://boekhoudbaar.nl/kopen" target="_blank"
+           style="background:#1A237E;color:#fff;padding:12px 28px;border-radius:8px;
+                  text-decoration:none;font-weight:700;font-size:15px;display:inline-block">
+          Koop een licentie — €49 →
+        </a>
+        <p style="color:#94a3b8;font-size:11px;margin-top:16px">
+          Al gekocht? Open dan de spreadsheet die je bij activering hebt aangemaakt,<br>of neem contact op via hallo@boekhoudbaar.nl
+        </p>
+      </body></html>
+    `).setWidth(420).setHeight(280);
+    SpreadsheetApp.getUi().showModalDialog(html, '📊 Boekhoudbaar — Licentie vereist');
+  } catch (_) {}
+}
 
-  if (resultaat.geldig) {
-    props.setProperty(LICENTIE_PROP_KEY, sleutel);
-    props.setProperty(LICENTIE_KLANT_KEY, resultaat.naam || '');
-    props.setProperty(LICENTIE_VERSIE_KEY, resultaat.versie || 'Standaard');
-    // Cache instellen (24 uur geldig)
-    props.setProperty(LICENTIE_CACHE_KEY,
-      String(Date.now() + LICENTIE_CACHE_UREN * 3600 * 1000));
-    Logger.log('Licentie geactiveerd: ' + sleutel + ' voor ' + resultaat.naam);
+// ─────────────────────────────────────────────
+//  ACTIVATIEDIALOOG (OTP — 2 stappen)
+// ─────────────────────────────────────────────
+function toonActivatieDialog_() {
+  const html = HtmlService.createHtmlOutput(`
+    <!DOCTYPE html><html lang="nl"><head>
+    <meta charset="UTF-8">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+           padding:24px;font-size:13px;color:#1a1a2e;background:#fff}
+      .logo{text-align:center;margin-bottom:20px}
+      .logo h2{font-size:19px;color:#1A237E;margin:8px 0 4px}
+      .logo p{color:#666;font-size:12px}
+      .stap{display:none}
+      .stap.actief{display:block}
+      label{display:block;font-weight:600;margin-bottom:4px;color:#333;font-size:12px}
+      input{width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;
+            font-size:14px;margin-bottom:10px;transition:border-color .2s}
+      input:focus{outline:none;border-color:#1A237E}
+      .btn{width:100%;padding:12px;background:#1A237E;color:#fff;border:none;
+           border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+      .btn:hover{background:#283593}
+      .btn:disabled{background:#9e9e9e;cursor:not-allowed}
+      .fout{background:#FFEBEE;color:#c62828;padding:8px 12px;border-radius:6px;
+            font-size:12px;margin-bottom:10px;display:none}
+      .hint{font-size:11px;color:#888;text-align:center;margin-top:8px}
+      .link-btn{background:none;border:none;color:#1A237E;cursor:pointer;
+                text-decoration:underline;font-size:12px;padding:0}
+      .succes-box{text-align:center;padding:8px 0}
+    </style></head>
+    <body>
+      <div class="logo">
+        <div style="font-size:38px">📊</div>
+        <h2>Boekhoudbaar activeren</h2>
+        <p>Voer het e-mailadres in waarmee je hebt gekocht</p>
+      </div>
+
+      <!-- Stap 1: e-mail -->
+      <div class="stap actief" id="stap1">
+        <label>E-mailadres (waarmee je hebt gekocht)</label>
+        <input type="email" id="email" placeholder="jan@uwbedrijf.nl" autocomplete="email">
+        <div class="fout" id="fout1"></div>
+        <button class="btn" id="btn1" onclick="stuurCode()">Stuur activeringscode →</button>
+        <p class="hint">Je ontvangt een 6-cijferige code per e-mail</p>
+      </div>
+
+      <!-- Stap 2: OTP -->
+      <div class="stap" id="stap2">
+        <p style="background:#E8F5E9;color:#2E7D32;padding:8px 12px;border-radius:6px;
+                  font-size:12px;margin-bottom:12px">
+          ✓ Code verstuurd — controleer je inbox (en spammap).
+        </p>
+        <label>Activeringscode (6 cijfers)</label>
+        <input type="text" id="otp" placeholder="123456" maxlength="6"
+               inputmode="numeric" autocomplete="one-time-code">
+        <div class="fout" id="fout2"></div>
+        <button class="btn" id="btn2" onclick="activeer()">Activeer Boekhoudbaar →</button>
+        <p style="text-align:center;margin-top:8px">
+          <button class="link-btn" onclick="nieuweCode()">Andere code aanvragen</button>
+        </p>
+      </div>
+
+      <!-- Stap 3: succes -->
+      <div class="stap" id="stap3">
+        <div class="succes-box">
+          <div style="font-size:48px;margin-bottom:10px">🎉</div>
+          <h3 style="color:#2E7D32;margin-bottom:8px" id="succes_titel">Geactiveerd!</h3>
+          <p id="succes_naam" style="margin-bottom:12px;color:#555"></p>
+          <p style="color:#666;font-size:12px;line-height:1.6">
+            Je boekhouding wordt nu ingericht.<br>
+            <strong>Vernieuw daarna de pagina</strong> (Ctrl+R / Cmd+R)<br>
+            om het volledige menu te zien.
+          </p>
+        </div>
+      </div>
+
+    <script>
+    var emailVal = '';
+
+    function stuurCode() {
+      var email = document.getElementById('email').value.trim();
+      if (!email || !email.includes('@')) {
+        toonFout('fout1', 'Vul een geldig e-mailadres in.');
+        return;
+      }
+      emailVal = email;
+      var btn = document.getElementById('btn1');
+      btn.disabled = true;
+      btn.textContent = 'Versturen...';
+      document.getElementById('fout1').style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.textContent = 'Stuur activeringscode →';
+          if (res.ok) {
+            schakelNaar('stap2');
+            setTimeout(function() { document.getElementById('otp').focus(); }, 100);
+          } else {
+            toonFout('fout1', res.fout || 'Fout bij aanvragen. Probeer opnieuw.');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Stuur activeringscode →';
+          toonFout('fout1', 'Fout: ' + err.message);
+        })
+        .aanvraagOtp(email);
+    }
+
+    function activeer() {
+      var otp = document.getElementById('otp').value.trim();
+      if (!otp || otp.length < 6) {
+        toonFout('fout2', 'Voer de 6-cijferige code in.');
+        return;
+      }
+      var btn = document.getElementById('btn2');
+      btn.disabled = true;
+      btn.textContent = 'Activeren...';
+      document.getElementById('fout2').style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.ok) {
+            schakelNaar('stap3');
+            document.getElementById('succes_naam').textContent =
+              res.naam ? 'Welkom, ' + res.naam + '!' : '';
+            // Setup draaien op achtergrond
+            google.script.run.initialiseerNaActivatie();
+          } else {
+            btn.disabled = false;
+            btn.textContent = 'Activeer Boekhoudbaar →';
+            toonFout('fout2', res.fout || 'Activering mislukt. Probeer opnieuw.');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Activeer Boekhoudbaar →';
+          toonFout('fout2', 'Fout: ' + err.message);
+        })
+        .activeerMetOtp(emailVal, otp);
+    }
+
+    function nieuweCode() {
+      schakelNaar('stap1');
+      document.getElementById('fout1').style.display = 'none';
+    }
+
+    function schakelNaar(id) {
+      ['stap1','stap2','stap3'].forEach(function(s) {
+        document.getElementById(s).classList.remove('actief');
+      });
+      document.getElementById(id).classList.add('actief');
+    }
+
+    function toonFout(id, tekst) {
+      var el = document.getElementById(id);
+      el.textContent = tekst;
+      el.style.display = 'block';
+    }
+    </script>
+    </body></html>
+  `).setWidth(400).setHeight(380);
+
+  SpreadsheetApp.getUi().showModalDialog(html, '📊 Boekhoudbaar — Licentie activeren');
+}
+
+// ─────────────────────────────────────────────
+//  OTP AANVRAGEN (server-side, aangeroepen door dialoog)
+// ─────────────────────────────────────────────
+function aanvraagOtp(email) {
+  email = String(email || '').trim().toLowerCase();
+  const serverUrl = getLicentieServerUrl_();
+  if (!serverUrl) return { ok: false, fout: 'Licentieserver niet geconfigureerd.' };
+
+  try {
+    const url  = serverUrl + '?actie=aanvraag-otp&email=' + encodeURIComponent(email);
+    const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+    return safeJsonParse_(resp.getContentText());
+  } catch (err) {
+    return { ok: false, fout: 'Netwerkfout: ' + err.message };
   }
+}
 
-  return resultaat;
+// ─────────────────────────────────────────────
+//  ACTIVEREN MET OTP (server-side, aangeroepen door dialoog)
+// ─────────────────────────────────────────────
+function activeerMetOtp(email, otp) {
+  email = String(email || '').trim().toLowerCase();
+  otp   = String(otp   || '').trim();
+
+  const serverUrl  = getLicentieServerUrl_();
+  const huidigSsId = SpreadsheetApp.getActiveSpreadsheet().getId();
+
+  if (!serverUrl) return { ok: false, fout: 'Licentieserver niet geconfigureerd.' };
+
+  try {
+    const url  = serverUrl
+      + '?actie=activeer-otp'
+      + '&email='  + encodeURIComponent(email)
+      + '&otp='    + encodeURIComponent(otp)
+      + '&ssId='   + encodeURIComponent(huidigSsId);
+    const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+    const res  = safeJsonParse_(resp.getContentText());
+
+    if (res.ok && res.sleutel) {
+      // Sla licentie op in Script Properties
+      const props = PropertiesService.getScriptProperties();
+      props.setProperty(LICENTIE_PROP_KEY,   res.sleutel);
+      props.setProperty(LICENTIE_KLANT_KEY,  res.naam || '');
+      props.setProperty(LICENTIE_SS_ID_KEY,  huidigSsId);
+      props.setProperty(LICENTIE_VERSIE_KEY, 'Standaard');
+      props.setProperty(LICENTIE_CACHE_KEY,  String(Date.now() + LICENTIE_CACHE_UREN * 3600 * 1000));
+    }
+    return res;
+  } catch (err) {
+    return { ok: false, fout: 'Netwerkfout: ' + err.message };
+  }
+}
+
+// ─────────────────────────────────────────────
+//  AUTO-SETUP NA ACTIVATIE
+// ─────────────────────────────────────────────
+function initialiseerNaActivatie() {
+  try {
+    // setup() heeft eigen idempotency guard — veilig om aan te roepen
+    setup();
+  } catch (err) {
+    Logger.log('initialiseerNaActivatie fout: ' + err.message);
+  }
 }
 
 // ─────────────────────────────────────────────
 //  LICENTIE VALIDEREN (gecacht)
 // ─────────────────────────────────────────────
-/**
- * Controleert of de licentie geldig is.
- * Gebruikt een 24-uurs cache om serverbelasting te beperken.
- * @returns {boolean}
- */
 function isLicentieGeldig_() {
-  const props = PropertiesService.getScriptProperties();
+  const props   = PropertiesService.getScriptProperties();
   const sleutel = props.getProperty(LICENTIE_PROP_KEY);
-
-  // Geen sleutel = nooit geactiveerd
   if (!sleutel) return false;
 
-  // Cache check
   const cacheGeldigTot = parseInt(props.getProperty(LICENTIE_CACHE_KEY) || '0');
   if (Date.now() < cacheGeldigTot) return true;
 
-  // Cache verlopen: opnieuw valideren
   const resultaat = valideerLicentieOpServer_(sleutel);
   if (resultaat.geldig) {
     props.setProperty(LICENTIE_CACHE_KEY,
@@ -154,165 +368,72 @@ function isLicentieGeldig_() {
   return resultaat.geldig;
 }
 
-/**
- * Valideert de licentiesleutel tegen de centrale server.
- * Als de server niet bereikbaar is, geldt de gecachte status.
- */
 function valideerLicentieOpServer_(sleutel) {
-  const serverUrl = getLicentieServerUrl_();
+  const serverUrl  = getLicentieServerUrl_();
+  const huidigSsId = PropertiesService.getScriptProperties().getProperty(LICENTIE_SS_ID_KEY) || '';
 
-  // Als er geen server URL is geconfigureerd, accepteer ALLE sleutels
-  // (voor demo/dev gebruik — zet de server URL in voor productie)
   if (!serverUrl) {
-    Logger.log('WAARSCHUWING: Geen licentieserver geconfigureerd. Licentie geaccepteerd zonder validatie.');
-    return { geldig: true, naam: 'Demo gebruiker', versie: 'Demo' };
+    Logger.log('WAARSCHUWING: Geen licentieserver — licentie geaccepteerd zonder validatie.');
+    return { geldig: true, naam: 'Demo', versie: 'Demo' };
   }
 
   try {
-    const url = serverUrl + '?actie=valideer&sleutel=' + encodeURIComponent(sleutel)
-      + '&installatie=' + encodeURIComponent(getInstallatieid_());
+    const url  = serverUrl
+      + '?actie=valideer&sleutel=' + encodeURIComponent(sleutel)
+      + '&installatie='            + encodeURIComponent(huidigSsId);
     const resp = UrlFetchApp.fetch(url, {
-      muteHttpExceptions: true,
-      followRedirects: true,
-      headers: { 'User-Agent': 'BoekhoudenEngine/2.0' },
+      muteHttpExceptions: true, followRedirects: true,
+      headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
     });
+    if (resp.getResponseCode() === 200) return safeJsonParse_(resp.getContentText());
 
-    if (resp.getResponseCode() === 200) {
-      const data = safeJsonParse_(resp.getContentText());
-      return data;
-    }
-
-    // Server niet bereikbaar maar sleutel is lokaal opgeslagen → vertrouw het
-    const props = PropertiesService.getScriptProperties();
-    if (props.getProperty(LICENTIE_PROP_KEY) === sleutel) {
-      Logger.log('Licentieserver niet bereikbaar — lokale cache gebruikt.');
-      return { geldig: true, naam: props.getProperty(LICENTIE_KLANT_KEY) || '', offline: true };
-    }
-
-    return { geldig: false, fout: 'Server niet bereikbaar. Controleer uw internetverbinding.' };
-  } catch (e) {
-    Logger.log('Licentievalidatie fout: ' + e.message);
-    // Bij netwerk fout: vertrouw de lokaal opgeslagen sleutel
+    // Server niet bereikbaar → vertrouw lokale cache
     const props = PropertiesService.getScriptProperties();
     if (props.getProperty(LICENTIE_PROP_KEY) === sleutel) {
       return { geldig: true, naam: props.getProperty(LICENTIE_KLANT_KEY) || '', offline: true };
     }
-    return { geldig: false, fout: 'Validatie mislukt: ' + e.message };
+    return { geldig: false, fout: 'Server niet bereikbaar.' };
+  } catch (err) {
+    Logger.log('Licentievalidatie fout: ' + err.message);
+    const props = PropertiesService.getScriptProperties();
+    if (props.getProperty(LICENTIE_PROP_KEY) === sleutel) {
+      return { geldig: true, naam: props.getProperty(LICENTIE_KLANT_KEY) || '', offline: true };
+    }
+    return { geldig: false, fout: 'Validatie mislukt: ' + err.message };
   }
 }
 
 // ─────────────────────────────────────────────
-//  UNIEK INSTALLATIE-ID
-// ─────────────────────────────────────────────
-/**
- * Genereert een uniek ID voor deze installatie.
- * Wordt gebruikt om te registreren welk exemplaar de licentie gebruikt.
- */
-function getInstallatieid_() {
-  const props = PropertiesService.getScriptProperties();
-  let id = props.getProperty('installatie_id');
-  if (!id) {
-    id = 'BKHE-' + Utilities.getUuid().toUpperCase().replace(/-/g, '').substring(0, 12);
-    props.setProperty('installatie_id', id);
-  }
-  return id;
-}
-
-// ─────────────────────────────────────────────
-//  LICENTIE INFO TONEN
+//  LICENTIE INFO TONEN (menu-item)
 // ─────────────────────────────────────────────
 function toonLicentieInfo() {
-  const props = PropertiesService.getScriptProperties();
-  const sleutel = props.getProperty(LICENTIE_PROP_KEY) || 'Niet geactiveerd';
-  const klantnaam = props.getProperty(LICENTIE_KLANT_KEY) || '—';
-  const versie = props.getProperty(LICENTIE_VERSIE_KEY) || '—';
-  const installatieId = getInstallatieid_();
+  const props      = PropertiesService.getScriptProperties();
+  const sleutel    = props.getProperty(LICENTIE_PROP_KEY)  || 'Niet geactiveerd';
+  const klantnaam  = props.getProperty(LICENTIE_KLANT_KEY) || '—';
+  const versie     = props.getProperty(LICENTIE_VERSIE_KEY)|| '—';
+  const ssId       = props.getProperty(LICENTIE_SS_ID_KEY) || '—';
 
   SpreadsheetApp.getUi().alert(
     'Licentie-informatie',
-    `Licentiehouder: ${klantnaam}\n` +
-    `Licentieversie: ${versie}\n` +
-    `Sleutel: ${sleutel}\n` +
-    `Installatie-ID: ${installatieId}\n\n` +
-    `Bewaar uw installatie-ID voor support-vragen.`,
+    'Licentiehouder: ' + klantnaam + '\n' +
+    'Versie: '         + versie    + '\n' +
+    'Sleutel: '        + sleutel   + '\n' +
+    'Spreadsheet-ID: ' + ssId      + '\n\n' +
+    'Vragen? hallo@boekhoudbaar.nl',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
 
 // ─────────────────────────────────────────────
-//  LICENTIESERVER (draait op ontwikkelaarsaccount)
+//  LICENTIE OPNIEUW ACTIVEREN (menu-optie voor support)
 // ─────────────────────────────────────────────
-/**
- * Dit is de server-kant van het licentiesysteem.
- * Publiceer dit script ALS WEB APP op uw eigen Google-account.
- * Zet de Web App URL als LICENTIE_SERVER_URL in uw Script Properties.
- *
- * De licentiesheet bevat kolommen:
- *   A: Licentiesleutel  B: Klantnaam  C: E-mail  D: Versie  E: Status  F: Vervaldatum
- *   G: Installatie-ID   H: Laatste check
- */
-function doGetLicentieServer_(e) {
-  // !! ALLEEN gebruiken als dit script de licentieserver IS !!
-  // Verwijder de underscore en publiceer als Web App op uw eigen account.
-
-  const actie = e.parameter.actie;
-  const sleutel = String(e.parameter.sleutel || '').trim().toUpperCase();
-  const installatieId = String(e.parameter.installatie || '');
-
-  if (actie === 'valideer' && sleutel) {
-    const LICENTIE_SHEET_ID = PropertiesService.getScriptProperties()
-      .getProperty('LICENTIE_SHEET_ID') || '';
-
-    if (!LICENTIE_SHEET_ID) {
-      return ContentService.createTextOutput(JSON.stringify({
-        geldig: false, fout: 'Licentieserver niet geconfigureerd'
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-
-    try {
-      const ss = SpreadsheetApp.openById(LICENTIE_SHEET_ID);
-      const sheet = ss.getSheets()[0];
-      const data = sheet.getDataRange().getValues();
-
-      for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0]).toUpperCase() === sleutel) {
-          const status = String(data[i][4]).toLowerCase();
-          const vervaldatum = data[i][5] ? new Date(data[i][5]) : null;
-          const isVerlopen = vervaldatum && vervaldatum < new Date();
-
-          if (status === 'ingetrokken') {
-            return _jsonResp({ geldig: false, fout: 'Licentie is ingetrokken.' });
-          }
-          if (isVerlopen) {
-            return _jsonResp({ geldig: false, fout: 'Licentie is verlopen. Verleng uw abonnement.' });
-          }
-
-          // Registreer installatie-ID en laatste check
-          if (installatieId && !data[i][6]) {
-            sheet.getRange(i + 1, 7).setValue(installatieId);
-          }
-          sheet.getRange(i + 1, 8).setValue(new Date());
-
-          return _jsonResp({
-            geldig: true,
-            naam: data[i][1],
-            email: data[i][2],
-            versie: data[i][3] || 'Standaard',
-          });
-        }
-      }
-
-      return _jsonResp({ geldig: false, fout: 'Licentiesleutel niet gevonden.' });
-    } catch (err) {
-      return _jsonResp({ geldig: false, fout: 'Serverfout: ' + err.message });
-    }
-  }
-
-  return _jsonResp({ fout: 'Onbekende actie' });
+function toonLicentieDialoog() {
+  toonActivatieDialog_();
 }
 
-function _jsonResp(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
+// ─────────────────────────────────────────────
+//  HELPER
+// ─────────────────────────────────────────────
+function safeJsonParse_(tekst) {
+  try { return JSON.parse(tekst); } catch (_) { return { geldig: false, fout: 'Ongeldig serverantwoord.' }; }
 }

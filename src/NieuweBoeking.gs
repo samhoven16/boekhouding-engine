@@ -181,8 +181,8 @@ input.ok{border-color:#2e7d32}
     <tbody id="regels-body">
       <tr id="regel-1">
         <td><input type="text" id="f-r1omschr" placeholder="Bijv. Webdesign" oninput="herbereken();valideerVeld('factuur','r1omschr',this)"></td>
-        <td><input type="number" id="f-r1aantal" value="1" min="0.01" step="any" oninput="herbereken()"></td>
-        <td><input type="number" id="f-r1prijs" placeholder="0,00" min="0" step="any" oninput="herbereken();valideerVeld('factuur','r1prijs',this)"></td>
+        <td><input type="number" id="f-r1aantal" value="1" min="0.01" step="any" oninput="herbereken()" onchange="herbereken()"></td>
+        <td><input type="number" id="f-r1prijs" placeholder="0,00" min="0" step="any" oninput="herbereken();valideerVeld('factuur','r1prijs',this)" onchange="herbereken();valideerVeld('factuur','r1prijs',this)"></td>
         <td><input type="text" id="f-r1tot" readonly tabindex="-1" style="background:#F5F5F5;color:#555"></td>
         <td></td>
       </tr>
@@ -454,8 +454,8 @@ function voegRegelToe() {
   var tr = document.createElement('tr');
   tr.id = 'regel-' + n;
   tr.innerHTML = '<td><input type="text" id="f-r'+n+'omschr" placeholder="Omschrijving" oninput="herbereken()"></td>'
-    + '<td><input type="number" id="f-r'+n+'aantal" value="1" min="0" step="any" oninput="herbereken()"></td>'
-    + '<td><input type="number" id="f-r'+n+'prijs" placeholder="0,00" min="0" step="any" oninput="herbereken()"></td>'
+    + '<td><input type="number" id="f-r'+n+'aantal" value="1" min="0" step="any" oninput="herbereken()" onchange="herbereken()"></td>'
+    + '<td><input type="number" id="f-r'+n+'prijs" placeholder="0,00" min="0" step="any" oninput="herbereken()" onchange="herbereken()"></td>'
     + '<td><input type="text" id="f-r'+n+'tot" readonly tabindex="-1" style="background:#F5F5F5;color:#555"></td>'
     + '<td><button class="verwijder" onclick="verwijderRegel('+n+')" title="Verwijder regel">\xd7</button></td>';
   document.getElementById('regels-body').appendChild(tr);

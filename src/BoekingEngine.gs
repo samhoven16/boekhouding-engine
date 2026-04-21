@@ -209,6 +209,8 @@ function _verwerkFactuur_(ss, s) {
                   ' | Open debiteuren: ' + formatBedrag_(result.debiteurenOpen);
   }
 
+  // Nieuwe factuur wijzigt debiteurenOpen + omzet → snapshot verouderd.
+  invalideerKpiSnapshot_();
   return {
     ok:             true,
     bericht:        'Factuur aangemaakt!' + emailInfo + snapshotInfo,
@@ -247,6 +249,8 @@ function _verwerkKosten_(ss, s, raw) {
   schrijfAuditLog_('Kosten geboekt', s.leverancier + ' ' + bedragIncl);
   const bonBericht_k = bonUrl ? ' Bon opgeslagen in Drive.'
                      : raw.bonBase64 ? ' Let op: bon kon niet worden opgeslagen in Drive.' : '';
+  // Nieuwe kosten wijzigen nettowinst + kosten → snapshot verouderd.
+  invalideerKpiSnapshot_();
   return {
     ok: true,
     bericht: 'Kosten geboekt (\u20ac\u00a0' + bedragIncl.toFixed(2).replace('.', ',') + ').' + bonBericht_k,
@@ -280,6 +284,8 @@ function _verwerkDeclaratie_(ss, s, raw) {
   schrijfAuditLog_('Declaratie ingediend', s.omschr + ' ' + bedragIncl);
   const bonBericht_d = bonUrl ? ' Bon opgeslagen in Drive.'
                      : raw.bonBase64 ? ' Let op: bon kon niet worden opgeslagen in Drive.' : '';
+  // Declaratie wijzigt kosten + nettowinst → snapshot verouderd.
+  invalideerKpiSnapshot_();
   return {
     ok: true,
     bericht: 'Declaratie ingediend (\u20ac\u00a0' + bedragIncl.toFixed(2).replace('.', ',') + ').' + bonBericht_d,
@@ -293,7 +299,7 @@ function _slaBonoOp_(base64Data, mimeType, naam) {
     const decoded = Utilities.base64Decode(base64Data);
     const mime    = mimeType || 'image/jpeg';
     const ext     = mime.includes('pdf') ? 'pdf' : (mime.split('/')[1] || 'jpg');
-    const blob    = Utilities.newBlob(decoded, mime, naam.replace(/[\/\\:*?"<>|]/g, '_') + '.' + ext);
+    const blob    = Utilities.newBlob(decoded, mime, naam.replace(/[/\\:*?"<>|]/g, '_') + '.' + ext);
     let folder;
     const mappen = DriveApp.getFoldersByName('Bonnetjes & Ontvangstbewijzen');
     folder = mappen.hasNext() ? mappen.next() : DriveApp.createFolder('Bonnetjes & Ontvangstbewijzen');

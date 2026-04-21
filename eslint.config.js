@@ -82,10 +82,11 @@ module.exports = [
       'eqeqeq': ['warn', 'always', { null: 'ignore' }],
       // Ongebruikte variabelen — dead code
       'no-unused-vars': ['warn', {
-        // GAS entry-point functies (openNieuweBoeking, onOpen, enz.) worden
-        // door GAS/menu/trigger aangeroepen maar lijken unused voor ESLint
-        varsIgnorePattern: '^(on[A-Z]|open|toon|stuur|beheer|importeer|exporteer|genereer|bereken|verwerk|controleer|instell|instel|maak|reset|sla)',
+        // GAS entry-point functies worden door GAS/menu/trigger/dialog aangeroepen
+        // maar lijken unused voor ESLint (cross-file + google.script.run calls)
+        varsIgnorePattern: '^(on[A-Z]|do[A-Z]|open|toon|stuur|sluit|beheer|importeer|exporteer|genereer|bereken|verwerk|controleer|instell|instel|maak|reset|sla|herlaad|vernieuw|initialiseer|get[A-Z]|boek[A-Z]|bank[A-Z]|laad[A-Z]|haal[A-Z]|toon[A-Z]|valideer[A-Z])|\\w+_$',
         argsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
       }],
       // Modern JavaScript stijl
       'prefer-const': 'warn',

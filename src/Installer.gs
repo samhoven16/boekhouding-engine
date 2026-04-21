@@ -59,39 +59,37 @@ function installerenVoorKlant(sleutel, bedrijfsnaam, email) {
     return { succes: false, fout: licentie.fout || 'Ongeldige licentiesleutel.' };
   }
 
-  try {
-    // Maak nieuwe spreadsheet aan in de Drive van de ingelogde gebruiker
-    const naam = 'Boekhouding ' + bedrijfsnaam + ' ' + new Date().getFullYear();
-    const ss = SpreadsheetApp.create(naam);
-    const ssId = ss.getId();
-
-    // Sla sleutel en bedrijfsgegevens op als Script Properties van het nieuwe script
-    // (dit vereist dat het script al is gebonden aan de spreadsheet)
-    Logger.log('Spreadsheet aangemaakt: ' + ssId + ' voor ' + bedrijfsnaam);
-
-    // Stuur bevestigingsmail naar klant
-    try {
-      MailApp.sendEmail({
-        to: email,
-        subject: 'Uw Boekhouding Engine is klaar!',
-        htmlBody: bouwBevestigingsmail_(bedrijfsnaam, ss.getUrl(), sleutel),
-      });
-    } catch (mailErr) {
-      Logger.log('Bevestigingsmail mislukt: ' + mailErr.message);
-      // Niet fataal — installatie is wel geslaagd
-    }
-
+  // Template-ID ophalen (ingesteld via Script Properties door ontwikkelaar)
+  const templateId = PropertiesService.getScriptProperties()
+    .getProperty('INSTALLER_TEMPLATE_ID');
+  if (!templateId) {
     return {
-      succes: true,
-      spreadsheetUrl: ss.getUrl(),
-      spreadsheetId:  ssId,
-      naam:           licentie.naam || bedrijfsnaam,
+      succes: false,
+      fout: 'De installatie is nog niet geconfigureerd door de ontwikkelaar. ' +
+            'Neem contact op via support@boekhouding-engine.nl',
     };
-
-  } catch (err) {
-    Logger.log('Installatie mislukt: ' + err.message);
-    return { succes: false, fout: 'Installatie mislukt: ' + err.message };
   }
+
+  // Bouw de Google "Maak een kopie" URL — Google kopieert de spreadsheet
+  // inclusief alle gebonden Apps Script code naar de Drive van de klant.
+  const jaar = new Date().getFullYear();
+  const titel = encodeURIComponent('Boekhouding ' + bedrijfsnaam + ' ' + jaar);
+  const redirectUrl = 'https://docs.google.com/spreadsheets/d/' + templateId +
+                      '/copy?title=' + titel;
+
+  // Stuur bevestigingsmail met de redirectUrl als primaire link
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: 'Uw Boekhouding Engine staat klaar!',
+      htmlBody: bouwBevestigingsmail_(bedrijfsnaam, redirectUrl, sleutel),
+    });
+  } catch (mailErr) {
+    Logger.log('Bevestigingsmail mislukt: ' + mailErr.message);
+  }
+
+  Logger.log('Installatie klaar voor ' + bedrijfsnaam + ' — redirect: ' + redirectUrl);
+  return { succes: true, redirectUrl: redirectUrl, naam: licentie.naam || bedrijfsnaam };
 }
 
 // ─────────────────────────────────────────────
@@ -262,16 +260,16 @@ function bouwInstallerPagina_(vooringevuldeSleutel) {
     </div>
 
     <div class="succes" id="succes">
-      <h2>🎉 Uw boekhouding is klaar!</h2>
+      <h2>🎉 Licentie gevalideerd!</h2>
       <p>
-        We hebben een nieuw boekhoudbestand aangemaakt in uw Google Drive.<br>
-        Een bevestiging is verstuurd naar uw e-mailadres.
+        U wordt doorgestuurd naar Google om uw boekhouding te kopiëren naar uw Drive.<br>
+        Klik op <strong>"Maak een kopie"</strong> — de boekhouding staat dan direct klaar.
       </p>
-      <a href="#" id="openLink" class="open-btn" target="_blank">
-        📊 Boekhouding openen
+      <a href="#" id="openLink" class="open-btn">
+        📊 Doorgaan naar Google →
       </a>
       <p style="font-size:12px;color:#888;margin-top:16px">
-        Sla de link op als bladwijzer voor snelle toegang.
+        Een bevestiging is ook verstuurd naar uw e-mailadres.
       </p>
     </div>
   </div>
@@ -294,10 +292,14 @@ function bouwInstallerPagina_(vooringevuldeSleutel) {
       google.script.run
         .withSuccessHandler(function(res) {
           if (res.succes) {
+            // Redirect naar Google's "Maak een kopie" pagina.
+            // Google kopieert de spreadsheet + alle code naar de Drive van de klant.
             document.getElementById('formulier').style.display = 'none';
             var succes = document.getElementById('succes');
             succes.style.display = 'block';
-            document.getElementById('openLink').href = res.spreadsheetUrl;
+            document.getElementById('openLink').href = res.redirectUrl;
+            // Auto-redirect na 2 seconden
+            setTimeout(function() { window.location.href = res.redirectUrl; }, 2000);
           } else {
             toonFout(res.fout || 'Er ging iets mis. Probeer opnieuw.');
             btn.disabled = false;

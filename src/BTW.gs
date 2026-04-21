@@ -13,6 +13,7 @@ function genereerBtwAangifteQ3() { genereerBtwAangifte('Q3'); }
 function genereerBtwAangifteQ4() { genereerBtwAangifte('Q4'); }
 
 function genereerBtwAangifte(kwartaal) {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const jaar = parseInt(getInstelling_('Boekjaar start') || new Date().getFullYear());
   const periode = bepaalBtwPeriode_(kwartaal, isNaN(jaar) ? new Date().getFullYear() : jaar);
@@ -59,7 +60,6 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     const s = ss.getSheetByName(naam);
     return s ? s.getDataRange().getValues() : [[]];
   }
-  const jpData = sheetData_(SHEETS.JOURNAALPOSTEN);
   const vfData = sheetData_(SHEETS.VERKOOPFACTUREN);
   const ifData = sheetData_(SHEETS.INKOOPFACTUREN);
 
@@ -312,6 +312,7 @@ function sluitBtwPeriode() {
 //  KOR REGELING CONTROLE
 // ─────────────────────────────────────────────
 function controleerKor() {
+  if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
   const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
   const jaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();

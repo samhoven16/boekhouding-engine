@@ -1,0 +1,6 @@
+# Apex→www redirect: via Cloudflare Redirect Rules in het dashboard
+# (CF Pages _redirects ondersteunt alleen relatieve paden als bron)
+# Regel: boekhoudbaar.nl/* → https://www.boekhoudbaar.nl/$1  (301)
+
+# Checkout — doorsturen naar licentieserver
+/kopen https://script.google.com/macros/s/AKfycbyq5Xrvh4bFXkcjpjsdaPS-UJm3b7h-X7kGyfdTnDNcNS2brUX0q86pRU7Q2nSMCOWsMg/exec 302
