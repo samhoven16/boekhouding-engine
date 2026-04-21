@@ -761,6 +761,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const vanEmail    = props.getProperty('VAN_EMAIL')       || 'hallo@boekhoudbaar.nl';
   const vanNaam     = props.getProperty('VAN_NAAM')        || 'Sam van Boekhoudbaar';
   const kvk         = props.getProperty('KVK_NUMMER')      || '';
+  const btw         = props.getProperty('BTW_NUMMER')      || '';
   const privacyUrl  = props.getProperty('PRIVACY_URL')     || 'https://www.boekhoudbaar.nl/privacy';
 
   // Guard — zonder TEMPLATE_SS_ID kan de klant de copy-link niet gebruiken.
@@ -836,7 +837,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
       Vragen? Stuur een e-mail naar <a href="mailto:${vanEmail}" style="color:#0D1B4E">${vanEmail}</a>.
     </p>
     <p style="font-size:12px;color:#cbd5e1">
-      ${productnm}${kvk ? ' · KVK ' + kvk : ''} · <a href="${privacyUrl}" style="color:#94a3b8">Privacybeleid</a>
+      ${productnm}${kvk ? ' · KVK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''} · <a href="${privacyUrl}" style="color:#94a3b8">Privacybeleid</a>
     </p>
   </div>
 </body></html>`;
