@@ -126,69 +126,74 @@ function toonActivatieDialog_() {
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
-           padding:24px;font-size:13px;color:#1a1a2e;background:#fff}
-      .logo{text-align:center;margin-bottom:20px}
-      .logo h2{font-size:19px;color:#1A237E;margin:8px 0 4px}
-      .logo p{color:#666;font-size:12px}
+           padding:26px 28px;font-size:14px;color:#1A1A1A;background:#F7F9FC;
+           -webkit-font-smoothing:antialiased}
+      .head{margin-bottom:22px}
+      .label{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2EC4B6;margin-bottom:6px}
+      h2{font-size:20px;font-weight:800;color:#0D1B4E;letter-spacing:-0.01em;margin-bottom:6px;line-height:1.3}
+      .sub{color:#5F6B7A;font-size:13px;line-height:1.55}
       .stap{display:none}
       .stap.actief{display:block}
-      label{display:block;font-weight:600;margin-bottom:4px;color:#333;font-size:12px}
-      input{width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;
-            font-size:14px;margin-bottom:10px;transition:border-color .2s}
-      input:focus{outline:none;border-color:#1A237E}
-      .btn{width:100%;padding:12px;background:#1A237E;color:#fff;border:none;
-           border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
-      .btn:hover{background:#283593}
-      .btn:disabled{background:#9e9e9e;cursor:not-allowed}
-      .fout{background:#FFEBEE;color:#c62828;padding:8px 12px;border-radius:6px;
-            font-size:12px;margin-bottom:10px;display:none}
-      .hint{font-size:11px;color:#888;text-align:center;margin-top:8px}
-      .link-btn{background:none;border:none;color:#1A237E;cursor:pointer;
-                text-decoration:underline;font-size:12px;padding:0}
-      .succes-box{text-align:center;padding:8px 0}
+      label.veld{display:block;font-weight:600;margin-bottom:6px;color:#1A1A1A;font-size:13px}
+      input{width:100%;padding:12px 14px;border:1px solid #E5EAF2;border-radius:8px;
+            font-size:14px;font-family:inherit;margin-bottom:12px;background:#fff;
+            transition:border-color .15s ease,box-shadow .15s ease}
+      input:focus{outline:none;border-color:#2EC4B6;box-shadow:0 0 0 3px rgba(46,196,182,.18)}
+      input#otp{font-family:inherit;letter-spacing:6px;font-size:18px;text-align:center;font-weight:600}
+      .btn{width:100%;padding:13px 16px;background:#0D1B4E;color:#fff;border:none;
+           border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+           transition:background .15s ease,transform .15s ease,box-shadow .2s ease}
+      .btn:hover:not(:disabled){background:#1A2A6B;transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,27,78,.22)}
+      .btn:disabled{background:#94A3B8;cursor:not-allowed}
+      .fout{background:#FDECEC;color:#B91C1C;padding:10px 12px;border-radius:6px;
+            font-size:12px;margin-bottom:12px;display:none;border:1px solid #F5B3B3}
+      .hint{font-size:12px;color:#5F6B7A;text-align:center;margin-top:10px;line-height:1.5}
+      .link-btn{background:none;border:none;color:#0D1B4E;cursor:pointer;
+                text-decoration:underline;font-size:12px;padding:0;font-family:inherit}
+      .banner{background:#E6F7F4;border:1px solid rgba(46,196,182,.35);color:#0D1B4E;
+              padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:14px;line-height:1.5}
+      .succes-box{text-align:center;padding:10px 0 4px}
+      .check{width:56px;height:56px;border-radius:50%;background:rgba(46,196,182,.14);
+             color:#2EC4B6;display:inline-flex;align-items:center;justify-content:center;
+             font-size:28px;font-weight:800;margin-bottom:14px;border:1px solid rgba(46,196,182,.35)}
+      ::selection{background:rgba(46,196,182,.28);color:#0D1B4E}
     </style></head>
     <body>
-      <div class="logo">
-        <div style="font-size:38px">📊</div>
-        <h2>Boekhoudbaar activeren</h2>
-        <p>Voer het e-mailadres in waarmee je hebt gekocht</p>
+      <div class="head">
+        <div class="label">Licentie</div>
+        <h2>Activeer je Boekhoudbaar</h2>
+        <p class="sub">Voer het e-mailadres in waarmee je de licentie hebt gekocht. Je krijgt dan een 6-cijferige code.</p>
       </div>
 
       <!-- Stap 1: e-mail -->
       <div class="stap actief" id="stap1">
-        <label>E-mailadres (waarmee je hebt gekocht)</label>
+        <label class="veld">E-mailadres</label>
         <input type="email" id="email" placeholder="jan@uwbedrijf.nl" autocomplete="email">
         <div class="fout" id="fout1"></div>
-        <button class="btn" id="btn1" onclick="stuurCode()">Stuur activeringscode →</button>
-        <p class="hint">Je ontvangt een 6-cijferige code per e-mail</p>
+        <button class="btn" id="btn1" onclick="stuurCode()">Stuur activeringscode</button>
+        <p class="hint">Geen mail ontvangen? Check je spam-map of mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.</p>
       </div>
 
       <!-- Stap 2: OTP -->
       <div class="stap" id="stap2">
-        <p style="background:#E8F5E9;color:#2E7D32;padding:8px 12px;border-radius:6px;
-                  font-size:12px;margin-bottom:12px">
-          ✓ Code verstuurd — controleer je inbox (en spammap).
-        </p>
-        <label>Activeringscode (6 cijfers)</label>
-        <input type="text" id="otp" placeholder="123456" maxlength="6"
+        <div class="banner"><strong>Code verstuurd.</strong> Check je inbox — en eventueel je spam-map.</div>
+        <label class="veld">Activeringscode (6 cijfers)</label>
+        <input type="text" id="otp" placeholder="000000" maxlength="6"
                inputmode="numeric" autocomplete="one-time-code">
         <div class="fout" id="fout2"></div>
-        <button class="btn" id="btn2" onclick="activeer()">Activeer Boekhoudbaar →</button>
-        <p style="text-align:center;margin-top:8px">
-          <button class="link-btn" onclick="nieuweCode()">Andere code aanvragen</button>
-        </p>
+        <button class="btn" id="btn2" onclick="activeer()">Activeer Boekhoudbaar</button>
+        <p class="hint"><button class="link-btn" onclick="nieuweCode()">Andere code aanvragen</button></p>
       </div>
 
       <!-- Stap 3: succes -->
       <div class="stap" id="stap3">
         <div class="succes-box">
-          <div style="font-size:48px;margin-bottom:10px">🎉</div>
-          <h3 style="color:#2E7D32;margin-bottom:8px" id="succes_titel">Geactiveerd!</h3>
-          <p id="succes_naam" style="margin-bottom:12px;color:#555"></p>
-          <p style="color:#666;font-size:12px;line-height:1.6">
+          <div class="check">✓</div>
+          <h2 id="succes_titel" style="margin-bottom:6px">Geactiveerd</h2>
+          <p id="succes_naam" class="sub" style="margin-bottom:14px"></p>
+          <p class="sub" style="font-size:13px">
             Je boekhouding wordt nu ingericht.<br>
-            <strong>Vernieuw daarna de pagina</strong> (Ctrl+R / Cmd+R)<br>
-            om het volledige menu te zien.
+            <strong style="color:#0D1B4E">Ververs straks de pagina</strong> (Ctrl+R of Cmd+R) om het volledige menu te laden.
           </p>
         </div>
       </div>
@@ -205,13 +210,13 @@ function toonActivatieDialog_() {
       emailVal = email;
       var btn = document.getElementById('btn1');
       btn.disabled = true;
-      btn.textContent = 'Versturen...';
+      btn.textContent = 'Versturen…';
       document.getElementById('fout1').style.display = 'none';
 
       google.script.run
         .withSuccessHandler(function(res) {
           btn.disabled = false;
-          btn.textContent = 'Stuur activeringscode →';
+          btn.textContent = 'Stuur activeringscode';
           if (res.ok) {
             schakelNaar('stap2');
             setTimeout(function() { document.getElementById('otp').focus(); }, 100);
@@ -221,7 +226,7 @@ function toonActivatieDialog_() {
         })
         .withFailureHandler(function(err) {
           btn.disabled = false;
-          btn.textContent = 'Stuur activeringscode →';
+          btn.textContent = 'Stuur activeringscode';
           toonFout('fout1', 'Fout: ' + err.message);
         })
         .aanvraagOtp(email);
@@ -235,7 +240,7 @@ function toonActivatieDialog_() {
       }
       var btn = document.getElementById('btn2');
       btn.disabled = true;
-      btn.textContent = 'Activeren...';
+      btn.textContent = 'Activeren…';
       document.getElementById('fout2').style.display = 'none';
 
       google.script.run
@@ -243,18 +248,18 @@ function toonActivatieDialog_() {
           if (res.ok) {
             schakelNaar('stap3');
             document.getElementById('succes_naam').textContent =
-              res.naam ? 'Welkom, ' + res.naam + '!' : '';
+              res.naam ? 'Welkom, ' + res.naam + '.' : '';
             // Setup draaien op achtergrond
             google.script.run.initialiseerNaActivatie();
           } else {
             btn.disabled = false;
-            btn.textContent = 'Activeer Boekhoudbaar →';
+            btn.textContent = 'Activeer Boekhoudbaar';
             toonFout('fout2', res.fout || 'Activering mislukt. Probeer opnieuw.');
           }
         })
         .withFailureHandler(function(err) {
           btn.disabled = false;
-          btn.textContent = 'Activeer Boekhoudbaar →';
+          btn.textContent = 'Activeer Boekhoudbaar';
           toonFout('fout2', 'Fout: ' + err.message);
         })
         .activeerMetOtp(emailVal, otp);
