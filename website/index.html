@@ -275,6 +275,47 @@
   h2 { font-size: clamp(28px, 3.6vw, 42px); font-weight: 800; line-height: 1.18; letter-spacing: -0.015em; color: var(--blauw); }
   .sub-tekst { font-size: 17px; color: var(--grijs); margin-top: 12px; max-width: 600px; }
 
+  /* ── PRODUCT PREVIEW ── */
+  .preview-sectie { background: var(--wit); padding-top: 64px; padding-bottom: 88px; }
+  .preview-head { max-width: 720px; margin: 0 auto 40px; text-align: center; }
+  .preview-head h2 { margin-bottom: 10px; }
+  .preview-head .sub-tekst { margin: 0 auto; }
+  .preview-bullets {
+    list-style: none; padding: 0; margin: 22px auto 0;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px;
+    max-width: 780px;
+  }
+  .preview-bullets li {
+    font-size: 14px; color: var(--tekst);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .preview-bullets li::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+  }
+  .preview-frame {
+    max-width: 900px; margin: 36px auto 0;
+    border: 1px solid var(--rand);
+    border-radius: 14px;
+    background: var(--wit);
+    box-shadow: 0 20px 60px rgba(13,27,78,.08), 0 2px 8px rgba(13,27,78,.04);
+    overflow: hidden;
+    position: relative;
+    transition: transform .4s cubic-bezier(.2,.7,.2,1), box-shadow .4s ease;
+  }
+  .preview-frame:hover { transform: scale(1.015); box-shadow: 0 28px 72px rgba(13,27,78,.12), 0 4px 12px rgba(13,27,78,.05); }
+  .preview-frame img { display: block; width: 100%; height: auto; }
+  .preview-frame::after {
+    content: ""; position: absolute; inset: 0;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(247,249,252,0) 78%, rgba(247,249,252,.55) 100%);
+  }
+  @media (max-width: 720px) {
+    .preview-sectie { padding-top: 48px; padding-bottom: 64px; }
+    .preview-frame { border-radius: 10px; margin-top: 24px; }
+    .preview-bullets { gap: 8px 16px; font-size: 13px; }
+  }
+
   /* ── PROBLEEM ── */
   .probleem-sectie { background: #0D1B4E; color: rgba(255,255,255,.88); }
   .probleem-sectie .section-label { color: var(--accent); }
@@ -648,6 +689,25 @@
 </header>
 
 <main id="main" tabindex="-1">
+<!-- ── PRODUCT PREVIEW ── -->
+<section class="preview-sectie" aria-labelledby="preview-heading">
+  <div class="container">
+    <div class="preview-head">
+      <p class="section-label">Hoe het eruit ziet</p>
+      <h2 id="preview-heading">Zo ziet je boekhouding eruit</h2>
+      <p class="sub-tekst">Geen dashboard-chaos. Gewoon overzicht in je eigen systeem.</p>
+      <ul class="preview-bullets" role="list">
+        <li>Inkomsten, kosten en BTW in één overzicht</li>
+        <li>Automatische structuur, geen handmatig gedoe</li>
+        <li>Volledig in jouw Google Drive</li>
+      </ul>
+    </div>
+    <div class="preview-frame" aria-hidden="true">
+      <img src="/preview.svg" alt="" width="1200" height="720" loading="lazy">
+    </div>
+  </div>
+</section>
+
 <!-- ── SOCIAL PROOF STRIP ── -->
 <div class="proof-strip" aria-label="Kenmerken">
   <p>
