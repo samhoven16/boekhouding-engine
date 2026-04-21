@@ -85,22 +85,12 @@ function doPost(e) {
 }
 
 // ─────────────────────────────────────────────
-//  WEB APP: GET (status check, Zapier trigger test, EN installer)
+//  WEB APP: GET (status check, Zapier trigger test)
 //
-//  NB: Een GAS-project heeft slechts één doGet. Deze functie handelt
-//  twee rollen af:
-//   - ?sleutel=BKHE-... → installatieformulier (HTML, voor browser)
-//   - overige requests  → JSON API (voor Zapier, Make, status)
+//  Klantinstallatie loopt via de centrale licentieserver
+//  (licence-server/Code.gs), niet via de klant-kopie zelf.
 // ─────────────────────────────────────────────
 function doGet(e) {
-  // Installer-flow: als ?sleutel= aanwezig is (ook leeg voor formulier)
-  if (e && e.parameter && ('sleutel' in e.parameter)) {
-    const sleutel = String(e.parameter.sleutel || '').trim().toUpperCase();
-    return HtmlService.createHtmlOutput(bouwInstallerPagina_(sleutel))
-      .setTitle('Boekhouding Engine — Installatie')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
   // API-flow: JSON response
   const apiSleutel = getInstelling_('Webhook API sleutel');
   if (apiSleutel) {
