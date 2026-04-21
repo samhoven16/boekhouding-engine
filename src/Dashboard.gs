@@ -47,16 +47,21 @@ function vernieuwDashboard() {
     ? Math.floor(kpi.banksaldo / burnRate)
     : null;
 
+  // Unified KPI look: neutral background for everything, soft-red only when a
+  // value is concerning (negative nettowinst / banksaldo, low winstmarge).
+  // Replaces the old rainbow of nine different pastels.
+  const KPI_NEUTRAAL = KLEUREN.SECTIE_BG;         // #F7F9FC
+  const KPI_WAARSCHUWING = KLEUREN.NEGATIEF;       // #FDECEC
   const kpiItems = [
-    { label: 'Omzet (YTD)', waarde: kpi.omzet, format: 'bedrag', kleur: '#E8F5E9' },
-    { label: 'Kosten (YTD)', waarde: kpi.kosten, format: 'bedrag', kleur: '#FFEBEE' },
-    { label: 'Nettowinst', waarde: kpi.nettowinst, format: 'bedrag', kleur: kpi.nettowinst >= 0 ? '#E8F5E9' : '#FFEBEE' },
-    { label: 'Winstmarge', waarde: kpi.winstmarge, format: 'pct', kleur: kpi.winstmarge >= 20 ? '#E8F5E9' : '#FFF8E1' },
-    { label: 'Banksaldo', waarde: kpi.banksaldo, format: 'bedrag', kleur: kpi.banksaldo >= 0 ? '#E3F2FD' : '#FFEBEE' },
-    { label: 'Open debiteuren', waarde: kpi.debiteurenOpen, format: 'bedrag', kleur: '#FFF3E0' },
-    { label: 'Open crediteuren', waarde: kpi.crediteurenOpen, format: 'bedrag', kleur: '#FCE4EC' },
-    { label: 'BTW saldo', waarde: kpi.btwSaldo, format: 'bedrag', kleur: '#F3E5F5' },
-    { label: 'Verwacht (30d)', waarde: kpi.verwachtIn30d, format: 'bedrag', kleur: '#E8EAF6' },
+    { label: 'Omzet (YTD)',       waarde: kpi.omzet,           format: 'bedrag', kleur: KPI_NEUTRAAL },
+    { label: 'Kosten (YTD)',      waarde: kpi.kosten,          format: 'bedrag', kleur: KPI_NEUTRAAL },
+    { label: 'Nettowinst',        waarde: kpi.nettowinst,      format: 'bedrag', kleur: kpi.nettowinst   >= 0 ? KPI_NEUTRAAL : KPI_WAARSCHUWING },
+    { label: 'Winstmarge',        waarde: kpi.winstmarge,      format: 'pct',    kleur: kpi.winstmarge   >= 20 ? KPI_NEUTRAAL : KPI_WAARSCHUWING },
+    { label: 'Banksaldo',         waarde: kpi.banksaldo,       format: 'bedrag', kleur: kpi.banksaldo    >= 0 ? KPI_NEUTRAAL : KPI_WAARSCHUWING },
+    { label: 'Open debiteuren',   waarde: kpi.debiteurenOpen,  format: 'bedrag', kleur: KPI_NEUTRAAL },
+    { label: 'Open crediteuren',  waarde: kpi.crediteurenOpen, format: 'bedrag', kleur: KPI_NEUTRAAL },
+    { label: 'BTW saldo',         waarde: kpi.btwSaldo,        format: 'bedrag', kleur: KPI_NEUTRAAL },
+    { label: 'Verwacht (30d)',    waarde: kpi.verwachtIn30d,   format: 'bedrag', kleur: KPI_NEUTRAAL },
   ];
 
   // Rij 4: KPI titels, Rij 5: KPI waarden
@@ -457,7 +462,7 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
   }
 
   sheet.getRange(startRij, 1, 1, 8).merge()
-    .setValue('WAARSCHUWINGEN').setBackground('#FF8F00').setFontColor('#FFFFFF').setFontWeight('bold');
+    .setValue('WAARSCHUWINGEN').setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
   startRij++;
 
   waarschuwingen.forEach(([type, tekst, bg]) => {
