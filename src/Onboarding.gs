@@ -24,9 +24,24 @@ function controleerOnboarding_() {
   const props = PropertiesService.getScriptProperties();
   const voltooid = props.getProperty(ONBOARDING_PROP);
 
+  // Moderne flow: klant kwam via /kopen → activation dialog → OTP → setup.
+  // Tegen de tijd dat deze functie draait is setup klaar, licentie geldig.
+  // De oude stap-voor-stap ui.alert-wizard zou dan nog eens om activatie
+  // vragen en voelt dubbel. Auto-flag voltooid zodat 'm overslaan de
+  // default is. toonPostSetupWelkomModal_ neemt de welkom-rol over.
+  const setupDone = props.getProperty(PROP.SETUP_DONE) === 'true';
+  if (!voltooid && setupDone) {
+    props.setProperties({
+      [ONBOARDING_PROP]: 'ja',
+      [VERSIE_PROP]:     HUIDIGE_VERSIE,
+    });
+    controleerOpUpdate_();
+    return;
+  }
+
   if (!voltooid) {
-    // Eerste keer: toon welkomst-wizard
-    Utilities.sleep(1000); // Laat spreadsheet eerst laden
+    // Legacy pad (pre-setup, niet via activation-flow): oude wizard
+    Utilities.sleep(1000);
     toonWelkomstWizard();
   } else {
     // Terugkerende gebruiker: stille versiecheck
