@@ -368,6 +368,39 @@ function isLicentieGeldig_() {
   return resultaat.geldig;
 }
 
+/**
+ * Eénmalig signaal aan de licentieserver dat setup() succesvol is
+ * doorlopen. Idempotent: zet een UserProperties-vlag die herhalen
+ * voorkomt. Faalt stil — setup() mag hier nooit op breken.
+ */
+function meldOnboardingAanServer_() {
+  const serverUrl = getLicentieServerUrl_();
+  if (!serverUrl) return;
+
+  const userProps = PropertiesService.getUserProperties();
+  if (userProps.getProperty('onboardingGemeld') === 'true') return;
+
+  const scriptProps = PropertiesService.getScriptProperties();
+  const sleutel = scriptProps.getProperty(LICENTIE_PROP_KEY) || '';
+  const ssId    = scriptProps.getProperty(LICENTIE_SS_ID_KEY) || '';
+  if (!sleutel) return;  // Nog niet geactiveerd — geen melding
+
+  try {
+    const url = serverUrl
+      + '?actie=onboarded&sleutel=' + encodeURIComponent(sleutel)
+      + '&ssId='                    + encodeURIComponent(ssId);
+    const resp = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true, followRedirects: true,
+      headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
+    });
+    if (resp.getResponseCode() === 200) {
+      userProps.setProperty('onboardingGemeld', 'true');
+    }
+  } catch (err) {
+    Logger.log('meldOnboardingAanServer_ fout: ' + err.message);
+  }
+}
+
 function valideerLicentieOpServer_(sleutel) {
   const serverUrl  = getLicentieServerUrl_();
   const huidigSsId = PropertiesService.getScriptProperties().getProperty(LICENTIE_SS_ID_KEY) || '';

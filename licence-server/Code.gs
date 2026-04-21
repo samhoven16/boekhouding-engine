@@ -32,6 +32,7 @@ function doGet(e) {
   if (actie === 'valideer')      return valideerEndpoint_(e);
   if (actie === 'aanvraag-otp')  return aanvraagOtpEndpoint_(e);
   if (actie === 'activeer-otp')  return activeerOtpEndpoint_(e);
+  if (actie === 'onboarded')     return onboardedEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   if (actie === 'admin')         return adminPaneel_(e);
 
@@ -441,6 +442,62 @@ function valideerEndpoint_(e) {
 }
 
 // ─────────────────────────────────────────────
+//  ONBOARDED-ENDPOINT — klant-kopie meldt geslaagde setup()
+// ─────────────────────────────────────────────
+/**
+ * Klant-kopie roept dit aan zodra setup() voor het eerst succesvol is
+ * doorlopen. Schrijft een timestamp in kolom 11 ("Onboarded op") van de
+ * CRM-sheet, zodat jij in één oogopslag ziet welke klanten daadwerkelijk
+ * werkend zijn vs. alleen geactiveerd.
+ *
+ * Idempotent — overschrijft een bestaande timestamp niet.
+ */
+function onboardedEndpoint_(e) {
+  const sleutel = String((e.parameter.sleutel || '')).trim().toUpperCase();
+  const ssId    = String((e.parameter.ssId    || '')).trim();
+  if (!sleutel) return jsonResp_({ ok: false, fout: 'Geen sleutel.' });
+
+  try {
+    const sheet = getLicentieSheet_();
+    ensureOnboardedKolom_(sheet);
+    const data = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).toUpperCase() !== sleutel) continue;
+
+      const boundSsId = String(data[i][6] || '');
+      if (ssId && boundSsId && ssId !== boundSsId) {
+        return jsonResp_({ ok: false, fout: 'Spreadsheet-ID komt niet overeen.' });
+      }
+
+      // Idempotent — niet overschrijven als al geboekt
+      if (data[i][10]) return jsonResp_({ ok: true, already: true });
+
+      sheet.getRange(i + 1, 11).setValue(new Date());
+      return jsonResp_({ ok: true });
+    }
+    return jsonResp_({ ok: false, fout: 'Sleutel niet gevonden.' });
+  } catch (err) {
+    Logger.log('Onboarded fout: ' + err.message);
+    return jsonResp_({ ok: false, fout: 'Serverfout.' });
+  }
+}
+
+/**
+ * Voegt kolom 11 ('Onboarded op') toe aan oudere licentie-sheets.
+ * Idempotent — no-op als kolom al bestaat.
+ */
+function ensureOnboardedKolom_(sheet) {
+  const lastCol = sheet.getLastColumn();
+  if (lastCol >= 11) return;
+  sheet.getRange(1, 11)
+    .setValue('Onboarded op')
+    .setFontWeight('bold')
+    .setBackground('#0D1B4E')
+    .setFontColor('#FFFFFF');
+}
+
+// ─────────────────────────────────────────────
 //  BEDANKT-PAGINA (na Mollie redirect)
 // ─────────────────────────────────────────────
 function bedanktPagina_(e) {
@@ -717,9 +774,10 @@ function getLicentieSheet_() {
   // Zet headers als het een nieuw blad is
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(['Sleutel','Naam','Email','Versie','Status','Vervaldatum',
-                     'Installatie-ID','Aangemaakt op','Mollie betaling ID','Laatste validatie']);
-    sheet.getRange(1, 1, 1, 10).setFontWeight('bold')
-      .setBackground('#1A237E').setFontColor('#FFFFFF');
+                     'Installatie-ID','Aangemaakt op','Mollie betaling ID','Laatste validatie',
+                     'Onboarded op']);
+    sheet.getRange(1, 1, 1, 11).setFontWeight('bold')
+      .setBackground('#0D1B4E').setFontColor('#FFFFFF');
   }
   return sheet;
 }
