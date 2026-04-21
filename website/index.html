@@ -433,6 +433,29 @@
   .stap h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
   .stap p { font-size: 14px; color: var(--grijs); }
 
+  /* ── OAUTH HEADS-UP ── */
+  .oauth-heads-up {
+    max-width: 720px;
+    margin: 48px auto 0;
+    padding: 18px 22px;
+    background: #FFF8E1;
+    border: 1px solid #FFECB3;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #5A3F00;
+  }
+  .oauth-heads-up .label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5A3F00;
+    margin-bottom: 6px;
+  }
+  .oauth-heads-up em { color: #5A3F00; }
+  .oauth-heads-up strong { color: #5A3F00; }
+
   /* ── OPRICHTER ── */
   .oprichter-sectie { background: var(--bg); }
   .oprichter-grid {
@@ -843,13 +866,18 @@
       <div class="stap" role="listitem">
         <div class="stap-nr" aria-hidden="true">2</div>
         <h3>Activeer in je Drive</h3>
-        <p>Klik op de link in de e-mail. Je spreadsheet wordt automatisch aangemaakt in jouw Google Drive.</p>
+        <p>Klik op de link in de e-mail. Google vraagt toestemming om een kopie in <strong>jouw Drive</strong> te zetten — dat is precies waar je boekhouding komt te staan.</p>
       </div>
       <div class="stap" role="listitem">
         <div class="stap-nr" aria-hidden="true">3</div>
         <h3>Stel in en begin</h3>
         <p>Vul je bedrijfsnaam, BTW-nummer en IBAN in. Twee minuten later staat je eerste factuur klaar.</p>
       </div>
+    </div>
+
+    <div class="oauth-heads-up" role="note">
+      <p class="label">Eerlijk gezegd:</p>
+      <p>Google toont bij stap 2 mogelijk <em>"Deze app is niet geverifieerd door Google"</em>. Dat klopt — Boekhoudbaar is een éénpersoonszaak, geen Google-partner. Je klikt dan op <strong>Geavanceerd → Ga naar Boekhoudbaar</strong>. Je data blijft 100% op jóuw Drive; wij hebben er geen toegang toe.</p>
     </div>
   </div>
 </section>
