@@ -175,8 +175,13 @@
     background: var(--blauw); color: var(--wit) !important;
     padding: 9px 20px; border-radius: 8px; font-weight: 600 !important;
     font-size: 14px !important;
+    transition: background .15s ease, transform .15s ease, box-shadow .2s ease;
   }
-  .nav-cta:hover { background: var(--blauw-licht) !important; color: var(--wit) !important; }
+  .nav-cta:hover {
+    background: var(--blauw-licht) !important; color: var(--wit) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(13,27,78,.22);
+  }
 
   /* ── HERO ── */
   .hero {
@@ -262,7 +267,8 @@
     transition: background .15s;
     min-height: 56px;
   }
-  .btn-secundair:hover { background: rgba(255,255,255,.2); }
+  .btn-secundair { transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+  .btn-secundair:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.6); transform: translateY(-1px); }
   .ideal-badge {
     display: inline-flex; align-items: center; gap: 8px;
     background: transparent; border-radius: 0;
@@ -352,6 +358,12 @@
     border: 1px solid rgba(255,255,255,.10);
     border-radius: var(--radius);
     padding: 28px 24px 24px;
+    transition: background .25s ease, border-color .25s ease, transform .25s ease;
+  }
+  .probleem-kaart:hover {
+    background: rgba(255,255,255,.06);
+    border-color: rgba(46,196,182,.25);
+    transform: translateY(-2px);
   }
   .probleem-kaart::before {
     content: "";
