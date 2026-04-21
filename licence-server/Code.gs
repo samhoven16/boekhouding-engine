@@ -32,6 +32,8 @@ function doGet(e) {
   if (actie === 'valideer')      return valideerEndpoint_(e);
   if (actie === 'aanvraag-otp')  return aanvraagOtpEndpoint_(e);
   if (actie === 'activeer-otp')  return activeerOtpEndpoint_(e);
+  if (actie === 'onboarded')     return onboardedEndpoint_(e);
+  if (actie === 'config')        return configEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   if (actie === 'admin')         return adminPaneel_(e);
 
@@ -72,6 +74,8 @@ function healthEndpoint_() {
     version: '1.0.3',
     licenses: licenseCount,
     mollie: !!props.getProperty('MOLLIE_API_KEY'),
+    templateReady: !!props.getProperty('TEMPLATE_SS_ID'),
+    brevo: !!props.getProperty('BREVO_API_KEY'),
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -439,6 +443,84 @@ function valideerEndpoint_(e) {
 }
 
 // ─────────────────────────────────────────────
+//  CONFIG-ENDPOINT — centrale product-versie + bericht
+// ─────────────────────────────────────────────
+/**
+ * Klant-kopie vraagt dit 1× per 24u op voor:
+ *  - versie      — huidige product-versie (vergelijkt met eigen PRODUCT_VERSIE)
+ *  - bericht     — optionele globale banner-tekst (leeg = geen banner)
+ *  - flags       — feature-flag object voor toekomstige gradual rollouts
+ *
+ * Geen authenticatie nodig: het is publieke product-metadata.
+ */
+function configEndpoint_(e) {
+  const props = PropertiesService.getScriptProperties();
+  let flags = {};
+  try { flags = JSON.parse(props.getProperty('FEATURE_FLAGS') || '{}'); } catch (_) {}
+  return jsonResp_({
+    versie:  props.getProperty('PRODUCT_VERSIE') || '2.1.0',
+    bericht: props.getProperty('GLOBAL_BERICHT') || '',
+    flags:   flags,
+  });
+}
+
+// ─────────────────────────────────────────────
+//  ONBOARDED-ENDPOINT — klant-kopie meldt geslaagde setup()
+// ─────────────────────────────────────────────
+/**
+ * Klant-kopie roept dit aan zodra setup() voor het eerst succesvol is
+ * doorlopen. Schrijft een timestamp in kolom 11 ("Onboarded op") van de
+ * CRM-sheet, zodat jij in één oogopslag ziet welke klanten daadwerkelijk
+ * werkend zijn vs. alleen geactiveerd.
+ *
+ * Idempotent — overschrijft een bestaande timestamp niet.
+ */
+function onboardedEndpoint_(e) {
+  const sleutel = String((e.parameter.sleutel || '')).trim().toUpperCase();
+  const ssId    = String((e.parameter.ssId    || '')).trim();
+  if (!sleutel) return jsonResp_({ ok: false, fout: 'Geen sleutel.' });
+
+  try {
+    const sheet = getLicentieSheet_();
+    ensureOnboardedKolom_(sheet);
+    const data = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).toUpperCase() !== sleutel) continue;
+
+      const boundSsId = String(data[i][6] || '');
+      if (ssId && boundSsId && ssId !== boundSsId) {
+        return jsonResp_({ ok: false, fout: 'Spreadsheet-ID komt niet overeen.' });
+      }
+
+      // Idempotent — niet overschrijven als al geboekt
+      if (data[i][10]) return jsonResp_({ ok: true, already: true });
+
+      sheet.getRange(i + 1, 11).setValue(new Date());
+      return jsonResp_({ ok: true });
+    }
+    return jsonResp_({ ok: false, fout: 'Sleutel niet gevonden.' });
+  } catch (err) {
+    Logger.log('Onboarded fout: ' + err.message);
+    return jsonResp_({ ok: false, fout: 'Serverfout.' });
+  }
+}
+
+/**
+ * Voegt kolom 11 ('Onboarded op') toe aan oudere licentie-sheets.
+ * Idempotent — no-op als kolom al bestaat.
+ */
+function ensureOnboardedKolom_(sheet) {
+  const lastCol = sheet.getLastColumn();
+  if (lastCol >= 11) return;
+  sheet.getRange(1, 11)
+    .setValue('Onboarded op')
+    .setFontWeight('bold')
+    .setBackground('#0D1B4E')
+    .setFontColor('#FFFFFF');
+}
+
+// ─────────────────────────────────────────────
 //  BEDANKT-PAGINA (na Mollie redirect)
 // ─────────────────────────────────────────────
 function bedanktPagina_(e) {
@@ -485,26 +567,118 @@ function adminPaneel_(e) {
     ).setTitle('Admin');
   }
 
+  const props = PropertiesService.getScriptProperties();
+  const templateReady = !!props.getProperty('TEMPLATE_SS_ID');
+  const mollieReady   = !!props.getProperty('MOLLIE_API_KEY');
+  const brevoReady    = !!props.getProperty('BREVO_API_KEY');
+
+  let banners = '';
+  if (!templateReady) {
+    banners += '<div class="banner err"><strong>⚠ TEMPLATE_SS_ID ontbreekt.</strong> ' +
+               'De copy-link in de klant-e-mail is dan leeg. Vul Script Properties → ' +
+               '<code>TEMPLATE_SS_ID</code> met het ID van je master-spreadsheet.</div>';
+  }
+  if (!mollieReady) {
+    banners += '<div class="banner err"><strong>⚠ MOLLIE_API_KEY ontbreekt.</strong> ' +
+               'Betaalpagina werkt niet. Vul Script Properties.</div>';
+  }
+  if (!brevoReady) {
+    banners += '<div class="banner warn">Brevo niet geconfigureerd — transactionele e-mail ' +
+               'valt terug op <code>MailApp.sendEmail</code> (lagere deliverability).</div>';
+  }
+
   const sheet = getLicentieSheet_();
+  ensureOnboardedKolom_(sheet);
   const data  = sheet.getDataRange().getValues();
-  let rijen   = '';
+  const totaal      = Math.max(0, data.length - 1);
+  let actief        = 0;
+  let onboarded     = 0;
+  let wachtTemplate = 0;
+  let rijen = '';
+
   for (let i = 1; i < data.length; i++) {
-    rijen += `<tr><td>${data[i][0]}</td><td>${data[i][1]}</td><td>${data[i][2]}</td>
-      <td>${data[i][4]}</td><td>${data[i][6] || '—'}</td>
-      <td>${data[i][9] ? new Date(data[i][9]).toLocaleDateString('nl-NL') : '—'}</td></tr>`;
+    const statusRaw = String(data[i][4] || '');
+    const statusL   = statusRaw.toLowerCase();
+    const installatie = String(data[i][6] || '');
+    const onboardDt = data[i][10];
+    const valideerDt = data[i][9];
+
+    if (statusL.startsWith('actief')) actief++;
+    if (onboardDt) onboarded++;
+    if (statusRaw.indexOf('wacht op TEMPLATE') !== -1) wachtTemplate++;
+
+    const cat = onboardDt
+      ? 'onboarded'
+      : (statusL.startsWith('actief') ? 'actief' : 'overig');
+
+    rijen += `<tr data-cat="${cat}" data-tekst="${(data[i][1] + ' ' + data[i][2]).toLowerCase()}">
+      <td>${data[i][0]}</td><td>${data[i][1]}</td><td>${data[i][2]}</td>
+      <td>${statusRaw}</td>
+      <td>${installatie ? '<code>' + installatie.substring(0, 16) + '…</code>' : '—'}</td>
+      <td>${onboardDt ? new Date(onboardDt).toLocaleDateString('nl-NL') : '—'}</td>
+      <td>${valideerDt ? new Date(valideerDt).toLocaleDateString('nl-NL') : '—'}</td>
+    </tr>`;
   }
 
   return HtmlService.createHtmlOutput(`
-    <style>body{font-family:Arial;padding:20px;font-size:13px}
-    table{width:100%;border-collapse:collapse}th,td{padding:7px 10px;
-    border:1px solid #ddd;text-align:left}th{background:#1A237E;color:#fff}
-    tr:nth-child(even){background:#f5f5f5}</style>
-    <h3>Licenties (${data.length - 1} totaal)</h3>
-    <table><tr><th>Sleutel</th><th>Naam</th><th>Email</th>
-    <th>Status</th><th>Installatie-ID</th><th>Laatste validatie</th></tr>
-    ${rijen}</table>
+    <style>
+      body{font-family:Arial;padding:20px;font-size:13px}
+      .banner{border-radius:6px;padding:10px 14px;margin-bottom:10px;font-size:13px}
+      .banner.err{background:#FDECEC;color:#B91C1C;border:1px solid #F5B3B3}
+      .banner.warn{background:#FFF8E1;color:#8B5A00;border:1px solid #E6D8A8}
+      code{background:#F1F3F5;padding:1px 6px;border-radius:3px;font-size:12px}
+      .metrics{display:flex;gap:14px;margin:12px 0 18px}
+      .metric{background:#F7F9FC;border:1px solid #E5EAF2;border-radius:8px;padding:10px 14px;min-width:120px}
+      .metric .v{font-size:20px;font-weight:700;color:#0D1B4E}
+      .metric .l{font-size:11px;color:#5F6B7A;text-transform:uppercase;letter-spacing:.5px}
+      .filters{display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+      .filters input{flex:1;min-width:220px;padding:8px;border:1px solid #E5EAF2;border-radius:6px;font-size:13px}
+      .filters button{padding:8px 12px;border:1px solid #E5EAF2;background:#fff;border-radius:6px;cursor:pointer;font-size:12px}
+      .filters button.actief{background:#0D1B4E;color:#fff;border-color:#0D1B4E}
+      table{width:100%;border-collapse:collapse}
+      th,td{padding:7px 10px;border:1px solid #ddd;text-align:left}
+      th{background:#0D1B4E;color:#fff}
+      tr:nth-child(even){background:#f5f5f5}
+      tr.hidden{display:none}
+    </style>
+    ${banners}
+    <h3>Klanten-overzicht</h3>
+    <div class="metrics">
+      <div class="metric"><div class="v">${totaal}</div><div class="l">Totaal</div></div>
+      <div class="metric"><div class="v">${actief}</div><div class="l">Actief</div></div>
+      <div class="metric"><div class="v">${onboarded}</div><div class="l">Onboarded</div></div>
+      <div class="metric"><div class="v" style="color:${wachtTemplate ? '#B91C1C' : '#0D1B4E'}">${wachtTemplate}</div><div class="l">Wacht op template</div></div>
+    </div>
+    <div class="filters">
+      <input id="zoek" placeholder="Filter op naam of e-mail…" oninput="filter()">
+      <button onclick="kiesCat('alle', this)" class="actief">Alle</button>
+      <button onclick="kiesCat('onboarded', this)">Onboarded</button>
+      <button onclick="kiesCat('actief', this)">Actief (nog niet onboarded)</button>
+      <button onclick="kiesCat('overig', this)">Overig</button>
+    </div>
+    <table><tr>
+      <th>Sleutel</th><th>Naam</th><th>Email</th><th>Status</th>
+      <th>Installatie-ID</th><th>Onboarded op</th><th>Laatste validatie</th>
+    </tr>${rijen}</table>
     <p style="margin-top:16px;font-size:11px;color:#999">
       Licenties beheren: open de licentie-spreadsheet rechtstreeks in Google Drive.</p>
+    <script>
+      var cat = 'alle';
+      function kiesCat(c, btn) {
+        cat = c;
+        document.querySelectorAll('.filters button').forEach(function(b){ b.classList.remove('actief'); });
+        btn.classList.add('actief');
+        filter();
+      }
+      function filter() {
+        var q = document.getElementById('zoek').value.toLowerCase();
+        document.querySelectorAll('tr[data-cat]').forEach(function(tr){
+          var catOk = cat === 'alle' || tr.getAttribute('data-cat') === cat;
+          var qOk   = !q || tr.getAttribute('data-tekst').indexOf(q) !== -1;
+          tr.classList.toggle('hidden', !(catOk && qOk));
+        });
+      }
+    </script>
   `).setTitle('Admin — Licentiebeheer');
 }
 
@@ -518,6 +692,28 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const brevoKey    = props.getProperty('BREVO_API_KEY')   || '';
   const vanEmail    = props.getProperty('VAN_EMAIL')       || 'hallo@boekhoudbaar.nl';
   const vanNaam     = props.getProperty('VAN_NAAM')        || 'Sam van Boekhoudbaar';
+  const kvk         = props.getProperty('KVK_NUMMER')      || '';
+  const privacyUrl  = props.getProperty('PRIVACY_URL')     || 'https://www.boekhoudbaar.nl/privacy';
+
+  // Guard — zonder TEMPLATE_SS_ID kan de klant de copy-link niet gebruiken.
+  // Stuur een alert naar de eigenaar en markeer de licentie-rij zichtbaar.
+  if (!templateId) {
+    Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' (' + sleutel + ') wacht op activatielink.');
+    try { markeerTemplateOntbreekt_(sleutel); } catch (_) {}
+    try {
+      MailApp.sendEmail({
+        to: vanEmail,
+        subject: '⚠ Boekhoudbaar — TEMPLATE_SS_ID ontbreekt (' + email + ' wacht)',
+        htmlBody: '<p>Nieuwe klant <strong>' + naam + '</strong> (' + email + ') heeft betaald ' +
+                  'maar de copy-link kan niet worden opgebouwd omdat <code>TEMPLATE_SS_ID</code> ' +
+                  'ontbreekt in Script Properties.</p>' +
+                  '<p>Licentiesleutel: <code>' + sleutel + '</code></p>' +
+                  '<p>Vul <code>TEMPLATE_SS_ID</code> en run <code>herstuurLicentiemailHandmatig(&quot;' +
+                  sleutel + '&quot;)</code> in de editor.</p>',
+      });
+    } catch (_) {}
+    return;
+  }
 
   // Klant krijgt een "Maak een kopie"-link naar het master-sjabloon.
   // Na het openen vult de klant zijn e-mailadres in, ontvangt een OTP en activeert.
@@ -560,7 +756,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
       Vragen? Stuur een e-mail naar <a href="mailto:${vanEmail}" style="color:#1A237E">${vanEmail}</a>.
     </p>
     <p style="font-size:12px;color:#cbd5e1">
-      ${productnm} · KVK 00000000 · <a href="https://www.boekhoudbaar.nl/privacy" style="color:#94a3b8">Privacybeleid</a>
+      ${productnm}${kvk ? ' · KVK ' + kvk : ''} · <a href="${privacyUrl}" style="color:#94a3b8">Privacybeleid</a>
     </p>
   </div>
 </body></html>`;
@@ -585,6 +781,47 @@ function stuurLicentiemail_(naam, email, sleutel) {
   }
 
   if (brevoKey) maakBrevoContact_(naam, email, sleutel, brevoKey);
+}
+
+/**
+ * Markeert een licentie-rij wanneer de eerste mail niet verstuurd kon worden
+ * wegens ontbrekende TEMPLATE_SS_ID. Admin-paneel toont de aangepaste status.
+ */
+function markeerTemplateOntbreekt_(sleutel) {
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === sleutel) {
+      sheet.getRange(i + 1, 5).setValue('Actief — wacht op TEMPLATE_SS_ID');
+      return;
+    }
+  }
+}
+
+/**
+ * Handmatig opnieuw de activatiemail versturen. Gebruiken wanneer de eerste
+ * mail faalde (bv. TEMPLATE_SS_ID stond toen nog niet ingesteld).
+ * Run in de editor: herstuurLicentiemailHandmatig("BKHE-XXXX-XXXX-XXXX")
+ */
+function herstuurLicentiemailHandmatig(sleutel) {
+  sleutel = String(sleutel || '').trim().toUpperCase();
+  if (!sleutel) throw new Error('Geef een licentiesleutel op.');
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).toUpperCase() !== sleutel) continue;
+    const naam  = String(data[i][1] || 'Klant');
+    const email = String(data[i][2] || '');
+    if (!email) throw new Error('Rij heeft geen e-mailadres.');
+    stuurLicentiemail_(naam, email, sleutel);
+    // Status normaliseren als 'm op de fallback stond
+    if (String(data[i][4]).indexOf('wacht op TEMPLATE') !== -1) {
+      sheet.getRange(i + 1, 5).setValue('Actief');
+    }
+    Logger.log('Mail opnieuw verstuurd naar ' + email);
+    return;
+  }
+  throw new Error('Sleutel niet gevonden: ' + sleutel);
 }
 
 function maakBrevoContact_(naam, email, sleutel, brevoKey) {
@@ -629,9 +866,10 @@ function getLicentieSheet_() {
   // Zet headers als het een nieuw blad is
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(['Sleutel','Naam','Email','Versie','Status','Vervaldatum',
-                     'Installatie-ID','Aangemaakt op','Mollie betaling ID','Laatste validatie']);
-    sheet.getRange(1, 1, 1, 10).setFontWeight('bold')
-      .setBackground('#1A237E').setFontColor('#FFFFFF');
+                     'Installatie-ID','Aangemaakt op','Mollie betaling ID','Laatste validatie',
+                     'Onboarded op']);
+    sheet.getRange(1, 1, 1, 11).setFontWeight('bold')
+      .setBackground('#0D1B4E').setFontColor('#FFFFFF');
   }
   return sheet;
 }

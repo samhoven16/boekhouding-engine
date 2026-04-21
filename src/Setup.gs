@@ -79,6 +79,9 @@ function setup() {
 
     PropertiesService.getScriptProperties().setProperty(PROP.SETUP_DONE, 'true');
 
+    // Meld onboarding succesvol aan centrale licentieserver (fire-and-forget).
+    try { meldOnboardingAanServer_(); } catch (e) { Logger.log('Onboarding-callback overgeslagen: ' + e.message); }
+
     Logger.log('=== SETUP GESLAAGD ===');
     Logger.log('Spreadsheet URL: ' + ss.getUrl());
     Logger.log('Vul uw bedrijfsgegevens in op het tabblad Instellingen.');
