@@ -61,21 +61,38 @@ function setup() {
 
   try {
     Logger.log('Setup gestart...');
-    maakTabbladen_(ss);
-    verbergTechnischeTabbladen_(ss);
-    vulGrootboekschema_(ss);
-    zetInstellingen_(ss);
-    maakFormuliersTabbladen_(ss);
-    maakHoofdFormulier_(ss);
-    // Zet tabs in vaste professionele volgorde en verberg alle rommel
-    herorganiseerWerkruimteSilent_(ss);
-    // Bescherm kritieke cellen tegen onbedoeld overschrijven
-    beschermCellen_(ss);
-    installeelTriggers_();
-    // Drive mappenstructuur aanmaken
+
+    // Elke stap krijgt een label zodat een crash exact vertelt
+    // waar het misging. Fail-fast: stop bij eerste fout.
     const jaar = new Date().getFullYear();
-    maakDriveStructuur_(jaar);
-    slaDriverLinksOpInInstellingen_(jaar);
+    const stappen = [
+      ['Tabbladen aanmaken',        function() { maakTabbladen_(ss); }],
+      ['Technische tabs verbergen', function() { verbergTechnischeTabbladen_(ss); }],
+      ['Grootboekschema laden',     function() { vulGrootboekschema_(ss); }],
+      ['Instellingen initialiseren', function() { zetInstellingen_(ss); }],
+      ['Formuliers-tabs aanmaken',  function() { maakFormuliersTabbladen_(ss); }],
+      ['Hoofdformulier aanmaken',   function() { maakHoofdFormulier_(ss); }],
+      ['Werkruimte ordenen',        function() { herorganiseerWerkruimteSilent_(ss); }],
+      ['Cellen beschermen',         function() { beschermCellen_(ss); }],
+      ['Triggers installeren',      function() { installeelTriggers_(); }],
+      ['Drive-structuur aanmaken',  function() { maakDriveStructuur_(jaar); }],
+      ['Drive-links opslaan',       function() { slaDriverLinksOpInInstellingen_(jaar); }],
+    ];
+
+    for (let i = 0; i < stappen.length; i++) {
+      const label = stappen[i][0];
+      const fn    = stappen[i][1];
+      try {
+        Logger.log('Setup-stap ' + (i + 1) + '/' + stappen.length + ': ' + label);
+        fn();
+      } catch (stapErr) {
+        const melding = 'Setup gestopt bij stap ' + (i + 1) + ' van ' + stappen.length +
+                        ' (' + label + '): ' + stapErr.message;
+        Logger.log('::error:: ' + melding + '\n' + (stapErr.stack || ''));
+        // Herkenbaar voor de eigenaar in support-ticket: stap-nummer + stap-naam
+        throw new Error(melding);
+      }
+    }
 
     PropertiesService.getScriptProperties().setProperty(PROP.SETUP_DONE, 'true');
 
@@ -97,7 +114,8 @@ function setup() {
 
   } catch (e) {
     Logger.log('FOUT bij setup: ' + e.message + '\n' + e.stack);
-    alertOfLog_(ui, 'Fout bij setup', e.message);
+    alertOfLog_(ui, 'Fout bij setup', e.message +
+      '\n\nStuur dit bericht door aan hallo@boekhoudbaar.nl — het stap-nummer helpt ons snel te weten waar te kijken.');
   }
 }
 
