@@ -175,8 +175,13 @@
     background: var(--blauw); color: var(--wit) !important;
     padding: 9px 20px; border-radius: 8px; font-weight: 600 !important;
     font-size: 14px !important;
+    transition: background .15s ease, transform .15s ease, box-shadow .2s ease;
   }
-  .nav-cta:hover { background: var(--blauw-licht) !important; color: var(--wit) !important; }
+  .nav-cta:hover {
+    background: var(--blauw-licht) !important; color: var(--wit) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(13,27,78,.22);
+  }
 
   /* ── HERO ── */
   .hero {
@@ -190,13 +195,33 @@
   .hero::before {
     content: "";
     position: absolute;
-    inset: 0;
+    inset: -10%;
     background:
       radial-gradient(600px 320px at 18% 15%, rgba(46,196,182,.18), transparent 60%),
-      radial-gradient(520px 280px at 82% 85%, rgba(46,196,182,.12), transparent 65%);
+      radial-gradient(520px 280px at 82% 85%, rgba(46,196,182,.12), transparent 65%),
+      radial-gradient(440px 260px at 50% 50%, rgba(46,196,182,.08), transparent 70%);
     pointer-events: none;
+    animation: hero-drift 26s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  @keyframes hero-drift {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    50%  { transform: translate3d(-18px, 10px, 0) scale(1.04); }
+    100% { transform: translate3d(14px, -8px, 0) scale(1.02); }
   }
   .hero > * { position: relative; }
+  .hero-badge, .hero h1, .hero-sub, .hero-ctas, .hero .ideal-badge {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: hero-rise .7s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  .hero h1   { animation-delay: .08s; }
+  .hero-sub  { animation-delay: .22s; }
+  .hero-ctas { animation-delay: .36s; }
+  .hero .ideal-badge { animation-delay: .50s; }
+  @keyframes hero-rise {
+    to { opacity: 1; transform: translateY(0); }
+  }
   .hero-badge {
     display: inline-block;
     background: rgba(46,196,182,.15);
@@ -242,7 +267,8 @@
     transition: background .15s;
     min-height: 56px;
   }
-  .btn-secundair:hover { background: rgba(255,255,255,.2); }
+  .btn-secundair { transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+  .btn-secundair:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.6); transform: translateY(-1px); }
   .ideal-badge {
     display: inline-flex; align-items: center; gap: 8px;
     background: transparent; border-radius: 0;
@@ -275,6 +301,47 @@
   h2 { font-size: clamp(28px, 3.6vw, 42px); font-weight: 800; line-height: 1.18; letter-spacing: -0.015em; color: var(--blauw); }
   .sub-tekst { font-size: 17px; color: var(--grijs); margin-top: 12px; max-width: 600px; }
 
+  /* ── PRODUCT PREVIEW ── */
+  .preview-sectie { background: var(--wit); padding-top: 64px; padding-bottom: 88px; }
+  .preview-head { max-width: 720px; margin: 0 auto 40px; text-align: center; }
+  .preview-head h2 { margin-bottom: 10px; }
+  .preview-head .sub-tekst { margin: 0 auto; }
+  .preview-bullets {
+    list-style: none; padding: 0; margin: 22px auto 0;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px;
+    max-width: 780px;
+  }
+  .preview-bullets li {
+    font-size: 14px; color: var(--tekst);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .preview-bullets li::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+  }
+  .preview-frame {
+    max-width: 900px; margin: 36px auto 0;
+    border: 1px solid var(--rand);
+    border-radius: 14px;
+    background: var(--wit);
+    box-shadow: 0 20px 60px rgba(13,27,78,.08), 0 2px 8px rgba(13,27,78,.04);
+    overflow: hidden;
+    position: relative;
+    transition: transform .4s cubic-bezier(.2,.7,.2,1), box-shadow .4s ease;
+  }
+  .preview-frame:hover { transform: scale(1.015); box-shadow: 0 28px 72px rgba(13,27,78,.12), 0 4px 12px rgba(13,27,78,.05); }
+  .preview-frame img { display: block; width: 100%; height: auto; }
+  .preview-frame::after {
+    content: ""; position: absolute; inset: 0;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(247,249,252,0) 78%, rgba(247,249,252,.55) 100%);
+  }
+  @media (max-width: 720px) {
+    .preview-sectie { padding-top: 48px; padding-bottom: 64px; }
+    .preview-frame { border-radius: 10px; margin-top: 24px; }
+    .preview-bullets { gap: 8px 16px; font-size: 13px; }
+  }
+
   /* ── PROBLEEM ── */
   .probleem-sectie { background: #0D1B4E; color: rgba(255,255,255,.88); }
   .probleem-sectie .section-label { color: var(--accent); }
@@ -291,6 +358,12 @@
     border: 1px solid rgba(255,255,255,.10);
     border-radius: var(--radius);
     padding: 28px 24px 24px;
+    transition: background .25s ease, border-color .25s ease, transform .25s ease;
+  }
+  .probleem-kaart:hover {
+    background: rgba(255,255,255,.06);
+    border-color: rgba(46,196,182,.25);
+    transform: translateY(-2px);
   }
   .probleem-kaart::before {
     content: "";
@@ -592,6 +665,16 @@
   /* Fixed-header scroll-margin fix (WCAG 2.4.11) */
   [id] { scroll-margin-top: 88px; }
 
+  /* ── SCROLL-REVEAL ── */
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity .65s cubic-bezier(.2,.7,.2,1), transform .65s cubic-bezier(.2,.7,.2,1);
+    transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
+  }
+  [data-reveal].is-visible { opacity: 1; transform: translateY(0); }
+
   /* Respect reduced-motion preference (WCAG 2.3.3) */
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
@@ -599,6 +682,7 @@
       transition-duration: .01ms !important;
       animation-duration: .01ms !important;
     }
+    [data-reveal] { opacity: 1 !important; transform: none !important; }
   }
 </style>
 </head>
@@ -648,6 +732,25 @@
 </header>
 
 <main id="main" tabindex="-1">
+<!-- ── PRODUCT PREVIEW ── -->
+<section class="preview-sectie" aria-labelledby="preview-heading">
+  <div class="container">
+    <div class="preview-head">
+      <p class="section-label">Hoe het eruit ziet</p>
+      <h2 id="preview-heading">Zo ziet je boekhouding eruit</h2>
+      <p class="sub-tekst">Geen dashboard-chaos. Gewoon overzicht in je eigen systeem.</p>
+      <ul class="preview-bullets" role="list">
+        <li>Inkomsten, kosten en BTW in één overzicht</li>
+        <li>Automatische structuur, geen handmatig gedoe</li>
+        <li>Volledig in jouw Google Drive</li>
+      </ul>
+    </div>
+    <div class="preview-frame" aria-hidden="true" data-reveal>
+      <img src="/preview.svg" alt="" width="1200" height="720" loading="lazy">
+    </div>
+  </div>
+</section>
+
 <!-- ── SOCIAL PROOF STRIP ── -->
 <div class="proof-strip" aria-label="Kenmerken">
   <p>
@@ -668,15 +771,15 @@
     <h2 id="probleem-heading">Boekhoudsoftware is duur, en je data zit vast</h2>
     <p class="sub-tekst">Drie kosten die je niet meer hoeft te dragen als je je boekhouding zelf in de hand houdt.</p>
     <div class="probleem-grid" role="list">
-      <div class="probleem-kaart" role="listitem">
+      <div class="probleem-kaart" role="listitem" data-reveal data-reveal-stagger="0">
         <h3>€300+ per jaar, elk jaar opnieuw</h3>
         <p>Een abonnement dat doorloopt zolang je onderneemt. Na vijf jaar heb je €1.500 tot €2.500 betaald — voor iets dat in de kern een spreadsheet is.</p>
       </div>
-      <div class="probleem-kaart" role="listitem">
+      <div class="probleem-kaart" role="listitem" data-reveal data-reveal-stagger="90">
         <h3>Je data staat op hún server</h3>
         <p>Stop je met het abonnement, dan verlies je je toegang. Exporteren kan vaak alleen in hun formaat. Jouw zeven jaar administratie zit vast in hun systeem.</p>
       </div>
-      <div class="probleem-kaart" role="listitem">
+      <div class="probleem-kaart" role="listitem" data-reveal data-reveal-stagger="180">
         <h3>Gebouwd voor accountants, niet voor jou</h3>
         <p>Dubbel boekhouden, grootboekrekeningen, debet/credit. Prima als je accountant bent — onnodig complex als je gewoon je eigen boekhouding wilt bijhouden.</p>
       </div>
@@ -691,32 +794,32 @@
     <h2>Alles wat de Belastingdienst verwacht</h2>
     <p class="sub-tekst">Zes kernfuncties voor de zelfstandige. Niet méér, niet minder.</p>
     <div class="usp-grid" role="list">
-      <article class="usp-kaart" role="listitem">
+      <article class="usp-kaart" role="listitem" data-reveal data-reveal-stagger="0">
         <div class="usp-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h5"/></svg></div>
         <h3>PDF-facturen versturen</h3>
         <p>Maak professionele facturen met jouw huisstijl, stuur ze direct per e-mail en houd de status automatisch bij. Met betalingsherinnering als dat nodig is.</p>
       </article>
-      <article class="usp-kaart" role="listitem">
+      <article class="usp-kaart" role="listitem" data-reveal data-reveal-stagger="70">
         <div class="usp-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 5L5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg></div>
         <h3>BTW-aangifte in 5 minuten</h3>
         <p>Je BTW-aangifte wordt automatisch berekend per kwartaal. Overzicht per rubriek (1a, 1b, 3b), klaar om over te nemen in Mijn Belastingdienst.</p>
       </article>
-      <article class="usp-kaart" role="listitem">
+      <article class="usp-kaart" role="listitem" data-reveal data-reveal-stagger="140">
         <div class="usp-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 20V10M12 20V4M17 20v-7"/></svg></div>
         <h3>Dashboard &amp; KPI's</h3>
         <p>In één oogopslag: omzet, kosten, winst, openstaande facturen en je BTW-saldo. Bijgewerkt zodra je een boeking doet.</p>
       </article>
-      <article class="usp-kaart" role="listitem">
+      <article class="usp-kaart" role="listitem" data-reveal data-reveal-stagger="210">
         <div class="usp-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-14.93 4"/><path d="M4 12a8 8 0 0 1 14.93-4"/><path d="M20 4v5h-5"/><path d="M4 20v-5h5"/></svg></div>
         <h3>Herhalende kosten</h3>
         <p>Vaste lasten als huur, abonnementen en verzekeringen worden automatisch geboekt. Jij hoeft er niet meer aan te denken.</p>
       </article>
-      <article class="usp-kaart" role="listitem">
+      <article class="usp-kaart" role="listitem" data-reveal data-reveal-stagger="280">
         <div class="usp-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 13h8M8 17h5"/></svg></div>
         <h3>Volledige rapportages</h3>
         <p>Balans, winst- en verliesrekening en cashflow-overzicht. Altijd bijgewerkt, exporteerbaar naar Excel — voor jou en je boekhouder.</p>
       </article>
-      <article class="usp-kaart" role="listitem">
+      <article class="usp-kaart" role="listitem" data-reveal data-reveal-stagger="350">
         <div class="usp-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></div>
         <h3>Data in jouw Drive</h3>
         <p>Jouw boekhouding staat in een Google Spreadsheet op jouw eigen Google Drive. Wij hebben er geen toegang toe. 7-jaar bewaarplicht automatisch geregeld.</p>
@@ -754,15 +857,15 @@
 <!-- ── OPRICHTER ── -->
 <section class="oprichter-sectie" aria-labelledby="oprichter-heading">
   <div class="container">
-    <p class="section-label">Wie hier achter zit</p>
-    <h2 id="oprichter-heading">Gemaakt door één zelfstandige, voor zelfstandigen</h2>
-    <div class="oprichter-grid">
+    <p class="section-label">Over de maker</p>
+    <h2 id="oprichter-heading">Gebouwd uit de behoefte aan controle</h2>
+    <div class="oprichter-grid" data-reveal>
       <img src="/sam-hoven.jpg" alt="Sam Hoven, oprichter van Boekhoudbaar" class="oprichter-foto" width="200" height="200" loading="lazy" onerror="this.classList.add('failed')">
       <div class="oprichter-foto-initial" aria-hidden="true">SH</div>
       <div class="oprichter-tekst">
-        <p class="oprichter-quote">"Ik wilde een boekhouding die ik snapte, die van mij was, en waar ik nooit meer een abonnement voor hoef af te sluiten."</p>
-        <p>Boekhoudbaar is ontstaan uit frustratie met mijn eigen administratie. Ieder jaar €300 betalen voor software die ik een paar keer per maand gebruikte, met een interface die vooral voor accountants geschreven leek — dat voelde niet goed.</p>
-        <p>Dus heb ik het zelf gebouwd, in Google Sheets, zodat het bestand voor altijd van mij blijft. Geen abonnement, geen vendor lock-in, geen verrassingen. Het werkt voor mij — en inmiddels voor een paar honderd andere zelfstandigen ook.</p>
+        <p class="oprichter-quote">"Ik wilde mijn eigen boekhouding kunnen openen zonder afhankelijk te zijn van iemand anders zijn software."</p>
+        <p>Boekhoudbaar begon als mijn eigen administratie. Een map in Drive, een paar Sheets, logica die langzaam groeide. Geen SaaS-abonnement dat elk jaar duurder werd, geen export-gedoe wanneer ik iets anders wilde — gewoon bestanden die van mij zijn.</p>
+        <p>Na een paar jaar gebruiken was het stabiel genoeg om te delen. Dezelfde opzet, dezelfde beperkingen, dezelfde rust: je data blijft op jouw Drive, je sluit niets af, en als Boekhoudbaar ooit verdwijnt, werkt je administratie door zoals altijd.</p>
         <p class="oprichter-naam"><strong>Sam Hoven</strong> · oprichter</p>
       </div>
     </div>
@@ -845,7 +948,7 @@
   <div class="container">
     <p class="section-label">Prijs</p>
     <h2>Eén prijs. Eenmalig.</h2>
-    <div class="pricing-kaart" role="region" aria-labelledby="prijs-heading">
+    <div class="pricing-kaart" role="region" aria-labelledby="prijs-heading" data-reveal>
       <div class="pricing-badge">Eenmalige aankoop</div>
       <div class="prijs-groot" id="prijs-heading"><sup>€</sup>49</div>
       <p class="prijs-sub">Eenmalig — inclusief BTW — geen verborgen kosten</p>
@@ -965,6 +1068,26 @@
 </footer>
 
 <script>
+  (function() {
+    if (!('IntersectionObserver' in window)) {
+      document.querySelectorAll('[data-reveal]').forEach(function(el){ el.classList.add('is-visible'); });
+      return;
+    }
+    var io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+    document.querySelectorAll('[data-reveal]').forEach(function(el, i) {
+      var stagger = el.getAttribute('data-reveal-stagger');
+      if (stagger) el.style.setProperty('--reveal-delay', stagger + 'ms');
+      io.observe(el);
+    });
+  })();
+
   (function() {
     var btn = document.querySelector('.nav-toggle');
     var menu = document.getElementById('nav-menu');
