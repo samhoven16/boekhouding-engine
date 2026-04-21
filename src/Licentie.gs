@@ -97,22 +97,34 @@ function vergrendelKopie_() {
 
   try {
     const html = HtmlService.createHtmlOutput(`
-      <!DOCTYPE html><html lang="nl"><body style="font-family:Arial,sans-serif;padding:24px;text-align:center;color:#1a1a2e">
-        <div style="font-size:52px;margin-bottom:12px">🔒</div>
-        <h2 style="color:#1A237E;margin-bottom:8px">Licentie vereist</h2>
-        <p style="color:#555;margin-bottom:16px">Dit bestand is een kopie van een gelicenseerde Boekhoudbaar-spreadsheet.<br>
-        Elke spreadsheet heeft een eigen licentie nodig.</p>
-        <a href="https://boekhoudbaar.nl/kopen" target="_blank"
-           style="background:#1A237E;color:#fff;padding:12px 28px;border-radius:8px;
-                  text-decoration:none;font-weight:700;font-size:15px;display:inline-block">
-          Koop een licentie — €49 →
-        </a>
-        <p style="color:#94a3b8;font-size:11px;margin-top:16px">
-          Al gekocht? Open dan de spreadsheet die je bij activering hebt aangemaakt,<br>of neem contact op via hallo@boekhoudbaar.nl
+      <!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>
+      <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+                   padding:28px 30px;background:#F7F9FC;color:#1A1A1A;-webkit-font-smoothing:antialiased">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2EC4B6;margin-bottom:6px">Licentie vereist</div>
+        <h2 style="color:#0D1B4E;font-size:22px;font-weight:800;letter-spacing:-0.01em;margin-bottom:10px;line-height:1.3">
+          Dit is een kopie van een Boekhoudbaar-sheet
+        </h2>
+        <p style="color:#5F6B7A;font-size:13px;line-height:1.6;margin-bottom:16px">
+          Elke Boekhoudbaar-installatie heeft een eigen licentie nodig. Deze kopie is niet
+          geactiveerd. Alle tabbladen zijn daarom alleen-lezen.
+        </p>
+        <div style="background:#fff;border:1px solid #E5EAF2;border-radius:10px;padding:14px 16px;margin:14px 0;font-size:13px;line-height:1.55;color:#1A1A1A">
+          <strong style="color:#0D1B4E">Wat te doen?</strong><br>
+          <span style="color:#5F6B7A">Open de originele spreadsheet die je bij activering hebt aangemaakt, óf koop een eigen licentie hieronder.</span>
+        </div>
+        <div style="text-align:center;margin-top:20px">
+          <a href="https://boekhoudbaar.nl/kopen" target="_blank"
+             style="background:#0D1B4E;color:#fff;padding:13px 28px;border-radius:10px;
+                    text-decoration:none;font-weight:600;font-size:14px;display:inline-block;letter-spacing:.1px">
+            Koop een licentie — €49
+          </a>
+        </div>
+        <p style="color:#94a3b8;font-size:12px;margin-top:18px;text-align:center">
+          Al gekocht? Mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.
         </p>
       </body></html>
-    `).setWidth(420).setHeight(280);
-    SpreadsheetApp.getUi().showModalDialog(html, '📊 Boekhoudbaar — Licentie vereist');
+    `).setWidth(460).setHeight(380);
+    SpreadsheetApp.getUi().showModalDialog(html, 'Boekhoudbaar — Licentie vereist');
   } catch (_) {}
 }
 
