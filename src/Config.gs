@@ -253,14 +253,14 @@ const KOSTEN_CATEGORIEEN = [
 //  KLEUREN PALET
 // ─────────────────────────────────────────────
 const KLEUREN = {
-  HEADER_BG:     '#1A237E',   // donkerblauw
+  HEADER_BG:     '#0D1B4E',   // brand navy (matches website)
   HEADER_FG:     '#FFFFFF',
-  SUBHEADER_BG:  '#3949AB',
+  SUBHEADER_BG:  '#132661',   // one shade lighter than HEADER_BG
   SUBHEADER_FG:  '#FFFFFF',
-  SECTIE_BG:     '#E8EAF6',
-  POSITIEF:      '#E8F5E9',
-  NEGATIEF:      '#FFEBEE',
-  NEUTRAAL:      '#F3F4F6',
-  ACCENT:        '#FF6F00',
-  BORDER:        '#C5CAE9',
+  SECTIE_BG:     '#F7F9FC',   // neutral light bg (was lavender #E8EAF6)
+  POSITIEF:      '#E6F7F4',   // soft teal tint for affirmative cells
+  NEGATIEF:      '#FDECEC',   // soft red for warnings
+  NEUTRAAL:      '#F7F9FC',
+  ACCENT:        '#2EC4B6',   // brand teal (was orange #FF6F00)
+  BORDER:        '#E5EAF2',   // neutral light border
 };
