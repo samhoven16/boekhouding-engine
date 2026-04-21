@@ -411,6 +411,8 @@ function zetInstellingen_(ss) {
   sheet.clearFormats();
 
   const data = [
+    ['START HIER — Vul deze velden eenmalig in', 'Boekhoudbaar gebruikt ze op elke factuur, BTW-aangifte en rapport.'],
+    ['', ''],
     ['BEDRIJFSGEGEVENS', ''],
     ['Bedrijfsnaam', ''],
     ['Rechtsvorm', 'Eenmanszaak'],
@@ -457,27 +459,37 @@ function zetInstellingen_(ss) {
   sheet.getRange(1, 1, data.length, 2).setValues(data);
 
   // Plaatshouder-notities (verschijnen als tooltip op lege cellen)
+  // Indices zijn +2 verschoven omdat rij 1 een START-HIER-banner is en rij 2 leeg.
   const notities = [
-    [2, 'Uw officiële handelsnaam — wordt verwerkt in facturen, dashboard en bestandsnaam'],
-    [4, 'Uw straatnaam + huisnummer (bijv. Hoofdstraat 12)'],
-    [5, 'Postcode (bijv. 1234 AB)'],
-    [6, 'Plaatsnaam'],
-    [8, '8-cijferig KvK-nummer (te vinden op kvk.nl)'],
-    [9, 'BTW-nummer: NL + 9 cijfers + B + 2 cijfers (bijv. NL123456789B01)'],
-    [10, 'IBAN-nummer: NL + 2 cijfers + 4 letters + 10 cijfers'],
-    [11, 'BIC/SWIFT-code van uw bank (bijv. ABNANL2A)'],
-    [12, 'Uw zakelijk e-mailadres'],
-    [13, 'Uw telefoonnummer (bijv. 06-12345678)'],
-    [14, 'Uw website (optioneel, bijv. www.uwbedrijf.nl)'],
-    [30, 'Kies een sterk wachtwoord voor de API-koppeling (bijv. mijnbedrijf-2026-geheim)'],
-    [31, 'Vul hier de Web App URL in na publicatie — zie Boekhouding → Koppeling Zapier'],
+    [4,  'Uw officiële handelsnaam — wordt verwerkt in facturen, dashboard en bestandsnaam'],
+    [6,  'Uw straatnaam + huisnummer (bijv. Hoofdstraat 12)'],
+    [7,  'Postcode (bijv. 1234 AB)'],
+    [8,  'Plaatsnaam'],
+    [10, '8-cijferig KvK-nummer (te vinden op kvk.nl)'],
+    [11, 'BTW-nummer: NL + 9 cijfers + B + 2 cijfers (bijv. NL123456789B01)'],
+    [12, 'IBAN-nummer: NL + 2 cijfers + 4 letters + 10 cijfers'],
+    [13, 'BIC/SWIFT-code van uw bank (bijv. ABNANL2A)'],
+    [14, 'Uw zakelijk e-mailadres'],
+    [15, 'Uw telefoonnummer (bijv. 06-12345678)'],
+    [16, 'Uw website (optioneel, bijv. www.uwbedrijf.nl)'],
+    [32, 'Kies een sterk wachtwoord voor de API-koppeling (bijv. mijnbedrijf-2026-geheim)'],
+    [33, 'Vul hier de Web App URL in na publicatie — zie Boekhouding → Koppeling Zapier'],
   ];
   notities.forEach(function(n) {
     sheet.getRange(n[0], 2).setNote(n[1]);
   });
 
-  // Opmaak sectietitels
-  [1, 16, 27, 33, 37].forEach(rij => {
+  // Opmaak — START HIER banner (rij 1): accent-teal bg, donker navy tekst
+  sheet.getRange(1, 1, 1, 2)
+    .setBackground('#E6F7F4')
+    .setFontColor(KLEUREN.HEADER_BG)
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setWrap(true);
+  sheet.setRowHeight(1, 38);
+
+  // Opmaak sectietitels — rijen +2 vanaf oude indices [1,16,27,33,37]
+  [3, 18, 29, 35, 39].forEach(rij => {
     sheet.getRange(rij, 1, 1, 2)
       .setBackground(KLEUREN.HEADER_BG)
       .setFontColor(KLEUREN.HEADER_FG)
@@ -485,11 +497,11 @@ function zetInstellingen_(ss) {
       .setFontSize(11);
   });
 
-  // Opmaak labels
+  // Opmaak labels (vanaf rij 2 tot einde; banner-rij is al opgemaakt)
   sheet.getRange(2, 1, data.length - 1, 1).setFontWeight('bold');
   sheet.setColumnWidth(1, 250);
   sheet.setColumnWidth(2, 400);
-  sheet.setFrozenRows(0);
+  sheet.setFrozenRows(1); // START HIER altijd zichtbaar
 }
 
 // ─────────────────────────────────────────────
