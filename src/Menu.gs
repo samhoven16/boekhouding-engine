@@ -26,6 +26,9 @@ function onOpen() {
   // Onboarding wizard bij eerste gebruik + update-melding bij terugkerende gebruikers
   try { controleerOnboarding_(); } catch (e) { Logger.log('Onboarding check fout: ' + e.message); }
 
+  // Eénmalig welkom-modal na geslaagde setup — 3 quick-start acties
+  try { toonPostSetupWelkomModal_(); } catch (e) { Logger.log('Welkom-modal overgeslagen: ' + e.message); }
+
   // Globaal bericht van licentieserver (bv. onderhoud, nieuwe versie) — max 1×/dag/bericht.
   try { toonGlobaalBerichtIndienNieuw_(); } catch (e) { Logger.log('Globaal bericht overgeslagen: ' + e.message); }
 

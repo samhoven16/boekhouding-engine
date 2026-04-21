@@ -199,6 +199,107 @@ function toonWatIsErNieuw() {
 }
 
 // ─────────────────────────────────────────────
+//  POST-SETUP WELKOM-MODAL (éénmalig na eerste setup)
+// ─────────────────────────────────────────────
+
+const POST_SETUP_WELKOM_GEZIEN = 'postSetupWelkomGezien';
+
+/**
+ * Toont éénmalig een welkom-modal zodra setup() klaar is. Vertelt de
+ * klant dat de boekhouding live is en biedt 3 duidelijke vervolgacties:
+ * bedrijfsgegevens invullen, eerste factuur maken, dashboard openen.
+ * Daarna wordt de property gezet en verschijnt 't nooit meer.
+ */
+function toonPostSetupWelkomModal_() {
+  const scriptProps = PropertiesService.getScriptProperties();
+  if (scriptProps.getProperty(PROP.SETUP_DONE) !== 'true') return;
+
+  const userProps = PropertiesService.getUserProperties();
+  if (userProps.getProperty(POST_SETUP_WELKOM_GEZIEN) === 'true') return;
+
+  let ui;
+  try { ui = SpreadsheetApp.getUi(); } catch (e) { return; }  // geen UI-context (trigger)
+
+  const bedrijf = (getInstelling_ && typeof getInstelling_ === 'function')
+    ? (getInstelling_('Bedrijfsnaam') || '')
+    : '';
+  const begroeting = bedrijf ? 'Welkom bij Boekhoudbaar, ' + bedrijf : 'Welkom bij Boekhoudbaar';
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+           color:#1A1A1A;background:#F7F9FC;padding:26px 28px}
+      .label{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2EC4B6;margin-bottom:8px}
+      h1{color:#0D1B4E;font-size:22px;font-weight:800;letter-spacing:-0.01em;margin-bottom:10px;line-height:1.25}
+      p.sub{color:#5F6B7A;font-size:14px;line-height:1.55;margin-bottom:20px}
+      .acties{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+      .actie{
+        display:flex;align-items:center;gap:14px;padding:14px 16px;
+        background:#fff;border:1px solid #E5EAF2;border-radius:10px;
+        cursor:pointer;transition:border-color .15s ease,transform .15s ease,box-shadow .15s ease;
+        font-family:inherit;font-size:14px;text-align:left;color:#1A1A1A;width:100%;
+      }
+      .actie:hover{border-color:rgba(46,196,182,.45);transform:translateY(-1px);box-shadow:0 2px 10px rgba(13,27,78,.06)}
+      .actie .n{width:28px;height:28px;border-radius:50%;background:rgba(46,196,182,.12);color:#0D1B4E;
+                font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+      .actie .t{flex:1}
+      .actie .t strong{display:block;color:#0D1B4E;font-weight:700;font-size:14px;margin-bottom:2px}
+      .actie .t span{color:#5F6B7A;font-size:12px}
+      .later{text-align:center;margin-top:6px}
+      .later button{background:none;border:none;color:#5F6B7A;font-size:13px;cursor:pointer;font-family:inherit;padding:8px 12px}
+      .later button:hover{color:#0D1B4E}
+    </style>
+    <div class="label">Setup voltooid</div>
+    <h1>${begroeting}</h1>
+    <p class="sub">Je boekhouding staat klaar. Drie acties die je nu kunt doen — of later via het Boekhouding-menu.</p>
+    <div class="acties">
+      <button class="actie" onclick="kies('instellingen')">
+        <span class="n">1</span>
+        <span class="t"><strong>Bedrijfsgegevens invullen</strong><span>Naam, BTW-nummer, IBAN — nodig voor facturen</span></span>
+      </button>
+      <button class="actie" onclick="kies('boeking')">
+        <span class="n">2</span>
+        <span class="t"><strong>Eerste factuur of kostenpost boeken</strong><span>Nieuwe boeking dialoog openen</span></span>
+      </button>
+      <button class="actie" onclick="kies('dashboard')">
+        <span class="n">3</span>
+        <span class="t"><strong>Dashboard bekijken</strong><span>KPI's en openstaande facturen in één oogopslag</span></span>
+      </button>
+    </div>
+    <div class="later"><button onclick="kies('later')">Later — sluit dit venster</button></div>
+    <script>
+      function kies(actie) {
+        google.script.run.withSuccessHandler(function(){ google.script.host.close(); })
+          .markeerWelkomGezienEnNavigeer_(actie);
+      }
+    </script>
+  `).setWidth(460).setHeight(440);
+
+  ui.showModalDialog(html, 'Welkom bij Boekhoudbaar');
+}
+
+/**
+ * Zet de welkom-gezien-vlag en navigeert (optioneel) naar de gekozen
+ * vervolg-actie. Aangeroepen vanuit de welkom-modal.
+ */
+function markeerWelkomGezienEnNavigeer_(actie) {
+  PropertiesService.getUserProperties().setProperty(POST_SETUP_WELKOM_GEZIEN, 'true');
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (actie === 'instellingen') {
+      const s = ss.getSheetByName(SHEETS.INSTELLINGEN);
+      if (s) ss.setActiveSheet(s);
+    } else if (actie === 'dashboard') {
+      const s = ss.getSheetByName(SHEETS.DASHBOARD);
+      if (s) ss.setActiveSheet(s);
+    } else if (actie === 'boeking') {
+      if (typeof openNieuweBoeking === 'function') openNieuweBoeking();
+    }
+  } catch (e) { Logger.log('Welkom-navigatie fout: ' + e.message); }
+}
+
+// ─────────────────────────────────────────────
 //  ONBOARDING RESETTEN (voor ontwikkeling/support)
 // ─────────────────────────────────────────────
 
@@ -210,9 +311,10 @@ function resetOnboarding() {
   const props = PropertiesService.getScriptProperties();
   props.deleteProperty(ONBOARDING_PROP);
   props.deleteProperty(VERSIE_PROP);
+  PropertiesService.getUserProperties().deleteProperty(POST_SETUP_WELKOM_GEZIEN);
   SpreadsheetApp.getUi().alert(
     'Onboarding gereset',
-    'De welkomst-wizard wordt getoond bij de volgende keer openen.',
+    'De welkomst-wizard + post-setup welkom-modal worden opnieuw getoond.',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
