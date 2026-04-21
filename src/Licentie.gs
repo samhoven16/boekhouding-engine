@@ -369,6 +369,46 @@ function isLicentieGeldig_() {
 }
 
 /**
+ * Haalt centrale product-config op (versie, bericht, flags) en cachet
+ * 24 uur in UserProperties. Returnt null wanneer offline of geen server.
+ *
+ * Gebruik:
+ *   const cfg = haalConfigOp_();
+ *   if (cfg && cfg.bericht) toonBanner(cfg.bericht);
+ *   if (cfg && cfg.versie !== MIJN_VERSIE) toonNieuweVersieBanner();
+ */
+function haalConfigOp_() {
+  const userProps = PropertiesService.getUserProperties();
+  const cached    = userProps.getProperty('licentieConfig');
+  const cachedTs  = parseInt(userProps.getProperty('licentieConfigTs') || '0');
+  const verlopen  = Date.now() - cachedTs > 24 * 3600 * 1000;
+
+  if (cached && !verlopen) {
+    try { return JSON.parse(cached); } catch (_) {}
+  }
+
+  const serverUrl = getLicentieServerUrl_();
+  if (!serverUrl) return null;
+
+  try {
+    const resp = UrlFetchApp.fetch(serverUrl + '?actie=config', {
+      muteHttpExceptions: true, followRedirects: true,
+      headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
+    });
+    if (resp.getResponseCode() !== 200) {
+      return cached ? JSON.parse(cached) : null;
+    }
+    const parsed = JSON.parse(resp.getContentText());
+    userProps.setProperty('licentieConfig', resp.getContentText());
+    userProps.setProperty('licentieConfigTs', String(Date.now()));
+    return parsed;
+  } catch (err) {
+    Logger.log('haalConfigOp_ fout: ' + err.message);
+    return cached ? JSON.parse(cached) : null;
+  }
+}
+
+/**
  * Eénmalig signaal aan de licentieserver dat setup() succesvol is
  * doorlopen. Idempotent: zet een UserProperties-vlag die herhalen
  * voorkomt. Faalt stil — setup() mag hier nooit op breken.

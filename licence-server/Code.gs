@@ -33,6 +33,7 @@ function doGet(e) {
   if (actie === 'aanvraag-otp')  return aanvraagOtpEndpoint_(e);
   if (actie === 'activeer-otp')  return activeerOtpEndpoint_(e);
   if (actie === 'onboarded')     return onboardedEndpoint_(e);
+  if (actie === 'config')        return configEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   if (actie === 'admin')         return adminPaneel_(e);
 
@@ -439,6 +440,28 @@ function valideerEndpoint_(e) {
     Logger.log('Valideer fout: ' + err.message);
     return jsonResp_({ geldig: false, fout: 'Serverfout: ' + err.message });
   }
+}
+
+// ─────────────────────────────────────────────
+//  CONFIG-ENDPOINT — centrale product-versie + bericht
+// ─────────────────────────────────────────────
+/**
+ * Klant-kopie vraagt dit 1× per 24u op voor:
+ *  - versie      — huidige product-versie (vergelijkt met eigen PRODUCT_VERSIE)
+ *  - bericht     — optionele globale banner-tekst (leeg = geen banner)
+ *  - flags       — feature-flag object voor toekomstige gradual rollouts
+ *
+ * Geen authenticatie nodig: het is publieke product-metadata.
+ */
+function configEndpoint_(e) {
+  const props = PropertiesService.getScriptProperties();
+  let flags = {};
+  try { flags = JSON.parse(props.getProperty('FEATURE_FLAGS') || '{}'); } catch (_) {}
+  return jsonResp_({
+    versie:  props.getProperty('PRODUCT_VERSIE') || '2.1.0',
+    bericht: props.getProperty('GLOBAL_BERICHT') || '',
+    flags:   flags,
+  });
 }
 
 // ─────────────────────────────────────────────
