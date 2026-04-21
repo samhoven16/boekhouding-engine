@@ -1119,6 +1119,30 @@ const FOLLOWUP_SCHEMA = [
 ];
 
 /**
+ * Wikkelt een follow-up-bodyHTML in een brand-aligned e-mail-shell
+ * (navy header, neutrale body, subtiele footer met contact). Zo krijgen
+ * alle 6 follow-ups dezelfde premium uitstraling als de activatie-mail.
+ */
+function wrapFollowUpHtml_(onderwerp, bodyHtml, vanEmail) {
+  return '<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>' +
+'<body style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Arial,sans-serif;' +
+  'max-width:580px;margin:0 auto;padding:20px;color:#1A1A1A;background:#F7F9FC">' +
+'<div style="background:#0D1B4E;padding:22px 24px;border-radius:10px 10px 0 0">' +
+  '<div style="color:#2EC4B6;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:4px">Boekhoudbaar</div>' +
+  '<h1 style="color:#fff;margin:0;font-size:18px;font-weight:700;letter-spacing:-0.01em;line-height:1.3">' + escHtml_(onderwerp) + '</h1>' +
+'</div>' +
+'<div style="background:#fff;padding:24px;border:1px solid #E5EAF2;border-top:none;border-radius:0 0 10px 10px;font-size:14px;line-height:1.65;color:#1A1A1A">' +
+  bodyHtml +
+  '<hr style="border:none;border-top:1px solid #E5EAF2;margin:22px 0">' +
+  '<p style="font-size:12px;color:#5F6B7A;margin:0">Vragen? Beantwoord deze mail of stuur naar <a href="mailto:' + escHtml_(vanEmail) + '" style="color:#0D1B4E">' + escHtml_(vanEmail) + '</a>.</p>' +
+'</div>' +
+'<p style="font-size:11px;color:#94a3b8;text-align:center;margin-top:12px">' +
+  'Je ontvangt deze tip-serie omdat je Boekhoudbaar hebt geactiveerd. Reageer met "stop" om af te melden.' +
+'</p>' +
+'</body></html>';
+}
+
+/**
  * Controleert alle actieve licenties en stuurt follow-up emails op de juiste dag.
  * Aanroepen via een dagelijkse GAS time-based trigger.
  */
@@ -1162,11 +1186,12 @@ function verwerkFollowUpEmails() {
       if (props.getProperty(sentKey) === 'sent') return;  // idempotency
 
       try {
+        const voornaam = naam.split(' ')[0] || naam;
         const payload = {
           sender:      { email: vanEmail, name: vanNaam },
           to:          [{ email, name: naam }],
           subject:     seq.onderwerp,
-          htmlContent: seq.html(naam.split(' ')[0] || naam),
+          htmlContent: wrapFollowUpHtml_(seq.onderwerp, seq.html(voornaam), vanEmail),
           tags:        ['followup', 'dag' + seq.dag],
         };
 
