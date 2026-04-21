@@ -251,10 +251,13 @@ function verwerkMollieWebhook_(e) {
       }
     }
 
-    // Genereer en sla licentiesleutel op
+    // Genereer en sla licentiesleutel op.
+    // Defense-in-depth: strip HTML-actieve tekens al voor opslag.
+    // Output-escaping blijft verplicht, maar zo zit vervuilde data
+    // niet in de CRM.
     const meta    = betaling.metadata || {};
-    const naam    = String(meta.naam  || 'Klant');
-    const email   = String(meta.email || '');
+    const naam    = saneerNaam_(String(meta.naam  || 'Klant'));
+    const email   = String(meta.email || '').trim().toLowerCase();
     const sleutel = genereerSleutel_();
 
     sheet.appendRow([
@@ -611,10 +614,11 @@ function adminPaneel_(e) {
       ? 'onboarded'
       : (statusL.startsWith('actief') ? 'actief' : 'overig');
 
-    rijen += `<tr data-cat="${cat}" data-tekst="${(data[i][1] + ' ' + data[i][2]).toLowerCase()}">
-      <td>${data[i][0]}</td><td>${data[i][1]}</td><td>${data[i][2]}</td>
-      <td>${statusRaw}</td>
-      <td>${installatie ? '<code>' + installatie.substring(0, 16) + '…</code>' : '—'}</td>
+    const zoekTekst = (String(data[i][1] || '') + ' ' + String(data[i][2] || '')).toLowerCase();
+    rijen += `<tr data-cat="${escHtml_(cat)}" data-tekst="${escHtml_(zoekTekst)}">
+      <td>${escHtml_(data[i][0])}</td><td>${escHtml_(data[i][1])}</td><td>${escHtml_(data[i][2])}</td>
+      <td>${escHtml_(statusRaw)}</td>
+      <td>${installatie ? '<code>' + escHtml_(installatie.substring(0, 16)) + '…</code>' : '—'}</td>
       <td>${onboardDt ? new Date(onboardDt).toLocaleDateString('nl-NL') : '—'}</td>
       <td>${valideerDt ? new Date(valideerDt).toLocaleDateString('nl-NL') : '—'}</td>
     </tr>`;
@@ -704,12 +708,12 @@ function stuurLicentiemail_(naam, email, sleutel) {
       MailApp.sendEmail({
         to: vanEmail,
         subject: '⚠ Boekhoudbaar — TEMPLATE_SS_ID ontbreekt (' + email + ' wacht)',
-        htmlBody: '<p>Nieuwe klant <strong>' + naam + '</strong> (' + email + ') heeft betaald ' +
+        htmlBody: '<p>Nieuwe klant <strong>' + escHtml_(naam) + '</strong> (' + escHtml_(email) + ') heeft betaald ' +
                   'maar de copy-link kan niet worden opgebouwd omdat <code>TEMPLATE_SS_ID</code> ' +
                   'ontbreekt in Script Properties.</p>' +
-                  '<p>Licentiesleutel: <code>' + sleutel + '</code></p>' +
+                  '<p>Licentiesleutel: <code>' + escHtml_(sleutel) + '</code></p>' +
                   '<p>Vul <code>TEMPLATE_SS_ID</code> en run <code>herstuurLicentiemailHandmatig(&quot;' +
-                  sleutel + '&quot;)</code> in de editor.</p>',
+                  escHtml_(sleutel) + '&quot;)</code> in de editor.</p>',
       });
     } catch (_) {}
     return;
@@ -872,6 +876,33 @@ function getLicentieSheet_() {
       .setBackground('#0D1B4E').setFontColor('#FFFFFF');
   }
   return sheet;
+}
+
+/**
+ * HTML-escape helper. Gebruik ALTIJD bij het interpoleren van
+ * sheet-data of Mollie-metadata in HTML-templates (admin-paneel,
+ * owner-alerts). Anders bestaat XSS-risico.
+ */
+function escHtml_(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Defense-in-depth input-filter voor klantnaam die uit Mollie-metadata
+ * komt. Strip HTML-actieve tekens. Output-escaping via escHtml_ blijft
+ * de primaire veiligheid; deze guard zorgt dat vervuilde data niet
+ * eens in de CRM komt.
+ */
+function saneerNaam_(s) {
+  return String(s || '')
+    .replace(/[<>"'&]/g, '')
+    .trim()
+    .substring(0, 120);
 }
 
 function jsonResp_(data) {
