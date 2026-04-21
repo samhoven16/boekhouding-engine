@@ -266,11 +266,27 @@ function vernieuwDashboard() {
 
   // Tijdbesparing motivatietekst
   sheet.getRange(rij, 1, 1, 8).merge()
-    .setValue(`💡 Op basis van ${roiData.aantalFacturen} facturen, ${roiData.aantalBoekingen} boekingen en automatische categorisering schat Boekhouding Engine u ~${roiData.tijdsBesparing} uur administratietijd te hebben bespaard dit jaar.`)
+    .setValue(`Op basis van ${roiData.aantalFacturen} facturen, ${roiData.aantalBoekingen} boekingen en automatische categorisering schat Boekhoudbaar ~${roiData.tijdsBesparing} uur administratietijd bespaard dit jaar.`)
     .setBackground(KLEUREN.SECTIE_BG).setFontSize(10).setWrap(true).setFontColor(KLEUREN.HEADER_BG);
   sheet.setRowHeight(rij, 30);
 
   ss.setActiveSheet(sheet);
+
+  // First-run empty-state hint: als alles nul is én bedrijfsnaam nog op
+  // default staat, laat klant zien waar te beginnen. Non-intrusieve toast
+  // rechtsonder — 8 sec. Verdwijnt vanzelf zodra er omzet/kosten zijn.
+  try {
+    const leeg = (!kpi.omzet) && (!kpi.kosten) && (!kpi.banksaldo)
+              && (bedrijf === 'Mijn Bedrijf' || bedrijf === '');
+    if (leeg) {
+      ss.toast(
+        'Dit dashboard vult zich vanzelf zodra je je eerste factuur of kosten boekt. ' +
+        'Tip: vul eerst je bedrijfsgegevens in op het tabblad Instellingen.',
+        'Welkom bij Boekhoudbaar',
+        8
+      );
+    }
+  } catch (_) { /* trigger-context zonder UI, negeren */ }
 }
 
 // ─────────────────────────────────────────────
