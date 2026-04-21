@@ -28,15 +28,15 @@ function vernieuwDashboard() {
   sheet.getRange(1, 1, 1, 8).merge()
     .setValue(`FINANCIEEL DASHBOARD – ${bedrijf.toUpperCase()}`)
     .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
-    .setFontWeight('bold').setFontSize(16).setHorizontalAlignment('center');
+    .setFontWeight('bold').setFontSize(14).setHorizontalAlignment('center');
 
   sheet.getRange(2, 1, 1, 8).merge()
     .setValue(`Bijgewerkt op ${formatDatumTijd_(nu)}  |  Boekjaar ${jaar}`)
-    .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#E8EAF6')
+    .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#B8C2D1')
     .setFontSize(10).setHorizontalAlignment('center');
 
-  sheet.setRowHeight(1, 40);
-  sheet.setRowHeight(2, 22);
+  sheet.setRowHeight(1, 48);
+  sheet.setRowHeight(2, 24);
 
   // ── KPI Blokken (rij 4) ───────────────────────────────────────────────
   // Burn rate + cash runway (pijnpunt: Fractional CFO / Qonto / Bunq "geen echte boekhouding")
@@ -47,16 +47,21 @@ function vernieuwDashboard() {
     ? Math.floor(kpi.banksaldo / burnRate)
     : null;
 
+  // Unified KPI look: neutral background for everything, soft-red only when a
+  // value is concerning (negative nettowinst / banksaldo, low winstmarge).
+  // Replaces the old rainbow of nine different pastels.
+  const KPI_NEUTRAAL = KLEUREN.SECTIE_BG;         // #F7F9FC
+  const KPI_WAARSCHUWING = KLEUREN.NEGATIEF;       // #FDECEC
   const kpiItems = [
-    { label: 'Omzet (YTD)', waarde: kpi.omzet, format: 'bedrag', kleur: '#E8F5E9' },
-    { label: 'Kosten (YTD)', waarde: kpi.kosten, format: 'bedrag', kleur: '#FFEBEE' },
-    { label: 'Nettowinst', waarde: kpi.nettowinst, format: 'bedrag', kleur: kpi.nettowinst >= 0 ? '#E8F5E9' : '#FFEBEE' },
-    { label: 'Winstmarge', waarde: kpi.winstmarge, format: 'pct', kleur: kpi.winstmarge >= 20 ? '#E8F5E9' : '#FFF8E1' },
-    { label: 'Banksaldo', waarde: kpi.banksaldo, format: 'bedrag', kleur: kpi.banksaldo >= 0 ? '#E3F2FD' : '#FFEBEE' },
-    { label: 'Open debiteuren', waarde: kpi.debiteurenOpen, format: 'bedrag', kleur: '#FFF3E0' },
-    { label: 'Open crediteuren', waarde: kpi.crediteurenOpen, format: 'bedrag', kleur: '#FCE4EC' },
-    { label: 'BTW saldo', waarde: kpi.btwSaldo, format: 'bedrag', kleur: '#F3E5F5' },
-    { label: 'Verwacht (30d)', waarde: kpi.verwachtIn30d, format: 'bedrag', kleur: '#E8EAF6' },
+    { label: 'Omzet (YTD)',       waarde: kpi.omzet,           format: 'bedrag', kleur: KPI_NEUTRAAL },
+    { label: 'Kosten (YTD)',      waarde: kpi.kosten,          format: 'bedrag', kleur: KPI_NEUTRAAL },
+    { label: 'Nettowinst',        waarde: kpi.nettowinst,      format: 'bedrag', kleur: kpi.nettowinst   >= 0 ? KPI_NEUTRAAL : KPI_WAARSCHUWING },
+    { label: 'Winstmarge',        waarde: kpi.winstmarge,      format: 'pct',    kleur: kpi.winstmarge   >= 20 ? KPI_NEUTRAAL : KPI_WAARSCHUWING },
+    { label: 'Banksaldo',         waarde: kpi.banksaldo,       format: 'bedrag', kleur: kpi.banksaldo    >= 0 ? KPI_NEUTRAAL : KPI_WAARSCHUWING },
+    { label: 'Open debiteuren',   waarde: kpi.debiteurenOpen,  format: 'bedrag', kleur: KPI_NEUTRAAL },
+    { label: 'Open crediteuren',  waarde: kpi.crediteurenOpen, format: 'bedrag', kleur: KPI_NEUTRAAL },
+    { label: 'BTW saldo',         waarde: kpi.btwSaldo,        format: 'bedrag', kleur: KPI_NEUTRAAL },
+    { label: 'Verwacht (30d)',    waarde: kpi.verwachtIn30d,   format: 'bedrag', kleur: KPI_NEUTRAAL },
   ];
 
   // Rij 4: KPI titels, Rij 5: KPI waarden
@@ -65,28 +70,28 @@ function vernieuwDashboard() {
     const titelCel = sheet.getRange(4, col);
     const waardeCel = sheet.getRange(5, col);
 
-    titelCel.setValue(item.label)
+    titelCel.setValue(item.label.toUpperCase())
       .setBackground(item.kleur)
-      .setFontWeight('bold').setFontSize(9)
+      .setFontWeight('bold').setFontSize(9).setFontColor(KLEUREN.HEADER_BG)
       .setHorizontalAlignment('center').setWrap(true);
 
     if (item.format === 'bedrag') {
       waardeCel.setValue(item.waarde)
         .setNumberFormat('€#,##0.00')
-        .setFontSize(12).setFontWeight('bold')
+        .setFontSize(15).setFontWeight('bold').setFontColor(KLEUREN.HEADER_BG)
         .setBackground(item.kleur).setHorizontalAlignment('center');
     } else {
       waardeCel.setValue(item.waarde / 100)
         .setNumberFormat('0.0%')
-        .setFontSize(12).setFontWeight('bold')
+        .setFontSize(15).setFontWeight('bold').setFontColor(KLEUREN.HEADER_BG)
         .setBackground(item.kleur).setHorizontalAlignment('center');
     }
 
-    sheet.setColumnWidth(col, 120);
+    sheet.setColumnWidth(col, 128);
   });
 
-  sheet.setRowHeight(4, 35);
-  sheet.setRowHeight(5, 35);
+  sheet.setRowHeight(4, 30);
+  sheet.setRowHeight(5, 42);
 
   // Verwerk herhalende kosten (automatisch boeken + komende betalingen voor waarschuwingen)
   let herhalendeResult = { geboekt: 0, komend: [] };
@@ -125,7 +130,7 @@ function vernieuwDashboard() {
 
   const vfHeaders = ['Factuurnummer', 'Datum', 'Klant', 'Bedrag incl.', 'Status'];
   sheet.getRange(rij, 1, 1, 5).setValues([vfHeaders])
-    .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold');
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
   rij++;
 
   const _vfS = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
@@ -156,7 +161,7 @@ function vernieuwDashboard() {
 
   const btwHeaders = ['', 'Q1 (jan-mrt)', 'Q2 (apr-jun)', 'Q3 (jul-sep)', 'Q4 (okt-dec)', 'Jaar totaal'];
   sheet.getRange(rij, 1, 1, 6).setValues([btwHeaders])
-    .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold');
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
   rij++;
 
   const btwQ = [
@@ -190,7 +195,7 @@ function vernieuwDashboard() {
 
   const kgHeaders = ['Kengetal', 'Waarde', 'Norm', 'Beoordeling'];
   sheet.getRange(rij, 1, 1, 4).setValues([kgHeaders])
-    .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold');
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
   rij++;
 
   const kengetallen = [
@@ -247,12 +252,12 @@ function vernieuwDashboard() {
     const col = i * 2 + 1;
     sheet.getRange(rij, col, 1, 2).merge()
       .setValue(item.icon + '  ' + item.label)
-      .setBackground('#E8EAF6').setFontWeight('bold').setFontSize(9)
+      .setBackground(KLEUREN.SECTIE_BG).setFontWeight('bold').setFontSize(10)
       .setHorizontalAlignment('center');
     sheet.getRange(rij + 1, col, 1, 2).merge()
       .setValue(item.waarde)
-      .setBackground('#E8EAF6').setFontSize(14).setFontWeight('bold')
-      .setHorizontalAlignment('center').setFontColor('#1A237E');
+      .setBackground(KLEUREN.SECTIE_BG).setFontSize(14).setFontWeight('bold')
+      .setHorizontalAlignment('center').setFontColor(KLEUREN.HEADER_BG);
   });
 
   sheet.setRowHeight(rij, 28);
@@ -262,7 +267,7 @@ function vernieuwDashboard() {
   // Tijdbesparing motivatietekst
   sheet.getRange(rij, 1, 1, 8).merge()
     .setValue(`💡 Op basis van ${roiData.aantalFacturen} facturen, ${roiData.aantalBoekingen} boekingen en automatische categorisering schat Boekhouding Engine u ~${roiData.tijdsBesparing} uur administratietijd te hebben bespaard dit jaar.`)
-    .setBackground('#F5F5FF').setFontSize(9).setWrap(true).setFontColor('#37474F');
+    .setBackground(KLEUREN.SECTIE_BG).setFontSize(10).setWrap(true).setFontColor(KLEUREN.HEADER_BG);
   sheet.setRowHeight(rij, 30);
 
   ss.setActiveSheet(sheet);
@@ -457,7 +462,7 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
   }
 
   sheet.getRange(startRij, 1, 1, 8).merge()
-    .setValue('WAARSCHUWINGEN').setBackground('#FF8F00').setFontColor('#FFFFFF').setFontWeight('bold');
+    .setValue('WAARSCHUWINGEN').setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
   startRij++;
 
   waarschuwingen.forEach(([type, tekst, bg]) => {
