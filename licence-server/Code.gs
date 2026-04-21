@@ -588,30 +588,97 @@ function adminPaneel_(e) {
   }
 
   const sheet = getLicentieSheet_();
+  ensureOnboardedKolom_(sheet);
   const data  = sheet.getDataRange().getValues();
-  let rijen   = '';
+  const totaal      = Math.max(0, data.length - 1);
+  let actief        = 0;
+  let onboarded     = 0;
+  let wachtTemplate = 0;
+  let rijen = '';
+
   for (let i = 1; i < data.length; i++) {
-    rijen += `<tr><td>${data[i][0]}</td><td>${data[i][1]}</td><td>${data[i][2]}</td>
-      <td>${data[i][4]}</td><td>${data[i][6] || '—'}</td>
-      <td>${data[i][9] ? new Date(data[i][9]).toLocaleDateString('nl-NL') : '—'}</td></tr>`;
+    const statusRaw = String(data[i][4] || '');
+    const statusL   = statusRaw.toLowerCase();
+    const installatie = String(data[i][6] || '');
+    const onboardDt = data[i][10];
+    const valideerDt = data[i][9];
+
+    if (statusL.startsWith('actief')) actief++;
+    if (onboardDt) onboarded++;
+    if (statusRaw.indexOf('wacht op TEMPLATE') !== -1) wachtTemplate++;
+
+    const cat = onboardDt
+      ? 'onboarded'
+      : (statusL.startsWith('actief') ? 'actief' : 'overig');
+
+    rijen += `<tr data-cat="${cat}" data-tekst="${(data[i][1] + ' ' + data[i][2]).toLowerCase()}">
+      <td>${data[i][0]}</td><td>${data[i][1]}</td><td>${data[i][2]}</td>
+      <td>${statusRaw}</td>
+      <td>${installatie ? '<code>' + installatie.substring(0, 16) + '…</code>' : '—'}</td>
+      <td>${onboardDt ? new Date(onboardDt).toLocaleDateString('nl-NL') : '—'}</td>
+      <td>${valideerDt ? new Date(valideerDt).toLocaleDateString('nl-NL') : '—'}</td>
+    </tr>`;
   }
 
   return HtmlService.createHtmlOutput(`
-    <style>body{font-family:Arial;padding:20px;font-size:13px}
-    .banner{border-radius:6px;padding:10px 14px;margin-bottom:10px;font-size:13px}
-    .banner.err{background:#FDECEC;color:#B91C1C;border:1px solid #F5B3B3}
-    .banner.warn{background:#FFF8E1;color:#8B5A00;border:1px solid #E6D8A8}
-    code{background:#F1F3F5;padding:1px 6px;border-radius:3px;font-size:12px}
-    table{width:100%;border-collapse:collapse}th,td{padding:7px 10px;
-    border:1px solid #ddd;text-align:left}th{background:#0D1B4E;color:#fff}
-    tr:nth-child(even){background:#f5f5f5}</style>
+    <style>
+      body{font-family:Arial;padding:20px;font-size:13px}
+      .banner{border-radius:6px;padding:10px 14px;margin-bottom:10px;font-size:13px}
+      .banner.err{background:#FDECEC;color:#B91C1C;border:1px solid #F5B3B3}
+      .banner.warn{background:#FFF8E1;color:#8B5A00;border:1px solid #E6D8A8}
+      code{background:#F1F3F5;padding:1px 6px;border-radius:3px;font-size:12px}
+      .metrics{display:flex;gap:14px;margin:12px 0 18px}
+      .metric{background:#F7F9FC;border:1px solid #E5EAF2;border-radius:8px;padding:10px 14px;min-width:120px}
+      .metric .v{font-size:20px;font-weight:700;color:#0D1B4E}
+      .metric .l{font-size:11px;color:#5F6B7A;text-transform:uppercase;letter-spacing:.5px}
+      .filters{display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+      .filters input{flex:1;min-width:220px;padding:8px;border:1px solid #E5EAF2;border-radius:6px;font-size:13px}
+      .filters button{padding:8px 12px;border:1px solid #E5EAF2;background:#fff;border-radius:6px;cursor:pointer;font-size:12px}
+      .filters button.actief{background:#0D1B4E;color:#fff;border-color:#0D1B4E}
+      table{width:100%;border-collapse:collapse}
+      th,td{padding:7px 10px;border:1px solid #ddd;text-align:left}
+      th{background:#0D1B4E;color:#fff}
+      tr:nth-child(even){background:#f5f5f5}
+      tr.hidden{display:none}
+    </style>
     ${banners}
-    <h3>Licenties (${data.length - 1} totaal)</h3>
-    <table><tr><th>Sleutel</th><th>Naam</th><th>Email</th>
-    <th>Status</th><th>Installatie-ID</th><th>Laatste validatie</th></tr>
-    ${rijen}</table>
+    <h3>Klanten-overzicht</h3>
+    <div class="metrics">
+      <div class="metric"><div class="v">${totaal}</div><div class="l">Totaal</div></div>
+      <div class="metric"><div class="v">${actief}</div><div class="l">Actief</div></div>
+      <div class="metric"><div class="v">${onboarded}</div><div class="l">Onboarded</div></div>
+      <div class="metric"><div class="v" style="color:${wachtTemplate ? '#B91C1C' : '#0D1B4E'}">${wachtTemplate}</div><div class="l">Wacht op template</div></div>
+    </div>
+    <div class="filters">
+      <input id="zoek" placeholder="Filter op naam of e-mail…" oninput="filter()">
+      <button onclick="kiesCat('alle', this)" class="actief">Alle</button>
+      <button onclick="kiesCat('onboarded', this)">Onboarded</button>
+      <button onclick="kiesCat('actief', this)">Actief (nog niet onboarded)</button>
+      <button onclick="kiesCat('overig', this)">Overig</button>
+    </div>
+    <table><tr>
+      <th>Sleutel</th><th>Naam</th><th>Email</th><th>Status</th>
+      <th>Installatie-ID</th><th>Onboarded op</th><th>Laatste validatie</th>
+    </tr>${rijen}</table>
     <p style="margin-top:16px;font-size:11px;color:#999">
       Licenties beheren: open de licentie-spreadsheet rechtstreeks in Google Drive.</p>
+    <script>
+      var cat = 'alle';
+      function kiesCat(c, btn) {
+        cat = c;
+        document.querySelectorAll('.filters button').forEach(function(b){ b.classList.remove('actief'); });
+        btn.classList.add('actief');
+        filter();
+      }
+      function filter() {
+        var q = document.getElementById('zoek').value.toLowerCase();
+        document.querySelectorAll('tr[data-cat]').forEach(function(tr){
+          var catOk = cat === 'alle' || tr.getAttribute('data-cat') === cat;
+          var qOk   = !q || tr.getAttribute('data-tekst').indexOf(q) !== -1;
+          tr.classList.toggle('hidden', !(catOk && qOk));
+        });
+      }
+    </script>
   `).setTitle('Admin — Licentiebeheer');
 }
 
