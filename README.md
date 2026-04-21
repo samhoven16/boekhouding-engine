@@ -1,228 +1,119 @@
-# Boekhoudprogramma voor ZZP & MKB
-### Google Forms + Google Spreadsheets + Apps Script
+# Boekhoudbaar
 
-Een **volledig, gratis boekhoudprogramma** voor ZZP-ers en MKB-bedrijven, gebouwd op Google Workspace.
-Geen abonnement, geen installatie – werkt volledig in Google Drive.
+**Volledige ZZP-boekhouding in Google Sheets — eenmalig €49, geen abonnement.**
 
----
-
-## Functies
-
-| Module | Functionaliteit |
-|---|---|
-| **Facturatie** | Verkoopfacturen aanmaken met PDF, herinneringen, creditnota's |
-| **Inkoopfacturen** | Registreren en bijhouden van leveranciersrekeningen |
-| **Bankboek** | Handmatig invoeren of CSV-import, bankafstemming |
-| **Dubbel boekhouden** | Volledig journaalboek conform NL GAAP (RGS-schema) |
-| **BTW aangifte** | Kwartaalberekening incl. alle rubrieken (1a t/m 5d) |
-| **Balans** | Actuele balans conform Nederlandse standaard |
-| **W&V Rekening** | Winst- en verliesrekening per boekjaar |
-| **Cashflow** | Maandelijks cashflow overzicht |
-| **Jaarrekening** | Gecombineerd jaaroverzicht |
-| **Dashboard** | KPI's, waarschuwingen, kengetallen |
-| **Debiteuren** | Openstaande facturen, vervallijst |
-| **Crediteuren** | Openstaande leveranciersrekeningen |
-| **Relatiebeheer** | Klanten en leveranciers |
-| **Afschrijvingen** | Lineaire afschrijving vaste activa |
-| **KOR controle** | Kleine Ondernemers Regeling bewaking |
+[`boekhoudbaar.nl`](https://www.boekhoudbaar.nl) · [privacy](https://www.boekhoudbaar.nl/privacy) · [voorwaarden](https://www.boekhoudbaar.nl/voorwaarden) · [contact](mailto:hallo@boekhoudbaar.nl)
 
 ---
 
-## Installatie
+## Wat het is
 
-### Vereisten
-- Google-account (gratis)
-- Google Drive toegang
-- Google Sheets / Google Forms
+Boekhoudbaar is een boekhoudengine voor ZZP en eenmanszaak die volledig draait in **jouw eigen Google Spreadsheet** op **jouw Google Drive**. Je koopt eenmalig een licentie (€49), activeert de software in een kopie van de master-template, en werkt vervolgens zonder cloud-afhankelijkheden van ons.
 
-### Stap 1 – Script aanmaken
+- Facturen (PDF + e-mail), BTW-aangifte per kwartaal, dashboard, balans/W&V/cashflow
+- Alle boekhouddata blijft op **jouw** Drive; wij hebben er geen toegang toe
+- Geen abonnement, geen vendor lock-in
+- Google Apps Script onder de motorkap — je ziet wat er gebeurt
 
-1. Ga naar [script.google.com](https://script.google.com)
-2. Klik op **Nieuw project**
-3. Klik op het tandwiel ⚙ → **Projectinstellingen** → kopieer de **Script ID**
+Meer over wat je krijgt: [www.boekhoudbaar.nl](https://www.boekhoudbaar.nl).
 
-### Stap 2 – Code uploaden (clasp)
+---
 
-```bash
-# Installeer clasp (vereist Node.js)
-npm install -g @google/clasp
+## Repo-structuur
 
-# Login bij Google
-clasp login
-
-# Clone het project
-git clone https://github.com/samhoven16/boekhouding-engine.git
-cd boekhouding-engine
-
-# Initialiseer clasp met uw Script ID
-clasp clone <SCRIPT_ID>
-
-# Upload alle bestanden
-clasp push
+```
+boekhouding-engine/
+├── src/                    Apps Script van de klant-kopie (master template)
+│   ├── Menu.gs             onOpen + hoofdmenu
+│   ├── Setup.gs            Eerste-keer setup, tabbladen, Drive-structuur
+│   ├── Licentie.gs         Licentievalidatie, OTP-activering, kopieerbeveiliging
+│   ├── Boekingen.gs        Dubbel-boekhouding-engine (RGS-schema)
+│   ├── Verkoopfacturen.gs  Facturen, PDF-generatie, e-mail
+│   ├── BTW.gs              BTW-aangifte per kwartaal (rubrieken 1a t/m 5d)
+│   ├── Dashboard.gs        KPI-dashboard
+│   ├── Rapportages.gs      Balans, W&V, cashflow, jaarrekening
+│   └── …                   (zie .claude/repo-map.md voor de volledige map)
+│
+├── licence-server/         Apps Script web-app in eigen Google-account
+│   └── Code.gs             Mollie-webhook, OTP-server, CRM-sheet, config-endpoint
+│
+├── website/                Cloudflare Pages — marketing + juridisch
+│   ├── index.html          Landing (pricing, FAQ, oprichter)
+│   ├── privacy.html
+│   ├── voorwaarden.html
+│   └── …
+│
+├── tests/                  Jest — 122 tests, unit + integration
+├── .github/workflows/      Lint, test, clasp push (Apps Script deploy)
+└── CLAUDE.md / CONTEXT.md / INFRA.md   Intelligence voor AI-ondersteund werk
 ```
 
-### Stap 3 – Handmatig uploaden (zonder clasp)
-
-1. Open [script.google.com](https://script.google.com) en maak een nieuw project
-2. Verwijder de standaard `Code.gs`
-3. Maak voor elk `.gs` bestand in `src/` een nieuw scriptbestand aan:
-   - Klik op **+** → **Script**
-   - Geef het dezelfde naam (bijv. `Config`)
-   - Plak de inhoud
-4. Vervang `appsscript.json` via **Projectinstellingen** → **appsscript.json weergeven**
-
-### Stap 4 – Eerste keer opstarten
-
-1. Open een **nieuw Google Spreadsheet**
-2. Ga naar **Extensies** → **Apps Script**
-3. Koppel het script aan de spreadsheet
-4. **Vernieuwen** de spreadsheet (F5)
-5. Klik in het menu op **Boekhouding** → **Instellingen & Beheer** → **Setup uitvoeren**
-6. Geef de gevraagde rechten (Google Drive, Gmail, Forms)
-7. Wacht ~60 seconden – alle tabbladen en formulieren worden aangemaakt
-
-### Stap 5 – Bedrijfsgegevens invullen
-
-Ga naar tabblad **Instellingen** en vul uw gegevens in:
-- Bedrijfsnaam, adres, KvK-nummer
-- BTW-nummer
-- IBAN
-- Boekjaarperiode
-- E-mailadres voor rapporten
-
 ---
 
-## Gebruik
+## Licentie en eigenaarschap
 
-### Verkoopfactuur aanmaken
-1. **Boekhouding** → **Facturen** → **Nieuwe verkoopfactuur aanmaken**
-2. Of gebruik de directe formulier-link (zie tabblad Instellingen)
-3. Na invullen wordt automatisch een PDF gegenereerd in Google Drive
-4. Verstuur via **Boekhouding** → **Facturen** → **Verkoopfactuur als PDF versturen**
+- **Uitgever**: Hoven Strategy & Solutions (KVK 87254697, Utrecht)
+- **Code-licentie**: dit is een **source-available** repo. Je mag de code lezen, auditen en begrijpen hoe het werkt. **Commercieel hergebruiken of forken als eigen product** is niet toegestaan zonder schriftelijke toestemming.
+- **Product-licentie (€49)**: geeft je persoonlijk gebruiksrecht op één administratie — zie [Algemene Voorwaarden](https://www.boekhoudbaar.nl/voorwaarden).
 
-### Inkoopfactuur registreren
-1. **Boekhouding** → **Facturen** → **Inkoopfactuur registreren**
-2. Vul leveranciersnaam, factuurnummer en bedrag in
-3. Factuur wordt automatisch geboekt als crediteur
-
-### Banktransactie invoeren
-1. **Boekhouding** → **Bankboek** → **Banktransactie invoeren**
-2. Of importeer een bankafschrift via CSV: **Bankafschrift importeren (CSV)**
-3. Het systeem koppelt automatisch transacties aan open facturen via de referentie
-
-### BTW aangifte
-1. **Boekhouding** → **BTW** → kies het gewenste kwartaal
-2. De aangifte wordt berekend op basis van alle facturen in die periode
-3. Alle rubrieken (1a t/m 5d) worden ingevuld
-4. Vervolgens **BTW journaalpost sluiten** om de periode te boeken
-
-### Rapporten genereren
-- **Balans**: actuele vermogenspositie
-- **W&V Rekening**: resultaten over het boekjaar
-- **Cashflow**: geldstromen per maand
-- **Dashboard**: KPI overzicht met waarschuwingen
-
----
-
-## Grootboekschema (RGS)
-
-Het programma gebruikt het **Referentie Grootboekschema (RGS)** conform de Nederlandse standaard:
-
-| Reeks | Type |
-|---|---|
-| 0xxx | Vaste activa |
-| 1xxx | Vlottende activa & liquide middelen |
-| 2xxx | Eigen vermogen |
-| 3xxx | Langlopende schulden |
-| 4xxx | Kortlopende schulden |
-| 7xxx | Kosten (resultatenrekening) |
-| 8xxx | Opbrengsten (resultatenrekening) |
-
----
-
-## Google Forms
-
-De setup maakt automatisch **5 Google Forms** aan:
-
-| Formulier | Doel |
-|---|---|
-| Verkoopfactuur aanmaken | Nieuwe factuur invoeren (tot 3 regelitems) |
-| Inkoopfactuur registreren | Leveranciersrekening boeken |
-| Banktransactie invoeren | Bankafschrift handmatig invoeren |
-| Relatie toevoegen | Klant of leverancier aanmaken |
-| Handmatige journaalpost | Correcties, beginbalans, afschrijvingen |
-
-De links naar de formulieren staan op het tabblad **Instellingen**.
+Issues en kleine verbeter-PRs zijn welkom voor bugs en typo's. Grotere features eerst per e-mail bespreken.
 
 ---
 
 ## Technische details
 
-### Bestanden
+### BTW-wetgeving (NL)
 
-```
-appsscript.json          - Google Apps Script manifest
-src/
-  Config.gs              - Constanten, grootboekschema, BTW tarieven
-  Setup.gs               - Eenmalige setup (tabbladen + forms)
-  Menu.gs                - Aangepast Sheets menu
-  Triggers.gs            - Form submission handlers
-  Boekingen.gs           - Dubbel boekhoudingsengine
-  Verkoopfacturen.gs     - Facturen, PDF generatie, e-mail
-  Inkoopfacturen.gs      - Inkoopfacturen administratie
-  Bankboek.gs            - Bankrekening beheer
-  BTW.gs                 - BTW aangifte berekening
-  Rapportages.gs         - Balans, W&V, Cashflow, Jaarrekening
-  Dashboard.gs           - KPI dashboard
-  Utils.gs               - Hulpfuncties
-```
+| Tarief | Scope |
+|---|---|
+| 21% | Standaard |
+| 9% | Verlaagd (voedsel, boeken, geneesmiddelen) |
+| 0% | Nultarief (export, IC-leveringen) |
+| Vrijgesteld | Onderwijs, gezondheidszorg |
+| Verlegd | BTW verlegd naar afnemer |
+| KOR | Kleine Ondernemersregeling (< €20.000 omzet) |
+
+Aangifte-deadlines: Q1 30 apr · Q2 31 jul · Q3 31 okt · Q4 31 jan.
+
+### Benodigde OAuth-scopes (klant-kopie)
+
+- `spreadsheets` — sheet lezen/schrijven
+- `forms` — Google Form voor boekingen
+- `drive.file` / `drive` — PDF-opslag in klant-Drive
+- `gmail.send` — facturen versturen namens de klant
+- `script.scriptapp` — triggers installeren
 
 ### Triggers
 
-- **onOpen**: menu aanmaken bij openen spreadsheet
-- **onFormSubmit (5x)**: elk formulier heeft een trigger
-- **Dagelijks om 08:00**: vervallen facturen markeren, BTW herinneringen
-
-### Benodigde OAuth Scopes
-
-- `spreadsheets` – tabbladen lezen/schrijven
-- `forms` – formulieren aanmaken
-- `drive` – PDF's opslaan
-- `gmail.send` – e-mails versturen
-- `script.scriptapp` – triggers instellen
-- `documents` – (optioneel voor Doc-gebaseerde PDF's)
+- `onOpen` — menu aanmaken
+- `onFormSubmit` — boekingen verwerken
+- Dagelijks 08:00 — vervallen facturen, BTW-deadlines
+- Dagelijks 09:00 — follow-up-e-mails (dag 3/7/14/30/60/90) via Brevo
 
 ---
 
-## BTW Wetgeving (NL)
+## Development
 
-Het programma ondersteunt de Nederlandse BTW wetgeving:
+Vereisten: Node 22, `npm ci`.
 
-- **21%** – standaard (hoog) tarief
-- **9%** – verlaagd (laag) tarief (voedsel, boeken, geneesmiddelen)
-- **0%** – nultarief (export, IC leveringen)
-- **Vrijgesteld** – onderwijs, gezondheidszorg, etc.
-- **Verlegd** – BTW verlegd naar afnemer
-- **KOR** – Kleine Ondernemers Regeling (< €20.000 omzet)
+```bash
+npm test               # 122 Jest-tests
+npm run test:flow      # targeted flow-tests (zie CLAUDE.md)
+npm run lint           # ESLint op src/**/*.gs
+npm run index          # regenereer symbol-index.json
+node scripts/impact.js <functieNaam>   # impact-analyse
+```
 
-Aangifte termijnen:
-| Kwartaal | Deadline |
-|---|---|
-| Q1 (jan-mrt) | 30 april |
-| Q2 (apr-jun) | 31 juli |
-| Q3 (jul-sep) | 31 oktober |
-| Q4 (okt-dec) | 31 januari (volgend jaar) |
+Deploy gaat via `.github/workflows/deploy.yml` — `clasp push` op push-naar-`main`.
 
----
+### Local intelligence
 
-## Licentie
-
-MIT License – vrij te gebruiken en aan te passen.
+De map `.claude/` bevat repo-map, flow-maps, sheet-schemas en invariants die beschrijven hoe het systeem in elkaar zit. Lees deze vóór een bijdrage; ze voorkomen 80% van de context-rework.
 
 ---
 
-## Bijdragen
+## Contact
 
-Pull requests welkom! Zie issues voor openstaande verbeterpunten.
-
-Meld bugs via: [github.com/samhoven16/boekhouding-engine/issues](https://github.com/samhoven16/boekhouding-engine/issues)
+- **Hallo / support** — [hallo@boekhoudbaar.nl](mailto:hallo@boekhoudbaar.nl)
+- **Security** — mail naar hetzelfde adres met onderwerp "Security"
+- **Website** — [www.boekhoudbaar.nl](https://www.boekhoudbaar.nl)
