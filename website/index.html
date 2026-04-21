@@ -190,13 +190,33 @@
   .hero::before {
     content: "";
     position: absolute;
-    inset: 0;
+    inset: -10%;
     background:
       radial-gradient(600px 320px at 18% 15%, rgba(46,196,182,.18), transparent 60%),
-      radial-gradient(520px 280px at 82% 85%, rgba(46,196,182,.12), transparent 65%);
+      radial-gradient(520px 280px at 82% 85%, rgba(46,196,182,.12), transparent 65%),
+      radial-gradient(440px 260px at 50% 50%, rgba(46,196,182,.08), transparent 70%);
     pointer-events: none;
+    animation: hero-drift 26s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  @keyframes hero-drift {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    50%  { transform: translate3d(-18px, 10px, 0) scale(1.04); }
+    100% { transform: translate3d(14px, -8px, 0) scale(1.02); }
   }
   .hero > * { position: relative; }
+  .hero-badge, .hero h1, .hero-sub, .hero-ctas, .hero .ideal-badge {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: hero-rise .7s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  .hero h1   { animation-delay: .08s; }
+  .hero-sub  { animation-delay: .22s; }
+  .hero-ctas { animation-delay: .36s; }
+  .hero .ideal-badge { animation-delay: .50s; }
+  @keyframes hero-rise {
+    to { opacity: 1; transform: translateY(0); }
+  }
   .hero-badge {
     display: inline-block;
     background: rgba(46,196,182,.15);
