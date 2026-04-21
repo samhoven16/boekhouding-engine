@@ -86,76 +86,124 @@ function betaalPagina_(e) {
 
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
 <title>${naam} — Aankoop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
-       background:linear-gradient(135deg,#1A237E,#283593);min-height:100vh;
-       display:flex;align-items:center;justify-content:center;padding:20px}
-  .card{background:#fff;border-radius:16px;padding:40px;max-width:440px;width:100%;
-        box-shadow:0 20px 60px rgba(0,0,0,.3)}
-  h1{color:#1A237E;font-size:22px;margin-bottom:4px}
-  .prijs{font-size:36px;font-weight:700;color:#1A237E;margin:16px 0 4px}
-  .sub{color:#666;font-size:13px;margin-bottom:20px}
-  .voordelen{background:#E8EAF6;border-radius:8px;padding:14px 16px;margin-bottom:24px;
-             font-size:13px;line-height:2;color:#333}
-  label{display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:#333}
-  input{width:100%;padding:11px;border:1.5px solid #ddd;border-radius:8px;
-        font-size:14px;margin-bottom:14px;transition:border-color .2s}
-  input:focus{outline:none;border-color:#1A237E}
-  .btn{width:100%;padding:15px;background:#1A237E;color:#fff;border:none;
-       border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;transition:background .2s}
-  .btn:hover{background:#283593} .btn:disabled{background:#999;cursor:not-allowed}
-  .fout{background:#FFEBEE;color:#c62828;padding:10px;border-radius:6px;
-        font-size:13px;margin-top:10px;display:none}
-  .veilig{text-align:center;font-size:11px;color:#999;margin-top:14px}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+    background:#F7F9FC;min-height:100vh;color:#1A1A1A;
+    display:flex;align-items:center;justify-content:center;padding:24px;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  .card{
+    background:#fff;border:1px solid #E5EAF2;border-radius:16px;
+    padding:36px 32px;max-width:460px;width:100%;
+    box-shadow:0 20px 60px rgba(13,27,78,.08),0 2px 8px rgba(13,27,78,.04);
+  }
+  .brand{font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#2EC4B6;margin-bottom:6px}
+  h1{color:#0D1B4E;font-size:22px;font-weight:700;letter-spacing:-0.01em;margin-bottom:12px}
+  .prijs{font-size:44px;font-weight:800;color:#0D1B4E;letter-spacing:-0.02em;line-height:1;margin:8px 0 4px}
+  .prijs sup{font-size:22px;font-weight:700;color:#0D1B4E;vertical-align:super;margin-right:4px}
+  .sub{color:#5F6B7A;font-size:13px;margin-bottom:22px}
+  .voordelen{list-style:none;margin:0 0 24px;padding:0}
+  .voordelen li{display:flex;align-items:flex-start;gap:10px;padding:7px 0;font-size:14px;color:#1A1A1A;line-height:1.5}
+  .voordelen .v{width:18px;height:18px;border-radius:50%;background:rgba(46,196,182,.14);color:#2EC4B6;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+  label.veld{display:block;font-weight:600;font-size:13px;margin:0 0 6px;color:#1A1A1A}
+  input[type=text],input[type=email]{
+    width:100%;padding:12px 14px;border:1px solid #E5EAF2;border-radius:8px;
+    font-size:14px;font-family:inherit;margin-bottom:14px;background:#fff;
+    transition:border-color .15s ease,box-shadow .15s ease;
+  }
+  input[type=text]:focus,input[type=email]:focus{
+    outline:none;border-color:#2EC4B6;box-shadow:0 0 0 3px rgba(46,196,182,.18);
+  }
+  .herroepingsrecht{
+    background:#F7F9FC;border:1px solid #E5EAF2;border-radius:8px;
+    padding:14px 16px;margin:4px 0 16px;font-size:12px;color:#5F6B7A;line-height:1.6;
+  }
+  .herroepingsrecht label{display:flex;gap:10px;align-items:flex-start;font-weight:normal;margin-bottom:8px;cursor:pointer}
+  .herroepingsrecht label:last-child{margin-bottom:0}
+  .herroepingsrecht input[type=checkbox]{width:auto;margin-top:3px;flex-shrink:0;accent-color:#2EC4B6}
+  .btn{
+    width:100%;padding:15px 18px;background:#0D1B4E;color:#fff;border:none;
+    border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;
+    font-family:inherit;letter-spacing:.1px;
+    transition:background .15s ease,transform .15s ease,box-shadow .2s ease;
+  }
+  .btn:hover:not(:disabled){background:#1A2A6B;transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,27,78,.22)}
+  .btn:disabled{background:#94A3B8;cursor:not-allowed}
+  .fout{
+    background:#FDECEC;color:#B91C1C;padding:10px 14px;border-radius:6px;
+    font-size:13px;margin-top:12px;display:none;border:1px solid #F5B3B3;
+  }
+  .hint{font-size:12px;color:#5F6B7A;text-align:center;margin-top:14px;line-height:1.5}
+  .hint strong{color:#1A1A1A;font-weight:600}
+  .preframe{
+    background:#FFF8E1;border:1px solid #FFECB3;border-radius:8px;
+    padding:12px 14px;margin-top:14px;font-size:12px;color:#5A3F00;line-height:1.5;
+  }
+  ::selection{background:rgba(46,196,182,.28);color:#0D1B4E}
 </style></head><body>
 <div class="card">
-  <h1>📊 ${naam}</h1>
-  <div class="prijs">€${prijs}</div>
-  <div class="sub">Eenmalige aankoop — geen abonnement — altijd van u</div>
-  <div class="voordelen">
-    ✅ Volledige ZZP-boekhouding in Google Spreadsheets<br>
-    ✅ PDF-facturen aanmaken en direct e-mailen<br>
-    ✅ BTW-aangifte automatisch berekend<br>
-    ✅ Belastingvoordelen automatisch gesignaleerd<br>
-    ✅ Uw data blijft altijd op uw eigen Google Drive
-  </div>
-  <label>Uw naam *</label>
+  <div class="brand">${naam}</div>
+  <h1>Eenmalig — geen abonnement</h1>
+  <div class="prijs"><sup>€</sup>${prijs}</div>
+  <div class="sub">Licentiesleutel direct per e-mail. Altijd van jou.</div>
+
+  <ul class="voordelen">
+    <li><span class="v">✓</span>Volledige ZZP-boekhouding in Google Spreadsheets</li>
+    <li><span class="v">✓</span>PDF-facturen aanmaken &amp; rechtstreeks mailen</li>
+    <li><span class="v">✓</span>BTW-aangifte automatisch berekend per kwartaal</li>
+    <li><span class="v">✓</span>Aftrekposten automatisch gesignaleerd</li>
+    <li><span class="v">✓</span>Data blijft op jóuw Google Drive — wij kunnen er niet bij</li>
+  </ul>
+
+  <label class="veld" for="naam">Jouw naam</label>
   <input type="text" id="naam" placeholder="Jan Jansen" autocomplete="name">
-  <label>E-mailadres *</label>
+
+  <label class="veld" for="email">E-mailadres</label>
   <input type="email" id="email" placeholder="jan@uwbedrijf.nl" autocomplete="email">
-  <div style="background:#F3F4F6;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#444;line-height:1.6">
-    <label style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;margin-bottom:8px">
-      <input type="checkbox" id="cb1" style="width:auto;margin-top:2px;flex-shrink:0">
-      <span>Ik verzoek uitdrukkelijk om directe levering van de digitale inhoud vóór het verstrijken van de herroepingstermijn.</span>
+
+  <div class="herroepingsrecht">
+    <label>
+      <input type="checkbox" id="cb1">
+      <span>Ik verzoek uitdrukkelijk om directe levering van de digitale inhoud vóór het einde van de herroepingstermijn.</span>
     </label>
-    <label style="display:flex;gap:8px;align-items:flex-start;font-weight:normal;margin-bottom:0">
-      <input type="checkbox" id="cb2" style="width:auto;margin-top:2px;flex-shrink:0">
+    <label>
+      <input type="checkbox" id="cb2">
       <span>Ik begrijp dat ik hiermee mijn herroepingsrecht verlies zodra de levering is gestart.</span>
     </label>
   </div>
-  <button class="btn" id="btn" onclick="betaal()">Bestelling met betalingsverplichting — €${prijs} iDEAL</button>
+
+  <button class="btn" id="btn" onclick="betaal()">Bestelling met betalingsverplichting · €${prijs}</button>
   <div class="fout" id="fout"></div>
-  <div class="veilig">Betaling via Mollie · Veilig &amp; versleuteld · Factuur per e-mail</div>
+
+  <div class="hint"><strong>Betaling via Mollie</strong> — iDEAL, creditcard of Bancontact. Factuur volgt per e-mail.</div>
+
+  <div class="preframe"><strong>Wat na je betaling gebeurt:</strong> je krijgt binnen een minuut een e-mail met een link. Google vraagt dan toestemming om jouw boekhoudbestand in jóuw Drive te zetten — dat is precies de bedoeling. Je data blijft 100% van jou.</div>
 </div>
 <script>
 function betaal() {
   var naam  = document.getElementById('naam').value.trim();
   var email = document.getElementById('email').value.trim();
-  if (!naam)  { toonFout('Vul uw naam in.'); return; }
+  if (!naam)  { toonFout('Vul je naam in.'); return; }
   if (!email || !email.includes('@')) { toonFout('Vul een geldig e-mailadres in.'); return; }
   if (!document.getElementById('cb1').checked) { toonFout('Vink het eerste vakje aan om door te gaan.'); return; }
   if (!document.getElementById('cb2').checked) { toonFout('Vink het tweede vakje aan om door te gaan.'); return; }
   var btn = document.getElementById('btn');
-  btn.disabled = true; btn.textContent = '⏳ Even geduld...';
+  var oriBtnTxt = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Betaling aanmaken…';
   document.getElementById('fout').style.display = 'none';
   google.script.run
     .withSuccessHandler(function(res) {
       if (res.checkoutUrl) { window.location.href = res.checkoutUrl; }
-      else { toonFout(res.fout || 'Betaling aanmaken mislukt.'); btn.disabled=false; btn.textContent='🔒 Veilig betalen met iDEAL →'; }
+      else { toonFout(res.fout || 'Betaling aanmaken mislukt.'); btn.disabled=false; btn.textContent=oriBtnTxt; }
     })
-    .withFailureHandler(function(e) { toonFout('Fout: '+e.message); btn.disabled=false; btn.textContent='🔒 Veilig betalen met iDEAL →'; })
+    .withFailureHandler(function(e) { toonFout('Fout: '+e.message); btn.disabled=false; btn.textContent=oriBtnTxt; })
     .maakBetaling(naam, email);
 }
 function toonFout(t){var e=document.getElementById('fout');e.textContent=t;e.style.display='block';}
