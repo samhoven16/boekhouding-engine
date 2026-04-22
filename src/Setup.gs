@@ -134,7 +134,7 @@ const ZICHTBARE_TABS = [
 
 function maakTabbladen_(ss) {
   const tabDefinities = [
-    { naam: SHEETS.DASHBOARD,       volgorde: 1,  kleur: '#1A237E' },
+    { naam: SHEETS.DASHBOARD,       volgorde: 1,  kleur: '#0D1B4E' },
     { naam: SHEETS.INSTELLINGEN,    volgorde: 2,  kleur: '#4527A0' },
     { naam: SHEETS.VERKOOPFACTUREN, volgorde: 3,  kleur: '#1565C0' },
     { naam: SHEETS.INKOOPFACTUREN,  volgorde: 4,  kleur: '#0277BD' },

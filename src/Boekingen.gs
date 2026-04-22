@@ -260,12 +260,25 @@ function boekAfschrijvingen() {
 
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body { font-family: Arial, sans-serif; padding: 10px; font-size: 13px; }
-      table { width: 100%; border-collapse: collapse; }
-      td, th { padding: 4px 6px; border: 1px solid #ccc; }
-      th { background: #1A237E; color: white; }
-      input[type=number] { width: 80px; }
-      .btn { background: #1A237E; color: white; padding: 8px 16px; border: none; cursor: pointer; }
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:18px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 10px}
+      p{color:#5A6478;margin:0 0 10px}
+      table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;
+            box-shadow:0 1px 2px rgba(13,27,78,0.04)}
+      td,th{padding:8px 10px;border-bottom:1px solid #E5EAF2;text-align:left}
+      th{background:#0D1B4E;color:white;font-weight:600;font-size:12px;letter-spacing:0.3px}
+      tr:last-child td{border-bottom:none}
+      input[type=number]{width:90px;padding:6px 8px;border:1px solid #E5EAF2;border-radius:6px;
+                         font-size:13px;font-family:inherit;background:#fff;transition:border-color 0.15s}
+      input[type=number]:focus{outline:none;border-color:#2EC4B6}
+      select{padding:6px 8px;border:1px solid #E5EAF2;border-radius:6px;font-size:13px;
+             font-family:inherit;background:#fff}
+      .btn{background:#0D1B4E;color:white;padding:10px 18px;border:none;border-radius:6px;
+           cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;
+           transition:background 0.15s}
+      .btn:hover{background:#1A2A6B}
     </style>
     <h3>Afschrijvingen boeken</h3>
     <p>Voer het afschrijvingspercentage per actief in (lineaire methode):</p>

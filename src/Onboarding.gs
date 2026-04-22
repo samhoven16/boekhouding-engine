@@ -160,29 +160,43 @@ function toonUpdateMelding_(oudeVersie, nieuweVersie) {
 function toonWatIsErNieuw() {
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body{font-family:Arial,sans-serif;padding:20px;font-size:13px;line-height:1.6}
-      h2{color:#1A237E;margin-bottom:4px}
-      h3{color:#283593;margin:16px 0 4px;font-size:13px}
-      .versie{background:#E8EAF6;padding:12px;border-radius:6px;margin-bottom:12px}
-      .nieuw{color:#2E7D32;font-weight:bold}
-      .fix{color:#1565C0}
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:22px;font-size:13px;line-height:1.6;color:#1A1A1A;background:#F7F9FC;
+           -webkit-font-smoothing:antialiased}
+      h2{color:#0D1B4E;font-size:18px;font-weight:700;letter-spacing:-0.01em;margin:0 0 4px}
+      h3{color:#0D1B4E;margin:0 0 6px;font-size:13px;font-weight:600}
+      .versie{background:#fff;border:1px solid #E5EAF2;padding:14px 16px;border-radius:8px;
+              margin-bottom:12px;box-shadow:0 1px 2px rgba(13,27,78,0.03)}
+      .versie.nieuwste{border-left:3px solid #2EC4B6}
+      .nieuw{color:#1A1A1A}
+      .nieuw::marker{color:#2EC4B6}
+      .fix{color:#5A6478}
+      .fix::marker{color:#5A6478}
       ul{margin:4px 0;padding-left:20px}
-      li{margin:2px 0}
+      li{margin:3px 0}
+      a{color:#0D1B4E;text-decoration:none;font-weight:600}
+      a:hover{color:#2EC4B6}
+      .foot{font-size:11px;color:#5A6478;margin-top:16px}
+      .btn-sec{background:#F7F9FC;color:#0D1B4E;border:1px solid #E5EAF2;
+               padding:9px 16px;border-radius:6px;cursor:pointer;font-size:13px;
+               font-weight:600;font-family:inherit;margin-top:10px;transition:background 0.15s}
+      .btn-sec:hover{background:#EEF2F8}
     </style>
-    <h2>Wat is er nieuw in Boekhouding Engine?</h2>
+    <h2>Wat is er nieuw in Boekhoudbaar?</h2>
 
-    <div class="versie">
-      <h3>🆕 Versie 2.0.0 — Grote update</h3>
+    <div class="versie nieuwste">
+      <h3>Versie 2.0.0 — grote update</h3>
       <ul>
-        <li class="nieuw">✨ Eén formulier voor facturen, kosten en declaraties (was: 5 aparte formulieren)</li>
-        <li class="nieuw">✨ Foto van bon of factuur uploaden via het menu</li>
-        <li class="nieuw">✨ Alle teksten herschreven in gewone taal</li>
-        <li class="nieuw">✨ Koppeling met Zapier, Make en n8n voor automatisering</li>
-        <li class="nieuw">✨ Betere factuurlay-out met opgemaakt factuurnummer (F000001)</li>
-        <li class="nieuw">✨ Ondersteuning voor niet-Gmail e-mail (ProtonMail, Outlook etc.)</li>
-        <li class="fix">🔧 Alle menu-items werken nu correct (was: toestemmingsfout)</li>
-        <li class="fix">🔧 Oude antwoordtabbladen worden automatisch verwijderd</li>
-        <li class="fix">🔧 Beveiliging verbeterd: injecties in PDF-facturen niet meer mogelijk</li>
+        <li class="nieuw">Eén formulier voor facturen, kosten en declaraties (was: 5 aparte formulieren)</li>
+        <li class="nieuw">Foto van bon of factuur uploaden via het menu</li>
+        <li class="nieuw">Alle teksten herschreven in gewone taal</li>
+        <li class="nieuw">Koppeling met Zapier, Make en n8n voor automatisering</li>
+        <li class="nieuw">Betere factuurlay-out met opgemaakt factuurnummer (F000001)</li>
+        <li class="nieuw">Ondersteuning voor niet-Gmail e-mail (ProtonMail, Outlook etc.)</li>
+        <li class="fix">Alle menu-items werken nu correct (was: toestemmingsfout)</li>
+        <li class="fix">Oude antwoordtabbladen worden automatisch verwijderd</li>
+        <li class="fix">Beveiliging verbeterd: injecties in PDF-facturen niet meer mogelijk</li>
       </ul>
     </div>
 
@@ -196,7 +210,7 @@ function toonWatIsErNieuw() {
     </div>
 
     <div class="versie">
-      <h3>Versie 1.0.0 — Eerste versie</h3>
+      <h3>Versie 1.0.0 — eerste versie</h3>
       <ul>
         <li>Basisfunctionaliteit: facturen, kosten, BTW-aangifte</li>
         <li>Dashboard met live statistieken</li>
@@ -204,10 +218,8 @@ function toonWatIsErNieuw() {
       </ul>
     </div>
 
-    <p style="font-size:11px;color:#888;margin-top:16px">
-      Vragen of problemen? <a href="mailto:support@boekhouding-engine.nl">support@boekhouding-engine.nl</a>
-    </p>
-    <button onclick="google.script.host.close()" style="margin-top:8px;padding:8px 16px;cursor:pointer">Sluiten</button>
+    <p class="foot">Vragen of problemen? <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a></p>
+    <button class="btn-sec" onclick="google.script.host.close()">Sluiten</button>
   `).setWidth(520).setHeight(500);
 
   SpreadsheetApp.getUi().showModalDialog(html, 'Wat is er nieuw?');

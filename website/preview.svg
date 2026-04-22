@@ -1,162 +1,243 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Boekhoudbaar dashboard preview">
-  <title>Boekhoudbaar dashboard — omzet, kosten, winst en BTW-saldo in één overzicht</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Boekhoudbaar in Google Spreadsheets">
+  <title>Boekhoudbaar draait in je eigen Google Spreadsheet — dashboard, menu en tabbladen zoals je ze echt ziet</title>
 
   <!-- Canvas -->
   <rect width="1200" height="720" fill="#F7F9FC"/>
 
-  <!-- Window chrome -->
-  <rect x="24" y="24" width="1152" height="672" rx="12" fill="#FFFFFF" stroke="#E5EAF2" stroke-width="1"/>
-  <rect x="24" y="24" width="1152" height="40" rx="12" fill="#F7F9FC"/>
-  <rect x="24" y="56" width="1152" height="8" fill="#F7F9FC"/>
-  <circle cx="48" cy="44" r="5" fill="#E5EAF2"/>
-  <circle cx="66" cy="44" r="5" fill="#E5EAF2"/>
-  <circle cx="84" cy="44" r="5" fill="#E5EAF2"/>
-  <rect x="120" y="34" width="240" height="20" rx="4" fill="#FFFFFF" stroke="#E5EAF2" stroke-width="1"/>
-  <text x="132" y="48" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" fill="#5F6B7A">Dashboard — Boekhouding 2026</text>
+  <!-- Browser window shell -->
+  <rect x="24" y="24" width="1152" height="672" rx="10" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <rect x="24" y="24" width="1152" height="36" rx="10" fill="#F1F3F4"/>
+  <rect x="24" y="50" width="1152" height="10" fill="#F1F3F4"/>
+  <circle cx="48" cy="42" r="5" fill="#E5EAF2"/>
+  <circle cx="66" cy="42" r="5" fill="#E5EAF2"/>
+  <circle cx="84" cy="42" r="5" fill="#E5EAF2"/>
+  <rect x="116" y="32" width="520" height="20" rx="10" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <text x="132" y="46" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#5F6B7A">docs.google.com/spreadsheets/d/…/edit — Boekhouding 2026</text>
 
-  <!-- Tab bar -->
-  <g font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" font-weight="600">
-    <rect x="40" y="84" width="96" height="26" rx="4" fill="#0D1B4E"/>
-    <text x="88" y="101" text-anchor="middle" fill="#FFFFFF">Dashboard</text>
-    <text x="170" y="101" fill="#5F6B7A">Verkoopfacturen</text>
-    <text x="304" y="101" fill="#5F6B7A">Inkoopfacturen</text>
-    <text x="430" y="101" fill="#5F6B7A">Bank</text>
-    <text x="494" y="101" fill="#5F6B7A">BTW</text>
-    <text x="550" y="101" fill="#5F6B7A">Rapportages</text>
-  </g>
+  <!-- Google Sheets title bar -->
+  <rect x="24" y="60" width="1152" height="44" fill="#FFFFFF"/>
+  <!-- Sheets icon -->
+  <rect x="48" y="72" width="22" height="22" rx="3" fill="#0F9D58"/>
+  <rect x="52" y="76" width="14" height="2.5" fill="#FFFFFF" opacity="0.85"/>
+  <rect x="52" y="81" width="14" height="2.5" fill="#FFFFFF" opacity="0.85"/>
+  <rect x="52" y="86" width="14" height="2.5" fill="#FFFFFF" opacity="0.85"/>
+  <text x="82" y="84" font-family="Inter, -apple-system, Arial, sans-serif" font-size="13" font-weight="600" fill="#1A1A1A">Boekhouding 2026</text>
+  <text x="82" y="98" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#5F6B7A">Bestand · Bewerken · Beeld · Invoegen · Opmaak · Gegevens · Extensies · Boekhoudbaar · Help</text>
 
-  <!-- KPI cards -->
-  <g font-family="Inter, -apple-system, Arial, sans-serif">
-    <!-- Omzet -->
-    <rect x="40" y="138" width="268" height="120" rx="10" fill="#FFFFFF" stroke="#E5EAF2"/>
-    <text x="60" y="166" font-size="11" font-weight="600" letter-spacing="1" fill="#5F6B7A">OMZET Q1</text>
-    <text x="60" y="208" font-size="30" font-weight="800" fill="#0D1B4E">€ 42.180</text>
-    <text x="60" y="232" font-size="12" fill="#2EC4B6">▲ 12% t.o.v. Q4</text>
+  <!-- Boekhoudbaar menu highlighted -->
+  <rect x="336" y="92" width="94" height="14" rx="2" fill="rgba(13,27,78,0.08)"/>
 
-    <!-- Kosten -->
-    <rect x="322" y="138" width="268" height="120" rx="10" fill="#FFFFFF" stroke="#E5EAF2"/>
-    <text x="342" y="166" font-size="11" font-weight="600" letter-spacing="1" fill="#5F6B7A">KOSTEN Q1</text>
-    <text x="342" y="208" font-size="30" font-weight="800" fill="#0D1B4E">€ 8.940</text>
-    <text x="342" y="232" font-size="12" fill="#5F6B7A">21% van omzet</text>
+  <!-- Avatar -->
+  <circle cx="1148" cy="82" r="12" fill="#2EC4B6"/>
+  <text x="1148" y="86" text-anchor="middle" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" font-weight="700" fill="#FFFFFF">S</text>
 
-    <!-- Winst -->
-    <rect x="604" y="138" width="268" height="120" rx="10" fill="#FFFFFF" stroke="#E5EAF2"/>
-    <text x="624" y="166" font-size="11" font-weight="600" letter-spacing="1" fill="#5F6B7A">NETTOWINST</text>
-    <text x="624" y="208" font-size="30" font-weight="800" fill="#0D1B4E">€ 33.240</text>
-    <text x="624" y="232" font-size="12" fill="#2EC4B6">▲ 18% t.o.v. Q4</text>
-
-    <!-- BTW -->
-    <rect x="886" y="138" width="274" height="120" rx="10" fill="rgba(46,196,182,.08)" stroke="rgba(46,196,182,.35)"/>
-    <text x="906" y="166" font-size="11" font-weight="600" letter-spacing="1" fill="#0D1B4E">BTW-SALDO Q1</text>
-    <text x="906" y="208" font-size="30" font-weight="800" fill="#0D1B4E">€ 6.218</text>
-    <text x="906" y="232" font-size="12" fill="#5F6B7A">Aangifte: 30 apr</text>
-  </g>
-
-  <!-- Chart card -->
-  <rect x="40" y="280" width="720" height="288" rx="10" fill="#FFFFFF" stroke="#E5EAF2"/>
-  <text x="60" y="312" font-family="Inter, -apple-system, Arial, sans-serif" font-size="14" font-weight="700" fill="#0D1B4E">Omzet vs. kosten · 2026</text>
-  <text x="60" y="332" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" fill="#5F6B7A">Per maand, inclusief BTW</text>
-
-  <!-- Chart gridlines -->
-  <g stroke="#E5EAF2" stroke-width="1">
-    <line x1="80" y1="540" x2="740" y2="540"/>
-    <line x1="80" y1="490" x2="740" y2="490"/>
-    <line x1="80" y1="440" x2="740" y2="440"/>
-    <line x1="80" y1="390" x2="740" y2="390"/>
-  </g>
-
-  <!-- Chart bars (omzet navy, kosten teal) -->
-  <g>
-    <!-- Jan -->
-    <rect x="110" y="420" width="18" height="120" fill="#0D1B4E" rx="2"/>
-    <rect x="130" y="500" width="18" height="40" fill="#2EC4B6" rx="2"/>
-    <!-- Feb -->
-    <rect x="180" y="400" width="18" height="140" fill="#0D1B4E" rx="2"/>
-    <rect x="200" y="495" width="18" height="45" fill="#2EC4B6" rx="2"/>
-    <!-- Mrt -->
-    <rect x="250" y="385" width="18" height="155" fill="#0D1B4E" rx="2"/>
-    <rect x="270" y="498" width="18" height="42" fill="#2EC4B6" rx="2"/>
-    <!-- Apr -->
-    <rect x="320" y="410" width="18" height="130" fill="#0D1B4E" rx="2"/>
-    <rect x="340" y="503" width="18" height="37" fill="#2EC4B6" rx="2"/>
-    <!-- Mei -->
-    <rect x="390" y="395" width="18" height="145" fill="#0D1B4E" rx="2"/>
-    <rect x="410" y="496" width="18" height="44" fill="#2EC4B6" rx="2"/>
-    <!-- Jun -->
-    <rect x="460" y="405" width="18" height="135" fill="#0D1B4E" rx="2"/>
-    <rect x="480" y="499" width="18" height="41" fill="#2EC4B6" rx="2"/>
-    <!-- Jul -->
-    <rect x="530" y="390" width="18" height="150" fill="#0D1B4E" rx="2"/>
-    <rect x="550" y="494" width="18" height="46" fill="#2EC4B6" rx="2"/>
-    <!-- Aug -->
-    <rect x="600" y="415" width="18" height="125" fill="#0D1B4E" rx="2"/>
-    <rect x="620" y="505" width="18" height="35" fill="#2EC4B6" rx="2"/>
-    <!-- Sep -->
-    <rect x="670" y="380" width="18" height="160" fill="#0D1B4E" rx="2"/>
-    <rect x="690" y="492" width="18" height="48" fill="#2EC4B6" rx="2"/>
-  </g>
-
-  <!-- Month labels -->
-  <g font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#5F6B7A" text-anchor="middle">
-    <text x="128" y="560">jan</text>
-    <text x="198" y="560">feb</text>
-    <text x="268" y="560">mrt</text>
-    <text x="338" y="560">apr</text>
-    <text x="408" y="560">mei</text>
-    <text x="478" y="560">jun</text>
-    <text x="548" y="560">jul</text>
-    <text x="618" y="560">aug</text>
-    <text x="688" y="560">sep</text>
-  </g>
-
-  <!-- Legend -->
+  <!-- Thin toolbar -->
+  <rect x="24" y="104" width="1152" height="32" fill="#F7F9FC"/>
   <g font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" fill="#5F6B7A">
-    <rect x="580" y="308" width="10" height="10" fill="#0D1B4E" rx="2"/>
-    <text x="596" y="317">Omzet</text>
-    <rect x="640" y="308" width="10" height="10" fill="#2EC4B6" rx="2"/>
-    <text x="656" y="317">Kosten</text>
+    <text x="48" y="124">↶  ↷  ⎙  100%  €  %  .0</text>
+    <text x="260" y="124">Standaard  ▾   11 ▾   B  I  U</text>
   </g>
 
-  <!-- Recent invoices card -->
-  <rect x="776" y="280" width="384" height="288" rx="10" fill="#FFFFFF" stroke="#E5EAF2"/>
-  <text x="796" y="312" font-family="Inter, -apple-system, Arial, sans-serif" font-size="14" font-weight="700" fill="#0D1B4E">Openstaande facturen</text>
-  <text x="796" y="332" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" fill="#5F6B7A">4 openstaand · totaal € 9.640</text>
+  <!-- Name box + formula bar -->
+  <rect x="24" y="136" width="1152" height="28" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <rect x="24" y="136" width="110" height="28" fill="#F7F9FC" stroke="#E5EAF2"/>
+  <text x="40" y="154" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" fill="#1A1A1A">A3</text>
+  <text x="150" y="154" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" fill="#5F6B7A">ƒx</text>
+  <text x="172" y="154" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" fill="#1A1A1A">Bedrijfsnaam</text>
 
-  <!-- Invoice rows -->
-  <g font-family="Inter, -apple-system, Arial, sans-serif" font-size="12">
-    <g>
-      <line x1="796" y1="358" x2="1140" y2="358" stroke="#E5EAF2"/>
-      <text x="796" y="380" fill="#0D1B4E" font-weight="600">2026-041 · Studio Veld</text>
-      <text x="796" y="398" fill="#5F6B7A" font-size="11">Verstuurd 12 mrt · vervalt 11 apr</text>
-      <text x="1140" y="385" text-anchor="end" fill="#0D1B4E" font-weight="700">€ 2.420</text>
-    </g>
-    <g>
-      <line x1="796" y1="418" x2="1140" y2="418" stroke="#E5EAF2"/>
-      <text x="796" y="440" fill="#0D1B4E" font-weight="600">2026-040 · Kuipers &amp; Co</text>
-      <text x="796" y="458" fill="#5F6B7A" font-size="11">Verstuurd 08 mrt · vervalt 07 apr</text>
-      <text x="1140" y="445" text-anchor="end" fill="#0D1B4E" font-weight="700">€ 1.815</text>
-    </g>
-    <g>
-      <line x1="796" y1="478" x2="1140" y2="478" stroke="#E5EAF2"/>
-      <text x="796" y="500" fill="#0D1B4E" font-weight="600">2026-039 · Bloem Ontwerp</text>
-      <text x="796" y="518" fill="#B91C1C" font-size="11">⚠ Vervallen sinds 2 apr</text>
-      <text x="1140" y="505" text-anchor="end" fill="#B91C1C" font-weight="700">€ 3.200</text>
-    </g>
-    <g>
-      <line x1="796" y1="538" x2="1140" y2="538" stroke="#E5EAF2"/>
-      <text x="796" y="560" fill="#0D1B4E" font-weight="600">2026-038 · Timmerman BV</text>
-      <text x="796" y="578" fill="#5F6B7A" font-size="11">Verstuurd 02 mrt · vervalt 01 apr</text>
-      <text x="1140" y="565" text-anchor="end" fill="#0D1B4E" font-weight="700">€ 2.205</text>
-    </g>
+  <!-- Column headers -->
+  <rect x="24" y="164" width="1152" height="22" fill="#F7F9FC" stroke="#E5EAF2"/>
+  <g font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" font-weight="600" fill="#5F6B7A" text-anchor="middle">
+    <text x="64" y="179">A</text>
+    <text x="200" y="179">B</text>
+    <text x="430" y="179">C</text>
+    <text x="580" y="179">D</text>
+    <text x="700" y="179">E</text>
+    <text x="800" y="179">F</text>
   </g>
 
-  <!-- Bottom status row -->
-  <rect x="40" y="588" width="1120" height="80" rx="10" fill="rgba(46,196,182,.05)" stroke="rgba(46,196,182,.2)"/>
-  <g font-family="Inter, -apple-system, Arial, sans-serif">
-    <text x="60" y="618" font-size="11" font-weight="600" letter-spacing="1" fill="#5F6B7A">VOLGENDE TAAK</text>
-    <text x="60" y="646" font-size="14" font-weight="700" fill="#0D1B4E">BTW-aangifte Q1 — bijna klaar</text>
-    <text x="60" y="663" font-size="11" fill="#5F6B7A">Rubriek 1a, 1b en 3b automatisch berekend · klaar om over te nemen</text>
-    <rect x="988" y="618" width="148" height="34" rx="6" fill="#0D1B4E"/>
-    <text x="1062" y="640" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">Aangifte openen →</text>
+  <!-- Row numbers gutter -->
+  <rect x="24" y="186" width="40" height="450" fill="#F7F9FC" stroke="#E5EAF2"/>
+  <g font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#5F6B7A" text-anchor="middle">
+    <text x="44" y="204">1</text>
+    <text x="44" y="232">2</text>
+    <text x="44" y="264">3</text>
+    <text x="44" y="292">4</text>
+    <text x="44" y="320">5</text>
+    <text x="44" y="348">6</text>
+    <text x="44" y="376">7</text>
+    <text x="44" y="404">8</text>
+    <text x="44" y="432">9</text>
+    <text x="44" y="460">10</text>
+    <text x="44" y="488">11</text>
+    <text x="44" y="516">12</text>
+    <text x="44" y="544">13</text>
+    <text x="44" y="572">14</text>
+    <text x="44" y="600">15</text>
+    <text x="44" y="628">16</text>
   </g>
+
+  <!-- Sheet area (left of sidebar) -->
+  <!-- Row 1: START HIER banner -->
+  <rect x="64" y="186" width="740" height="28" fill="#E6F7F4"/>
+  <rect x="64" y="186" width="4" height="28" fill="#2EC4B6"/>
+  <text x="78" y="205" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" font-weight="700" fill="#0D1B4E">START HIER — Vul deze velden eenmalig in</text>
+
+  <!-- Row 2 blank spacer -->
+  <rect x="64" y="214" width="740" height="28" fill="#FFFFFF"/>
+
+  <!-- Row 3 Bedrijfsnaam -->
+  <rect x="64" y="242" width="740" height="28" fill="#FFFFFF"/>
+  <rect x="64" y="242" width="740" height="1" fill="#E5EAF2"/>
+  <text x="78" y="261" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">Bedrijfsnaam</text>
+  <text x="236" y="261" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" font-weight="600" fill="#0D1B4E">Studio Veld</text>
+
+  <!-- Row 4 KVK -->
+  <rect x="64" y="270" width="740" height="28" fill="#FFFFFF"/>
+  <rect x="64" y="270" width="740" height="1" fill="#E5EAF2"/>
+  <text x="78" y="289" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">KVK-nummer</text>
+  <text x="236" y="289" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">87254697</text>
+
+  <!-- Row 5 BTW -->
+  <rect x="64" y="298" width="740" height="28" fill="#FFFFFF"/>
+  <rect x="64" y="298" width="740" height="1" fill="#E5EAF2"/>
+  <text x="78" y="317" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">BTW-nummer</text>
+  <text x="236" y="317" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">NL004384587B39</text>
+
+  <!-- Row 6 IBAN -->
+  <rect x="64" y="326" width="740" height="28" fill="#FFFFFF"/>
+  <rect x="64" y="326" width="740" height="1" fill="#E5EAF2"/>
+  <text x="78" y="345" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">IBAN</text>
+  <text x="236" y="345" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">NL42 INGB 0123 4567 89</text>
+
+  <!-- Row 7 E-mail -->
+  <rect x="64" y="354" width="740" height="28" fill="#FFFFFF"/>
+  <rect x="64" y="354" width="740" height="1" fill="#E5EAF2"/>
+  <text x="78" y="373" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">E-mailadres</text>
+  <text x="236" y="373" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">sam@studioveld.nl</text>
+
+  <!-- Row 8 spacer -->
+  <rect x="64" y="382" width="740" height="14" fill="#FFFFFF"/>
+
+  <!-- Section header: BTW-instellingen -->
+  <rect x="64" y="396" width="740" height="26" fill="#0D1B4E"/>
+  <text x="78" y="414" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="1" fill="#FFFFFF">BTW-INSTELLINGEN</text>
+
+  <!-- Row 10 BTW-plichtig -->
+  <rect x="64" y="422" width="740" height="28" fill="#FFFFFF"/>
+  <text x="78" y="441" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">BTW-plichtig</text>
+  <text x="236" y="441" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">Ja</text>
+  <text x="410" y="441" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#5F6B7A">← Dropdown: Ja / Nee / KOR</text>
+
+  <!-- Row 11 BTW-aangiftefrequentie -->
+  <rect x="64" y="450" width="740" height="28" fill="#FFFFFF"/>
+  <rect x="64" y="450" width="740" height="1" fill="#E5EAF2"/>
+  <text x="78" y="469" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">Aangifte-frequentie</text>
+  <text x="236" y="469" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">Per kwartaal</text>
+
+  <!-- Row 12 Boekjaar -->
+  <rect x="64" y="478" width="740" height="28" fill="#FFFFFF"/>
+  <rect x="64" y="478" width="740" height="1" fill="#E5EAF2"/>
+  <text x="78" y="497" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">Boekjaar start</text>
+  <text x="236" y="497" font-family="Inter, -apple-system, Arial, sans-serif" font-size="12" fill="#1A1A1A">2026</text>
+
+  <!-- Row 13 spacer -->
+  <rect x="64" y="506" width="740" height="30" fill="#FFFFFF"/>
+
+  <!-- Active cell highlight on Bedrijfsnaam (row 3) -->
+  <rect x="64" y="243" width="165" height="27" fill="none" stroke="#2EC4B6" stroke-width="2"/>
+
+  <!-- Sidebar: Boekhoudbaar Dashboard (right side, 340px wide) -->
+  <rect x="810" y="186" width="346" height="450" fill="#F7F9FC" stroke="#E5EAF2"/>
+
+  <!-- Sidebar header -->
+  <rect x="810" y="186" width="346" height="48" fill="#0D1B4E"/>
+  <text x="826" y="212" font-family="Inter, -apple-system, Arial, sans-serif" font-size="13" font-weight="700" fill="#FFFFFF">Dashboard</text>
+  <text x="826" y="226" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#B8C2D1">Studio Veld · Q1 2026</text>
+  <rect x="1080" y="200" width="64" height="20" rx="3" fill="rgba(255,255,255,0.15)"/>
+  <text x="1112" y="214" text-anchor="middle" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#FFFFFF">↻ Vernieuwen</text>
+
+  <!-- KPI grid 2x2 -->
+  <!-- KPI 1: Omzet -->
+  <rect x="822" y="248" width="160" height="68" rx="6" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <text x="834" y="266" font-family="Inter, -apple-system, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.5" fill="#5F6B7A">OMZET Q1</text>
+  <text x="834" y="292" font-family="Inter, -apple-system, Arial, sans-serif" font-size="18" font-weight="800" fill="#0D1B4E">€ 42.180</text>
+  <text x="834" y="306" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#2EC4B6">▲ 12%</text>
+
+  <!-- KPI 2: Kosten -->
+  <rect x="990" y="248" width="160" height="68" rx="6" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <text x="1002" y="266" font-family="Inter, -apple-system, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.5" fill="#5F6B7A">KOSTEN Q1</text>
+  <text x="1002" y="292" font-family="Inter, -apple-system, Arial, sans-serif" font-size="18" font-weight="800" fill="#0D1B4E">€ 8.940</text>
+  <text x="1002" y="306" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#5F6B7A">21% van omzet</text>
+
+  <!-- KPI 3: Nettowinst -->
+  <rect x="822" y="324" width="160" height="68" rx="6" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <text x="834" y="342" font-family="Inter, -apple-system, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.5" fill="#5F6B7A">NETTOWINST</text>
+  <text x="834" y="368" font-family="Inter, -apple-system, Arial, sans-serif" font-size="18" font-weight="800" fill="#0D1B4E">€ 33.240</text>
+  <text x="834" y="382" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#2EC4B6">▲ 18%</text>
+
+  <!-- KPI 4: BTW -->
+  <rect x="990" y="324" width="160" height="68" rx="6" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <text x="1002" y="342" font-family="Inter, -apple-system, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.5" fill="#5F6B7A">BTW-SALDO</text>
+  <text x="1002" y="368" font-family="Inter, -apple-system, Arial, sans-serif" font-size="18" font-weight="800" fill="#0D1B4E">€ 6.218</text>
+  <text x="1002" y="382" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#5F6B7A">Aangifte 30 apr</text>
+
+  <!-- Action grid heading -->
+  <text x="822" y="418" font-family="Inter, -apple-system, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.5" fill="#5F6B7A">SNEL AAN DE SLAG</text>
+
+  <!-- Action 1: Nieuwe factuur (primary, navy) -->
+  <rect x="822" y="426" width="104" height="60" rx="6" fill="#0D1B4E"/>
+  <text x="874" y="452" text-anchor="middle" font-family="Inter, -apple-system, Arial, sans-serif" font-size="18" fill="#FFFFFF">＋</text>
+  <text x="874" y="474" text-anchor="middle" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF">Nieuwe factuur</text>
+
+  <!-- Action 2: Kosten boeken -->
+  <rect x="934" y="426" width="104" height="60" rx="6" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <text x="986" y="452" text-anchor="middle" font-family="Inter, -apple-system, Arial, sans-serif" font-size="16" fill="#0D1B4E">€</text>
+  <text x="986" y="474" text-anchor="middle" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" font-weight="600" fill="#0D1B4E">Kosten boeken</text>
+
+  <!-- Action 3: BTW-aangifte -->
+  <rect x="1046" y="426" width="104" height="60" rx="6" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <text x="1098" y="452" text-anchor="middle" font-family="Inter, -apple-system, Arial, sans-serif" font-size="14" fill="#0D1B4E">📋</text>
+  <text x="1098" y="474" text-anchor="middle" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" font-weight="600" fill="#0D1B4E">BTW-aangifte</text>
+
+  <!-- Openstaande facturen list -->
+  <text x="822" y="510" font-family="Inter, -apple-system, Arial, sans-serif" font-size="9" font-weight="700" letter-spacing="0.5" fill="#5F6B7A">OPENSTAAND · € 9.640</text>
+
+  <rect x="822" y="518" width="328" height="106" rx="6" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <!-- Invoice row 1 -->
+  <text x="834" y="538" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" font-weight="600" fill="#0D1B4E">2026-041 · Studio Veld</text>
+  <text x="1138" y="538" text-anchor="end" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" font-weight="700" fill="#0D1B4E">€ 2.420</text>
+  <line x1="834" y1="546" x2="1138" y2="546" stroke="#F7F9FC"/>
+  <!-- Invoice row 2 (overdue) -->
+  <text x="834" y="566" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" font-weight="600" fill="#0D1B4E">2026-039 · Bloem Ontwerp</text>
+  <text x="834" y="578" font-family="Inter, -apple-system, Arial, sans-serif" font-size="9" fill="#B91C1C">Vervallen sinds 2 apr</text>
+  <text x="1138" y="566" text-anchor="end" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" font-weight="700" fill="#B91C1C">€ 3.200</text>
+  <line x1="834" y1="588" x2="1138" y2="588" stroke="#F7F9FC"/>
+  <!-- Invoice row 3 -->
+  <text x="834" y="608" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" font-weight="600" fill="#0D1B4E">2026-040 · Kuipers &amp; Co</text>
+  <text x="1138" y="608" text-anchor="end" font-family="Inter, -apple-system, Arial, sans-serif" font-size="11" font-weight="700" fill="#0D1B4E">€ 1.815</text>
+
+  <!-- Bottom tab bar (Google Sheets tabs) -->
+  <rect x="24" y="636" width="1152" height="36" fill="#F7F9FC" stroke="#E5EAF2"/>
+  <g font-family="Inter, -apple-system, Arial, sans-serif" font-size="11">
+    <rect x="40" y="640" width="4" height="28" fill="#2EC4B6"/>
+    <rect x="44" y="642" width="82" height="26" fill="#FFFFFF" stroke="#E5EAF2"/>
+    <text x="85" y="659" text-anchor="middle" font-weight="700" fill="#0D1B4E">Instellingen</text>
+
+    <text x="148" y="659" fill="#5F6B7A">Dashboard</text>
+    <text x="220" y="659" fill="#5F6B7A">Verkoopfacturen</text>
+    <text x="328" y="659" fill="#5F6B7A">Inkoopfacturen</text>
+    <text x="428" y="659" fill="#5F6B7A">Bankboek</text>
+    <text x="498" y="659" fill="#5F6B7A">BTW-aangifte</text>
+    <text x="586" y="659" fill="#5F6B7A">Balans</text>
+    <text x="634" y="659" fill="#5F6B7A">W&amp;V</text>
+    <text x="680" y="659" fill="#5F6B7A">Cashflow</text>
+    <text x="744" y="659" fill="#5F6B7A">Grootboek</text>
+    <text x="820" y="659" fill="#5F6B7A">Relaties</text>
+    <text x="880" y="659" fill="#5F6B7A">+ 8 tabbladen</text>
+  </g>
+
+  <!-- Bottom status bar -->
+  <rect x="24" y="672" width="1152" height="24" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <text x="48" y="688" font-family="Inter, -apple-system, Arial, sans-serif" font-size="10" fill="#5F6B7A">Laatste wijziging: zojuist opgeslagen in Drive · Boekhoudbaar v2.0</text>
 </svg>

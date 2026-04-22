@@ -133,21 +133,38 @@ function toonDriveStructuur() {
     { label: 'Jaarrekening',                  key: 'DRIVE_JAARREKENING_'    + jaar },
   ];
 
-  let html = '<h3>Google Drive mappen ' + jaar + '</h3><table style="border-collapse:collapse;width:100%;font-family:Arial;font-size:13px">';
+  let html = ''
+    + '<style>'
+    + '*{box-sizing:border-box}'
+    + 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;'
+    + 'padding:20px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}'
+    + 'h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 12px}'
+    + 'table{border-collapse:collapse;width:100%;font-size:13px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 2px rgba(13,27,78,0.04)}'
+    + 'td{padding:10px 12px;border-bottom:1px solid #E5EAF2}'
+    + 'tr:last-child td{border-bottom:none}'
+    + 'td:first-child{font-weight:600;color:#0D1B4E}'
+    + 'a{color:#0D1B4E;font-weight:600;text-decoration:none}'
+    + 'a:hover{color:#2EC4B6}'
+    + '.btn{background:#0D1B4E;color:white;padding:10px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;margin-top:14px;transition:background 0.15s}'
+    + '.btn:hover{background:#1A2A6B}'
+    + '.btn-sec{background:#F7F9FC;color:#0D1B4E;border:1px solid #E5EAF2;padding:9px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;margin-left:8px;margin-top:14px;transition:background 0.15s}'
+    + '.btn-sec:hover{background:#EEF2F8}'
+    + '</style>'
+    + '<h3>Google Drive mappen ' + jaar + '</h3><table>';
   mappen.forEach(m => {
     const id = props.getProperty(m.key);
-    let link = 'Nog niet aangemaakt';
+    let link = '<span style="color:#5A6478">Nog niet aangemaakt</span>';
     if (id) {
       try {
         const url = DriveApp.getFolderById(id).getUrl();
-        link = '<a href="' + url + '" target="_blank">📁 Openen</a>';
-      } catch(e) { link = 'Niet beschikbaar'; }
+        link = '<a href="' + url + '" target="_blank">Openen →</a>';
+      } catch(e) { link = '<span style="color:#c62828">Niet beschikbaar</span>'; }
     }
-    html += '<tr><td style="padding:5px 8px;font-weight:bold">' + m.label + '</td><td style="padding:5px 8px">' + link + '</td></tr>';
+    html += '<tr><td>' + m.label + '</td><td>' + link + '</td></tr>';
   });
   html += '</table>';
-  html += '<br><button onclick="google.script.run.maakDriveStructuurManueel()">Mappen aanmaken / vernieuwen</button>';
-  html += '&nbsp;<button onclick="google.script.host.close()">Sluiten</button>';
+  html += '<button class="btn" onclick="google.script.run.maakDriveStructuurManueel()">Mappen aanmaken / vernieuwen</button>';
+  html += '<button class="btn-sec" onclick="google.script.host.close()">Sluiten</button>';
 
   SpreadsheetApp.getUi().showModalDialog(
     HtmlService.createHtmlOutput(html).setWidth(500).setHeight(350),
