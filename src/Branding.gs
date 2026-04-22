@@ -29,7 +29,7 @@ function getBedrijfsLogo_() {
 }
 
 /**
- * Geeft de primaire bedrijfskleur terug (hex, default #1A237E).
+ * Geeft de primaire bedrijfskleur terug (hex, default #0D1B4E).
  */
 function getBedrijfsKleur_() {
   const kleur = PropertiesService.getScriptProperties().getProperty(PROP_KLEUR);
@@ -129,7 +129,7 @@ function getBedrijfsLogoVolledig_() {
  */
 function slaKleurOp(hexKleur) {
   if (!/^#[0-9A-Fa-f]{6}$/.test(hexKleur)) {
-    throw new Error('Ongeldige kleur. Gebruik een hex kleur zoals #1A237E.');
+    throw new Error('Ongeldige kleur. Gebruik een hex kleur zoals #0D1B4E.');
   }
   PropertiesService.getScriptProperties().setProperty(PROP_KLEUR, hexKleur);
   auditLog_('Bedrijfskleur gewijzigd', hexKleur);
@@ -163,46 +163,52 @@ function openBrandingInstellingen() {
 <head>
 <style>
   *{box-sizing:border-box}
-  body{font-family:Arial,sans-serif;padding:16px;font-size:13px;margin:0;color:#212121}
-  h2{color:#1A237E;font-size:17px;margin:0 0 4px}
-  .sub{color:#666;font-size:12px;margin-bottom:18px}
-  .sectie{font-size:11px;font-weight:bold;color:#1A237E;text-transform:uppercase;
-          letter-spacing:0.5px;margin:14px 0 8px;padding-bottom:4px;
-          border-bottom:1px solid #E8EAF6}
-  .logo-area{border:2px dashed #C5CAE9;border-radius:8px;padding:18px;text-align:center;
-             cursor:pointer;transition:all 0.2s;background:#FAFAFA;min-height:90px;
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+       padding:18px;font-size:13px;margin:0;color:#1A1A1A;-webkit-font-smoothing:antialiased}
+  h2{color:#0D1B4E;font-size:17px;margin:0 0 4px;font-weight:700;letter-spacing:-0.01em}
+  .sub{color:#5A6478;font-size:12px;margin-bottom:18px}
+  .sectie{font-size:11px;font-weight:600;color:#0D1B4E;text-transform:uppercase;
+          letter-spacing:0.6px;margin:16px 0 8px;padding-bottom:6px;
+          border-bottom:1px solid #E5EAF2}
+  .logo-area{border:2px dashed #E5EAF2;border-radius:10px;padding:20px;text-align:center;
+             cursor:pointer;transition:all 0.2s;background:#F7F9FC;min-height:96px;
              display:flex;align-items:center;justify-content:center;flex-direction:column}
-  .logo-area:hover{border-color:#1A237E;background:#F0F2FF}
-  .logo-area.heeft-logo{border-color:#4CAF50;background:#F0FFF4}
+  .logo-area:hover{border-color:#2EC4B6;background:#E6F7F4}
+  .logo-area.heeft-logo{border-color:#2EC4B6;background:#E6F7F4}
   .logo-preview{max-width:200px;max-height:70px;object-fit:contain;margin-bottom:8px}
   .kleur-rij{display:flex;align-items:center;gap:12px;margin:8px 0}
-  .kleur-vakje{width:36px;height:36px;border-radius:6px;border:2px solid #ccc;
+  .kleur-vakje{width:36px;height:36px;border-radius:6px;border:2px solid #E5EAF2;
                cursor:pointer;flex-shrink:0;transition:border-color 0.2s}
-  .kleur-vakje:hover{border-color:#1A237E}
-  input[type=color]{width:44px;height:36px;padding:2px;border:1px solid #ccc;border-radius:4px;cursor:pointer}
-  input[type=text]{padding:7px 10px;border:1px solid #ccc;border-radius:4px;font-size:13px;width:120px}
-  .preview-box{background:#F5F5F5;border-radius:6px;padding:12px;margin:10px 0;
-               border:1px solid #E0E0E0;text-align:center}
-  .factuur-mini{background:white;border-radius:4px;padding:10px 14px;text-align:left;
-                display:inline-block;width:280px;border:1px solid #eee;font-size:11px}
+  .kleur-vakje:hover{border-color:#0D1B4E}
+  input[type=color]{width:44px;height:36px;padding:2px;border:1px solid #E5EAF2;border-radius:6px;cursor:pointer}
+  input[type=text]{padding:8px 10px;border:1px solid #E5EAF2;border-radius:6px;font-size:13px;width:130px;
+                   color:#1A1A1A;background:#fff;transition:border-color 0.15s}
+  input[type=text]:focus{outline:none;border-color:#2EC4B6}
+  .preview-box{background:#F7F9FC;border-radius:8px;padding:14px;margin:10px 0;
+               border:1px solid #E5EAF2;text-align:center}
+  .factuur-mini{background:white;border-radius:6px;padding:12px 14px;text-align:left;
+                display:inline-block;width:280px;border:1px solid #E5EAF2;font-size:11px;
+                box-shadow:0 1px 3px rgba(13,27,78,0.04)}
   .factuur-header{display:flex;justify-content:space-between;align-items:flex-start;
                   margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--pk)}
-  .mini-label{font-size:9px;color:#888;font-weight:bold;text-transform:uppercase}
-  .mini-tabel-header{color:white;padding:4px 6px;margin:4px 0;border-radius:2px;font-size:10px;background:var(--pk)}
-  .btn{padding:8px 16px;border-radius:4px;border:none;cursor:pointer;font-size:13px;font-weight:bold}
-  .btn-pri{background:#1A237E;color:white}
-  .btn-pri:hover{background:#283593}
-  .btn-sec{background:#E8EAF6;color:#1A237E;margin-left:6px}
-  .btn-sec:hover{background:#C5CAE9}
-  .btn-danger{background:#FFEBEE;color:#c62828;margin-left:6px}
-  .btn-danger:hover{background:#FFCDD2}
-  .status{font-size:12px;font-style:italic;color:#555;min-height:18px;margin:6px 0}
+  .mini-label{font-size:9px;color:#5A6478;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+  .mini-tabel-header{color:white;padding:4px 6px;margin:4px 0;border-radius:3px;font-size:10px;background:var(--pk)}
+  .btn{padding:9px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;
+       font-family:inherit;transition:background 0.15s,transform 0.05s}
+  .btn:active{transform:translateY(1px)}
+  .btn-pri{background:#0D1B4E;color:white}
+  .btn-pri:hover{background:#1A2A6B}
+  .btn-sec{background:#F7F9FC;color:#0D1B4E;margin-left:6px;border:1px solid #E5EAF2}
+  .btn-sec:hover{background:#EEF2F8}
+  .btn-danger{background:#FFF1F2;color:#c62828;margin-left:6px;border:1px solid #FCD9DA}
+  .btn-danger:hover{background:#FFE0E2}
+  .status{font-size:12px;font-style:italic;color:#5A6478;min-height:18px;margin:6px 0}
   .kleuren-presets{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
   .preset{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;
           transition:all 0.15s;flex-shrink:0}
-  .preset:hover{border-color:white;box-shadow:0 0 0 2px #1A237E;transform:scale(1.1)}
-  .tip{background:#FFF8E1;border-left:3px solid #FFC107;padding:8px 10px;font-size:11px;
-       border-radius:0 4px 4px 0;margin-top:10px}
+  .preset:hover{border-color:white;box-shadow:0 0 0 2px #0D1B4E;transform:scale(1.1)}
+  .tip{background:#FFF8E1;border-left:3px solid #FFC107;padding:10px 12px;font-size:11px;
+       color:#5A3A00;border-radius:0 6px 6px 0;margin-top:12px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -222,14 +228,14 @@ function openBrandingInstellingen() {
 
 <div class="sectie">Primaire kleur</div>
 <div class="kleur-rij">
-  <input type="color" id="kleurPicker" value="#1A237E" oninput="kleurGewijzigd(this.value)">
-  <input type="text" id="kleurHex" value="#1A237E" onchange="kleurHexGewijzigd()" maxlength="7" placeholder="#1A237E">
+  <input type="color" id="kleurPicker" value="#0D1B4E" oninput="kleurGewijzigd(this.value)">
+  <input type="text" id="kleurHex" value="#0D1B4E" onchange="kleurHexGewijzigd()" maxlength="7" placeholder="#0D1B4E">
 </div>
 <div class="kleuren-presets" id="presets"></div>
 
 <div class="sectie">Voorbeeld factuur</div>
 <div class="preview-box">
-  <div class="factuur-mini" id="preview" style="--pk:#1A237E">
+  <div class="factuur-mini" id="preview" style="--pk:#0D1B4E">
     <div class="factuur-header">
       <div id="prevLogo">
         <div style="font-weight:bold;font-size:13px;color:var(--pk)" id="prevNaam">Uw Bedrijf</div>
