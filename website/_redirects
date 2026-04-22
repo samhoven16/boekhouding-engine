@@ -4,3 +4,11 @@
 
 # Checkout — doorsturen naar licentieserver
 /kopen https://script.google.com/macros/s/AKfycbyq5Xrvh4bFXkcjpjsdaPS-UJm3b7h-X7kGyfdTnDNcNS2brUX0q86pRU7Q2nSMCOWsMg/exec 302
+
+# ── Affiliate tracking (/go/ routes) ──────────────────────────
+# 302 = tijdelijk, zodat target-URL bijgewerkt kan worden zonder SEO-impact.
+# Vervang door echte affiliate-links zodra goedgekeurd.
+/go/bunq        https://www.bunq.com/nl/zakelijk  302
+/go/notion      https://www.notion.so/product     302
+/go/zapier      https://zapier.com/               302
+/go/accountant  https://www.boekhoudbaar.nl/gids/zakelijke-rekening-zzp-2026/  302
