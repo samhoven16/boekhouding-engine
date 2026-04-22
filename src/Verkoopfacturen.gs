@@ -296,18 +296,35 @@ function maakCreditnota(factuurNummer) {
 function importeerBankafschrift() {
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body { font-family: Arial, sans-serif; padding: 16px; }
-      textarea { width: 100%; height: 200px; font-family: monospace; font-size: 11px; }
-      .btn { background: #1A237E; color: white; padding: 8px 16px; border: none; cursor: pointer; margin-top: 8px; }
-      select, input { padding: 4px; margin: 4px 0; }
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 6px}
+      p{color:#5A6478;margin:0 0 10px;line-height:1.55}
+      textarea{width:100%;height:200px;font-family:monospace;font-size:11px;padding:10px;
+               border:1px solid #E5EAF2;border-radius:6px;color:#1A1A1A;background:#fff;
+               transition:border-color 0.15s}
+      textarea:focus{outline:none;border-color:#2EC4B6}
+      label{color:#0D1B4E;font-weight:600;font-size:12px}
+      select,input{padding:6px 8px;margin:4px 0;border:1px solid #E5EAF2;border-radius:6px;
+                   font-size:13px;font-family:inherit;color:#1A1A1A;background:#fff}
+      input[type=number]{width:70px}
+      .btn{background:#0D1B4E;color:white;padding:10px 18px;border:none;border-radius:6px;
+           cursor:pointer;margin-top:10px;font-size:13px;font-weight:600;
+           font-family:inherit;transition:background 0.15s}
+      .btn:hover{background:#1A2A6B}
+      .btn-sec{background:#F7F9FC;color:#0D1B4E;border:1px solid #E5EAF2;padding:9px 16px;
+               border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;
+               font-family:inherit;margin-left:8px;margin-top:10px;transition:background 0.15s}
+      .btn-sec:hover{background:#EEF2F8}
     </style>
     <h3>Bankafschrift importeren (CSV)</h3>
-    <p>Plak hieronder de CSV-inhoud van uw bankafschrift:</p>
+    <p>Plak hieronder de CSV-inhoud van je bankafschrift.</p>
     <p>
-      <label>Datum kolom: <input type="number" id="colDatum" value="1" min="1" max="20"></label>
-      <label style="margin-left:16px">Omschr. kolom: <input type="number" id="colOmschr" value="2" min="1" max="20"></label>
-      <label style="margin-left:16px">Bedrag kolom: <input type="number" id="colBedrag" value="3" min="1" max="20"></label>
-      <label style="margin-left:16px">Scheidingsteken: <select id="sep">
+      <label>Datum kolom <input type="number" id="colDatum" value="1" min="1" max="20"></label>
+      &nbsp;&nbsp;<label>Omschr. kolom <input type="number" id="colOmschr" value="2" min="1" max="20"></label>
+      &nbsp;&nbsp;<label>Bedrag kolom <input type="number" id="colBedrag" value="3" min="1" max="20"></label>
+      &nbsp;&nbsp;<label>Scheidingsteken <select id="sep">
         <option value=",">Komma (,)</option>
         <option value=";">Puntkomma (;)</option>
         <option value="\t">Tab</option>
@@ -316,7 +333,7 @@ function importeerBankafschrift() {
     <textarea id="csv" placeholder="Datum;Omschrijving;Bedrag&#10;2024-01-15;Betaling klant;1250.00&#10;2024-01-16;Huur;-1500.00"></textarea>
     <br>
     <button class="btn" onclick="importeer_()">Importeren</button>
-    <button onclick="google.script.host.close()" style="margin-left:8px">Annuleren</button>
+    <button class="btn-sec" onclick="google.script.host.close()">Annuleren</button>
     <div id="result" style="margin-top:8px;color:green"></div>
     <script>
       function importeer_() {
