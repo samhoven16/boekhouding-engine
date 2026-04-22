@@ -63,20 +63,27 @@ function zetPriveHeaders_(sheet) {
 function voegPriveTransactieToe() {
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body{font-family:Arial,sans-serif;padding:16px;font-size:13px}
-      h3{color:#6A1B9A;margin-bottom:10px}
-      .form-row{margin:7px 0}
-      label{display:block;font-weight:bold;margin-bottom:3px;font-size:12px}
-      input,select{width:100%;padding:7px;border:1px solid #ccc;border-radius:4px;font-size:13px}
-      .row2{display:flex;gap:8px}
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 10px}
+      .form-row{margin:9px 0}
+      label{display:block;font-weight:600;margin-bottom:4px;font-size:12px;color:#0D1B4E}
+      input,select{width:100%;padding:8px 10px;border:1px solid #E5EAF2;border-radius:6px;
+                   font-size:13px;font-family:inherit;color:#1A1A1A;background:#fff;
+                   transition:border-color 0.15s}
+      input:focus,select:focus{outline:none;border-color:#2EC4B6}
+      .row2{display:flex;gap:10px}
       .row2 .form-row{flex:1}
-      .btn{background:#6A1B9A;color:white;border:none;padding:10px 20px;border-radius:4px;
-           cursor:pointer;font-size:14px;width:100%;margin-top:10px}
-      .btn:hover{background:#7B1FA2}
-      .tip{background:#F3E5F5;padding:8px;border-radius:4px;font-size:11px;margin-bottom:10px}
+      .btn{background:#0D1B4E;color:white;border:none;padding:11px 20px;border-radius:6px;
+           cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;width:100%;margin-top:12px;
+           transition:background 0.15s}
+      .btn:hover{background:#1A2A6B}
+      .tip{background:#fff;border:1px solid #E5EAF2;border-left:3px solid #2EC4B6;padding:10px 12px;
+           border-radius:0 6px 6px 0;font-size:12px;margin-bottom:12px;color:#1A1A1A;line-height:1.5}
     </style>
-    <h3>🏠 Privé transactie invoeren</h3>
-    <div class="tip">💡 Gebruik dit voor persoonlijke uitgaven en inkomsten — los van uw bedrijf.</div>
+    <h3>Privé-transactie invoeren</h3>
+    <div class="tip">Gebruik dit voor persoonlijke uitgaven en inkomsten — los van je bedrijf.</div>
 
     <div class="row2">
       <div class="form-row">
@@ -254,24 +261,34 @@ function vernieuwPriveDashboard_(ss) {
 function openIbAangifteHelper() {
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body{font-family:Arial,sans-serif;padding:16px;font-size:13px;max-width:500px}
-      h3{color:#6A1B9A;margin-bottom:4px}
-      h4{color:#4A148C;margin:14px 0 6px;font-size:13px}
-      .form-row{margin:6px 0}
-      label{display:block;font-size:12px;color:#555;margin-bottom:2px}
-      input{width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px}
-      .box{background:#F3E5F5;padding:10px;border-radius:6px;margin:10px 0}
-      .box2{background:#EDE7F6;padding:10px;border-radius:6px;margin:10px 0}
-      .box3{background:#E8EAF6;padding:10px;border-radius:6px;margin:10px 0}
-      .btn{background:#6A1B9A;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;width:100%;margin-top:10px}
-      .resultaat{margin-top:12px;padding:12px;border-radius:6px;font-size:13px;display:none}
-      .info{font-size:10px;color:#888;margin-top:2px}
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:20px;font-size:13px;max-width:520px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:18px;font-weight:700;letter-spacing:-0.01em;margin:0 0 4px}
+      h4{color:#0D1B4E;margin:14px 0 8px;font-size:13px;font-weight:600}
+      .form-row{margin:8px 0}
+      label{display:block;font-size:12px;color:#5A6478;margin-bottom:4px;font-weight:500}
+      input{width:100%;padding:8px 10px;border:1px solid #E5EAF2;border-radius:6px;
+            font-size:13px;font-family:inherit;color:#1A1A1A;background:#fff;
+            transition:border-color 0.15s}
+      input:focus{outline:none;border-color:#2EC4B6}
+      .box,.box2,.box3{background:#fff;border:1px solid #E5EAF2;border-left:3px solid #2EC4B6;
+                      padding:12px 14px;border-radius:0 6px 6px 0;margin:12px 0}
+      .box2{border-left-color:#0D1B4E}
+      .box3{border-left-color:#FFC107}
+      .btn{background:#0D1B4E;color:white;border:none;padding:11px 20px;border-radius:6px;
+           cursor:pointer;width:100%;margin-top:12px;font-size:14px;font-weight:600;
+           font-family:inherit;transition:background 0.15s}
+      .btn:hover{background:#1A2A6B}
+      .resultaat{margin-top:14px;padding:14px;border-radius:8px;font-size:13px;display:none;
+                 background:#E6F7F4;border:1px solid #2EC4B6}
+      .info{font-size:10px;color:#5A6478;margin-top:2px}
     </style>
-    <h3>🧾 IB Aangifte Schatting 2025</h3>
-    <p style="font-size:11px;color:#888">Snelle schatting — niet voor officiële aangifte. Raadpleeg een belastingadviseur voor definitieve berekening.</p>
+    <h3>IB aangifte-schatting 2025</h3>
+    <p style="font-size:11px;color:#5A6478">Snelle schatting — niet voor officiële aangifte. Raadpleeg een belastingadviseur voor definitieve berekening.</p>
 
     <div class="box">
-      <h4>📦 Box 1 — Inkomen uit werk en woning</h4>
+      <h4>Box 1 — inkomen uit werk en woning</h4>
       <div class="form-row">
         <label>Bruto salaris / ZZP-winst (€/jaar)</label>
         <input type="number" id="b1inkomen" placeholder="0" step="100">
@@ -284,16 +301,16 @@ function openIbAangifteHelper() {
     </div>
 
     <div class="box2">
-      <h4>📦 Box 2 — Aanmerkelijk belang (BV-dividend)</h4>
+      <h4>Box 2 — aanmerkelijk belang (BV-dividend)</h4>
       <div class="form-row">
         <label>Dividend ontvangen uit eigen BV (€)</label>
         <input type="number" id="b2dividend" placeholder="0" step="100">
-        <div class="info">Alleen als u ≥5% aandeelhouder bent. Tarief 2025: 24,5% t/m €67.000, daarboven 33%.</div>
+        <div class="info">Alleen als je ≥5% aandeelhouder bent. Tarief 2025: 24,5% t/m €67.000, daarboven 33%.</div>
       </div>
     </div>
 
     <div class="box3">
-      <h4>📦 Box 3 — Sparen en beleggen</h4>
+      <h4>Box 3 — sparen en beleggen</h4>
       <div class="form-row">
         <label>Totaal vermogen op 1 januari (spaargeld + beleggingen + 2e woning)</label>
         <input type="number" id="b3vermogen" placeholder="0" step="1000">
@@ -353,23 +370,22 @@ function openIbAangifteHelper() {
           return '\u20AC' + parts.join(',');
         };
 
-        var html = '<h4 style="color:#1B5E20">Schatting inkomstenbelasting 2025</h4>' +
-          '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
-          '<tr style="background:#F3E5F5"><td>Box 1 (na heffingskorting)</td><td align=right><b>' + fmt(b1belasting) + '</b></td></tr>' +
-          (b2d > 0 ? '<tr style="background:#EDE7F6"><td>Box 2 (aanmerkelijk belang)</td><td align=right><b>' + fmt(b2belasting) + '</b></td></tr>' : '') +
-          (b3grondslag > 0 ? '<tr style="background:#E8EAF6"><td>Box 3 (grondslag ' + fmt(b3grondslag) + ')</td><td align=right><b>' + fmt(b3belasting) + '</b></td></tr>' : '') +
-          '<tr style="background:#1B5E20;color:white"><td><b>TOTAAL GESCHAT</b></td><td align=right><b>' + fmt(totaal) + '</b></td></tr>' +
+        var html = '<h4 style="color:#0D1B4E;margin:0 0 10px">Schatting inkomstenbelasting 2025</h4>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:6px;overflow:hidden">' +
+          '<tr><td style="padding:8px 10px;border-bottom:1px solid #E5EAF2">Box 1 (na heffingskorting)</td><td style="padding:8px 10px;text-align:right;border-bottom:1px solid #E5EAF2"><b>' + fmt(b1belasting) + '</b></td></tr>' +
+          (b2d > 0 ? '<tr><td style="padding:8px 10px;border-bottom:1px solid #E5EAF2">Box 2 (aanmerkelijk belang)</td><td style="padding:8px 10px;text-align:right;border-bottom:1px solid #E5EAF2"><b>' + fmt(b2belasting) + '</b></td></tr>' : '') +
+          (b3grondslag > 0 ? '<tr><td style="padding:8px 10px;border-bottom:1px solid #E5EAF2">Box 3 (grondslag ' + fmt(b3grondslag) + ')</td><td style="padding:8px 10px;text-align:right;border-bottom:1px solid #E5EAF2"><b>' + fmt(b3belasting) + '</b></td></tr>' : '') +
+          '<tr style="background:#0D1B4E;color:white"><td style="padding:10px"><b>TOTAAL GESCHAT</b></td><td style="padding:10px;text-align:right"><b>' + fmt(totaal) + '</b></td></tr>' +
           '</table>' +
-          '<p style="font-size:10px;color:#888;margin-top:8px">Bron: belastingtarieven 2025. Dit is een globale schatting zonder rekening met toeslagen, voorlopige aanslag of persoonlijke aftrekposten.</p>';
+          '<p style="font-size:10px;color:#5A6478;margin-top:10px;line-height:1.5">Bron: belastingtarieven 2025. Dit is een globale schatting zonder rekening met toeslagen, voorlopige aanslag of persoonlijke aftrekposten.</p>';
 
         var el = document.getElementById('resultaat');
         el.style.display = 'block';
-        el.style.background = '#E8F5E9';
         el.innerHTML = html;
       }
     </script>
   `).setWidth(520).setHeight(640);
-  SpreadsheetApp.getUi().showModalDialog(html, '🧾 IB Aangifte Schatting');
+  SpreadsheetApp.getUi().showModalDialog(html, 'IB aangifte-schatting');
 }
 
 // ─────────────────────────────────────────────
