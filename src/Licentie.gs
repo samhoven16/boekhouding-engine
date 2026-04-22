@@ -97,22 +97,34 @@ function vergrendelKopie_() {
 
   try {
     const html = HtmlService.createHtmlOutput(`
-      <!DOCTYPE html><html lang="nl"><body style="font-family:Arial,sans-serif;padding:24px;text-align:center;color:#1a1a2e">
-        <div style="font-size:52px;margin-bottom:12px">🔒</div>
-        <h2 style="color:#1A237E;margin-bottom:8px">Licentie vereist</h2>
-        <p style="color:#555;margin-bottom:16px">Dit bestand is een kopie van een gelicenseerde Boekhoudbaar-spreadsheet.<br>
-        Elke spreadsheet heeft een eigen licentie nodig.</p>
-        <a href="https://boekhoudbaar.nl/kopen" target="_blank"
-           style="background:#1A237E;color:#fff;padding:12px 28px;border-radius:8px;
-                  text-decoration:none;font-weight:700;font-size:15px;display:inline-block">
-          Koop een licentie — €49 →
-        </a>
-        <p style="color:#94a3b8;font-size:11px;margin-top:16px">
-          Al gekocht? Open dan de spreadsheet die je bij activering hebt aangemaakt,<br>of neem contact op via hallo@boekhoudbaar.nl
+      <!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>
+      <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+                   padding:28px 30px;background:#F7F9FC;color:#1A1A1A;-webkit-font-smoothing:antialiased">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2EC4B6;margin-bottom:6px">Licentie vereist</div>
+        <h2 style="color:#0D1B4E;font-size:22px;font-weight:800;letter-spacing:-0.01em;margin-bottom:10px;line-height:1.3">
+          Dit is een kopie van een Boekhoudbaar-sheet
+        </h2>
+        <p style="color:#5F6B7A;font-size:13px;line-height:1.6;margin-bottom:16px">
+          Elke Boekhoudbaar-installatie heeft een eigen licentie nodig. Deze kopie is niet
+          geactiveerd. Alle tabbladen zijn daarom alleen-lezen.
+        </p>
+        <div style="background:#fff;border:1px solid #E5EAF2;border-radius:10px;padding:14px 16px;margin:14px 0;font-size:13px;line-height:1.55;color:#1A1A1A">
+          <strong style="color:#0D1B4E">Wat te doen?</strong><br>
+          <span style="color:#5F6B7A">Open de originele spreadsheet die je bij activering hebt aangemaakt, óf koop een eigen licentie hieronder.</span>
+        </div>
+        <div style="text-align:center;margin-top:20px">
+          <a href="https://boekhoudbaar.nl/kopen" target="_blank"
+             style="background:#0D1B4E;color:#fff;padding:13px 28px;border-radius:10px;
+                    text-decoration:none;font-weight:600;font-size:14px;display:inline-block;letter-spacing:.1px">
+            Koop een licentie — €49
+          </a>
+        </div>
+        <p style="color:#94a3b8;font-size:12px;margin-top:18px;text-align:center">
+          Al gekocht? Mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.
         </p>
       </body></html>
-    `).setWidth(420).setHeight(280);
-    SpreadsheetApp.getUi().showModalDialog(html, '📊 Boekhoudbaar — Licentie vereist');
+    `).setWidth(460).setHeight(380);
+    SpreadsheetApp.getUi().showModalDialog(html, 'Boekhoudbaar — Licentie vereist');
   } catch (_) {}
 }
 
@@ -126,69 +138,74 @@ function toonActivatieDialog_() {
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
-           padding:24px;font-size:13px;color:#1a1a2e;background:#fff}
-      .logo{text-align:center;margin-bottom:20px}
-      .logo h2{font-size:19px;color:#1A237E;margin:8px 0 4px}
-      .logo p{color:#666;font-size:12px}
+           padding:26px 28px;font-size:14px;color:#1A1A1A;background:#F7F9FC;
+           -webkit-font-smoothing:antialiased}
+      .head{margin-bottom:22px}
+      .label{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2EC4B6;margin-bottom:6px}
+      h2{font-size:20px;font-weight:800;color:#0D1B4E;letter-spacing:-0.01em;margin-bottom:6px;line-height:1.3}
+      .sub{color:#5F6B7A;font-size:13px;line-height:1.55}
       .stap{display:none}
       .stap.actief{display:block}
-      label{display:block;font-weight:600;margin-bottom:4px;color:#333;font-size:12px}
-      input{width:100%;padding:10px;border:1.5px solid #ddd;border-radius:8px;
-            font-size:14px;margin-bottom:10px;transition:border-color .2s}
-      input:focus{outline:none;border-color:#1A237E}
-      .btn{width:100%;padding:12px;background:#1A237E;color:#fff;border:none;
-           border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
-      .btn:hover{background:#283593}
-      .btn:disabled{background:#9e9e9e;cursor:not-allowed}
-      .fout{background:#FFEBEE;color:#c62828;padding:8px 12px;border-radius:6px;
-            font-size:12px;margin-bottom:10px;display:none}
-      .hint{font-size:11px;color:#888;text-align:center;margin-top:8px}
-      .link-btn{background:none;border:none;color:#1A237E;cursor:pointer;
-                text-decoration:underline;font-size:12px;padding:0}
-      .succes-box{text-align:center;padding:8px 0}
+      label.veld{display:block;font-weight:600;margin-bottom:6px;color:#1A1A1A;font-size:13px}
+      input{width:100%;padding:12px 14px;border:1px solid #E5EAF2;border-radius:8px;
+            font-size:14px;font-family:inherit;margin-bottom:12px;background:#fff;
+            transition:border-color .15s ease,box-shadow .15s ease}
+      input:focus{outline:none;border-color:#2EC4B6;box-shadow:0 0 0 3px rgba(46,196,182,.18)}
+      input#otp{font-family:inherit;letter-spacing:6px;font-size:18px;text-align:center;font-weight:600}
+      .btn{width:100%;padding:13px 16px;background:#0D1B4E;color:#fff;border:none;
+           border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+           transition:background .15s ease,transform .15s ease,box-shadow .2s ease}
+      .btn:hover:not(:disabled){background:#1A2A6B;transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,27,78,.22)}
+      .btn:disabled{background:#94A3B8;cursor:not-allowed}
+      .fout{background:#FDECEC;color:#B91C1C;padding:10px 12px;border-radius:6px;
+            font-size:12px;margin-bottom:12px;display:none;border:1px solid #F5B3B3}
+      .hint{font-size:12px;color:#5F6B7A;text-align:center;margin-top:10px;line-height:1.5}
+      .link-btn{background:none;border:none;color:#0D1B4E;cursor:pointer;
+                text-decoration:underline;font-size:12px;padding:0;font-family:inherit}
+      .banner{background:#E6F7F4;border:1px solid rgba(46,196,182,.35);color:#0D1B4E;
+              padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:14px;line-height:1.5}
+      .succes-box{text-align:center;padding:10px 0 4px}
+      .check{width:56px;height:56px;border-radius:50%;background:rgba(46,196,182,.14);
+             color:#2EC4B6;display:inline-flex;align-items:center;justify-content:center;
+             font-size:28px;font-weight:800;margin-bottom:14px;border:1px solid rgba(46,196,182,.35)}
+      ::selection{background:rgba(46,196,182,.28);color:#0D1B4E}
     </style></head>
     <body>
-      <div class="logo">
-        <div style="font-size:38px">📊</div>
-        <h2>Boekhoudbaar activeren</h2>
-        <p>Voer het e-mailadres in waarmee je hebt gekocht</p>
+      <div class="head">
+        <div class="label">Licentie</div>
+        <h2>Activeer je Boekhoudbaar</h2>
+        <p class="sub">Voer het e-mailadres in waarmee je de licentie hebt gekocht. Je krijgt dan een 6-cijferige code.</p>
       </div>
 
       <!-- Stap 1: e-mail -->
       <div class="stap actief" id="stap1">
-        <label>E-mailadres (waarmee je hebt gekocht)</label>
+        <label class="veld">E-mailadres</label>
         <input type="email" id="email" placeholder="jan@uwbedrijf.nl" autocomplete="email">
         <div class="fout" id="fout1"></div>
-        <button class="btn" id="btn1" onclick="stuurCode()">Stuur activeringscode →</button>
-        <p class="hint">Je ontvangt een 6-cijferige code per e-mail</p>
+        <button class="btn" id="btn1" onclick="stuurCode()">Stuur activeringscode</button>
+        <p class="hint">Geen mail ontvangen? Check je spam-map of mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.</p>
       </div>
 
       <!-- Stap 2: OTP -->
       <div class="stap" id="stap2">
-        <p style="background:#E8F5E9;color:#2E7D32;padding:8px 12px;border-radius:6px;
-                  font-size:12px;margin-bottom:12px">
-          ✓ Code verstuurd — controleer je inbox (en spammap).
-        </p>
-        <label>Activeringscode (6 cijfers)</label>
-        <input type="text" id="otp" placeholder="123456" maxlength="6"
+        <div class="banner"><strong>Code verstuurd.</strong> Check je inbox — en eventueel je spam-map.</div>
+        <label class="veld">Activeringscode (6 cijfers)</label>
+        <input type="text" id="otp" placeholder="000000" maxlength="6"
                inputmode="numeric" autocomplete="one-time-code">
         <div class="fout" id="fout2"></div>
-        <button class="btn" id="btn2" onclick="activeer()">Activeer Boekhoudbaar →</button>
-        <p style="text-align:center;margin-top:8px">
-          <button class="link-btn" onclick="nieuweCode()">Andere code aanvragen</button>
-        </p>
+        <button class="btn" id="btn2" onclick="activeer()">Activeer Boekhoudbaar</button>
+        <p class="hint"><button class="link-btn" onclick="nieuweCode()">Andere code aanvragen</button></p>
       </div>
 
       <!-- Stap 3: succes -->
       <div class="stap" id="stap3">
         <div class="succes-box">
-          <div style="font-size:48px;margin-bottom:10px">🎉</div>
-          <h3 style="color:#2E7D32;margin-bottom:8px" id="succes_titel">Geactiveerd!</h3>
-          <p id="succes_naam" style="margin-bottom:12px;color:#555"></p>
-          <p style="color:#666;font-size:12px;line-height:1.6">
+          <div class="check">✓</div>
+          <h2 id="succes_titel" style="margin-bottom:6px">Geactiveerd</h2>
+          <p id="succes_naam" class="sub" style="margin-bottom:14px"></p>
+          <p class="sub" style="font-size:13px">
             Je boekhouding wordt nu ingericht.<br>
-            <strong>Vernieuw daarna de pagina</strong> (Ctrl+R / Cmd+R)<br>
-            om het volledige menu te zien.
+            <strong style="color:#0D1B4E">Ververs straks de pagina</strong> (Ctrl+R of Cmd+R) om het volledige menu te laden.
           </p>
         </div>
       </div>
@@ -205,13 +222,13 @@ function toonActivatieDialog_() {
       emailVal = email;
       var btn = document.getElementById('btn1');
       btn.disabled = true;
-      btn.textContent = 'Versturen...';
+      btn.textContent = 'Versturen…';
       document.getElementById('fout1').style.display = 'none';
 
       google.script.run
         .withSuccessHandler(function(res) {
           btn.disabled = false;
-          btn.textContent = 'Stuur activeringscode →';
+          btn.textContent = 'Stuur activeringscode';
           if (res.ok) {
             schakelNaar('stap2');
             setTimeout(function() { document.getElementById('otp').focus(); }, 100);
@@ -221,7 +238,7 @@ function toonActivatieDialog_() {
         })
         .withFailureHandler(function(err) {
           btn.disabled = false;
-          btn.textContent = 'Stuur activeringscode →';
+          btn.textContent = 'Stuur activeringscode';
           toonFout('fout1', 'Fout: ' + err.message);
         })
         .aanvraagOtp(email);
@@ -235,7 +252,7 @@ function toonActivatieDialog_() {
       }
       var btn = document.getElementById('btn2');
       btn.disabled = true;
-      btn.textContent = 'Activeren...';
+      btn.textContent = 'Activeren…';
       document.getElementById('fout2').style.display = 'none';
 
       google.script.run
@@ -243,18 +260,18 @@ function toonActivatieDialog_() {
           if (res.ok) {
             schakelNaar('stap3');
             document.getElementById('succes_naam').textContent =
-              res.naam ? 'Welkom, ' + res.naam + '!' : '';
+              res.naam ? 'Welkom, ' + res.naam + '.' : '';
             // Setup draaien op achtergrond
             google.script.run.initialiseerNaActivatie();
           } else {
             btn.disabled = false;
-            btn.textContent = 'Activeer Boekhoudbaar →';
+            btn.textContent = 'Activeer Boekhoudbaar';
             toonFout('fout2', res.fout || 'Activering mislukt. Probeer opnieuw.');
           }
         })
         .withFailureHandler(function(err) {
           btn.disabled = false;
-          btn.textContent = 'Activeer Boekhoudbaar →';
+          btn.textContent = 'Activeer Boekhoudbaar';
           toonFout('fout2', 'Fout: ' + err.message);
         })
         .activeerMetOtp(emailVal, otp);
@@ -366,6 +383,110 @@ function isLicentieGeldig_() {
       String(Date.now() + LICENTIE_CACHE_UREN * 3600 * 1000));
   }
   return resultaat.geldig;
+}
+
+/**
+ * Toont het globale bericht uit de centrale config (indien aanwezig en
+ * nog niet vandaag getoond voor dit exacte bericht). Non-intrusieve
+ * toast-notificatie rechtsonder in de spreadsheet. Faalt stil.
+ *
+ * Owner-workflow: Apps Script editor → Script Properties → zet
+ * GLOBAL_BERICHT op de tekst die je naar alle actieve klanten wilt
+ * sturen. Binnen 24u zien ze de toast bij het openen van hun sheet.
+ * Leeg laten = geen bericht.
+ */
+function toonGlobaalBerichtIndienNieuw_() {
+  const cfg = haalConfigOp_();
+  if (!cfg || !cfg.bericht) return;
+
+  const bericht = String(cfg.bericht).trim();
+  if (!bericht) return;
+
+  const userProps = PropertiesService.getUserProperties();
+  // Fingerprint: bericht + datum van vandaag. Bij wijziging OF nieuwe dag:
+  // opnieuw tonen. Zo ziet de klant hetzelfde bericht max 1×/dag.
+  const vandaag = new Date().toISOString().slice(0, 10);
+  const hash = String(bericht).length + '-' + bericht.substring(0, 40);
+  const fingerprint = vandaag + '|' + hash;
+  if (userProps.getProperty('globaalBerichtLaatst') === fingerprint) return;
+
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast(bericht, 'Boekhoudbaar', 10);
+    userProps.setProperty('globaalBerichtLaatst', fingerprint);
+  } catch (_) { /* toast niet beschikbaar in trigger-context, OK */ }
+}
+
+/**
+ * Haalt centrale product-config op (versie, bericht, flags) en cachet
+ * 24 uur in UserProperties. Returnt null wanneer offline of geen server.
+ *
+ * Gebruik:
+ *   const cfg = haalConfigOp_();
+ *   if (cfg && cfg.bericht) toonBanner(cfg.bericht);
+ *   if (cfg && cfg.versie !== MIJN_VERSIE) toonNieuweVersieBanner();
+ */
+function haalConfigOp_() {
+  const userProps = PropertiesService.getUserProperties();
+  const cached    = userProps.getProperty('licentieConfig');
+  const cachedTs  = parseInt(userProps.getProperty('licentieConfigTs') || '0');
+  const verlopen  = Date.now() - cachedTs > 24 * 3600 * 1000;
+
+  if (cached && !verlopen) {
+    try { return JSON.parse(cached); } catch (_) {}
+  }
+
+  const serverUrl = getLicentieServerUrl_();
+  if (!serverUrl) return null;
+
+  try {
+    const resp = UrlFetchApp.fetch(serverUrl + '?actie=config', {
+      muteHttpExceptions: true, followRedirects: true,
+      headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
+    });
+    if (resp.getResponseCode() !== 200) {
+      return cached ? JSON.parse(cached) : null;
+    }
+    const parsed = JSON.parse(resp.getContentText());
+    userProps.setProperty('licentieConfig', resp.getContentText());
+    userProps.setProperty('licentieConfigTs', String(Date.now()));
+    return parsed;
+  } catch (err) {
+    Logger.log('haalConfigOp_ fout: ' + err.message);
+    return cached ? JSON.parse(cached) : null;
+  }
+}
+
+/**
+ * Eénmalig signaal aan de licentieserver dat setup() succesvol is
+ * doorlopen. Idempotent: zet een UserProperties-vlag die herhalen
+ * voorkomt. Faalt stil — setup() mag hier nooit op breken.
+ */
+function meldOnboardingAanServer_() {
+  const serverUrl = getLicentieServerUrl_();
+  if (!serverUrl) return;
+
+  const userProps = PropertiesService.getUserProperties();
+  if (userProps.getProperty('onboardingGemeld') === 'true') return;
+
+  const scriptProps = PropertiesService.getScriptProperties();
+  const sleutel = scriptProps.getProperty(LICENTIE_PROP_KEY) || '';
+  const ssId    = scriptProps.getProperty(LICENTIE_SS_ID_KEY) || '';
+  if (!sleutel) return;  // Nog niet geactiveerd — geen melding
+
+  try {
+    const url = serverUrl
+      + '?actie=onboarded&sleutel=' + encodeURIComponent(sleutel)
+      + '&ssId='                    + encodeURIComponent(ssId);
+    const resp = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true, followRedirects: true,
+      headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
+    });
+    if (resp.getResponseCode() === 200) {
+      userProps.setProperty('onboardingGemeld', 'true');
+    }
+  } catch (err) {
+    Logger.log('meldOnboardingAanServer_ fout: ' + err.message);
+  }
 }
 
 function valideerLicentieOpServer_(sleutel) {

@@ -84,12 +84,22 @@ function toonOpenInkoopfacturen() {
 
   let html = `
     <style>
-      body { font-family: Arial, sans-serif; padding: 12px; font-size: 12px; }
-      table { width: 100%; border-collapse: collapse; }
-      th { background: #1A237E; color: white; padding: 6px 8px; text-align: left; }
-      td { padding: 5px 8px; border-bottom: 1px solid #eee; }
-      tr:nth-child(even) td { background: #f9f9f9; }
-      .totaal { font-weight: bold; background: #e8eaf6; }
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:18px;font-size:12px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 10px}
+      table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;
+            box-shadow:0 1px 2px rgba(13,27,78,0.04)}
+      th{background:#0D1B4E;color:white;padding:10px 12px;text-align:left;font-weight:600;font-size:11px;letter-spacing:0.3px}
+      td{padding:8px 12px;border-bottom:1px solid #E5EAF2}
+      tr:last-child td{border-bottom:none}
+      tr:nth-child(even) td{background:#F7F9FC}
+      .totaal td{font-weight:700;background:#E6F7F4;color:#0D1B4E;border-top:2px solid #2EC4B6}
+      .totaal td:nth-child(even){background:#E6F7F4}
+      button{background:#F7F9FC;color:#0D1B4E;border:1px solid #E5EAF2;padding:9px 16px;
+             border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;
+             font-family:inherit;margin-top:12px;transition:background 0.15s}
+      button:hover{background:#EEF2F8}
     </style>
     <h3>Open inkoopfacturen</h3>
     <table>

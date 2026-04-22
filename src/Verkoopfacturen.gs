@@ -11,8 +11,8 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     const bedrijf = getInstelling_('Bedrijfsnaam') || 'Ons Bedrijf';
     // Branding: logo + bedrijfskleur (uit Branding.gs)
     const logoDataUrl = (typeof getBedrijfsLogoVolledig_ === 'function') ? getBedrijfsLogoVolledig_() : null;
-    const pkKleur     = (typeof getBedrijfsKleur_ === 'function') ? getBedrijfsKleur_() : '#1A237E';
-    const pkLicht     = (typeof getBedrijfsKleurLicht_ === 'function') ? getBedrijfsKleurLicht_() : '#E8EAF6';
+    const pkKleur     = (typeof getBedrijfsKleur_ === 'function') ? getBedrijfsKleur_() : '#0D1B4E';
+    const pkLicht     = (typeof getBedrijfsKleurLicht_ === 'function') ? getBedrijfsKleurLicht_() : '#F7F9FC';
     const adres = getInstelling_('Adres') || '';
     const postcode = getInstelling_('Postcode') || '';
     const plaats = getInstelling_('Plaats') || '';
@@ -32,7 +32,7 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
   <meta charset="UTF-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; font-size: 11pt; color: #333; padding: 40px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1A1A1A; padding: 40px; -webkit-font-smoothing: antialiased; }
     .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
     .bedrijfsnaam { font-size: 22pt; font-weight: bold; color: ${pkKleur}; }
     .factuur-info { text-align: right; }
@@ -296,18 +296,35 @@ function maakCreditnota(factuurNummer) {
 function importeerBankafschrift() {
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body { font-family: Arial, sans-serif; padding: 16px; }
-      textarea { width: 100%; height: 200px; font-family: monospace; font-size: 11px; }
-      .btn { background: #1A237E; color: white; padding: 8px 16px; border: none; cursor: pointer; margin-top: 8px; }
-      select, input { padding: 4px; margin: 4px 0; }
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 6px}
+      p{color:#5A6478;margin:0 0 10px;line-height:1.55}
+      textarea{width:100%;height:200px;font-family:monospace;font-size:11px;padding:10px;
+               border:1px solid #E5EAF2;border-radius:6px;color:#1A1A1A;background:#fff;
+               transition:border-color 0.15s}
+      textarea:focus{outline:none;border-color:#2EC4B6}
+      label{color:#0D1B4E;font-weight:600;font-size:12px}
+      select,input{padding:6px 8px;margin:4px 0;border:1px solid #E5EAF2;border-radius:6px;
+                   font-size:13px;font-family:inherit;color:#1A1A1A;background:#fff}
+      input[type=number]{width:70px}
+      .btn{background:#0D1B4E;color:white;padding:10px 18px;border:none;border-radius:6px;
+           cursor:pointer;margin-top:10px;font-size:13px;font-weight:600;
+           font-family:inherit;transition:background 0.15s}
+      .btn:hover{background:#1A2A6B}
+      .btn-sec{background:#F7F9FC;color:#0D1B4E;border:1px solid #E5EAF2;padding:9px 16px;
+               border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;
+               font-family:inherit;margin-left:8px;margin-top:10px;transition:background 0.15s}
+      .btn-sec:hover{background:#EEF2F8}
     </style>
     <h3>Bankafschrift importeren (CSV)</h3>
-    <p>Plak hieronder de CSV-inhoud van uw bankafschrift:</p>
+    <p>Plak hieronder de CSV-inhoud van je bankafschrift.</p>
     <p>
-      <label>Datum kolom: <input type="number" id="colDatum" value="1" min="1" max="20"></label>
-      <label style="margin-left:16px">Omschr. kolom: <input type="number" id="colOmschr" value="2" min="1" max="20"></label>
-      <label style="margin-left:16px">Bedrag kolom: <input type="number" id="colBedrag" value="3" min="1" max="20"></label>
-      <label style="margin-left:16px">Scheidingsteken: <select id="sep">
+      <label>Datum kolom <input type="number" id="colDatum" value="1" min="1" max="20"></label>
+      &nbsp;&nbsp;<label>Omschr. kolom <input type="number" id="colOmschr" value="2" min="1" max="20"></label>
+      &nbsp;&nbsp;<label>Bedrag kolom <input type="number" id="colBedrag" value="3" min="1" max="20"></label>
+      &nbsp;&nbsp;<label>Scheidingsteken <select id="sep">
         <option value=",">Komma (,)</option>
         <option value=";">Puntkomma (;)</option>
         <option value="\t">Tab</option>
@@ -316,7 +333,7 @@ function importeerBankafschrift() {
     <textarea id="csv" placeholder="Datum;Omschrijving;Bedrag&#10;2024-01-15;Betaling klant;1250.00&#10;2024-01-16;Huur;-1500.00"></textarea>
     <br>
     <button class="btn" onclick="importeer_()">Importeren</button>
-    <button onclick="google.script.host.close()" style="margin-left:8px">Annuleren</button>
+    <button class="btn-sec" onclick="google.script.host.close()">Annuleren</button>
     <div id="result" style="margin-top:8px;color:green"></div>
     <script>
       function importeer_() {
@@ -722,43 +739,44 @@ function _bouwFactuurlijstHtml_() {
   return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
     '<style>' +
     '*{box-sizing:border-box;margin:0;padding:0}' +
-    'body{font-family:Arial,sans-serif;font-size:13px;color:#212121;background:#F4F5F8;height:100vh;display:flex;flex-direction:column;overflow:hidden}' +
-    '.hdr{background:#1A237E;color:white;padding:11px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}' +
-    '.hdr h1{font-size:14px;font-weight:bold}' +
-    '.btn-ref{background:rgba(255,255,255,.15);border:none;color:white;padding:5px 11px;border-radius:4px;cursor:pointer;font-size:11px}' +
-    '.btn-ref:hover{background:rgba(255,255,255,.25)}' +
-    '.tabs{display:flex;background:white;border-bottom:2px solid #E5E7EB;flex-shrink:0}' +
-    '.tab{flex:1;padding:10px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:bold;color:#6B7280;border-bottom:3px solid transparent;transition:all .15s;user-select:none}' +
-    '.tab:hover{color:#1A237E;background:#F5F3FF}' +
-    '.tab.actief{color:#1A237E;border-bottom-color:#1A237E}' +
-    '.tab .cnt{display:inline-block;background:#E5E7EB;color:#374151;font-size:10px;padding:1px 6px;border-radius:20px;margin-left:4px;vertical-align:middle}' +
-    '.tab.actief .cnt{background:#DBEAFE;color:#1D4ED8}' +
-    '.tab.vervallen.actief .cnt{background:#FEE2E2;color:#991B1B}' +
-    '.body{flex:1;overflow-y:auto;padding:12px 16px}' +
-    'table{width:100%;border-collapse:collapse;background:white;border-radius:8px;border:1px solid #E5E7EB;overflow:hidden}' +
-    'th{background:#F9FAFB;font-size:10px;font-weight:bold;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;padding:9px 12px;text-align:left;border-bottom:1px solid #E5E7EB}' +
-    'td{padding:9px 12px;border-bottom:1px solid #F9FAFB;font-size:12px;vertical-align:middle}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Arial,sans-serif;font-size:13px;color:#1A1A1A;background:#F7F9FC;height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}' +
+    '.hdr{background:#0D1B4E;color:white;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}' +
+    '.hdr h1{font-size:14px;font-weight:700;letter-spacing:-0.01em}' +
+    '.btn-ref{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:white;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:inherit;transition:background .15s ease}' +
+    '.btn-ref:hover{background:rgba(255,255,255,.22)}' +
+    '.tabs{display:flex;background:white;border-bottom:1px solid #E5EAF2;flex-shrink:0}' +
+    '.tab{flex:1;padding:11px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:#5F6B7A;border-bottom:3px solid transparent;transition:all .15s;user-select:none}' +
+    '.tab:hover{color:#0D1B4E;background:#F7F9FC}' +
+    '.tab.actief{color:#0D1B4E;border-bottom-color:#2EC4B6}' +
+    '.tab .cnt{display:inline-block;background:#E5EAF2;color:#5F6B7A;font-size:10px;padding:1px 7px;border-radius:20px;margin-left:6px;vertical-align:middle;font-weight:600}' +
+    '.tab.actief .cnt{background:rgba(46,196,182,.18);color:#0D1B4E}' +
+    '.tab.vervallen.actief .cnt{background:#FDECEC;color:#B91C1C}' +
+    '.body{flex:1;overflow-y:auto;padding:14px 18px}' +
+    'table{width:100%;border-collapse:collapse;background:white;border-radius:10px;border:1px solid #E5EAF2;overflow:hidden}' +
+    'th{background:#F7F9FC;font-size:10px;font-weight:700;color:#5F6B7A;text-transform:uppercase;letter-spacing:.6px;padding:10px 12px;text-align:left;border-bottom:1px solid #E5EAF2}' +
+    'td{padding:10px 12px;border-bottom:1px solid #F0F3F7;font-size:12px;vertical-align:middle}' +
     'tr:last-child td{border-bottom:none}' +
-    'tr:hover td{background:#FAFAFA}' +
-    '.badge{font-size:10px;font-weight:bold;padding:2px 8px;border-radius:20px;white-space:nowrap}' +
-    '.b-open{background:#DBEAFE;color:#1D4ED8}' +
-    '.b-concept{background:#F3F4F6;color:#374151}' +
+    'tr:hover td{background:#FAFBFC}' +
+    '.badge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;letter-spacing:.2px}' +
+    '.b-open{background:rgba(46,196,182,.14);color:#0D1B4E}' +
+    '.b-concept{background:#F0F3F7;color:#5F6B7A}' +
     '.b-deels{background:#FEF9C3;color:#854D0E}' +
-    '.b-vervallen{background:#FEE2E2;color:#991B1B}' +
+    '.b-vervallen{background:#FDECEC;color:#B91C1C}' +
     '.b-betaald{background:#DCFCE7;color:#166534}' +
     '.b-gecrediteerd{background:#F3E8FF;color:#6B21A8}' +
-    '.btn-betaald{background:#15803D;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;white-space:nowrap}' +
-    '.btn-betaald:hover{background:#166534}' +
-    '.btn-betaald:disabled{background:#9CA3AF;cursor:not-allowed}' +
-    '.btn-verstuur{background:#1D4ED8;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;white-space:nowrap;margin-right:4px}' +
-    '.btn-verstuur:hover{background:#1E40AF}' +
-    '.btn-verstuur:disabled{background:#9CA3AF;cursor:not-allowed}' +
-    '.urgent{color:#B91C1C;font-weight:bold}' +
-    '.loading{text-align:center;padding:40px;color:#9CA3AF}' +
-    '.spin{display:inline-block;width:20px;height:20px;border:2px solid #E5E7EB;border-top-color:#1A237E;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}' +
+    '.btn-betaald{background:#166534;color:white;border:none;padding:5px 11px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;font-family:inherit;font-weight:600}' +
+    '.btn-betaald:hover{background:#14532D}' +
+    '.btn-betaald:disabled{background:#94A3B8;cursor:not-allowed}' +
+    '.btn-verstuur{background:#0D1B4E;color:white;border:none;padding:5px 11px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;margin-right:4px;font-family:inherit;font-weight:600}' +
+    '.btn-verstuur:hover{background:#1A2A6B}' +
+    '.btn-verstuur:disabled{background:#94A3B8;cursor:not-allowed}' +
+    '.urgent{color:#B91C1C;font-weight:700}' +
+    '.loading{text-align:center;padding:40px;color:#94A3B8}' +
+    '.spin{display:inline-block;width:20px;height:20px;border:2px solid #E5EAF2;border-top-color:#2EC4B6;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}' +
     '@keyframes spin{to{transform:rotate(360deg)}}' +
-    '.leeg{text-align:center;padding:30px;color:#9CA3AF;font-size:12px}' +
-    '.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#166534;color:white;padding:8px 18px;border-radius:6px;font-size:12px;display:none;z-index:99}' +
+    '.leeg{text-align:center;padding:30px;color:#94A3B8;font-size:12px}' +
+    '.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0D1B4E;color:white;padding:10px 22px;border-radius:8px;font-size:12px;display:none;z-index:99;box-shadow:0 6px 20px rgba(13,27,78,.22)}' +
+    '::selection{background:rgba(46,196,182,.28);color:#0D1B4E}' +
     '</style></head><body>' +
     '<div class="hdr"><h1>Verkoopfacturen</h1><button class="btn-ref" onclick="laad()">\u21bb Vernieuwen</button></div>' +
     '<div class="tabs" id="tabs">' +

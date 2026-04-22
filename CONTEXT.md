@@ -81,7 +81,7 @@ boekhouding-engine/
   - default → betaalpagina met iDEAL/Mollie
 
 ### Betalingen
-- **Mollie** — test API key: `test_j6zt7F42h3drBQQsfx2evx5pHHrWuD`
+- **Mollie** — API key in Apps Script Script Properties als `MOLLIE_API_KEY` (`test_xxx` of `live_xxx`; **nooit** hier documenteren)
 - **Webhook pattern:** Mollie POST → licentieserver → LockService + CacheService idempotency → maak licentie → stuur Brevo mail
 
 ### E-mail
@@ -100,12 +100,20 @@ boekhouding-engine/
 
 | Sleutel | Waarde |
 |---------|--------|
-| `MOLLIE_API_KEY` | `test_j6zt7F42h3drBQQsfx2evx5pHHrWuD` *(switch naar live key bij launch)* |
-| `ADMIN_WACHTWOORD` | `BoekhoudAdmin2026!` |
+| `MOLLIE_API_KEY` | *(GAS Script Properties — `test_xxx` of `live_xxx` via Mollie dashboard)* |
+| `ADMIN_WACHTWOORD` | *(GAS Script Properties — sterk random wachtwoord)* |
+| `TEMPLATE_SS_ID` | *(GAS Script Properties — ID van master-template-spreadsheet)* |
+| `KVK_NUMMER` | `87254697` |
+| `BTW_NUMMER` | `NL004384587B39` |
 | `PRODUCT_NAAM` | `Boekhouding Engine` |
 | `PRODUCT_PRIJS` | `4900` *(in centen)* |
-| `BREVO_API_KEY` | *(instellen in GAS Script Properties)* |
+| `BREVO_API_KEY` | *(GAS Script Properties)* |
 | `VAN_EMAIL` | `hallo@boekhoudbaar.nl` |
+| `VAN_NAAM` | `Sam van Boekhoudbaar` |
+| `PRIVACY_URL` | `https://www.boekhoudbaar.nl/privacy` |
+| `PRODUCT_VERSIE` | *(optioneel — voor config-endpoint versioning)* |
+| `GLOBAL_BERICHT` | *(optioneel — broadcast-bericht naar alle klanten)* |
+| `FEATURE_FLAGS` | *(optioneel — JSON object voor rollouts)* |
 | `VAN_NAAM` | `Sam van Boekhoudbaar` |
 
 ---
@@ -164,7 +172,7 @@ Automatisch na activatie:
 - **Bestelknop tekst:** "Bestelling met betalingsverplichting — €49 via iDEAL" (art. 6:230v BW)
 - **Twee herroepingscheckboxes** op betaalpagina (niet vooraangevinkt)
 - **Bewaarplicht:** 7 jaar (art. 52 AWR) — automatisch geborgd in GAS audit log
-- **KVK/BTW** in footer: nog placeholder `00000000` / `NL000000000B01` — invullen bij KVK-inschrijving
+- **KVK/BTW** in footer: Hoven Strategy & Solutions · KVK 87254697 · BTW NL004384587B39
 
 ---
 

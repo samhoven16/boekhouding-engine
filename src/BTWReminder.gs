@@ -167,32 +167,35 @@ function toonBtwAangifteAssistent() {
 <html>
 <head>
 <style>
-  body{font-family:Arial,sans-serif;padding:16px;font-size:13px;color:#212121}
-  h2{color:#1A237E;margin:0 0 4px}
-  .periode{color:#555;font-size:12px;margin-bottom:14px}
-  .deadline{display:inline-block;padding:5px 12px;border-radius:12px;font-weight:bold;font-size:13px;margin-bottom:14px;color:white;background:${deadlineKleur}}
-  table{width:100%;border-collapse:collapse;margin:10px 0}
-  th{background:#E8EAF6;color:#1A237E;text-align:left;padding:7px 9px;font-size:12px}
-  td{padding:6px 9px;border-bottom:1px solid #eee;font-size:13px}
-  td.code{font-family:monospace;color:#555;width:40px}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+  .label{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2EC4B6;margin-bottom:4px}
+  h2{color:#0D1B4E;margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-0.01em}
+  .periode{color:#5F6B7A;font-size:13px;margin-bottom:14px}
+  .deadline{display:inline-block;padding:6px 14px;border-radius:100px;font-weight:600;font-size:12px;margin-bottom:18px;color:white;background:${deadlineKleur};letter-spacing:.2px}
+  table{width:100%;border-collapse:collapse;margin:10px 0;background:#fff;border:1px solid #E5EAF2;border-radius:8px;overflow:hidden}
+  th{background:#F7F9FC;color:#0D1B4E;text-align:left;padding:9px 11px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;border-bottom:1px solid #E5EAF2}
+  td{padding:8px 11px;border-bottom:1px solid #F0F3F7;font-size:13px}
+  td.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#5F6B7A;width:40px;font-size:12px}
   td.bedrag{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
-  .saldo-pos{background:#FFEBEE;color:#c62828;font-weight:bold}
-  .saldo-neg{background:#E8F5E9;color:#2e7d32;font-weight:bold}
-  .saldo-nul{background:#F5F5F5;color:#555}
-  .sectie{font-size:11px;font-weight:bold;color:#777;padding:8px 9px 4px;text-transform:uppercase;letter-spacing:0.5px}
-  .btn{display:inline-block;padding:10px 18px;border-radius:5px;border:none;cursor:pointer;font-size:13px;font-weight:bold;margin:4px 4px 0 0}
-  .btn-pri{background:#1A237E;color:white}
-  .btn-pri:hover{background:#283593}
-  .btn-sec{background:#E8EAF6;color:#1A237E}
-  .btn-sec:hover{background:#C5CAE9}
-  .tip{background:#FFF8E1;border-left:3px solid #FFC107;padding:9px 12px;margin-top:12px;font-size:12px;border-radius:0 4px 4px 0}
-  .nul{color:#bbb}
+  .saldo-pos td{background:#FDECEC;color:#B91C1C;font-weight:700}
+  .saldo-neg td{background:#E6F7F4;color:#0D1B4E;font-weight:700}
+  .saldo-nul td{background:#F7F9FC;color:#5F6B7A}
+  .sectie{font-size:10px;font-weight:700;color:#5F6B7A;padding:10px 11px 4px;text-transform:uppercase;letter-spacing:1.2px;background:#fff}
+  .btn{display:inline-block;padding:11px 20px;border-radius:10px;border:none;cursor:pointer;font-size:13px;font-weight:600;margin:4px 6px 0 0;font-family:inherit;letter-spacing:.1px;transition:background .15s ease,transform .15s ease,box-shadow .2s ease}
+  .btn-pri{background:#0D1B4E;color:white}
+  .btn-pri:hover{background:#1A2A6B;transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,27,78,.22)}
+  .btn-sec{background:#fff;color:#0D1B4E;border:1px solid #E5EAF2}
+  .btn-sec:hover{border-color:rgba(46,196,182,.45);transform:translateY(-1px)}
+  .tip{background:#FFF8E1;border:1px solid #FFECB3;padding:12px 14px;margin-top:16px;font-size:12px;color:#5A3F00;border-radius:8px;line-height:1.5}
+  .nul{color:#94a3b8}
+  ::selection{background:rgba(46,196,182,.28);color:#0D1B4E}
 </style>
 </head>
 <body>
-<h2>🧾 BTW Aangifte Assistent</h2>
-<div class="periode">${kw.naam} (${kw.van.toLocaleDateString('nl-NL')} – ${kw.tot.toLocaleDateString('nl-NL')})</div>
-<div class="deadline">⏰ Deadline: ${kw.deadline.toLocaleDateString('nl-NL')} — ${deadlineTekst}</div>
+<div class="label">BTW-aangifte</div>
+<h2>Aangifte-assistent ${kw.naam}</h2>
+<div class="periode">Periode ${kw.van.toLocaleDateString('nl-NL')} – ${kw.tot.toLocaleDateString('nl-NL')}</div>
+<div class="deadline">Deadline: ${kw.deadline.toLocaleDateString('nl-NL')} — ${deadlineTekst}</div>
 
 <table>
   <tr><th colspan="3">Rubriek op het Belastingdienst-formulier</th><th>Bedrag</th></tr>
@@ -239,14 +242,12 @@ function toonBtwAangifteAssistent() {
 </table>
 
 <div class="tip">
-  💡 <b>Invullen bij de Belastingdienst:</b> Gebruik de bedragen hierboven.
-  Vul ze in bij de overeenkomstige rubrieken (1a, 1b, 5a, 5b, 5g).
-  Klik op "Naar mijn.belastingdienst.nl" om direct naar het aangifte-portaal te gaan.
+  <strong>Invullen bij de Belastingdienst:</strong> gebruik de bedragen hierboven en vul ze in bij de overeenkomstige rubrieken (1a, 1b, 5a, 5b, 5g). Klik op de knop hieronder om direct naar het aangifte-portaal te gaan.
 </div>
 
-<div style="margin-top:14px">
-  <button class="btn btn-pri" onclick="naarBelastingdienst()">🌐 Naar mijn.belastingdienst.nl</button>
-  <button class="btn btn-sec" onclick="exporteerAangifte()">📄 Exporteer naar tabblad</button>
+<div style="margin-top:16px">
+  <button class="btn btn-pri" onclick="naarBelastingdienst()">Naar mijn.belastingdienst.nl</button>
+  <button class="btn btn-sec" onclick="exporteerAangifte()">Exporteer naar tabblad</button>
   <button class="btn btn-sec" onclick="google.script.host.close()">Sluiten</button>
 </div>
 
@@ -265,7 +266,7 @@ function exporteerAangifte() {
 </html>`;
 
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(700).setHeight(560),
-    '🧾 BTW Aangifte Assistent — ' + kw.naam
+    HtmlService.createHtmlOutput(html).setWidth(720).setHeight(580),
+    'BTW Aangifte Assistent — ' + kw.naam
   );
 }

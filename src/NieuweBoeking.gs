@@ -8,7 +8,7 @@
 // ─── ENTRY POINT ─────────────────────────────
 function openNieuweBoeking() {
   const ctx  = getBoekingContext();
-  const kleur = ctx.kleur || '#1A237E';
+  const kleur = ctx.kleur || '#0D1B4E';  // fallback = brand-navy wanneer geen huisstijl ingesteld
   const kleurLicht = _hexNaarRgba_(kleur, 0.08);
   const kleurMidden = _hexNaarRgba_(kleur, 0.15);
 
@@ -21,7 +21,7 @@ function openNieuweBoeking() {
 <style>
 :root{--pk:${kleur};--pk-licht:${kleurLicht};--pk-mid:${kleurMidden}}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;font-size:13px;color:#212121;background:#F8F9FA;height:100vh;display:flex;flex-direction:column}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:#212121;background:#F8F9FA;height:100vh;display:flex;flex-direction:column}
 /* ── TABBAR ── */
 .tabbar{display:flex;background:white;border-bottom:2px solid #E0E0E0;flex-shrink:0}
 .tab{flex:1;padding:10px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:bold;
@@ -41,7 +41,7 @@ body{font-family:Arial,sans-serif;font-size:13px;color:#212121;background:#F8F9F
             letter-spacing:0.4px;margin-bottom:3px}
 input[type=text],input[type=email],input[type=number],input[type=date],select,textarea{
   width:100%;padding:7px 9px;border:1.5px solid #DDD;border-radius:5px;font-size:13px;
-  font-family:Arial,sans-serif;transition:border-color 0.15s;background:white}
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;transition:border-color 0.15s;background:white}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pk)}
 input.fout,select.fout{border-color:#c62828;background:#FFF5F5}
 input.ok{border-color:#2e7d32}
@@ -66,19 +66,19 @@ input.ok{border-color:#2e7d32}
 .totalen td:last-child{text-align:right;font-weight:bold}
 .totalen .eindtotaal td{border-top:1.5px solid var(--pk);padding-top:6px;font-size:15px;color:var(--pk)}
 /* ── UPLOAD ── */
-.dropzone{border:2px dashed #C5CAE9;border-radius:8px;padding:24px;text-align:center;
-           cursor:pointer;transition:all 0.2s;background:white;min-height:110px;
+.dropzone{border:1.5px dashed #E5EAF2;border-radius:10px;padding:26px;text-align:center;
+           cursor:pointer;transition:all 0.2s;background:#F7F9FC;min-height:110px;
            display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
-.dropzone:hover,.dropzone.dragover{border-color:var(--pk);background:var(--pk-licht)}
-.dropzone.geladen{border-color:#2e7d32;background:#F0FFF4}
+.dropzone:hover,.dropzone.dragover{border-color:#2EC4B6;background:#E6F7F4}
+.dropzone.geladen{border-color:#2EC4B6;background:#E6F7F4}
 .dropzone .icoon{font-size:32px}
-.dropzone p{color:#666;font-size:12px}
+.dropzone p{color:#5A6478;font-size:12px}
 /* ── AI STATUS ── */
-.ai-balk{background:#E8EAF6;border-radius:5px;padding:8px 12px;font-size:12px;
-          margin:8px 0;display:none;align-items:center;gap:8px}
+.ai-balk{background:#F7F9FC;border:1px solid #E5EAF2;border-radius:6px;padding:8px 12px;font-size:12px;
+          margin:8px 0;display:none;align-items:center;gap:8px;color:#1A1A1A}
 .ai-balk.actief{display:flex}
-.ai-balk.ok{background:#E8F5E9}
-.ai-balk.fout{background:#FFEBEE}
+.ai-balk.ok{background:#E6F7F4;border-color:#2EC4B6}
+.ai-balk.fout{background:#FFF1F2;border-color:#FCD9DA}
 .spinner{width:16px;height:16px;border:2px solid #ccc;border-top-color:var(--pk);
           border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -97,8 +97,8 @@ input.ok{border-color:#2e7d32}
 .btn-pri{background:var(--pk);color:white}
 .btn-pri:hover{opacity:0.9}
 .btn-pri:disabled{background:#9E9E9E;cursor:not-allowed}
-.btn-sec{background:#E8EAF6;color:var(--pk)}
-.btn-sec:hover{background:#C5CAE9}
+.btn-sec{background:#F7F9FC;color:var(--pk);border:1px solid #E5EAF2}
+.btn-sec:hover{background:#EEF2F8}
 /* ── BEVESTIGING ── */
 .klaar{text-align:center;padding:30px 20px}
 .klaar .groot-icoon{font-size:52px;margin-bottom:12px}

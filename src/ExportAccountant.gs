@@ -112,15 +112,27 @@ function emailNaarAccountant() {
   const ui = SpreadsheetApp.getUi();
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body{font-family:Arial,sans-serif;padding:16px;font-size:13px}
-      .form-row{margin:8px 0}
-      label{display:block;font-weight:bold;margin-bottom:3px;font-size:12px}
-      input,textarea{width:100%;padding:7px;border:1px solid #ccc;border-radius:4px;font-size:13px}
-      .btn{background:#1A237E;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;width:100%;margin-top:10px}
-      .info{background:#E8EAF6;padding:8px;border-radius:4px;font-size:11px;margin-bottom:12px}
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 10px}
+      .form-row{margin:10px 0}
+      label{display:block;font-weight:600;margin-bottom:4px;font-size:12px;color:#0D1B4E}
+      input,textarea{width:100%;padding:8px 10px;border:1px solid #E5EAF2;border-radius:6px;
+                     font-size:13px;font-family:inherit;color:#1A1A1A;background:#fff;
+                     transition:border-color 0.15s}
+      input:focus,textarea:focus{outline:none;border-color:#2EC4B6}
+      .btn{background:#0D1B4E;color:white;border:none;padding:11px 20px;border-radius:6px;
+           cursor:pointer;width:100%;margin-top:14px;font-size:14px;font-weight:600;
+           font-family:inherit;transition:background 0.15s}
+      .btn:hover{background:#1A2A6B}
+      .btn:disabled{background:#9AA3B5;cursor:not-allowed}
+      .info{background:#fff;border:1px solid #E5EAF2;border-left:3px solid #2EC4B6;
+            padding:10px 12px;border-radius:0 6px 6px 0;font-size:12px;margin-bottom:14px;
+            color:#1A1A1A;line-height:1.5}
     </style>
-    <h3>📧 Samenvatting naar accountant e-mailen</h3>
-    <div class="info">Er wordt een tekstsamenvatting gemaild — geen persoonlijke financiële gegevens zonder uw toestemming.</div>
+    <h3>Samenvatting naar je accountant e-mailen</h3>
+    <div class="info">Er wordt een tekstsamenvatting gemaild — geen persoonlijke financiële gegevens zonder jouw toestemming.</div>
     <div class="form-row">
       <label>E-mailadres accountant *</label>
       <input type="email" id="email" placeholder="accountant@kantoor.nl">
@@ -166,27 +178,25 @@ function verstuurSamenvattingAccountant(emailAccountant, persoonlijkBericht) {
   const jaar    = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
   const kg      = berekenKengetallen_(ss);
 
-  MailApp.sendEmail({
-    to: emailAccountant,
-    subject: `Financieel overzicht ${bedrijf} — ${jaar}`,
+  GmailApp.sendEmail(emailAccountant, `Financieel overzicht ${bedrijf} — ${jaar}`, '', {
     htmlBody: `
-      <html><body style="font-family:Arial,sans-serif;max-width:600px;color:#333">
-        <div style="background:#1A237E;padding:20px;border-radius:8px 8px 0 0">
-          <h2 style="color:white;margin:0">📊 ${bedrijf}</h2>
-          <p style="color:#C5CAE9;margin:4px 0 0">Financieel overzicht ${jaar}</p>
+      <html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:600px;color:#1A1A1A;margin:0;padding:0;background:#F7F9FC">
+        <div style="background:#0D1B4E;padding:22px 24px;border-radius:10px 10px 0 0">
+          <h2 style="color:white;margin:0;font-size:20px;font-weight:700;letter-spacing:-0.01em">${bedrijf}</h2>
+          <p style="color:#B8C2D1;margin:4px 0 0;font-size:13px">Financieel overzicht ${jaar}</p>
         </div>
-        <div style="padding:20px;border:1px solid #eee;border-top:none;background:#fafafa">
-          ${persoonlijkBericht ? `<p style="background:#E8EAF6;padding:12px;border-radius:4px">${escHtml_(persoonlijkBericht)}</p>` : ''}
-          <h3>Samenvatting</h3>
-          <table style="width:100%;border-collapse:collapse">
-            <tr style="background:#E8EAF6"><td style="padding:8px;font-weight:bold">Omzet (YTD)</td><td style="padding:8px;text-align:right">${formatBedrag_(kg.omzet)}</td></tr>
-            <tr><td style="padding:8px">Kosten (YTD)</td><td style="padding:8px;text-align:right">${formatBedrag_(kg.kosten)}</td></tr>
-            <tr style="background:#E8F5E9;font-weight:bold"><td style="padding:8px">Nettowinst</td><td style="padding:8px;text-align:right">${formatBedrag_(kg.nettowinst)}</td></tr>
-            <tr><td style="padding:8px">Banksaldo</td><td style="padding:8px;text-align:right">${formatBedrag_(kg.banksaldo)}</td></tr>
-            <tr><td style="padding:8px">Open debiteuren</td><td style="padding:8px;text-align:right">${formatBedrag_(kg.debiteuren)}</td></tr>
+        <div style="padding:22px 24px;border:1px solid #E5EAF2;border-top:none;background:#fff;border-radius:0 0 10px 10px">
+          ${persoonlijkBericht ? `<p style="background:#F7F9FC;border-left:3px solid #2EC4B6;padding:12px 14px;border-radius:0 6px 6px 0;margin:0 0 18px">${escHtml_(persoonlijkBericht)}</p>` : ''}
+          <h3 style="color:#0D1B4E;font-size:14px;font-weight:600;margin:0 0 10px">Samenvatting</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <tr style="background:#F7F9FC"><td style="padding:10px 12px;font-weight:600;border-bottom:1px solid #E5EAF2">Omzet (YTD)</td><td style="padding:10px 12px;text-align:right;border-bottom:1px solid #E5EAF2">${formatBedrag_(kg.omzet)}</td></tr>
+            <tr><td style="padding:10px 12px;border-bottom:1px solid #E5EAF2">Kosten (YTD)</td><td style="padding:10px 12px;text-align:right;border-bottom:1px solid #E5EAF2">${formatBedrag_(kg.kosten)}</td></tr>
+            <tr style="background:#E6F7F4;font-weight:600"><td style="padding:10px 12px;border-bottom:1px solid #E5EAF2">Nettowinst</td><td style="padding:10px 12px;text-align:right;border-bottom:1px solid #E5EAF2">${formatBedrag_(kg.nettowinst)}</td></tr>
+            <tr><td style="padding:10px 12px;border-bottom:1px solid #E5EAF2">Banksaldo</td><td style="padding:10px 12px;text-align:right;border-bottom:1px solid #E5EAF2">${formatBedrag_(kg.banksaldo)}</td></tr>
+            <tr><td style="padding:10px 12px">Open debiteuren</td><td style="padding:10px 12px;text-align:right">${formatBedrag_(kg.debiteuren)}</td></tr>
           </table>
-          <p style="font-size:11px;color:#888;margin-top:16px">
-            Gegenereerd via Boekhouding Engine op ${formatDatumTijd_(new Date())}.
+          <p style="font-size:11px;color:#5A6478;margin-top:18px;line-height:1.5">
+            Gegenereerd via Boekhoudbaar op ${formatDatumTijd_(new Date())}.<br>
             Raadpleeg het volledige exportpakket voor details.
           </p>
         </div>

@@ -154,7 +154,7 @@ Webhook-flow in `licence-server/Code.gs`:
 
 - [ ] **Mollie live API key** instellen (Script Properties: `MOLLIE_API_KEY`)
   - Mollie dashboard → Activeer live modus → kopieer live key
-  - Overschrijf `test_j6zt7F42h3drBQQsfx2evx5pHHrWuD` met `live_...`
+  - Vervang de huidige `test_…`-waarde in Script Properties door de nieuwe `live_…`
 - [ ] **Webhook URL controleren** in Mollie dashboard
   - Staat ingesteld als: `[GAS Web App URL]` (dezelfde als checkout URL)
   - Mollie vereist publieke HTTPS — GAS Web App URL voldoet hieraan

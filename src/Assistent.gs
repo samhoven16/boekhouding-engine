@@ -93,7 +93,7 @@ function openAssistent() {
       <div class="cat-items">
         ${cat.items.map(item => `
           <div class="item">
-            <div class="vraag" onclick="toggle(this)">❓ ${item.v}</div>
+            <div class="vraag" onclick="toggle(this)">${item.v}</div>
             <div class="antwoord">${item.a}</div>
           </div>`).join('')}
       </div>
@@ -111,32 +111,35 @@ function openAssistent() {
 <head>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; font-size: 13px; margin: 0; padding: 0; color: #333; }
-  .header { background: #1A237E; color: white; padding: 14px 18px; font-size: 15px; font-weight: bold; }
-  .header span { font-size: 11px; font-weight: normal; opacity: 0.8; display: block; margin-top: 2px; }
-  .tabs { display: flex; background: #E8EAF6; }
-  .tab { padding: 10px 16px; cursor: pointer; font-weight: bold; font-size: 12px; border-bottom: 3px solid transparent; }
-  .tab.actief { border-bottom-color: #1A237E; color: #1A237E; background: white; }
-  .sectie { display: none; padding: 12px; height: 420px; overflow-y: auto; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 13px; margin: 0; padding: 0; color: #1A1A1A; background: #F7F9FC; -webkit-font-smoothing: antialiased; }
+  .header { background: #0D1B4E; color: white; padding: 16px 20px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .header span { font-size: 11px; font-weight: 400; color: #B8C2D1; display: block; margin-top: 4px; letter-spacing: 0; }
+  .tabs { display: flex; background: white; border-bottom: 1px solid #E5EAF2; }
+  .tab { padding: 11px 18px; cursor: pointer; font-weight: 600; font-size: 12px; color: #5F6B7A; border-bottom: 3px solid transparent; transition: all .15s ease; }
+  .tab:hover { color: #0D1B4E; }
+  .tab.actief { border-bottom-color: #2EC4B6; color: #0D1B4E; }
+  .sectie { display: none; padding: 16px 18px; height: 420px; overflow-y: auto; }
   .sectie.actief { display: block; }
-  .snel-item { padding: 8px 0; border-bottom: 1px solid #EEE; }
-  .snel-v { font-weight: bold; display: block; margin-bottom: 2px; }
-  .snel-a { color: #1A237E; }
-  .categorie { margin-bottom: 8px; border: 1px solid #E0E0E0; border-radius: 4px; overflow: hidden; }
-  .cat-titel { background: #E8EAF6; padding: 10px 12px; font-weight: bold; cursor: pointer; font-size: 12px; }
-  .cat-items { display: none; padding: 8px 12px; }
+  .snel-item { padding: 10px 0; border-bottom: 1px solid #E5EAF2; }
+  .snel-item:last-child { border-bottom: none; }
+  .snel-v { font-weight: 600; display: block; margin-bottom: 3px; color: #1A1A1A; }
+  .snel-a { color: #0D1B4E; }
+  .categorie { margin-bottom: 10px; border: 1px solid #E5EAF2; border-radius: 8px; overflow: hidden; background: white; }
+  .cat-titel { background: #F7F9FC; padding: 11px 14px; font-weight: 600; cursor: pointer; font-size: 12px; color: #0D1B4E; display: flex; justify-content: space-between; align-items: center; }
+  .cat-items { display: none; padding: 10px 14px; }
   .cat-items.open { display: block; }
-  .item { margin: 6px 0; }
-  .vraag { cursor: pointer; color: #1A237E; font-weight: bold; font-size: 12px; padding: 4px 0; }
-  .antwoord { display: none; padding: 6px 8px; background: #F5F5F5; border-radius: 3px; line-height: 1.5; font-size: 12px; }
+  .item { margin: 8px 0; }
+  .vraag { cursor: pointer; color: #0D1B4E; font-weight: 600; font-size: 12px; padding: 5px 0; }
+  .antwoord { display: none; padding: 10px 12px; background: #F7F9FC; border-radius: 6px; line-height: 1.6; font-size: 12px; color: #1A1A1A; border: 1px solid #E5EAF2; margin-top: 4px; }
   .antwoord.open { display: block; }
-  .ai-blok { background: #E3F2FD; border-radius: 6px; padding: 14px; margin: 10px 0; }
-  .ai-blok h4 { margin: 0 0 8px; color: #1A237E; }
-  .ai-blok a { color: #1565C0; text-decoration: none; font-weight: bold; }
-  .ai-blok a:hover { text-decoration: underline; }
-  .tip { background: #FFF8E1; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin: 8px 0; }
-  .actie-knop { background: #1A237E; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; width: 100%; margin: 8px 0; }
-  .actie-knop:hover { background: #283593; }
+  .ai-blok { background: white; border: 1px solid #E5EAF2; border-left: 3px solid #2EC4B6; border-radius: 8px; padding: 14px 16px; margin: 10px 0; }
+  .ai-blok h4 { margin: 0 0 8px; color: #0D1B4E; font-weight: 700; }
+  .ai-blok a { color: #0D1B4E; text-decoration: none; font-weight: 600; }
+  .ai-blok a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .tip { background: #FFF8E1; border: 1px solid #FFECB3; color: #5A3F00; padding: 10px 12px; border-radius: 8px; font-size: 12px; margin: 10px 0; line-height: 1.5; }
+  .actie-knop { background: #0D1B4E; color: white; border: none; padding: 11px 18px; border-radius: 10px; cursor: pointer; font-size: 13px; width: 100%; margin: 10px 0; font-family: inherit; font-weight: 600; letter-spacing: .1px; transition: background .15s ease, transform .15s ease, box-shadow .2s ease; }
+  .actie-knop:hover { background: #1A2A6B; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(13,27,78,.22); }
+  ::selection { background: rgba(46,196,182,.28); color: #0D1B4E; }
 </style>
 </head>
 <body>
@@ -178,10 +181,10 @@ function openAssistent() {
     Ik gebruik een boekhoudprogramma met dubbel boekhouden (NL GAAP).
     Vraag: [typ hier uw vraag]"
   </div>
-  <div class="ai-blok" style="background:#E8F5E9">
+  <div class="ai-blok">
     <h4>Automatisering (Zapier / Make / n8n)</h4>
     <p>Verbind uw boekhouding met andere tools via de ingebouwde koppeling:</p>
-    <button class="actie-knop" style="background:#2E7D32" onclick="google.script.run.toonZapierInstructies(); google.script.host.close();">
+    <button class="actie-knop" onclick="google.script.run.toonZapierInstructies(); google.script.host.close();">
       Koppelinstructies bekijken
     </button>
   </div>

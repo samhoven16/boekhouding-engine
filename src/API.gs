@@ -85,22 +85,12 @@ function doPost(e) {
 }
 
 // ─────────────────────────────────────────────
-//  WEB APP: GET (status check, Zapier trigger test, EN installer)
+//  WEB APP: GET (status check, Zapier trigger test)
 //
-//  NB: Een GAS-project heeft slechts één doGet. Deze functie handelt
-//  twee rollen af:
-//   - ?sleutel=BKHE-... → installatieformulier (HTML, voor browser)
-//   - overige requests  → JSON API (voor Zapier, Make, status)
+//  Klantinstallatie loopt via de centrale licentieserver
+//  (licence-server/Code.gs), niet via de klant-kopie zelf.
 // ─────────────────────────────────────────────
 function doGet(e) {
-  // Installer-flow: als ?sleutel= aanwezig is (ook leeg voor formulier)
-  if (e && e.parameter && ('sleutel' in e.parameter)) {
-    const sleutel = String(e.parameter.sleutel || '').trim().toUpperCase();
-    return HtmlService.createHtmlOutput(bouwInstallerPagina_(sleutel))
-      .setTitle('Boekhouding Engine — Installatie')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
   // API-flow: JSON response
   const apiSleutel = getInstelling_('Webhook API sleutel');
   if (apiSleutel) {
@@ -279,8 +269,8 @@ function toonZapierInstructies() {
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
            padding:20px;font-size:13px;color:#333;line-height:1.5}
-      h3{color:#1A237E;font-size:16px;margin-bottom:4px}
-      h4{color:#283593;margin:16px 0 6px}
+      h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin-bottom:4px}
+      h4{color:#0D1B4E;margin:16px 0 6px;font-weight:600}
       p{margin-bottom:10px}
       code{background:#F5F5F5;padding:2px 6px;border-radius:3px;font-size:11px;
            font-family:monospace;word-break:break-all}
@@ -288,13 +278,13 @@ function toonZapierInstructies() {
           overflow:auto;font-size:11px;font-family:monospace;margin:6px 0 14px}
       .kw{color:#569CD6} .str{color:#CE9178} .prop{color:#9CDCFE}
       .num{color:#B5CEA8} .cmt{color:#6A9955}
-      .stap{background:#E8EAF6;border-left:3px solid #1A237E;padding:10px 14px;
+      .stap{background:#fff;border:1px solid #E5EAF2;border-left:3px solid #0D1B4E;padding:10px 14px;
             border-radius:0 6px 6px 0;margin:10px 0}
-      .ok{background:#E8F5E9;border-left:3px solid #2E7D32;padding:8px 14px;
+      .ok{background:#E6F7F4;border-left:3px solid #2EC4B6;padding:10px 14px;
           border-radius:0 6px 6px 0;margin:10px 0}
-      .url-box{background:#F5F5F5;padding:10px;border-radius:6px;word-break:break-all;
+      .url-box{background:#F7F9FC;border:1px solid #E5EAF2;padding:10px;border-radius:6px;word-break:break-all;
                font-family:monospace;font-size:11px;margin:6px 0}
-      .badge{display:inline-block;background:#1A237E;color:white;border-radius:3px;
+      .badge{display:inline-block;background:#0D1B4E;color:white;border-radius:3px;
              padding:1px 7px;font-size:11px;font-weight:bold;margin-right:4px}
       hr{border:none;border-top:1px solid #eee;margin:16px 0}
     </style>
@@ -355,9 +345,9 @@ function toonZapierInstructies() {
     <hr>
     <h4>Beschikbare acties</h4>
     <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <tr style="background:#E8EAF6">
-        <th style="padding:6px;text-align:left">actie</th>
-        <th style="padding:6px;text-align:left">Wat het doet</th>
+      <tr style="background:#0D1B4E;color:white">
+        <th style="padding:8px;text-align:left">actie</th>
+        <th style="padding:8px;text-align:left">Wat het doet</th>
       </tr>
       <tr><td style="padding:5px"><code>factuur</code></td><td style="padding:5px">Verkoopfactuur aanmaken + PDF + e-mail naar klant</td></tr>
       <tr style="background:#fafafa"><td style="padding:5px"><code>kosten</code></td><td style="padding:5px">Inkoopfactuur / kosten boeken</td></tr>
