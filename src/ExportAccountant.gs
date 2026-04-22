@@ -178,9 +178,7 @@ function verstuurSamenvattingAccountant(emailAccountant, persoonlijkBericht) {
   const jaar    = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
   const kg      = berekenKengetallen_(ss);
 
-  MailApp.sendEmail({
-    to: emailAccountant,
-    subject: `Financieel overzicht ${bedrijf} — ${jaar}`,
+  GmailApp.sendEmail(emailAccountant, `Financieel overzicht ${bedrijf} — ${jaar}`, '', {
     htmlBody: `
       <html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:600px;color:#1A1A1A;margin:0;padding:0;background:#F7F9FC">
         <div style="background:#0D1B4E;padding:22px 24px;border-radius:10px 10px 0 0">
