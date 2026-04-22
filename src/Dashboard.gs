@@ -618,8 +618,8 @@ function _bouwDashboardHtml_() {
   return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
     '<style>' +
     '*{box-sizing:border-box;margin:0;padding:0}' +
-    'body{font-family:Arial,sans-serif;font-size:13px;color:#212121;background:#F4F5F8;height:100vh;display:flex;flex-direction:column;overflow:hidden}' +
-    '.hdr{background:#1A237E;color:white;padding:11px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;font-size:13px;color:#1A1A1A;background:#F7F9FC;height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}' +
+    '.hdr{background:#0D1B4E;color:white;padding:11px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}' +
     '.hdr h1{font-size:14px;font-weight:bold;letter-spacing:.3px}' +
     '.hdr .meta{font-size:10px;opacity:.65;margin-top:2px}' +
     '.btn-ref{background:rgba(255,255,255,.15);border:none;color:white;padding:5px 11px;border-radius:4px;cursor:pointer;font-size:11px}' +
@@ -633,11 +633,11 @@ function _bouwDashboardHtml_() {
     '.kpi.goed .val{color:#15803D}.kpi.warn .val{color:#B45309}.kpi.krit .val{color:#B91C1C}' +
     '.sec{font-size:10px;font-weight:bold;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}' +
     '.acties{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}' +
-    '.actie{background:white;border:2px solid #E5E7EB;border-radius:8px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}' +
-    '.actie:hover{border-color:#3730A3;background:#F5F3FF}' +
+    '.actie{background:white;border:1px solid #E5EAF2;border-radius:8px;padding:14px 10px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;user-select:none}' +
+    '.actie:hover{border-color:#2EC4B6;background:#E6F7F4;box-shadow:0 2px 6px rgba(13,27,78,0.06)}' +
     '.actie .icoon{font-size:22px;margin-bottom:6px}' +
-    '.actie .txt{font-size:12px;font-weight:bold;color:#1E1B4B;line-height:1.3}' +
-    '.actie.pr{background:#1A237E;border-color:#1A237E}.actie.pr .txt{color:white}.actie.pr:hover{background:#283593;border-color:#283593}' +
+    '.actie .txt{font-size:12px;font-weight:600;color:#0D1B4E;line-height:1.3}' +
+    '.actie.pr{background:#0D1B4E;border-color:#0D1B4E}.actie.pr .txt{color:white}.actie.pr:hover{background:#1A2A6B;border-color:#1A2A6B}' +
     '.lijst{background:white;border-radius:8px;border:1px solid #E5E7EB;overflow:hidden;margin-bottom:14px}' +
     '.rij{display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid #F9FAFB;gap:10px}' +
     '.rij:last-child{border-bottom:none}' +
@@ -648,7 +648,7 @@ function _bouwDashboardHtml_() {
     '.bedrag{font-size:13px;font-weight:bold;color:#B91C1C;flex-shrink:0}' +
     '.leeg{padding:18px;text-align:center;color:#9CA3AF;font-size:12px}' +
     '.loading{text-align:center;padding:60px 20px;color:#9CA3AF}' +
-    '.spin{display:inline-block;width:22px;height:22px;border:2px solid #E5E7EB;border-top-color:#1A237E;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:10px}' +
+    '.spin{display:inline-block;width:22px;height:22px;border:2px solid #E5EAF2;border-top-color:#2EC4B6;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:10px}' +
     '@keyframes spin{to{transform:rotate(360deg)}}' +
     '</style></head><body>' +
     '<div class="hdr">' +
