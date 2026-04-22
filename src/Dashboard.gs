@@ -287,6 +287,12 @@ function vernieuwDashboard() {
       );
     }
   } catch (_) { /* trigger-context zonder UI, negeren */ }
+
+  // Context-based suggesties (bank-referral, automation-tools, etc.)
+  // Crasht nooit het dashboard — zelfs als de hele module ontbreekt.
+  try {
+    if (typeof checkSuggesties_ === 'function') checkSuggesties_();
+  } catch (_) { /* suggesties mogen dashboard nooit breken */ }
 }
 
 // ─────────────────────────────────────────────
