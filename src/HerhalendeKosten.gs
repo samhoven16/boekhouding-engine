@@ -157,7 +157,7 @@ function maakHerhalendeKostenTab_(ss) {
     const headers = ['ID', 'Naam', 'Leverancier', 'Bedrag (excl.)', 'BTW', 'Frequentie', 'Volgende datum', 'Grootboekrekening', 'Status', 'Automatisch boeken', 'Notities'];
     sheet.getRange(1, 1, 1, headers.length)
       .setValues([headers])
-      .setBackground('#1A237E').setFontColor('#FFFFFF').setFontWeight('bold');
+      .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
     sheet.setFrozenRows(1);
     sheet.setColumnWidth(2, 180);
     sheet.setColumnWidth(3, 150);

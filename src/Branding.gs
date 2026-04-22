@@ -33,7 +33,7 @@ function getBedrijfsLogo_() {
  */
 function getBedrijfsKleur_() {
   const kleur = PropertiesService.getScriptProperties().getProperty(PROP_KLEUR);
-  return kleur && /^#[0-9A-Fa-f]{6}$/.test(kleur) ? kleur : '#1A237E';
+  return kleur && /^#[0-9A-Fa-f]{6}$/.test(kleur) ? kleur : '#0D1B4E';
 }
 
 /**
@@ -260,11 +260,11 @@ var logoBase64 = null;
 var logoMime = null;
 var heeftBestaandLogo = false;
 
-// Preset kleuren
+// Preset kleuren — eerste kleur = Boekhoudbaar brand-navy.
 var PRESETS = [
-  '#1A237E','#283593','#0D47A1','#01579B','#006064',
-  '#1B5E20','#E65100','#BF360C','#880E4F','#4A148C',
-  '#212121','#37474F','#795548',
+  '#0D1B4E','#1A2A6B','#0D47A1','#01579B','#006064',
+  '#2EC4B6','#1B5E20','#E65100','#BF360C','#880E4F',
+  '#4A148C','#212121','#37474F',
 ];
 var presetsEl = document.getElementById('presets');
 PRESETS.forEach(function(k) {
@@ -285,9 +285,9 @@ google.script.run
       heeftBestaandLogo = true;
       document.getElementById('verwijderBtn').style.display = 'inline-block';
     }
-    kleurGewijzigd(data.kleur || '#1A237E');
-    document.getElementById('kleurPicker').value = data.kleur || '#1A237E';
-    document.getElementById('kleurHex').value = data.kleur || '#1A237E';
+    kleurGewijzigd(data.kleur || '#0D1B4E');
+    document.getElementById('kleurPicker').value = data.kleur || '#0D1B4E';
+    document.getElementById('kleurHex').value = data.kleur || '#0D1B4E';
     document.getElementById('logoStatus').textContent = data.heeftLogo ? '\u2713 Logo is ingesteld' : 'Nog geen logo';
   })
   .withFailureHandler(function() { document.getElementById('logoStatus').textContent = ''; })

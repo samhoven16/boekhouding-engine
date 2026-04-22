@@ -103,7 +103,7 @@ function getBoekingContext() {
   const props = PropertiesService.getScriptProperties();
   const bt    = props.getProperty('businessType') || 'zzp';
   const btDef = BUSINESS_TYPES[bt] || BUSINESS_TYPES.zzp;
-  const kleur = (typeof getBedrijfsKleur_ === 'function') ? getBedrijfsKleur_() : '#1A237E';
+  const kleur = (typeof getBedrijfsKleur_ === 'function') ? getBedrijfsKleur_() : '#0D1B4E';
 
   return {
     btwKeuzes:    BTW_KEUZES,
