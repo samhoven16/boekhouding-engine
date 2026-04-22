@@ -178,23 +178,9 @@ jobs:
             exit $EXIT
           fi
           echo "✅ Klant-kopie gepusht"
-
-      - name: clasp deploy (klant-kopie — optioneel)
-        if: ${{ env.KLANT_DEPLOYMENT_ID != '' }}
-        env:
-          NODE_TLS_REJECT_UNAUTHORIZED: '0'
-          KLANT_DEPLOYMENT_ID: ${{ secrets.KLANT_DEPLOYMENT_ID }}
-        run: |
-          set +e
-          OUTPUT=$(clasp deploy --deploymentId "$KLANT_DEPLOYMENT_ID" --description "CI auto-deploy $(date -u +%Y-%m-%dT%H:%M:%SZ)" 2>&1)
-          EXIT=$?
-          set -e
-          echo "$OUTPUT"
-          if [ $EXIT -ne 0 ]; then
-            echo "::warning title=Automatische deploy mislukt (klant-kopie)::Deploy handmatig via Apps Script UI."
-          else
-            echo "✅ Klant-kopie live versie bijgewerkt"
-          fi
+          echo "ℹ️  Klant-kopie is container-bound aan template-sheet; geen /exec URL."
+          echo "    Nieuwe klanten krijgen automatisch de nieuwste code bij kopiëren."
+          echo "    Bestaande klanten houden hun eigen snapshot (by design)."
 
       - name: clasp push (licentieserver)
         env:
