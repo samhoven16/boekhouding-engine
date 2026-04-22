@@ -234,8 +234,8 @@ function vernieuwDashboard() {
   // ── ROI Sectie: "Wat heeft Boekhouding Engine u opgeleverd?" ─────────
   rij += 2;
   sheet.getRange(rij, 1, 1, 8).merge()
-    .setValue('WAT HEEFT BOEKHOUDING ENGINE U OPGELEVERD?')
-    .setBackground('#1A237E').setFontColor('#FFFFFF')
+    .setValue('WAT HEEFT BOEKHOUDBAAR JE OPGELEVERD?')
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
     .setFontWeight('bold').setFontSize(12);
   rij++;
 

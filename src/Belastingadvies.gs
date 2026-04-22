@@ -395,7 +395,7 @@ function genereerBelastingadvies() {
   if (!sheet) sheet = ss.insertSheet(bladNaam);
   sheet.clearContents();
   sheet.clearFormats();
-  sheet.setTabColor('#FF6F00');
+  sheet.setTabColor(KLEUREN.ACCENT);
 
   const advies = berekenBelastingadvies_(ss);
   const bedrijf = getInstelling_('Bedrijfsnaam') || '';
@@ -408,7 +408,7 @@ function genereerBelastingadvies() {
     .setFontWeight('bold').setFontSize(14).setHorizontalAlignment('center');
   sheet.getRange(2, 1, 1, 3).merge()
     .setValue(bedrijf + '  |  Bijgewerkt: ' + formatDatumTijd_(new Date()))
-    .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#E8EAF6')
+    .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#B8C2D1')
     .setFontSize(10).setHorizontalAlignment('center');
 
   let rij = 4;
@@ -440,7 +440,7 @@ function genereerBelastingadvies() {
     .setValue('AFTREKPOSTEN').setBackground(KLEUREN.SECTIE_BG).setFontWeight('bold');
   rij++;
   sheet.getRange(rij, 1, 1, 3).setValues([['Aftrekpost', 'Bedrag', 'Voorwaarde']])
-    .setBackground('#37474F').setFontColor('#FFFFFF').setFontWeight('bold');
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
   rij++;
 
   advies.aftrekken.forEach(a => {
