@@ -1004,7 +1004,7 @@ function setupLicentieSheet() {
   // KVK_NUMMER, BTW_NUMMER) moeten handmatig worden ingevuld per
   // environment — nooit hardcoden.
   if (!props.getProperty('PRODUCT_NAAM'))  props.setProperty('PRODUCT_NAAM',  'Boekhouding Engine');
-  if (!props.getProperty('PRODUCT_PRIJS')) props.setProperty('PRODUCT_PRIJS', '4900');
+  if (!props.getProperty('PRODUCT_PRIJS')) props.setProperty('PRODUCT_PRIJS', '49.00');
 
   const ontbrekend = [];
   if (!props.getProperty('MOLLIE_API_KEY'))    ontbrekend.push('MOLLIE_API_KEY');
