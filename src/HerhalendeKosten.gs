@@ -30,21 +30,28 @@ function beheerHerhalendeKosten() {
   const ui = SpreadsheetApp.getUi();
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body{font-family:Arial,sans-serif;padding:16px;font-size:13px}
-      h3{color:#1A237E;margin-bottom:12px}
-      .form-row{margin:8px 0}
-      .form-row label{display:block;font-weight:bold;margin-bottom:3px;font-size:12px}
-      .form-row input,.form-row select{width:100%;padding:7px;border:1px solid #ccc;border-radius:4px;font-size:13px}
-      .row2{display:flex;gap:8px}
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 12px}
+      .form-row{margin:10px 0}
+      .form-row label{display:block;font-weight:600;margin-bottom:4px;font-size:12px;color:#0D1B4E}
+      .form-row input,.form-row select{width:100%;padding:8px 10px;border:1px solid #E5EAF2;border-radius:6px;
+                                       font-size:13px;font-family:inherit;color:#1A1A1A;background:#fff;
+                                       transition:border-color 0.15s}
+      .form-row input:focus,.form-row select:focus{outline:none;border-color:#2EC4B6}
+      .row2{display:flex;gap:10px}
       .row2 .form-row{flex:1}
-      .btn{background:#1A237E;color:white;border:none;padding:10px 20px;border-radius:4px;
-           cursor:pointer;font-size:14px;width:100%;margin-top:12px}
-      .btn:hover{background:#283593}
-      .info{background:#E8EAF6;padding:8px;border-radius:4px;font-size:11px;margin-bottom:12px}
+      .btn{background:#0D1B4E;color:white;border:none;padding:11px 20px;border-radius:6px;
+           cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;width:100%;margin-top:14px;
+           transition:background 0.15s}
+      .btn:hover{background:#1A2A6B}
+      .info{background:#fff;border:1px solid #E5EAF2;border-left:3px solid #2EC4B6;
+            padding:10px 12px;border-radius:0 6px 6px 0;font-size:12px;margin-bottom:14px;
+            color:#1A1A1A;line-height:1.5}
     </style>
-    <h3>🔄 Herhalende kost toevoegen</h3>
-    <div class="info">💡 Gebruik dit voor huur, abonnementen, verzekeringen en andere vaste lasten.
-    Het systeem herinnert u als de betaaldatum nadert.</div>
+    <h3>Herhalende kost toevoegen</h3>
+    <div class="info">Gebruik dit voor huur, abonnementen, verzekeringen en andere vaste lasten. Boekhoudbaar herinnert je als de betaaldatum nadert.</div>
 
     <div class="form-row">
       <label>Naam / Omschrijving *</label>
