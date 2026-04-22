@@ -183,18 +183,22 @@ function openHoofdFormulier() {
   const url = FormApp.openById(formId).getPublishedUrl();
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body{font-family:Arial,sans-serif;padding:20px;text-align:center}
-      .btn{display:inline-block;background:#1A237E;color:#fff;padding:14px 28px;
-           border-radius:6px;text-decoration:none;font-size:15px;margin:10px 0}
-      .btn:hover{background:#283593}
-      .tip{background:#FFF8E1;padding:10px;border-radius:4px;font-size:11px;margin-top:14px}
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;padding:24px;text-align:center;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:18px;font-weight:700;letter-spacing:-0.01em;margin-bottom:6px}
+      p{color:#5A6478;font-size:13px;line-height:1.55;margin:0 0 10px}
+      .btn{display:inline-block;background:#0D1B4E;color:#fff;padding:12px 24px;
+           border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;margin:12px 0;
+           transition:background 0.15s}
+      .btn:hover{background:#1A2A6B}
+      .url{font-size:11px;color:#5A6478;margin-top:10px;word-break:break-all}
+      .tip{background:#FFF8E1;border-left:3px solid #FFC107;padding:10px 12px;border-radius:0 6px 6px 0;font-size:11px;margin-top:16px;text-align:left;color:#5A3A00;line-height:1.5}
     </style>
-    <h3 style="color:#1A237E">Factuur, kosten of declaratie invoeren</h3>
-    <p>Klik hieronder om het formulier te openen.<br>
-    U kiest zelf wat u wilt doen: een factuur maken, kosten boeken of een declaratie indienen.</p>
-    <a class="btn" href="${url}" target="_blank">📋 Formulier openen</a>
-    <p style="font-size:11px;color:#888;margin-top:12px;word-break:break-all">${url}</p>
-    <div class="tip">💡 <b>Tip:</b> Stuur deze link naar uzelf (WhatsApp, e-mail) zodat u ook vanaf uw telefoon kunt invoeren.</div>
+    <h3>Factuur, kosten of declaratie invoeren</h3>
+    <p>Klik hieronder om het formulier te openen. Je kiest zelf wat je wilt doen: een factuur maken, kosten boeken of een declaratie indienen.</p>
+    <a class="btn" href="${url}" target="_blank">Formulier openen</a>
+    <p class="url">${url}</p>
+    <div class="tip"><b>Tip —</b> stuur deze link naar jezelf (WhatsApp, e-mail) zodat je ook vanaf je telefoon kunt invoeren.</div>
   `).setWidth(500).setHeight(300);
   SpreadsheetApp.getUi().showModalDialog(html, 'Formulier openen');
 }
@@ -386,12 +390,21 @@ function toonFormulierLinks() {
     catch(e) { url = 'Kon niet ophalen: ' + e.message; }
   }
   const html = `
-    <style>body{font-family:Arial,sans-serif;padding:16px} a{color:#1A237E}</style>
-    <h3>Uw formulierlink</h3>
-    <p>Met dit formulier kunt u facturen maken, kosten boeken en declaraties indienen:</p>
-    <p><a href="${url}" target="_blank">📋 Formulier openen</a></p>
-    <p style="font-size:11px;color:#666;word-break:break-all">${url}</p>
-    <p style="font-size:11px;color:#888">💡 Sla deze link op als bladwijzer op uw telefoon voor snelle invoer onderweg.</p>
+    <style>
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 10px}
+      p{color:#5A6478;line-height:1.55;margin:0 0 10px}
+      a{color:#0D1B4E;font-weight:600;text-decoration:none}
+      a:hover{color:#2EC4B6}
+      .url{font-size:11px;color:#5A6478;word-break:break-all}
+      .hint{font-size:11px;color:#5A6478;margin-top:8px}
+    </style>
+    <h3>Je formulierlink</h3>
+    <p>Met dit formulier kun je facturen maken, kosten boeken en declaraties indienen.</p>
+    <p><a href="${url}" target="_blank">Formulier openen →</a></p>
+    <p class="url">${url}</p>
+    <p class="hint">Sla deze link op als bladwijzer op je telefoon voor snelle invoer onderweg.</p>
   `;
   SpreadsheetApp.getUi().showModalDialog(
     HtmlService.createHtmlOutput(html).setWidth(500).setHeight(250),
@@ -426,21 +439,32 @@ function vernieuwAlleRapporten() {
 function openBeginbalansDialoog() {
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body { font-family: Arial, sans-serif; padding: 14px; font-size: 13px; }
-      .info { background: #E8EAF6; padding: 12px; border-radius: 4px; margin: 10px 0; }
-      .btn { background: #1A237E; color: white; padding: 10px 18px; border: none;
-             border-radius: 4px; cursor: pointer; font-size: 13px; }
-      .btn:hover { background: #283593; }
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      h3{color:#0D1B4E;font-size:16px;font-weight:700;letter-spacing:-0.01em;margin:0 0 10px}
+      p{color:#5A6478;line-height:1.55;margin:0 0 10px}
+      b{color:#0D1B4E;font-weight:600}
+      .info{background:#fff;border:1px solid #E5EAF2;border-left:3px solid #2EC4B6;
+            padding:12px 14px;border-radius:0 6px 6px 0;margin:12px 0}
+      .info p{margin:0;color:#1A1A1A}
+      .btn{background:#0D1B4E;color:white;padding:10px 18px;border:none;
+           border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;
+           font-family:inherit;transition:background 0.15s}
+      .btn:hover{background:#1A2A6B}
+      .btn-sec{background:#F7F9FC;color:#0D1B4E;border:1px solid #E5EAF2;padding:9px 16px;
+               border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;margin-top:8px;
+               font-family:inherit;transition:background 0.15s}
+      .btn-sec:hover{background:#EEF2F8}
     </style>
-    <h3 style="color:#1A237E">Openingssaldi invoeren</h3>
+    <h3>Openingssaldi invoeren</h3>
     <div class="info">
-      <p>Voer hier de beginstand van uw bankrekening en andere rekeningen in.<br>
-      Dit is nodig als u overstapt van een ander systeem of een nieuw boekjaar start.</p>
+      <p>Voer hier de beginstand van je bankrekening en andere rekeningen in. Dit is nodig als je overstapt van een ander systeem of een nieuw boekjaar start.</p>
     </div>
     <p>Klik op de knop hieronder. Kies als type <b>"Beginbalans"</b>.</p>
     <p>Tegenrekening: <b>2000 – Ondernemingsvermogen</b></p>
     <p><button class="btn" onclick="google.script.run.openJournaalpostFormulier()">Openingssaldi invoeren</button></p>
-    <button onclick="google.script.host.close()" style="margin-top:8px;cursor:pointer">Sluiten</button>
+    <button class="btn-sec" onclick="google.script.host.close()">Sluiten</button>
   `).setWidth(450).setHeight(280);
   SpreadsheetApp.getUi().showModalDialog(html, 'Openingssaldi');
 }
