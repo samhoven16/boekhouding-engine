@@ -15,10 +15,10 @@ function onOpen() {
   try { licentieOk = controleerLicentieEnKopie_(); } catch (e) { Logger.log('Licentie check fout: ' + e.message); }
 
   if (!licentieOk) {
-    ui.createMenu('📊 Boekhoudbaar')
-      .addItem('🔑 Licentie activeren', 'toonLicentieDialoog')
+    ui.createMenu('Boekhoudbaar')
+      .addItem('Licentie activeren', 'toonLicentieDialoog')
       .addSeparator()
-      .addItem('ℹ️ Licentie-informatie', 'toonLicentieInfo')
+      .addItem('Licentie-informatie', 'toonLicentieInfo')
       .addToUi();
     return;
   }
@@ -38,21 +38,21 @@ function onOpen() {
     if (_ss) verbergFormResponseTabs_(_ss);
   } catch (e) { Logger.log('onOpen werkruimte fout: ' + e.message); }
 
-  ui.createMenu('Boekhouding')
+  ui.createMenu('Boekhoudbaar')
 
     // ── Dagelijks gebruik ─────────────────────
-    .addItem('📊 Dashboard openen', 'openDashboard')
-    .addItem('➕ Nieuwe boeking (factuur / kosten / declaratie / bon)', 'openNieuweBoeking')
+    .addItem('Dashboard openen', 'openDashboard')
+    .addItem('Nieuwe boeking — factuur, kosten of declaratie', 'openNieuweBoeking')
     .addSeparator()
 
     // ── Facturen ──────────────────────────────
     .addSubMenu(ui.createMenu('Facturen & Betalingen')
-      .addItem('📋 Factuurlijst (openen, versturen, markeren)', 'openFactuurlijst')
+      .addItem('Factuurlijst — openen, versturen, markeren', 'openFactuurlijst')
       .addSeparator()
       .addItem('Betalingsherinneringen versturen', 'stuurBetalingsherinneringen')
       .addSeparator()
-      .addItem('Openstaande klantfacturen bekijken', 'vernieuwDebiteurenOverzicht')
-      .addItem('Openstaande leveranciersfacturen bekijken', 'vernieuwCrediteurenOverzicht')
+      .addItem('Openstaande klantfacturen', 'vernieuwDebiteurenOverzicht')
+      .addItem('Openstaande leveranciersfacturen', 'vernieuwCrediteurenOverzicht')
     )
 
     // ── Bankboek ──────────────────────────────
@@ -60,11 +60,11 @@ function onOpen() {
       .addItem('Bankafschrift importeren (CSV)', 'importeerBankafschrift')
       .addSeparator()
       .addItem('Betalingen koppelen aan facturen', 'koppelTransactiesAanFacturen')
-      .addItem('Transacties categoriseren (op basis van omschrijving)', 'autoCategoriseerTransacties')
+      .addItem('Transacties categoriseren', 'autoCategoriseerTransacties')
       .addSeparator()
       .addItem('Banksaldo controleren (afstemming)', 'bankAfstemming')
       .addSeparator()
-      .addItem('🔄 Herhalende kosten toevoegen', 'beheerHerhalendeKosten')
+      .addItem('Herhalende kosten toevoegen', 'beheerHerhalendeKosten')
       .addItem('Herhalende kosten overzicht', 'toonHerhalendeKostenOverzicht')
     )
 
@@ -79,18 +79,18 @@ function onOpen() {
 
     // ── Kwaliteit & Controle ──────────────────
     .addSubMenu(ui.createMenu('Controle & Export')
-      .addItem('✅ Gezondheidscheck uitvoeren', 'voerGezondheidCheckUit')
+      .addItem('Gezondheidscheck uitvoeren', 'voerGezondheidCheckUit')
       .addSeparator()
-      .addItem('💾 Backup maken (XLSX naar Drive)', 'maakBackup')
-      .addItem('📦 Accountantspakket exporteren', 'exporteerAccountantsPakket')
-      .addItem('📧 Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
+      .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
+      .addItem('Accountantspakket exporteren', 'exporteerAccountantsPakket')
+      .addItem('Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
       .addSeparator()
-      .addItem('🔒 Gesloten periodes beheren', 'beheerGeslotenPeriodes')
+      .addItem('Gesloten periodes beheren', 'beheerGeslotenPeriodes')
     )
 
     // ── Hulp & advies ─────────────────────────
-    .addItem('💬 Hulp & Assistent', 'openAssistent')
-    .addItem('💡 Belastingtips & besparingen', 'genereerBelastingadvies')
+    .addItem('Hulp & Assistent', 'openAssistent')
+    .addItem('Belastingtips & besparingen', 'genereerBelastingadvies')
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────
@@ -109,7 +109,7 @@ function onOpen() {
 
     // ── BTW ───────────────────────────────────
     .addSubMenu(ui.createMenu('BTW')
-      .addItem('🧾 BTW aangifte assistent (invulhulp)', 'toonBtwAangifteAssistent')
+      .addItem('BTW-aangifte assistent (invulhulp)', 'toonBtwAangifteAssistent')
       .addSeparator()
       .addItem('BTW-aangifte kwartaal 1 (jan-mrt)', 'genereerBtwAangifteQ1')
       .addItem('BTW-aangifte kwartaal 2 (apr-jun)', 'genereerBtwAangifteQ2')
@@ -118,7 +118,7 @@ function onOpen() {
       .addSeparator()
       .addItem('Kleineondernemersregeling (KOR) check', 'controleerKor')
       .addSeparator()
-      .addItem('⏰ BTW reminder instellen', 'instelBtwReminderTrigger')
+      .addItem('BTW reminder instellen', 'instelBtwReminderTrigger')
     )
 
     // ── Instellingen & Beheer ─────────────────
@@ -126,33 +126,33 @@ function onOpen() {
     .addSubMenu(ui.createMenu('Instellingen')
       .addItem('Eerste keer instellen (setup)', 'setup')
       .addSeparator()
-      .addItem('🎨 Bedrijfsstijl (logo & kleur)', 'openBrandingInstellingen')
+      .addItem('Bedrijfsstijl (logo & kleur)', 'openBrandingInstellingen')
       .addItem('Google Drive mappen', 'toonDriveStructuur')
-      .addItem('🔗 Website / webshop koppelen (API)', 'toonZapierInstructies')
+      .addItem('Website / webshop koppelen (API)', 'toonZapierInstructies')
       .addSeparator()
       .addItem('Nieuw boekjaar starten', 'maakNieuwBoekjaar')
       .addItem('Rekeningschema opnieuw laden', 'herlaadGrootboekschema')
       .addItem('Alle overzichten vernieuwen', 'vernieuwAlleRapporten')
       .addItem('Saldi herberekenen (bij fouten)', 'herberekeningGrootboekSaldi')
       .addSeparator()
-      .addItem('✅ Instellingen controleren', 'valideerEnMeldInstellingen')
+      .addItem('Instellingen controleren', 'valideerEnMeldInstellingen')
       .addSeparator()
-      .addItem('🔑 Licentie activeren', 'toonLicentieDialoog')
-      .addItem('ℹ️ Licentie-informatie', 'toonLicentieInfo')
+      .addItem('Licentie activeren', 'toonLicentieDialoog')
+      .addItem('Licentie-informatie', 'toonLicentieInfo')
       .addSeparator()
-      .addItem('🗂 Werkruimte opschonen (tabbladen)', 'herorganiseerWerkruimte')
+      .addItem('Werkruimte opschonen (tabbladen)', 'herorganiseerWerkruimte')
       .addSeparator()
       .addItem('Setup opnieuw uitvoeren (reset)', 'resetSetup')
     )
 
     // ── Privé Financiën ───────────────────────
-    .addSubMenu(ui.createMenu('🏠 Privé Financiën')
+    .addSubMenu(ui.createMenu('Privé Financiën')
       .addItem('Privé dashboard openen', 'openPriveDashboard')
       .addSeparator()
       .addItem('Privé transactie toevoegen', 'voegPriveTransactieToe')
       .addItem('Vermogensoverzicht beheren', 'beheerVermogensoverzicht')
       .addSeparator()
-      .addItem('💡 IB aangifte schatting (Box 1/2/3)', 'openIbAangifteHelper')
+      .addItem('IB-aangifte schatting (Box 1/2/3)', 'openIbAangifteHelper')
     )
 
     // ── Licentie & Updates ────────────────────

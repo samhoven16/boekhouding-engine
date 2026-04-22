@@ -11,8 +11,8 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     const bedrijf = getInstelling_('Bedrijfsnaam') || 'Ons Bedrijf';
     // Branding: logo + bedrijfskleur (uit Branding.gs)
     const logoDataUrl = (typeof getBedrijfsLogoVolledig_ === 'function') ? getBedrijfsLogoVolledig_() : null;
-    const pkKleur     = (typeof getBedrijfsKleur_ === 'function') ? getBedrijfsKleur_() : '#1A237E';
-    const pkLicht     = (typeof getBedrijfsKleurLicht_ === 'function') ? getBedrijfsKleurLicht_() : '#E8EAF6';
+    const pkKleur     = (typeof getBedrijfsKleur_ === 'function') ? getBedrijfsKleur_() : '#0D1B4E';
+    const pkLicht     = (typeof getBedrijfsKleurLicht_ === 'function') ? getBedrijfsKleurLicht_() : '#F7F9FC';
     const adres = getInstelling_('Adres') || '';
     const postcode = getInstelling_('Postcode') || '';
     const plaats = getInstelling_('Plaats') || '';
@@ -32,7 +32,7 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
   <meta charset="UTF-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; font-size: 11pt; color: #333; padding: 40px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1A1A1A; padding: 40px; -webkit-font-smoothing: antialiased; }
     .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
     .bedrijfsnaam { font-size: 22pt; font-weight: bold; color: ${pkKleur}; }
     .factuur-info { text-align: right; }

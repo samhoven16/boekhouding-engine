@@ -8,7 +8,7 @@
 // ─── ENTRY POINT ─────────────────────────────
 function openNieuweBoeking() {
   const ctx  = getBoekingContext();
-  const kleur = ctx.kleur || '#1A237E';
+  const kleur = ctx.kleur || '#0D1B4E';  // fallback = brand-navy wanneer geen huisstijl ingesteld
   const kleurLicht = _hexNaarRgba_(kleur, 0.08);
   const kleurMidden = _hexNaarRgba_(kleur, 0.15);
 
@@ -21,7 +21,7 @@ function openNieuweBoeking() {
 <style>
 :root{--pk:${kleur};--pk-licht:${kleurLicht};--pk-mid:${kleurMidden}}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;font-size:13px;color:#212121;background:#F8F9FA;height:100vh;display:flex;flex-direction:column}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:#212121;background:#F8F9FA;height:100vh;display:flex;flex-direction:column}
 /* ── TABBAR ── */
 .tabbar{display:flex;background:white;border-bottom:2px solid #E0E0E0;flex-shrink:0}
 .tab{flex:1;padding:10px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:bold;
@@ -41,7 +41,7 @@ body{font-family:Arial,sans-serif;font-size:13px;color:#212121;background:#F8F9F
             letter-spacing:0.4px;margin-bottom:3px}
 input[type=text],input[type=email],input[type=number],input[type=date],select,textarea{
   width:100%;padding:7px 9px;border:1.5px solid #DDD;border-radius:5px;font-size:13px;
-  font-family:Arial,sans-serif;transition:border-color 0.15s;background:white}
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;transition:border-color 0.15s;background:white}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pk)}
 input.fout,select.fout{border-color:#c62828;background:#FFF5F5}
 input.ok{border-color:#2e7d32}
