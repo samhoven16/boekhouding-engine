@@ -210,33 +210,42 @@ function openHoofdFormulier() {
 function openBonUpload() {
   const html = HtmlService.createHtmlOutput(`
     <style>
-      body{font-family:Arial,sans-serif;padding:16px;font-size:13px}
-      h3{color:#1A237E;margin-bottom:8px}
-      .upload-area{border:2px dashed #C5CAE9;border-radius:8px;padding:24px;text-align:center;
-                   margin:10px 0;cursor:pointer;transition:all 0.2s}
-      .upload-area:hover{border-color:#1A237E;background:#F5F5FF}
-      .upload-area.active{border-color:#4CAF50;background:#E8F5E9}
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;padding:22px 24px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      .label{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2EC4B6;margin-bottom:4px}
+      h3{color:#0D1B4E;margin-bottom:6px;font-size:20px;font-weight:800;letter-spacing:-0.01em}
+      .sub{color:#5F6B7A;font-size:13px;line-height:1.55;margin-bottom:16px}
+      .upload-area{border:1.5px dashed #E5EAF2;border-radius:12px;padding:28px 20px;text-align:center;
+                   margin:12px 0;cursor:pointer;background:#fff;transition:all 0.15s ease;color:#5F6B7A}
+      .upload-area:hover{border-color:rgba(46,196,182,.55);background:rgba(46,196,182,.03)}
+      .upload-area.active{border-color:#2EC4B6;background:rgba(46,196,182,.06);color:#0D1B4E}
       input[type=file]{display:none}
-      .form-row{margin:8px 0}
-      .form-row label{display:block;font-weight:bold;margin-bottom:3px;font-size:12px}
+      .form-row{margin:10px 0}
+      .form-row label{display:block;font-weight:600;margin-bottom:4px;font-size:12px;color:#1A1A1A}
       .form-row select,.form-row input[type=text],.form-row input[type=date]{
-        width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px}
-      .btn{background:#1A237E;color:white;border:none;padding:10px 20px;border-radius:4px;
-           cursor:pointer;font-size:14px;width:100%;margin-top:10px}
-      .btn:hover{background:#283593}
-      .btn:disabled{background:#999;cursor:not-allowed}
-      .status{margin-top:8px;padding:8px;border-radius:4px;display:none}
-      .tip{background:#FFF8E1;padding:8px;border-radius:4px;font-size:11px;margin-top:10px}
+        width:100%;padding:9px 11px;border:1px solid #E5EAF2;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;
+        transition:border-color .15s ease,box-shadow .15s ease}
+      .form-row select:focus,.form-row input:focus{outline:none;border-color:#2EC4B6;box-shadow:0 0 0 3px rgba(46,196,182,.18)}
+      .btn{background:#0D1B4E;color:white;border:none;padding:12px 18px;border-radius:10px;
+           cursor:pointer;font-size:14px;width:100%;margin-top:14px;font-family:inherit;font-weight:600;letter-spacing:.1px;
+           transition:background .15s ease,transform .15s ease,box-shadow .2s ease}
+      .btn:hover:not(:disabled){background:#1A2A6B;transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,27,78,.22)}
+      .btn:disabled{background:#94A3B8;cursor:not-allowed}
+      .status{margin-top:10px;padding:10px 12px;border-radius:8px;display:none;font-size:12px;border:1px solid transparent}
+      .tip{background:#FFF8E1;border:1px solid #FFECB3;color:#5A3F00;padding:10px 12px;border-radius:8px;font-size:12px;margin-top:12px;line-height:1.5}
+      .filename{font-size:11px;color:#2EC4B6;margin:6px 0 0;font-weight:600}
+      ::selection{background:rgba(46,196,182,.28);color:#0D1B4E}
     </style>
-    <h3>📸 Bon of factuur uploaden</h3>
-    <p>Upload een foto van een bon, factuur of kassabon. Het bestand wordt opgeslagen in uw Google Drive.</p>
+    <div class="label">Upload</div>
+    <h3>Bon of factuur uploaden</h3>
+    <p class="sub">Upload een foto van een bon, factuur of kassabon. Het bestand wordt opgeslagen in jouw Google Drive.</p>
 
     <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
-      📷 Klik hier of sleep een bestand<br>
-      <span style="font-size:11px;color:#888">(JPG, PNG, PDF — max 10 MB)</span>
+      Klik hier of sleep een bestand<br>
+      <span style="font-size:11px;color:#94A3B8">JPG, PNG, PDF — max 10 MB</span>
     </div>
     <input type="file" id="fileInput" accept="image/*,.pdf" onchange="bestandGekozen(this)">
-    <div id="fileName" style="font-size:11px;color:#1A237E;margin:4px 0"></div>
+    <div id="fileName" class="filename"></div>
 
     <div class="form-row">
       <label>Wat is dit?</label>
@@ -257,7 +266,7 @@ function openBonUpload() {
 
     <button class="btn" id="uploadBtn" onclick="upload()" disabled>Uploaden naar Google Drive</button>
     <div class="status" id="status"></div>
-    <div class="tip">💡 Na het uploaden kunt u de kosten registreren via het formulier (Boekhouding → Nieuw invoeren).</div>
+    <div class="tip">Na uploaden registreer je de kosten via Boekhoudbaar → Nieuwe boeking.</div>
 
     <script>
       var fileData = null;
@@ -283,12 +292,12 @@ function openBonUpload() {
       function upload() {
         if (!fileData) return;
         document.getElementById('uploadBtn').disabled = true;
-        document.getElementById('uploadBtn').textContent = 'Bezig met uploaden...';
-        toonStatus('Uploaden...', '#1A237E');
+        document.getElementById('uploadBtn').textContent = 'Bezig met uploaden…';
+        toonStatus('Uploaden…', 'info');
 
         google.script.run
           .withSuccessHandler(function(url) {
-            toonStatus('✓ Opgeslagen in Google Drive!', 'green');
+            toonStatus('Opgeslagen in Google Drive.', 'green');
             document.getElementById('uploadBtn').textContent = 'Nog een bestand uploaden';
             document.getElementById('uploadBtn').disabled = false;
             fileData = null;
@@ -307,13 +316,14 @@ function openBonUpload() {
       function toonStatus(tekst, kleur) {
         var el = document.getElementById('status');
         el.style.display = 'block';
-        el.style.color = kleur;
-        el.style.background = kleur === 'green' ? '#E8F5E9' : kleur === 'red' ? '#FFEBEE' : '#E3F2FD';
+        if (kleur === 'green')      { el.style.background = '#E6F7F4'; el.style.color = '#0D1B4E'; el.style.borderColor = 'rgba(46,196,182,.35)'; }
+        else if (kleur === 'red')   { el.style.background = '#FDECEC'; el.style.color = '#B91C1C'; el.style.borderColor = '#F5B3B3'; }
+        else                         { el.style.background = '#F7F9FC'; el.style.color = '#5F6B7A'; el.style.borderColor = '#E5EAF2'; }
         el.textContent = tekst;
       }
     </script>
-  `).setWidth(480).setHeight(520);
-  SpreadsheetApp.getUi().showModalDialog(html, '📸 Bon uploaden');
+  `).setWidth(500).setHeight(560);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Bon of factuur uploaden');
 }
 
 /**
