@@ -200,7 +200,7 @@ function betaalPagina_(e) {
   }
   .herroepingsrecht label{display:flex;gap:10px;align-items:flex-start;font-weight:normal;margin-bottom:8px;cursor:pointer}
   .herroepingsrecht label:last-child{margin-bottom:0}
-  .herroepingsrecht input[type=checkbox]{width:auto;margin-top:3px;flex-shrink:0;accent-color:#2EC4B6}
+  .herroepingsrecht input[type=checkbox]{width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:#2EC4B6;cursor:pointer}
   .btn{
     width:100%;padding:15px 18px;background:#0D1B4E;color:#fff;border:none;
     border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;
@@ -212,6 +212,17 @@ function betaalPagina_(e) {
   .fout{
     background:#FDECEC;color:#B91C1C;padding:10px 14px;border-radius:6px;
     font-size:13px;margin-top:12px;display:none;border:1px solid #F5B3B3;
+    animation:slideDown .25s ease;
+  }
+  @keyframes slideDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .prijs{animation:scaleIn .6s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+  @media(max-width:480px){
+    .card{padding:24px 18px}
+    h1{font-size:19px}
+    .prijs{font-size:36px}
+    .voordelen li{font-size:13px}
+    .btn{font-size:14px;padding:14px 16px}
   }
   .hint{font-size:12px;color:#5F6B7A;text-align:center;margin-top:14px;line-height:1.5}
   .hint strong{color:#1A1A1A;font-weight:600}

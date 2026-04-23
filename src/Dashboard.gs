@@ -688,7 +688,8 @@ function _bouwDashboardHtml_() {
     '.btn-ref:hover{background:rgba(255,255,255,.25)}' +
     '.body{flex:1;overflow-y:auto;padding:14px 16px}' +
     '.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}' +
-    '.kpi{background:white;border-radius:8px;padding:13px 14px;border:1px solid #E5E7EB;box-shadow:0 1px 2px rgba(0,0,0,.05)}' +
+    '.kpi{background:white;border-radius:8px;padding:13px 14px;border:1px solid #E5E7EB;box-shadow:0 1px 2px rgba(0,0,0,.05);transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}' +
+    '.kpi:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(13,27,78,.08);border-color:#D0D7E2}' +
     '.kpi .lbl{font-size:10px;font-weight:bold;color:#6B7280;text-transform:uppercase;letter-spacing:.5px}' +
     '.kpi .val{font-size:19px;font-weight:bold;color:#111827;margin:5px 0 3px;line-height:1}' +
     '.kpi .sub{font-size:11px;color:#9CA3AF}' +
