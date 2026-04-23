@@ -230,7 +230,7 @@ function slaDriverLinksOpInInstellingen_(jaar) {
 }
 
 // ─────────────────────────────────────────────
-//  NIEUW BOEKJAAR AANMAKEN
+//  NIEUW BOEKJAAR AANMAKEN (legacy — alleen Drive structuur)
 // ─────────────────────────────────────────────
 function maakNieuwBoekjaar() {
   const ui = SpreadsheetApp.getUi();
@@ -247,4 +247,92 @@ function maakNieuwBoekjaar() {
   slaDriverLinksOpInInstellingen_(jaar);
 
   ui.alert('Boekjaar ' + jaar + ' aangemaakt.\nGoogle Drive mappen staan klaar.\nLinks zijn opgeslagen in het tabblad Instellingen.');
+}
+
+// ─────────────────────────────────────────────
+//  JAARAFSLUITING WIZARD
+// ─────────────────────────────────────────────
+/**
+ * Sluit het huidige boekjaar af en bereidt het volgende voor:
+ *  1. Archiveert de huidige spreadsheet naar Drive
+ *  2. Reset factuurnummer- en inkooptellers naar 1
+ *  3. Werkt de factuurprefix bij met het nieuwe jaar (bijv. F2027-)
+ *  4. Werkt Boekjaar start/einde bij in Instellingen
+ *  5. Maakt Drive-mappen aan voor het nieuwe jaar
+ */
+function sluitJaarAf() {
+  const ui = SpreadsheetApp.getUi();
+  const huidigJaar = new Date().getFullYear();
+  const nieuwJaar  = huidigJaar + 1;
+
+  const bevestiging = ui.alert(
+    'Jaarafsluiting ' + huidigJaar,
+    'Dit doet het volgende:\n\n' +
+    '✓ Archief-kopie van huidige spreadsheet opslaan in Drive\n' +
+    '✓ Factuurnummerteller resetten naar 1 (voor ' + nieuwJaar + ')\n' +
+    '✓ Factuurprefix bijwerken naar F' + nieuwJaar + '-\n' +
+    '✓ Boekjaar-instellingen bijwerken naar ' + nieuwJaar + '\n' +
+    '✓ Drive-mappen aanmaken voor ' + nieuwJaar + '\n\n' +
+    'Doorgaan?',
+    ui.ButtonSet.YES_NO
+  );
+  if (bevestiging !== ui.Button.YES) return;
+
+  const ss    = getSpreadsheet_();
+  const props = PropertiesService.getScriptProperties();
+  const fouten = [];
+
+  // 1. Archiveer huidige spreadsheet
+  try {
+    const archief = ss.copy('Boekhoudbaar ' + huidigJaar + ' — Archief');
+    schrijfAuditLog_('Jaarafsluiting', 'Archief aangemaakt: ' + archief.getUrl());
+  } catch (e) {
+    fouten.push('Archief niet gelukt: ' + e.message);
+  }
+
+  // 2. Reset tellers
+  props.setProperty(PROP.VOLGEND_FACTUUR_NR, '1');
+  props.setProperty(PROP.VOLGEND_INKOOP_NR,  '1');
+  _instellingenCache = null; // invalidate cache before writes
+
+  // 3. Factuurprefix + boekjaarinstellingen bijwerken in sheet
+  const instSheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
+  if (instSheet) {
+    const data = instSheet.getDataRange().getValues();
+    const updates = {
+      'Factuurprefix':   'F' + nieuwJaar + '-',
+      'Boekjaar start':  '01-01-' + nieuwJaar,
+      'Boekjaar einde':  '31-12-' + nieuwJaar,
+      'Gewerkte uren dit jaar': '0',
+      'Thuiswerk dagen per jaar': '0',
+    };
+    for (let i = 0; i < data.length; i++) {
+      const sleutel = String(data[i][0]);
+      if (Object.prototype.hasOwnProperty.call(updates, sleutel)) {
+        instSheet.getRange(i + 1, 2).setValue(updates[sleutel]);
+      }
+    }
+    _instellingenCache = null; // invalidate na writes
+  }
+
+  // 4. Drive-structuur nieuw boekjaar
+  try {
+    maakDriveStructuur_(nieuwJaar);
+    slaDriverLinksOpInInstellingen_(nieuwJaar);
+  } catch (e) {
+    fouten.push('Drive-mappen niet aangemaakt: ' + e.message);
+  }
+
+  schrijfAuditLog_('Jaarafsluiting voltooid', huidigJaar + ' → ' + nieuwJaar);
+
+  const foutTekst = fouten.length ? '\n\nWaarschuwingen:\n' + fouten.join('\n') : '';
+  ui.alert(
+    'Jaarafsluiting voltooid',
+    'Boekjaar ' + huidigJaar + ' is afgesloten.\n\n' +
+    '• Archief opgeslagen in Google Drive\n' +
+    '• Factuurnummers beginnen opnieuw bij 1\n' +
+    '• Factuurprefix: F' + nieuwJaar + '-\n' +
+    '• Drive-mappen aangemaakt voor ' + nieuwJaar + foutTekst,
+    ui.ButtonSet.OK
+  );
 }
