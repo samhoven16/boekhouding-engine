@@ -357,14 +357,20 @@ function vernieuwDebiteurenOverzicht() {
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.DEBITEUREN);
   sheet.clearContents();
+  sheet.clearFormats();
 
-  const headers = ['Factuurnummer', 'Datum', 'Vervaldatum', 'Klant', 'Bedrag incl.', 'Betaald', 'Openstaand', 'Dagen te laat', 'Status'];
-  zetHeaderRij_(sheet, headers);
+  // ── Kop ───────────────────────────────────────────────────────────────
+  sheet.getRange(1, 1, 1, 9).merge()
+    .setValue('DEBITEUREN — openstaande verkoopfacturen')
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
+    .setFontWeight('bold').setFontSize(13).setHorizontalAlignment('center');
+  sheet.setRowHeight(1, 36);
 
+  // ── Aging buckets (leeftijdsanalyse) ──────────────────────────────────
+  // Eerst alle open facturen verzamelen, dan buckets berekenen.
   const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
   const vandaag = new Date();
-  let rij = 2;
-  let totaalOpen = 0;
+  const open = [];
 
   for (let i = 1; i < vfData.length; i++) {
     const status = vfData[i][14];
@@ -372,37 +378,102 @@ function vernieuwDebiteurenOverzicht() {
 
     const incl = parseFloat(vfData[i][12]) || 0;
     const betaald = parseFloat(vfData[i][13]) || 0;
-    const open = rondBedrag_(incl - betaald);
-    if (open <= 0) continue;
+    const openBedrag = rondBedrag_(incl - betaald);
+    if (openBedrag <= 0) continue;
 
     const vervaldatum = vfData[i][3] ? new Date(vfData[i][3]) : null;
-    const dagenOver = vervaldatum ? Math.floor((vandaag - vervaldatum) / (1000 * 60 * 60 * 24)) : 0;
+    const dagenOver = vervaldatum && !isNaN(vervaldatum.getTime())
+      ? Math.floor((vandaag - vervaldatum) / (1000 * 60 * 60 * 24))
+      : 0;
 
-    sheet.appendRow([
-      vfData[i][1],  // Factuurnummer
-      vfData[i][2],  // Datum
-      vervaldatum,   // Vervaldatum
-      vfData[i][5],  // Klant
+    open.push({
+      factuurnummer: vfData[i][1],
+      datum: vfData[i][2],
+      vervaldatum,
+      klant: vfData[i][5],
       incl,
       betaald,
-      open,
-      dagenOver > 0 ? dagenOver : '',
+      openBedrag,
+      dagenOver,
       status,
-    ]);
-
-    if (dagenOver > 0) {
-      sheet.getRange(rij, 1, 1, 9).setBackground('#FFEBEE');
-    }
-
-    totaalOpen += open;
-    rij++;
+    });
   }
 
-  // Totaalregel — appendRow() returns Sheet, not Range; get range separately
+  // Bucket-indeling (positieve dagenOver = te laat; 0 of negatief = nog niet vervallen)
+  const bucket = { nietVervallen: 0, b0_30: 0, b30_60: 0, b60_90: 0, b90plus: 0 };
+  open.forEach(function(f) {
+    if (f.dagenOver <= 0)       bucket.nietVervallen += f.openBedrag;
+    else if (f.dagenOver <= 30) bucket.b0_30        += f.openBedrag;
+    else if (f.dagenOver <= 60) bucket.b30_60       += f.openBedrag;
+    else if (f.dagenOver <= 90) bucket.b60_90       += f.openBedrag;
+    else                        bucket.b90plus      += f.openBedrag;
+  });
+  const totaalOpen = Object.values(bucket).reduce(function(s, v) { return s + v; }, 0);
+
+  // Aging tabel (rij 3-5)
+  sheet.getRange(3, 1, 1, 5).setValues([[
+    'Nog niet vervallen',
+    '1–30 dagen te laat',
+    '31–60 dagen te laat',
+    '61–90 dagen te laat',
+    '90+ dagen te laat',
+  ]]).setBackground(KLEUREN.SECTIE_BG).setFontWeight('bold').setFontSize(10)
+     .setHorizontalAlignment('center').setFontColor(KLEUREN.HEADER_BG);
+  sheet.getRange(4, 1, 1, 5).setValues([[
+    rondBedrag_(bucket.nietVervallen),
+    rondBedrag_(bucket.b0_30),
+    rondBedrag_(bucket.b30_60),
+    rondBedrag_(bucket.b60_90),
+    rondBedrag_(bucket.b90plus),
+  ]]).setNumberFormat('€#,##0.00').setFontSize(14).setFontWeight('bold')
+     .setHorizontalAlignment('center').setFontColor(KLEUREN.HEADER_BG);
+
+  // Kleur-coderen: hoe ouder, hoe roder
+  sheet.getRange(4, 1).setBackground('#E8F5E9');
+  sheet.getRange(4, 2).setBackground('#FFF3E0');
+  sheet.getRange(4, 3).setBackground('#FFE0B2');
+  sheet.getRange(4, 4).setBackground('#FFCCBC');
+  sheet.getRange(4, 5).setBackground('#FFCDD2');
+  sheet.setRowHeight(4, 36);
+
+  // ── Detail tabel ──────────────────────────────────────────────────────
+  const detailHeaderRij = 6;
+  const headers = ['Factuurnummer', 'Datum', 'Vervaldatum', 'Klant', 'Bedrag incl.', 'Betaald', 'Openstaand', 'Dagen te laat', 'Status'];
+  sheet.getRange(detailHeaderRij, 1, 1, headers.length).setValues([headers])
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
+
+  // Sorteer: eerst oudste te-laat bovenaan, dan nog-niet-vervallen
+  open.sort(function(a, b) { return b.dagenOver - a.dagenOver; });
+
+  let rij = detailHeaderRij + 1;
+  open.forEach(function(f) {
+    sheet.appendRow([
+      f.factuurnummer, f.datum, f.vervaldatum, f.klant,
+      f.incl, f.betaald, f.openBedrag,
+      f.dagenOver > 0 ? f.dagenOver : '',
+      f.status,
+    ]);
+    if (f.dagenOver > 90)      sheet.getRange(rij, 1, 1, 9).setBackground('#FFCDD2');
+    else if (f.dagenOver > 60) sheet.getRange(rij, 1, 1, 9).setBackground('#FFE0B2');
+    else if (f.dagenOver > 30) sheet.getRange(rij, 1, 1, 9).setBackground('#FFF3E0');
+    else if (f.dagenOver > 0)  sheet.getRange(rij, 1, 1, 9).setBackground('#FFF9E6');
+    rij++;
+  });
+
+  // Totaal-regel
   sheet.appendRow(['', '', '', 'TOTAAL OPENSTAAND', '', '', totaalOpen, '', '']);
   sheet.getRange(rij, 1, 1, 9).setFontWeight('bold');
   sheet.getRange(rij, 5, 1, 3).setBackground(KLEUREN.SECTIE_BG);
-  sheet.getRange(2, 5, rij - 1, 3).setNumberFormat('€#,##0.00');
+  if (rij > detailHeaderRij + 1) {
+    sheet.getRange(detailHeaderRij + 1, 5, rij - detailHeaderRij, 3).setNumberFormat('€#,##0.00');
+  }
+
+  // Kolombreedtes voor leesbaarheid
+  sheet.setColumnWidths(1, 1, 130);  // Factuurnr
+  sheet.setColumnWidths(4, 1, 180);  // Klant
+  sheet.setColumnWidths(5, 3, 120);  // bedragen
+
+  ss.setActiveSheet(sheet);
 }
 
 // ─────────────────────────────────────────────
