@@ -21,9 +21,19 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     const iban = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '';
     const factuurprefix = getInstelling_('Factuurprefix') || 'F';
     const voettekst = getInstelling_('Factuur voettekst') || '';
+    const korActief = getInstelling_('KOR regeling actief') === 'Ja';
 
     const factuurnummer = formatFactuurnummer_(factuurNr, factuurprefix, 6);
     const sepaQr = haalSepaQrBase64_(iban, bedrijf, totalIncl, factuurnummer);
+
+    // KOR-verklaring — wettelijk verplicht op facturen als ondernemer
+    // onder de kleineondernemersregeling valt. Laat aan klant zien waarom
+    // er géén BTW is berekend (voorkomt "waarom staat hier geen BTW?" vraag).
+    const korVerklaring = korActief
+      ? `<div style="background:#FFF8E1;border:1px solid #F9A825;border-radius:4px;padding:10px 14px;margin-bottom:16px;font-size:10pt;color:#5A3F00">
+           <strong>Kleineondernemersregeling (KOR)</strong> — Er is geen btw in rekening gebracht, op basis van artikel 25 Wet OB.
+         </div>`
+      : '';
 
     const html = `
 <!DOCTYPE html>
@@ -129,6 +139,8 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
       </tr>
     </table>
   </div>
+
+  ${korVerklaring}
 
   <div class="betaalinfo">
     <h4>Betaalinformatie</h4>
