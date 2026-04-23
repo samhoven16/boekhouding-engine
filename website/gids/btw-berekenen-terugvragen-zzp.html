@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>BTW berekenen en terugvragen als ZZP — rekenvoorbeeld 2026 | Boekhoudbaar</title>
+<meta name="description" content="Hoe bereken je BTW over je facturen en hoe vraag je inkoop-BTW terug? Met concreet rekenvoorbeeld, stappenplan eerste aangifte, en alle bronnen.">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/gids/btw-berekenen-terugvragen-zzp/">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+<meta property="og:type" content="article">
+<meta property="og:title" content="BTW berekenen en terugvragen als ZZP — rekenvoorbeeld">
+<meta property="og:description" content="Concreet uitgewerkt rekenvoorbeeld voor BTW-berekening + eerste aangifte walkthrough.">
+<meta property="og:url" content="https://www.boekhoudbaar.nl/gids/btw-berekenen-terugvragen-zzp/">
+<meta property="og:image" content="https://www.boekhoudbaar.nl/og-image.svg">
+<meta property="og:locale" content="nl_NL">
+<meta property="article:author" content="Sam Hoven">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Article",
+      "@id": "https://www.boekhoudbaar.nl/gids/btw-berekenen-terugvragen-zzp/#article",
+      "headline": "BTW berekenen en terugvragen als ZZP — rekenvoorbeeld 2026",
+      "description": "Rekenvoorbeeld + eerste aangifte walkthrough voor ZZP'ers.",
+      "datePublished": "2026-04-23",
+      "dateModified": "2026-04-23",
+      "author": {"@type": "Person", "name": "Sam Hoven", "url": "https://www.boekhoudbaar.nl/#sam"},
+      "publisher": {"@type": "Organization", "name": "Boekhoudbaar", "url": "https://www.boekhoudbaar.nl/"}
+    }
+  ]
+}
+</script>
+
+<link rel="stylesheet" href="/gids/gids.css">
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
+</head>
+<body>
+
+<nav class="nav" aria-label="Hoofdnavigatie">
+  <div class="nav-inner">
+    <a href="/" class="logo-link"><img src="/logo.svg" alt="Boekhoudbaar" width="130" height="26"></a>
+    <ul>
+      <li><a href="/#hoe-het-werkt">Hoe het werkt</a></li>
+      <li><a href="/#prijs">Prijs</a></li>
+      <li><a href="/gids/">Gidsen</a></li>
+      <li><a href="/kopen" class="nav-cta">Start voor €49</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main class="gids">
+
+  <p class="breadcrumb">
+    <a href="/">Boekhoudbaar</a><span>›</span>
+    <a href="/gids/">Gidsen</a><span>›</span>
+    BTW berekenen ZZP
+  </p>
+
+  <h1>BTW berekenen en terugvragen als ZZP — rekenvoorbeeld 2026</h1>
+
+  <div class="meta-regel">
+    <span>Door <strong>Sam Hoven</strong></span>
+    <span>Bijgewerkt: april 2026</span>
+    <span>Leestijd: ~8 minuten</span>
+  </div>
+
+  <div class="disclosure" role="note" style="background:#EEF2FF;border-left:4px solid #0D1B4E;color:#1A2A6B;">
+    <strong>Informatie —</strong> deze gids beschrijft standaardsituaties met Nederlandse BTW (21%, 9%, 0%). Bij intracommunautair verkeer, import buiten EU, of bijzondere sectoren gelden aparte regels. Voor jouw specifieke situatie: raadpleeg <a href="https://www.belastingdienst.nl" target="_blank" rel="noopener noreferrer">belastingdienst.nl</a> of een fiscalist.
+  </div>
+
+  <div class="tldr">
+    <h2>Samenvatting</h2>
+    <ul>
+      <li><strong>BTW-saldo</strong> = BTW die je in rekening bracht (verkoopfacturen) − BTW die je zelf betaalde (inkoopfacturen)</li>
+      <li>Saldo positief → afdragen aan Belastingdienst. Negatief → terugvragen (krijg je terug op je zakelijke rekening)</li>
+      <li>2026 tarieven: <strong>21%</strong> (standaard), <strong>9%</strong> (voedsel/boeken/diensten), <strong>0%</strong> (export buiten EU)</li>
+      <li>Aangifte per kwartaal; deadline 1 maand na kwartaaleinde (Q1 → 30 april)</li>
+      <li>Bron: <a href="https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/zakelijk/btw/tarieven_en_vrijstellingen/" target="_blank" rel="noopener noreferrer">belastingdienst.nl — BTW-tarieven</a></li>
+    </ul>
+  </div>
+
+  <h2 id="hoe-werkt">Hoe BTW werkt — kort en conceptueel</h2>
+
+  <p>BTW is een doorgeefhuis. Jij int BTW namens de overheid, en je mag de BTW die je zelf hebt betaald daarvan aftrekken. Het verschil stort je (of krijg je terug).</p>
+
+  <p><strong>Twee kanten:</strong></p>
+  <ul>
+    <li><strong>Te betalen BTW</strong> = BTW op je verkopen (jij factureerde €100 + 21% = €121 aan je klant)</li>
+    <li><strong>Te vorderen BTW (voorbelasting)</strong> = BTW op je inkopen (je kocht een laptop van €1.210 incl BTW = €1.000 + €210)</li>
+  </ul>
+
+  <p>Saldo: €21 ontvangen − €210 betaald = <strong>€189 terugvordering</strong>.</p>
+
+  <h2 id="tarieven">De 3 BTW-tarieven in 2026</h2>
+
+  <table class="vergelijk">
+    <thead><tr><th>Tarief</th><th>Voor wie</th><th>Voorbeelden</th></tr></thead>
+    <tbody>
+      <tr><td><strong>21%</strong></td><td>Standaard — de meeste ZZP-diensten</td><td>Consultancy, webdesign, marketing, training</td></tr>
+      <tr><td><strong>9%</strong></td><td>Specifieke producten/diensten</td><td>Voedsel, boeken, kapper, reparatie fietsen, cultureel</td></tr>
+      <tr><td><strong>0%</strong></td><td>Export buiten EU + bepaalde diensten</td><td>Software-SaaS aan bedrijf buiten EU, export goederen</td></tr>
+      <tr><td><strong>Vrijgesteld</strong></td><td>Bepaalde sectoren (apart van 0%)</td><td>Zorg, onderwijs, financiële diensten — geen aftrek inkoop-BTW</td></tr>
+    </tbody>
+  </table>
+
+  <p>Bron: <a href="https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/zakelijk/btw/tarieven_en_vrijstellingen/" target="_blank" rel="noopener noreferrer">belastingdienst.nl — BTW-tarieven en vrijstellingen</a>.</p>
+
+  <div class="tip-blok" style="background:#FFFBEB;border-left:4px solid #F59E0B;padding:14px 18px;border-radius:0 8px 8px 0;margin:20px 0;font-size:14px;color:#78350F;">
+    <strong>Belangrijk onderscheid —</strong> "0%" is niet hetzelfde als "Vrijgesteld". Bij 0% mag je inkoop-BTW terugvragen (bijv. export naar de VS). Bij vrijgesteld <em>niet</em>. Twijfel? Check bij belastingdienst.nl of je sector.
+  </div>
+
+  <h2 id="rekenvoorbeeld">Rekenvoorbeeld — een kwartaal voor een ZZP-consultant</h2>
+
+  <p>Laten we Q1 2026 doorrekenen voor een fictieve consultant:</p>
+
+  <h3>Verkoopfacturen Q1</h3>
+  <table class="vergelijk">
+    <thead><tr><th>Datum</th><th>Klant</th><th>Excl. BTW</th><th>BTW 21%</th><th>Incl.</th></tr></thead>
+    <tbody>
+      <tr><td>15 jan</td><td>Bedrijf A</td><td>€2.500</td><td>€525,00</td><td>€3.025,00</td></tr>
+      <tr><td>2 feb</td><td>Bedrijf B</td><td>€1.800</td><td>€378,00</td><td>€2.178,00</td></tr>
+      <tr><td>20 mrt</td><td>Bedrijf C</td><td>€3.200</td><td>€672,00</td><td>€3.872,00</td></tr>
+      <tr><td colspan="2"><strong>Totaal omzet</strong></td><td><strong>€7.500</strong></td><td><strong>€1.575,00</strong></td><td><strong>€9.075,00</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Inkoopfacturen Q1 (met BTW)</h3>
+  <table class="vergelijk">
+    <thead><tr><th>Wat</th><th>Excl. BTW</th><th>BTW 21%</th><th>Incl.</th></tr></thead>
+    <tbody>
+      <tr><td>Laptop (zakelijk)</td><td>€1.200</td><td>€252,00</td><td>€1.452,00</td></tr>
+      <tr><td>Software abonnementen</td><td>€180</td><td>€37,80</td><td>€217,80</td></tr>
+      <tr><td>Boekhoudsoftware (eenmalig)</td><td>€49</td><td>€10,29</td><td>€59,29</td></tr>
+      <tr><td>Co-working ruimte (3 mnd)</td><td>€450</td><td>€94,50</td><td>€544,50</td></tr>
+      <tr><td colspan="1"><strong>Totaal kosten</strong></td><td><strong>€1.879</strong></td><td><strong>€394,59</strong></td><td><strong>€2.273,59</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h3>BTW-saldo Q1</h3>
+  <p>Verschuldigde BTW (verkoop): <strong>€1.575,00</strong><br>
+  − Voorbelasting (inkoop): <strong>€394,59</strong><br>
+  = <strong>Te betalen aan Belastingdienst: €1.180,41</strong></p>
+
+  <p>Deadline: 30 april 2026. Betalen via automatische incasso of overboeking met het kenmerk dat in je aangifte staat.</p>
+
+  <div class="tip-blok" style="background:#F0FDF4;border-left:4px solid #22C55E;padding:14px 18px;border-radius:0 8px 8px 0;margin:20px 0;font-size:14px;color:#166534;">
+    <strong>Praktisch —</strong> Boekhoudbaar rekent dit automatisch uit per kwartaal en genereert een invulhulp die 1-op-1 past op Mijn Belastingdienst Zakelijk. Zie onze <a href="/gids/btw-aangifte-zzp/">BTW-aangifte gids</a>.
+  </div>
+
+  <h2 id="eerste-aangifte">Je eerste BTW-aangifte — stap voor stap</h2>
+
+  <p>De eerste keer dat je een BTW-aangifte indient, voelt het complex. Dit is wat je feitelijk doet:</p>
+
+  <ol>
+    <li>Log in op <a href="https://mijn.belastingdienst.nl/zakelijk" target="_blank" rel="noopener noreferrer">mijn.belastingdienst.nl/zakelijk</a> met eHerkenning of DigiD</li>
+    <li>Open de aangifte voor het betreffende kwartaal (je ontvangt ook een uitnodiging per post)</li>
+    <li>Vul de 7 rubrieken in:
+      <ul>
+        <li><strong>1a:</strong> omzet belast met 21% + verschuldigde BTW</li>
+        <li><strong>1b:</strong> omzet 9% + BTW</li>
+        <li><strong>1d:</strong> omzet 0% of vrijgesteld</li>
+        <li><strong>1e:</strong> BTW verlegd (EU-zakelijk)</li>
+        <li><strong>2a:</strong> BTW verlegd bij invoer</li>
+        <li><strong>4a:</strong> inkopen met verlegd BTW</li>
+        <li><strong>5b:</strong> voorbelasting (aftrekbare inkoop-BTW) — <em>hier vraag je je BTW terug</em></li>
+      </ul>
+    </li>
+    <li>Klik op "Controleer" — systeem rekent saldo uit</li>
+    <li>Klik op "Verstuur" — je krijgt een bevestiging per e-mail en in je postvak</li>
+    <li>Indien te betalen: overboek binnen de deadline (of gebruik automatische incasso)</li>
+  </ol>
+
+  <div class="tip-blok" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;border-radius:0 8px 8px 0;margin:20px 0;font-size:14px;color:#7F1D1D;">
+    <strong>Te late aangifte —</strong> automatische boete van €68 (herhaling loopt op). Kun je niet betalen maar wel aangifte doen? Dat kán. <em>Bel de Belastingdienst voor uitstel</em> (<a href="tel:08000543">0800-0543</a>) vóór de deadline. Dit wordt vrijwel altijd verleend bij eerste verzoek.
+  </div>
+
+  <div class="auteur">
+    <div class="auteur-avatar"><img src="/sam-hoven.jpg" alt="Sam Hoven" width="52" height="52" loading="lazy" decoding="async"></div>
+    <div class="auteur-tekst">
+      <strong>Sam Hoven — maker van Boekhoudbaar</strong>
+      Mijn eerste BTW-aangifte duurde 45 minuten — voornamelijk omdat ik niet wist wat rubriek 3 van rubriek 4 onderscheidt. Na de 3e aangifte ben je het in 5 minuten kwijt. Leercurve is echt kort.
+    </div>
+  </div>
+
+  <section class="faq" aria-label="Veelgestelde vragen">
+    <h2 id="faq">Veelgestelde vragen</h2>
+
+    <details>
+      <summary>Moet ik ook BTW rekenen als ik onder €20.000 blijf?</summary>
+      <p>Alleen als je niet bent aangemeld voor de KOR. Met KOR factureer je zonder BTW en hoef je geen aangifte te doen. Zie onze <a href="/gids/btw-aangifte-zzp/#kor">KOR-sectie</a>.</p>
+    </details>
+
+    <details>
+      <summary>Hoe vaak moet ik BTW-aangifte doen?</summary>
+      <p>Standaard per kwartaal. Bij &gt;€15.000 afdracht per jaar kan de Belastingdienst maandaangifte opleggen. Jaaraangifte alleen op aanvraag bij kleine bedragen. Bron: <a href="https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/zakelijk/btw/btw_aangifte_doen_en_betalen/" target="_blank" rel="noopener noreferrer">belastingdienst.nl</a>.</p>
+    </details>
+
+    <details>
+      <summary>Wat als ik per ongeluk verkeerd heb gerekend — hoe corrigeer ik?</summary>
+      <p>Bij kleine fouten (&lt;€1.000) mag je dit in de volgende aangifte corrigeren. Bij grotere fouten: suppletie-aangifte indienen via <a href="https://mijn.belastingdienst.nl/zakelijk" target="_blank" rel="noopener noreferrer">Mijn Belastingdienst Zakelijk</a>. Zelf corrigeren vóór controle voorkomt vaak boetes.</p>
+    </details>
+
+    <details>
+      <summary>Mag ik BTW op boodschappen voor kantoor terugvragen?</summary>
+      <p>Alleen als het echt zakelijk is (koffie voor klant) en de bon aan factuureisen voldoet (BTW apart vermeld, bedrijfsnaam erop). Kleine bonnen &lt;€100 mogen soms zonder bedrijfsnaam. Niet: privé-boodschappen "omdat je thuis werkt".</p>
+    </details>
+
+    <details>
+      <summary>Kan ik voor grote aankopen vooraf BTW terugvragen?</summary>
+      <p>Nee, je vraagt terug in de aangifte van het kwartaal waarin je de factuur ontvangt. Je mag wel bij meer-dan-normaal-betalen vragen om <a href="https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/zakelijk/btw/btw_aangifte_doen_en_betalen/" target="_blank" rel="noopener noreferrer">maandaangifte</a> zodat je sneller terugkrijgt.</p>
+    </details>
+  </section>
+
+  <h2 id="verder">Verder lezen</h2>
+  <ul>
+    <li><a href="/gids/btw-aangifte-zzp/">BTW aangifte als ZZP'er — stap voor stap</a></li>
+    <li><a href="/gids/jaarafsluiting-zzp-checklist/">Jaarafsluiting ZZP checklist</a></li>
+    <li><a href="/gids/aftrekbare-kosten-zzp/">Aftrekbare kosten als ZZP</a></li>
+    <li><a href="/gids/zelf-boekhouding-doen-zzp/">Zelf boekhouding doen</a></li>
+  </ul>
+
+  <div class="cta-onderaan" style="background:linear-gradient(135deg,#0D1B4E 0%,#1A3A7E 100%);color:#fff;padding:32px 28px;border-radius:12px;margin:40px 0 20px;text-align:center;">
+    <h3 style="color:#fff;margin-bottom:8px;">BTW automatisch per kwartaal</h3>
+    <p style="color:rgba(255,255,255,.85);margin-bottom:18px;">Boekhoudbaar berekent per factuur je BTW-saldo, houdt kwartaaltotalen bij, en geeft je een invulhulp voor Mijn Belastingdienst Zakelijk.</p>
+    <a href="/kopen" class="btn" style="background:#2EC4B6;color:#0D1B4E;display:inline-block;padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;">Bekijk Boekhoudbaar — €49 eenmalig</a>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 Boekhoudbaar &mdash; <a href="/privacy">Privacy</a> &middot; <a href="/voorwaarden">Voorwaarden</a> &middot; <a href="/transparantie">Transparantie</a></p>
+</footer>
+
+</body>
+</html>
