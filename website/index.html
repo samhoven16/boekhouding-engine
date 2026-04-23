@@ -465,11 +465,18 @@
     margin-top: 40px;
     align-items: start;
   }
+  .oprichter-foto {
+    width: 200px; height: 200px; border-radius: 50%;
+    object-fit: cover; object-position: center top;
+    border: 4px solid var(--wit);
+    box-shadow: var(--shadow);
+    display: block;
+  }
   .oprichter-foto-initial {
     width: 200px; height: 200px; border-radius: 50%;
     background: linear-gradient(135deg, #0D1B4E 0%, #1A3A7E 100%);
     color: var(--wit);
-    display: flex;
+    display: none;
     align-items: center; justify-content: center;
     font-size: 72px; font-weight: 800; letter-spacing: -0.02em;
     border: 4px solid var(--wit);
@@ -882,7 +889,8 @@
     <p class="section-label">Waarom ik dit maak</p>
     <h2 id="oprichter-heading">Ik heb het gewoon voor mezelf gebouwd — en toen vroegen anderen erom</h2>
     <div class="oprichter-grid" data-reveal>
-      <div class="oprichter-foto-initial" aria-label="Oprichter-initialen: Sam Hoven">SH</div>
+      <img class="oprichter-foto" src="/sam-hoven.jpg" alt="Sam Hoven, maker van Boekhoudbaar" width="200" height="200" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="oprichter-foto-initial" aria-hidden="true">SH</div>
       <div class="oprichter-tekst">
         <p class="oprichter-quote">"Ik wilde mijn eigen boekhouding kunnen openen zonder afhankelijk te zijn van andermans software."</p>
         <p>Boekhoudbaar begon als mijn eigen administratie. Een map in Drive, een paar Sheets, wat formules die ik steeds verder uitwerkte. Geen abonnement dat elk jaar duurder werd. Geen export-gedoe als ik iets anders wilde proberen. Gewoon bestanden, op mijn eigen Drive, die van mij zijn.</p>
