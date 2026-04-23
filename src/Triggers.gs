@@ -1017,8 +1017,11 @@ function stuurBetalingsherinneringen() {
     if (!klantEmail) continue;
 
     const fnr = data[i][1];
-    const bedragOpen = rondBedrag_(data[i][12] - data[i][13]);
+    // Defensief parsen: als een klant handmatig 'betaald' of een datum in
+    // betaald-kolom zet, geven we liever €0 dan NaN in de herinneringsmail.
+    const bedragOpen = rondBedrag_((parseFloat(data[i][12]) || 0) - (parseFloat(data[i][13]) || 0));
     const vervaldatum = data[i][3];
+    if (bedragOpen <= 0) continue; // Geen herinnering sturen voor volledig betaalde factuur
 
     GmailApp.sendEmail(klantEmail,
       `Betalingsherinnering factuur ${fnr}`,
