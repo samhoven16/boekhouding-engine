@@ -58,7 +58,7 @@ function toonWelkomstWizard() {
 
   // Stap 1: Welkom
   const stap1 = ui.alert(
-    '🎉 Welkom bij Boekhouding Engine!',
+    '🎉 Welkom bij Boekhoudbaar!',
     'Fijn dat u ons programma heeft gekozen.\n\n' +
     'In de volgende stappen helpen we u in 3 minuten op weg:\n\n' +
     '  ✅ Stap 1: Uw licentie activeren\n' +
@@ -145,7 +145,7 @@ function toonUpdateMelding_(oudeVersie, nieuweVersie) {
   try {
     SpreadsheetApp.getActiveSpreadsheet().toast(
       `Bijgewerkt van versie ${oudeVersie} naar ${nieuweVersie}. Zie Boekhouding → Wat is er nieuw? voor details.`,
-      '✅ Boekhouding Engine bijgewerkt',
+      '✅ Boekhoudbaar bijgewerkt',
       8
     );
   } catch (e) {

@@ -15,8 +15,8 @@ function vernieuwDashboard() {
     try { SpreadsheetApp.getUi().alert('Tabblad "Dashboard" ontbreekt. Run setup() via Boekhouding → Instellingen → Herinstalleer.'); } catch (_) {}
     return;
   }
-  // Non-blokkerende toast zodat gebruiker altijd ziet dat het draait
-  try { ss.toast('Dashboard wordt bijgewerkt…', 'Boekhoudbaar', 3); } catch (_) {}
+  // Progressie-indicator (verdwijnt na 30s als code vastloopt)
+  try { ss.toast('Dashboard wordt bijgewerkt…', 'Boekhoudbaar', 30); } catch (_) {}
   sheet.clearContents();
   sheet.clearFormats();
 
@@ -238,7 +238,7 @@ function vernieuwDashboard() {
     rij++;
   });
 
-  // ── ROI Sectie: "Wat heeft Boekhouding Engine u opgeleverd?" ─────────
+  // ── ROI Sectie: "Wat heeft Boekhoudbaar je opgeleverd?" ──────────────
   rij += 2;
   sheet.getRange(rij, 1, 1, 8).merge()
     .setValue('WAT HEEFT BOEKHOUDBAAR JE OPGELEVERD?')
@@ -441,7 +441,8 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
   if (kpi.nettowinst < 0) waarschuwingen.push(['LET OP', 'Bedrijf maakt verlies dit boekjaar!', '#FFCDD2']);
 
   // Vervallen facturen
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  const _vfWs = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  const vfData = _vfWs ? _vfWs.getDataRange().getValues() : [[]];
   const aantalVervallen = vfData.slice(1).filter(r => r[14] === FACTUUR_STATUS.VERVALLEN).length;
   if (aantalVervallen > 0) waarschuwingen.push(['LET OP', `${aantalVervallen} vervallen factuur/facturen`, '#FFF3E0']);
 
@@ -467,8 +468,9 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
     waarschuwingen.push(['KRITIEK', `Cash runway: ~${kpi.runway} maand(en) bij huidig uitgavenpatroon. Verlaag kosten of vergroot omzet.`, '#FFCDD2']);
   }
 
-  // Crediteuren vervallen waarschuwing (nieuw: Blue10 AP automation pijnpunt)
-  const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  // Crediteuren vervallen waarschuwing
+  const _ifWs = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  const ifData = _ifWs ? _ifWs.getDataRange().getValues() : [[]];
   let vervallenCrediteuren = 0;
   const vandaag30 = nu;
   for (let i = 1; i < ifData.length; i++) {
@@ -638,6 +640,9 @@ function getDashboardData() {
       banksaldo:          kpi.banksaldo,
       nettowinst:         kpi.nettowinst,
       winstmarge:         kpi.winstmarge,
+      verwachtIn30d:      kpi.verwachtIn30d,
+      burnRate:           kpi.burnRate,
+      runway:             kpi.runway,
       omzetMaand:         rondBedrag_(omzetMaand),
       kostenMaand:        rondBedrag_(kostenMaand),
       btwSaldo:           kpi.btwSaldo,
@@ -688,7 +693,8 @@ function _bouwDashboardHtml_() {
     '.btn-ref:hover{background:rgba(255,255,255,.25)}' +
     '.body{flex:1;overflow-y:auto;padding:14px 16px}' +
     '.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}' +
-    '.kpi{background:white;border-radius:8px;padding:13px 14px;border:1px solid #E5E7EB;box-shadow:0 1px 2px rgba(0,0,0,.05)}' +
+    '.kpi{background:white;border-radius:8px;padding:13px 14px;border:1px solid #E5E7EB;box-shadow:0 1px 2px rgba(0,0,0,.05);transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}' +
+    '.kpi:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(13,27,78,.08);border-color:#D0D7E2}' +
     '.kpi .lbl{font-size:10px;font-weight:bold;color:#6B7280;text-transform:uppercase;letter-spacing:.5px}' +
     '.kpi .val{font-size:19px;font-weight:bold;color:#111827;margin:5px 0 3px;line-height:1}' +
     '.kpi .sub{font-size:11px;color:#9CA3AF}' +
@@ -735,6 +741,14 @@ function _bouwDashboardHtml_() {
     '  document.getElementById("h-tm").textContent="Bijgewerkt: "+d.bijgewerkt;' +
     '  var k=d.kpi,btw=k.btwDeadline||{kwartaal:"?",datum:"?",dagenOver:"?",urgent:false},h="";' +
     '  var nettoMaand=Math.round(((k.omzetMaand||0)-(k.kostenMaand||0))*100)/100;' +
+    '  var leeg=!k.banksaldo&&!k.omzetMaand&&!k.kostenMaand&&!k.aantalOpenFacturen&&!k.btwSaldo;' +
+    '  if(leeg){' +
+    '    h+=\'<div style="background:linear-gradient(135deg,#F7F9FC 0%,#E6F7F4 100%);border:1px solid #D0ECE6;border-radius:10px;padding:22px 24px;margin-bottom:14px">\';' +
+    '    h+=\'<div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#2EC4B6;margin-bottom:6px">Eerste stap</div>\';' +
+    '    h+=\'<div style="font-size:15px;font-weight:700;color:#0D1B4E;margin-bottom:6px">Welkom! Start met je eerste boeking.</div>\';' +
+    '    h+=\'<div style="font-size:12px;color:#5F6B7A;line-height:1.55">De getallen hieronder vullen zich vanzelf zodra je een factuur of kostenpost toevoegt. Tip: vul eerst Instellingen → Bedrijfsgegevens in.</div>\';' +
+    '    h+=\'</div>\';' +
+    '  }' +
     '  h+=\'<div class="kpi-grid">\';' +
     '  h+=kpi("Banksaldo",fmt(k.banksaldo||0),"",(k.banksaldo||0)<0?"krit":(k.banksaldo||0)>0?"goed":"");' +
     '  h+=kpi("Omzet deze maand",fmt(k.omzetMaand),"",k.omzetMaand>0?"goed":"");' +
@@ -742,7 +756,9 @@ function _bouwDashboardHtml_() {
     '  h+=kpi("Netto (maand)",fmt(nettoMaand),"",nettoMaand>0?"goed":nettoMaand<0?"krit":"");' +
     '  h+=\'</div>\';' +
     '  h+=\'<div class="kpi-grid" style="margin-bottom:14px">\';' +
-    '  h+=kpi("Open facturen",k.aantalOpenFacturen+" stuks",fmt(k.debiteurenOpen),k.aantalOpenFacturen>0?"warn":"goed");' +
+    '  var openSub=fmt(k.debiteurenOpen);' +
+    '  if(k.verwachtIn30d>0){openSub+=" · "+fmt(k.verwachtIn30d)+" binnen 30d";}' +
+    '  h+=kpi("Open facturen",k.aantalOpenFacturen+" stuks",openSub,k.aantalOpenFacturen>0?"warn":"goed");' +
     '  h+=kpi("Te betalen BTW",fmt(k.btwSaldo||0),"",(k.btwSaldo||0)>0?"warn":"goed");' +
     '  h+=kpi("Open crediteuren",fmt(k.crediteurenOpen||0),"","");' +
     '  h+=kpi("BTW aangifte",btw.kwartaal+" \u2014 "+btw.datum,btw.dagenOver+" dagen over",btw.urgent?"krit":"");' +

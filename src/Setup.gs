@@ -965,39 +965,48 @@ function getFormUrl_(formId) {
 //  TRIGGERS INSTALLEREN
 // ─────────────────────────────────────────────
 function installeelTriggers_() {
-  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
-
   const props = PropertiesService.getScriptProperties();
   const ss = getSpreadsheet_();
+  const nieuweTriggers = [];
 
-  // onOpen trigger
-  ScriptApp.newTrigger('onOpen')
-    .forSpreadsheet(ss)
-    .onOpen()
-    .create();
+  // Maak nieuwe triggers EERST aan — verwijder pas als alles gelukt is
+  nieuweTriggers.push(
+    ScriptApp.newTrigger('onOpen')
+      .forSpreadsheet(ss)
+      .onOpen()
+      .create()
+  );
 
-  // Hoofdformulier trigger
   const hoofdFormId = props.getProperty(PROP.FORM_HOOFD_ID);
   if (hoofdFormId) {
     try {
-      ScriptApp.newTrigger('verwerkHoofdformulier')
-        .forForm(FormApp.openById(hoofdFormId))
-        .onFormSubmit()
-        .create();
+      nieuweTriggers.push(
+        ScriptApp.newTrigger('verwerkHoofdformulier')
+          .forForm(FormApp.openById(hoofdFormId))
+          .onFormSubmit()
+          .create()
+      );
       Logger.log('Hoofdformulier trigger geïnstalleerd');
     } catch (e) {
       Logger.log('Trigger fout hoofdformulier: ' + e.message);
     }
   }
 
-  // Dagelijkse trigger: factuurherinneringen, BTW deadlines, dashboard
-  ScriptApp.newTrigger('dagelijkseTaken')
-    .timeBased()
-    .atHour(8)
-    .everyDays(1)
-    .create();
+  nieuweTriggers.push(
+    ScriptApp.newTrigger('dagelijkseTaken')
+      .timeBased()
+      .atHour(8)
+      .everyDays(1)
+      .create()
+  );
 
-  Logger.log('Triggers geïnstalleerd');
+  // Verwijder nu pas de oude triggers (nieuwe zijn al actief)
+  const nieuwIds = new Set(nieuweTriggers.map(t => t.getUniqueId()));
+  ScriptApp.getProjectTriggers()
+    .filter(t => !nieuwIds.has(t.getUniqueId()))
+    .forEach(t => ScriptApp.deleteTrigger(t));
+
+  Logger.log('Triggers geïnstalleerd (' + nieuweTriggers.length + ' actief)');
 }
 
 // ─────────────────────────────────────────────

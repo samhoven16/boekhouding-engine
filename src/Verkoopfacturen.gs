@@ -21,9 +21,19 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     const iban = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '';
     const factuurprefix = getInstelling_('Factuurprefix') || 'F';
     const voettekst = getInstelling_('Factuur voettekst') || '';
+    const korActief = getInstelling_('KOR regeling actief') === 'Ja';
 
     const factuurnummer = formatFactuurnummer_(factuurNr, factuurprefix, 6);
     const sepaQr = haalSepaQrBase64_(iban, bedrijf, totalIncl, factuurnummer);
+
+    // KOR-verklaring — wettelijk verplicht op facturen als ondernemer
+    // onder de kleineondernemersregeling valt. Laat aan klant zien waarom
+    // er géén BTW is berekend (voorkomt "waarom staat hier geen BTW?" vraag).
+    const korVerklaring = korActief
+      ? `<div style="background:#FFF8E1;border:1px solid #F9A825;border-radius:4px;padding:10px 14px;margin-bottom:16px;font-size:10pt;color:#5A3F00">
+           <strong>Kleineondernemersregeling (KOR)</strong> — Er is geen btw in rekening gebracht, op basis van artikel 25 Wet OB.
+         </div>`
+      : '';
 
     const html = `
 <!DOCTYPE html>
@@ -130,6 +140,8 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     </table>
   </div>
 
+  ${korVerklaring}
+
   <div class="betaalinfo">
     <h4>Betaalinformatie</h4>
     <div style="display:flex;gap:20px;align-items:flex-start">
@@ -143,8 +155,10 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
         </p>
       </div>
       ${sepaQr ? `<div style="text-align:center;flex-shrink:0">
-        <img src="${sepaQr}" width="90" height="90" alt="SEPA QR">
-        <div style="font-size:8pt;color:#888;margin-top:2px">Scan om te betalen</div>
+        <div style="display:inline-block;border:2px solid ${pkKleur};border-radius:8px;padding:4px;background:#fff">
+          <img src="${sepaQr}" width="90" height="90" alt="SEPA QR">
+        </div>
+        <div style="font-size:9pt;color:${pkKleur};font-weight:600;margin-top:6px">Scan &amp; betaal →</div>
       </div>` : ''}
     </div>
   </div>
@@ -431,7 +445,7 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
       } catch (e) { /* UBL optioneel */ }
     }
 
-    const onderwerp = `Factuur ${factuurNummer} van ${bedrijf}`;
+    const onderwerp = `Factuur ${factuurNummer} · ${formatBedrag_(bedragIncl)} · ${bedrijf}`;
     const tekst =
       `Beste ${klantnaam},\n\n` +
       `Bijgaand ontvangt u factuur ${factuurNummer}.\n\n` +
@@ -443,9 +457,32 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
       `o.v.v.: ${factuurNummer}\n\n` +
       `Met vriendelijke groet,\n${bedrijf}`;
 
+    const htmlBody =
+      '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;max-width:540px;margin:0;padding:0 0 24px;color:#1A1A1A">' +
+      '<div style="background:#0D1B4E;padding:20px 24px;border-radius:8px 8px 0 0">' +
+        '<div style="color:rgba(255,255,255,.78);font-size:11px;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:4px">Factuur</div>' +
+        '<div style="color:#fff;font-size:22px;font-weight:700">' + escHtml_(factuurNummer) + '</div>' +
+      '</div>' +
+      '<div style="background:#fff;border:1px solid #E5EAF2;border-top:none;border-radius:0 0 8px 8px;padding:22px 24px">' +
+        '<p style="margin:0 0 14px;font-size:14px">Beste ' + escHtml_(klantnaam) + ',</p>' +
+        '<p style="margin:0 0 14px;font-size:14px;line-height:1.55">Bijgaand ontvangt u factuur <strong>' + escHtml_(factuurNummer) + '</strong>.</p>' +
+        '<table role="presentation" style="width:100%;border-collapse:collapse;margin:14px 0;background:#F7F9FC;border-radius:6px">' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px">Te betalen</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-weight:700;font-size:15px;color:#0D1B4E">' + formatBedrag_(bedragIncl) + '</td></tr>' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px;border-top:1px solid #E5EAF2">Vóór</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-weight:600;font-size:13px;border-top:1px solid #E5EAF2">' + formatDatum_(vervaldatum) + '</td></tr>' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px;border-top:1px solid #E5EAF2">Naar</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-family:monospace;font-size:12px;border-top:1px solid #E5EAF2">' + escHtml_(iban) + '</td></tr>' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px;border-top:1px solid #E5EAF2">Kenmerk</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-family:monospace;font-size:12px;border-top:1px solid #E5EAF2">' + escHtml_(factuurNummer) + '</td></tr>' +
+        '</table>' +
+        '<p style="margin:18px 0 0;font-size:13px;color:#5F6B7A">Met vriendelijke groet,<br><strong style="color:#1A1A1A">' + escHtml_(bedrijf) + '</strong></p>' +
+      '</div></div>';
+
     const opties = {
       attachments: bijlagen,
       name: bedrijf,
+      htmlBody: htmlBody,
     };
     if (eigenEmail) opties.cc = eigenEmail;
 
@@ -757,7 +794,7 @@ function _bouwFactuurlijstHtml_() {
     'td{padding:10px 12px;border-bottom:1px solid #F0F3F7;font-size:12px;vertical-align:middle}' +
     'tr:last-child td{border-bottom:none}' +
     'tr:hover td{background:#FAFBFC}' +
-    '.badge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap;letter-spacing:.2px}' +
+    '.badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;letter-spacing:.3px;box-shadow:inset 0 1px 2px rgba(0,0,0,.04)}' +
     '.b-open{background:rgba(46,196,182,.14);color:#0D1B4E}' +
     '.b-concept{background:#F0F3F7;color:#5F6B7A}' +
     '.b-deels{background:#FEF9C3;color:#854D0E}' +
@@ -770,7 +807,7 @@ function _bouwFactuurlijstHtml_() {
     '.btn-verstuur{background:#0D1B4E;color:white;border:none;padding:5px 11px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap;margin-right:4px;font-family:inherit;font-weight:600}' +
     '.btn-verstuur:hover{background:#1A2A6B}' +
     '.btn-verstuur:disabled{background:#94A3B8;cursor:not-allowed}' +
-    '.urgent{color:#B91C1C;font-weight:700}' +
+    '.urgent{color:#B91C1C;font-weight:700;background:rgba(185,28,28,.08);padding:2px 6px;border-radius:4px}' +
     '.loading{text-align:center;padding:40px;color:#94A3B8}' +
     '.spin{display:inline-block;width:20px;height:20px;border:2px solid #E5EAF2;border-top-color:#2EC4B6;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}' +
     '@keyframes spin{to{transform:rotate(360deg)}}' +

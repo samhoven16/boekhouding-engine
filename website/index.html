@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0D1B4E">
 <meta name="color-scheme" content="light">
-<title>Boekhoudbaar — ZZP-boekhouding in je eigen Google Sheets · eenmalig €49</title>
-<meta name="description" content="Je boekhouding, eindelijk weer van jezelf. Facturen, BTW-aangifte, dashboard en rapportages in een Google Spreadsheet op je eigen Drive. Eén keer €49, geen abonnement, je data blijft van jou.">
+<title>Boekhoudbaar — ZZP-boekhouding in 15 minuten per maand · eenmalig €49</title>
+<meta name="description" content="Boekhouding in 15 min/maand. Facturen, BTW-aangifte en overzicht in jouw Google Sheet. Eenmalig €49, geen abonnement, jouw data blijft van jou.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://www.boekhoudbaar.nl/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -467,10 +467,10 @@
   }
   .oprichter-foto {
     width: 200px; height: 200px; border-radius: 50%;
-    object-fit: cover;
-    background: linear-gradient(135deg, #0D1B4E 0%, #1A3A7E 100%);
+    object-fit: cover; object-position: center top;
     border: 4px solid var(--wit);
     box-shadow: var(--shadow);
+    display: block;
   }
   .oprichter-foto-initial {
     width: 200px; height: 200px; border-radius: 50%;
@@ -482,8 +482,6 @@
     border: 4px solid var(--wit);
     box-shadow: var(--shadow);
   }
-  .oprichter-foto.failed { display: none; }
-  .oprichter-foto.failed + .oprichter-foto-initial { display: flex; }
   .oprichter-quote {
     font-size: 22px; font-weight: 600; line-height: 1.4;
     color: var(--blauw); margin-bottom: 20px;
@@ -738,9 +736,9 @@
 <!-- ── HERO ── -->
 <header class="hero" aria-labelledby="hero-heading">
   <div class="hero-badge">Eenmalig €49 · Geen abonnement, nooit</div>
-  <h1 id="hero-heading">Je boekhouding, <em>eindelijk</em> van jezelf.</h1>
+  <h1 id="hero-heading">Doe je boekhouding in <em>15 minuten</em> per maand.</h1>
   <p class="hero-sub">
-    Facturen maken, BTW-aangifte voorbereiden, een dashboard dat elke ochtend laat zien hoe je er echt voor staat — allemaal in een Google Spreadsheet die jij bezit. Eén keer €49. Geen abonnement. Nooit meer geklungel in een boekhoudpakket waar je op den duur niets meer van herkent.
+    Facturen, BTW-aangifte en overzicht — geregeld in één Google Sheet op jouw eigen Drive. Eenmalig €49. Geen abonnement, geen boekhoudsoftware die je elke maand opnieuw moet leren.
   </p>
   <div class="hero-ctas">
     <a href="/kopen" class="btn-primair">
@@ -793,20 +791,20 @@
 <section class="probleem-sectie" aria-labelledby="probleem-heading">
   <div class="container">
     <p class="section-label">Waarom ik dit heb gebouwd</p>
-    <h2 id="probleem-heading">Boekhoudsoftware was duur én leek niet voor mij gemaakt</h2>
-    <p class="sub-tekst">Ik ben Sam, zelfstandig ondernemer. Ik betaalde jaren voor een boekhoudpakket en vond het elke maand opnieuw irritant. Als jij deze drie dingen herkent, is Boekhoudbaar voor jou.</p>
+    <h2 id="probleem-heading">Boekhoudsoftware was duur én niet voor mij gemaakt</h2>
+    <p class="sub-tekst">Ik betaalde jaren voor een boekhoudpakket en vond het elke maand opnieuw frustrerend. Herken je dit?</p>
     <div class="probleem-grid" role="list">
       <div class="probleem-kaart" role="listitem" data-reveal data-reveal-stagger="0">
-        <h3>€300+ per jaar, en dat terwijl je niets extra's krijgt</h3>
-        <p>Je betaalt elke maand door, of je nu drie facturen stuurt of dertig. Na vijf jaar zit je op €1.500 tot €2.500 — voor iets dat in essentie een spreadsheet met knoppen is.</p>
+        <h3>€300+ per jaar, elk jaar opnieuw</h3>
+        <p>Je betaalt door of je drie of dertig facturen stuurt. Na vijf jaar: €1.500+ voor een spreadsheet met knoppen.</p>
       </div>
       <div class="probleem-kaart" role="listitem" data-reveal data-reveal-stagger="90">
-        <h3>Stoppen betekent: je data kwijt</h3>
-        <p>Zeg je het abonnement op, dan log je er niet meer in. Exporteren kan meestal alleen in hun eigen formaat. Je zeven jaar administratie zit gevangen in hun systeem, terwijl jij wettelijk verplicht bent ze te bewaren.</p>
+        <h3>Stoppen = data kwijt</h3>
+        <p>Opzeggen betekent geen toegang meer. Je zeven jaar administratie zit vast in hun systeem — terwijl je wettelijk verplicht bent ze te bewaren.</p>
       </div>
       <div class="probleem-kaart" role="listitem" data-reveal data-reveal-stagger="180">
-        <h3>Gemaakt voor accountants, niet voor ondernemers</h3>
-        <p>Dubbel boekhouden, grootboekrekeningen, debet en credit. Logisch als je accountant bent — maar jij wil gewoon zien: wat kwam er binnen, wat ging eruit, en hoeveel BTW moet ik afdragen?</p>
+        <h3>Voor accountants, niet voor jou</h3>
+        <p>Debet, credit, grootboekrekeningen. Jij wil weten: wat kwam binnen, wat ging eruit, hoeveel BTW afdragen?</p>
       </div>
     </div>
   </div>
@@ -879,8 +877,8 @@
     </div>
 
     <div class="oauth-heads-up" role="note">
-      <p class="label">Voor we verdergaan — even eerlijk zijn:</p>
-      <p>Bij stap 2 zegt Google mogelijk: <em>"Deze app is niet geverifieerd door Google"</em>. Dat klopt. Boekhoudbaar is door mij gemaakt — een zelfstandige, geen groot softwarebedrijf — en ik heb geen 300 euro per jaar over voor Google's verificatieprogramma. Je klikt op <strong>Geavanceerd → Ga naar Boekhoudbaar</strong>. Je data blijft op jóuw Drive, ik kan er niet bij, en dat waarschuwingsscherm is precies hoe Google mij ervan weerhoudt stiekem iets anders te doen. Veiliger dan een willekeurige SaaS, eigenlijk.</p>
+      <p class="label">Over die "niet-geverifieerd" melding van Google:</p>
+      <p>Bij stap 2 laat Google een waarschuwing zien dat deze app niet door hen is geverifieerd. <strong>Dat is precies waarom jouw data veilig is.</strong> Boekhoudbaar is geen cloud-SaaS die jouw cijfers op een externe server zet — het draait in <em>jouw</em> Google-account, op <em>jouw</em> Drive. Ik kan er niet bij, niemand kan er bij, behalve jij. Je klikt op <strong>Geavanceerd → Ga naar Boekhoudbaar</strong> om door te gaan. Jouw data blijft van jou. Altijd.</p>
     </div>
   </div>
 </section>
@@ -891,7 +889,7 @@
     <p class="section-label">Waarom ik dit maak</p>
     <h2 id="oprichter-heading">Ik heb het gewoon voor mezelf gebouwd — en toen vroegen anderen erom</h2>
     <div class="oprichter-grid" data-reveal>
-      <img src="/sam-hoven.jpg" alt="Sam Hoven, oprichter van Boekhoudbaar" class="oprichter-foto" width="200" height="200" loading="lazy" onerror="this.classList.add('failed')">
+      <img class="oprichter-foto" src="/sam-hoven.jpg?v=2" alt="Sam Hoven, maker van Boekhoudbaar" width="200" height="200" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       <div class="oprichter-foto-initial" aria-hidden="true">SH</div>
       <div class="oprichter-tekst">
         <p class="oprichter-quote">"Ik wilde mijn eigen boekhouding kunnen openen zonder afhankelijk te zijn van andermans software."</p>

@@ -57,7 +57,8 @@ function onOpen() {
 
     // ── Bankboek ──────────────────────────────
     .addSubMenu(ui.createMenu('Bank')
-      .addItem('Bankafschrift importeren (CSV)', 'importeerBankafschrift')
+      .addItem('Bankafschrift importeren (CSV, auto-match)', 'openBankImportDialoog')
+      .addItem('Bankafschrift importeren — oude versie', 'importeerBankafschrift')
       .addSeparator()
       .addItem('Betalingen koppelen aan facturen', 'koppelTransactiesAanFacturen')
       .addItem('Transacties categoriseren', 'autoCategoriseerTransacties')

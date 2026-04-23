@@ -226,8 +226,10 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     } else {
       schrijfAuditLog_('Email MISLUKT', factuurNummerOpgemaakt + ' → ' + klantEmail + ' – versturen mislukt');
     }
+  } else if (directMailen && !klantEmail) {
+    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen klant e-mailadres bekend. Vul het e-mailadres in bij de klant-relatie en verstuur handmatig via Boekhouding → Verkoopfacturen.');
   } else if (directMailen && klantEmail && !pdfUrl) {
-    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen PDF beschikbaar, email niet verzonden');
+    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – PDF niet beschikbaar, email niet verzonden');
   }
 
   // Status na werkelijk email-resultaat zetten (niet op intentie)
@@ -807,7 +809,55 @@ function dagelijkseTaken() {
     try { schrijfAuditLog_('FOUT dagelijkse taak', 'dashboard/herhalende kosten: ' + e.message); } catch (_) {}
   }
 
+  try {
+    controleerSheetGrootte_(ss);
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT groottecheck: ' + e.message);
+  }
+
   Logger.log('Dagelijkse taken uitgevoerd: ' + new Date());
+}
+
+/**
+ * Detecteert wanneer de spreadsheet zo groot wordt dat prestaties merkbaar
+ * degraderen. Stuurt één waarschuwing per 30 dagen, via audit-log + email
+ * indien eigen e-mail is ingesteld.
+ *
+ * Drempels:
+ *   - VERKOOPFACTUREN + INKOOPFACTUREN samen > 2000 rijen
+ *   - JOURNAALPOSTEN > 8000 rijen
+ * Dan: adviseer "Boekhouding → Beheer → Nieuw boekjaar starten"
+ */
+function controleerSheetGrootte_(ss) {
+  const nu = Date.now();
+  const props = PropertiesService.getScriptProperties();
+  const laatstKey = 'laatsteGrootteWaarschuwing';
+  const laatst = parseInt(props.getProperty(laatstKey) || '0');
+  if (nu - laatst < 30 * 24 * 60 * 60 * 1000) return; // max 1× per 30 dagen
+
+  const vfRijen = (ss.getSheetByName(SHEETS.VERKOOPFACTUREN) || { getLastRow: () => 0 }).getLastRow();
+  const ifRijen = (ss.getSheetByName(SHEETS.INKOOPFACTUREN)  || { getLastRow: () => 0 }).getLastRow();
+  const jrRijen = (ss.getSheetByName(SHEETS.JOURNAALPOSTEN)  || { getLastRow: () => 0 }).getLastRow();
+
+  const teVeelFacturen = (vfRijen + ifRijen) > 2000;
+  const teVeelBoekingen = jrRijen > 8000;
+  if (!teVeelFacturen && !teVeelBoekingen) return;
+
+  const eigenEmail = getInstelling_('Email rapporten naar') || '';
+  const bedrijf = getInstelling_('Bedrijfsnaam') || '';
+  const bericht =
+    'De spreadsheet bevat ' + (vfRijen + ifRijen) + ' facturen en ' + jrRijen + ' journaalposten. ' +
+    'Dit werkt prima, maar het Dashboard-refresh wordt merkbaar trager. ' +
+    'Overweeg om een nieuw boekjaar te starten via Boekhouding → Instellingen → Nieuw boekjaar.';
+
+  try { schrijfAuditLog_('Sheet-grootte waarschuwing', bericht); } catch (_) {}
+  if (eigenEmail) {
+    try {
+      GmailApp.sendEmail(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
+        bericht + '\n\n— Boekhoudbaar' + (bedrijf ? ' (' + bedrijf + ')' : ''));
+    } catch (_) {}
+  }
+  props.setProperty(laatstKey, String(nu));
 }
 
 // ─────────────────────────────────────────────
@@ -1017,15 +1067,49 @@ function stuurBetalingsherinneringen() {
     if (!klantEmail) continue;
 
     const fnr = data[i][1];
-    const bedragOpen = rondBedrag_(data[i][12] - data[i][13]);
+    // Defensief parsen: als een klant handmatig 'betaald' of een datum in
+    // betaald-kolom zet, geven we liever €0 dan NaN in de herinneringsmail.
+    const bedragOpen = rondBedrag_((parseFloat(data[i][12]) || 0) - (parseFloat(data[i][13]) || 0));
     const vervaldatum = data[i][3];
+    if (bedragOpen <= 0) continue; // Geen herinnering sturen voor volledig betaalde factuur
+
+    const iban = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '';
+    const bedrijf = getInstelling_('Bedrijfsnaam') || '';
+    const vervalStr = formatDatum_(vervaldatum);
+    const bedragStr = formatBedrag_(bedragOpen);
+
+    const htmlBody =
+      '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;max-width:540px;color:#1A1A1A">' +
+      '<div style="background:#B45309;padding:18px 22px;border-radius:8px 8px 0 0">' +
+        '<div style="color:rgba(255,255,255,.85);font-size:11px;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:4px">Betalingsherinnering</div>' +
+        '<div style="color:#fff;font-size:20px;font-weight:700">' + escHtml_(fnr) + '</div>' +
+      '</div>' +
+      '<div style="background:#fff;border:1px solid #E5EAF2;border-top:none;border-radius:0 0 8px 8px;padding:22px 24px">' +
+        '<p style="margin:0 0 14px;font-size:14px;line-height:1.55">Wij kwamen deze factuur tegen als nog niet betaald. Mocht u al betaald hebben, negeer dan dit bericht.</p>' +
+        '<table role="presentation" style="width:100%;border-collapse:collapse;margin:12px 0;background:#F7F9FC;border-radius:6px">' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px">Openstaand</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-weight:700;font-size:15px;color:#B45309">' + bedragStr + '</td></tr>' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px;border-top:1px solid #E5EAF2">Vervaldatum</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-weight:600;font-size:13px;border-top:1px solid #E5EAF2">' + vervalStr + '</td></tr>' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px;border-top:1px solid #E5EAF2">IBAN</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-family:monospace;font-size:12px;border-top:1px solid #E5EAF2">' + escHtml_(iban) + '</td></tr>' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px;border-top:1px solid #E5EAF2">Kenmerk</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-family:monospace;font-size:12px;border-top:1px solid #E5EAF2">' + escHtml_(fnr) + '</td></tr>' +
+        '</table>' +
+        '<p style="margin:14px 0 0;font-size:13px;color:#5F6B7A">Bij vragen kunt u altijd reageren op deze mail.</p>' +
+        '<p style="margin:14px 0 0;font-size:13px;color:#5F6B7A">Met vriendelijke groet,<br><strong style="color:#1A1A1A">' + escHtml_(bedrijf) + '</strong></p>' +
+      '</div></div>';
+
+    const tekst =
+      'Beste klant,\n\n' +
+      'Wij herinneren u vriendelijk aan factuur ' + fnr + '.\n\n' +
+      'Openstaand: ' + bedragStr + '\nVervaldatum: ' + vervalStr + '\nIBAN: ' + iban +
+      '\nKenmerk: ' + fnr + '\n\nMet vriendelijke groet,\n' + bedrijf;
 
     GmailApp.sendEmail(klantEmail,
-      `Betalingsherinnering factuur ${fnr}`,
-      `Geachte klant,\n\nWij herinneren u vriendelijk aan de openstaande factuur:\n\n` +
-      `Factuurnummer: ${fnr}\nVervaldatum: ${formatDatum_(vervaldatum)}\nOpenstaand bedrag: ${formatBedrag_(bedragOpen)}\n\n` +
-      `Wilt u dit bedrag zo spoedig mogelijk overmaken naar ${getInstelling_('Bankrekening op factuur')}?\n\n` +
-      `Met vriendelijke groet,\n${getInstelling_('Bedrijfsnaam')}`
+      `Herinnering factuur ${fnr} · ${bedragStr}`,
+      tekst,
+      { htmlBody: htmlBody, name: bedrijf }
     );
     aantalVerstuurd++;
   }

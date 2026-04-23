@@ -85,6 +85,31 @@ function healthEndpoint_() {
 }
 
 /**
+ * Constant-time string comparison.
+ *
+ * Voorkomt timing-attacks waarbij een attacker byte-voor-byte de code
+ * kan achterhalen door microseconde-verschillen te meten tussen een match
+ * op byte 1 vs match op byte 1+2 etc.
+ *
+ * Werkt zonder crypto-module (Apps Script heeft beperkte primitives):
+ * XOR elke byte, OR alle resultaten, eindcontrole = 0.
+ *
+ * @param {string} a
+ * @param {string} b
+ * @return {boolean}
+ */
+function veiligVergelijk_(a, b) {
+  const s1 = String(a == null ? '' : a);
+  const s2 = String(b == null ? '' : b);
+  if (s1.length !== s2.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < s1.length; i++) {
+    mismatch |= (s1.charCodeAt(i) ^ s2.charCodeAt(i));
+  }
+  return mismatch === 0;
+}
+
+/**
  * Zelfherstellende configuratie-laag.
  *
  * Repareert drie historische fouten die in live ScriptProperties kunnen staan:
@@ -128,9 +153,13 @@ function betaalPagina_(e) {
   const prijsRw = props.getProperty('PRODUCT_PRIJS') || '49.00';
   // Dubbele fallback: zelfs als zelfHerstelProductConfig_ niet heeft gedraaid,
   // corrigeer alsnog in de render-laag zodat de pagina nooit €4900 toont.
-  const prijs = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
-    ? (parseFloat(prijsRw) / 100).toFixed(2)
-    : prijsRw;
+  const prijsNum = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
+    ? parseFloat(prijsRw) / 100
+    : parseFloat(prijsRw) || 49;
+  // Nederlandse weergave: komma ipv punt, geen trailing .00 bij ronde bedragen
+  const prijs = (prijsNum % 1 === 0)
+    ? prijsNum.toString()
+    : prijsNum.toFixed(2).replace('.', ',');
 
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -175,7 +204,7 @@ function betaalPagina_(e) {
   }
   .herroepingsrecht label{display:flex;gap:10px;align-items:flex-start;font-weight:normal;margin-bottom:8px;cursor:pointer}
   .herroepingsrecht label:last-child{margin-bottom:0}
-  .herroepingsrecht input[type=checkbox]{width:auto;margin-top:3px;flex-shrink:0;accent-color:#2EC4B6}
+  .herroepingsrecht input[type=checkbox]{width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:#2EC4B6;cursor:pointer}
   .btn{
     width:100%;padding:15px 18px;background:#0D1B4E;color:#fff;border:none;
     border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;
@@ -187,6 +216,17 @@ function betaalPagina_(e) {
   .fout{
     background:#FDECEC;color:#B91C1C;padding:10px 14px;border-radius:6px;
     font-size:13px;margin-top:12px;display:none;border:1px solid #F5B3B3;
+    animation:slideDown .25s ease;
+  }
+  @keyframes slideDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .prijs{animation:scaleIn .6s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+  @media(max-width:480px){
+    .card{padding:24px 18px}
+    h1{font-size:19px}
+    .prijs{font-size:36px}
+    .voordelen li{font-size:13px}
+    .btn{font-size:14px;padding:14px 16px}
   }
   .hint{font-size:12px;color:#5F6B7A;text-align:center;margin-top:14px;line-height:1.5}
   .hint strong{color:#1A1A1A;font-weight:600}
@@ -259,7 +299,7 @@ function toonFout(t){var e=document.getElementById('fout');e.textContent=t;e.sty
 
   return HtmlService.createHtmlOutput(html)
     .setTitle(naam + ' — Aankoop')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DENY);
 }
 
 // ─────────────────────────────────────────────
@@ -371,7 +411,9 @@ function verwerkMollieWebhook_(e) {
     // Stuur licentiecode per e-mail
     if (email) stuurLicentiemail_(naam, email, sleutel);
 
-    Logger.log('Licentie aangemaakt: ' + sleutel + ' voor ' + email);
+    // Defense-in-depth: log alleen eerste 8 tekens van sleutel zodat
+    // een gelekte log niet direct de volledige code onthult.
+    Logger.log('Licentie aangemaakt: ' + sleutel.substring(0, 8) + '… voor ' + email);
 
   } finally {
     lock.releaseLock();
@@ -429,13 +471,34 @@ function activeerOtpEndpoint_(e) {
 
   if (Date.now() > otpObj.expiry) {
     props.deleteProperty('otp_' + email);
+    props.deleteProperty('otp_pogingen_' + email);
     return jsonResp_({ ok: false, fout: 'Code verlopen (geldig 15 min). Vraag een nieuwe code aan.' });
   }
-  if (otpObj.code !== otp) return jsonResp_({ ok: false, fout: 'Onjuiste code. Controleer je e-mail.' });
 
-  // Eenmalig gebruik — code direct verwijderen
+  // Brute-force bescherming — na 5 foute pogingen, OTP ongeldig verklaren
+  // (attacker moet opnieuw rate-limited aanvraag doen = max 1/min)
+  const pogingenKey = 'otp_pogingen_' + email;
+  const pogingen = parseInt(props.getProperty(pogingenKey) || '0');
+  if (pogingen >= 5) {
+    props.deleteProperty('otp_' + email);
+    props.deleteProperty(pogingenKey);
+    return jsonResp_({ ok: false, fout: 'Te veel foute pogingen. Vraag een nieuwe code aan.' });
+  }
+
+  // Constant-time vergelijk voorkomt timing-attack (leak van code byte-voor-byte)
+  if (!veiligVergelijk_(otpObj.code, otp)) {
+    props.setProperty(pogingenKey, String(pogingen + 1));
+    const resterend = 5 - (pogingen + 1);
+    return jsonResp_({
+      ok: false,
+      fout: 'Onjuiste code. ' + (resterend > 0 ? 'Nog ' + resterend + ' poging(en).' : 'Vraag een nieuwe code aan.'),
+    });
+  }
+
+  // Eenmalig gebruik — code + poging-teller direct verwijderen
   props.deleteProperty('otp_' + email);
   props.deleteProperty('otp_ts_' + email);
+  props.deleteProperty(pogingenKey);
 
   // Zoek actieve licentie voor dit e-mailadres
   const sheet = getLicentieSheet_();
@@ -511,6 +574,15 @@ function valideerEndpoint_(e) {
   const installatieId = String((e.parameter.installatie || '')).trim();
 
   if (!sleutel) return jsonResp_({ geldig: false, fout: 'Geen sleutel opgegeven.' });
+
+  // Rate-limit: max 10 validaties per sleutel per uur (beschermt tegen brute-force)
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'valRate_' + sleutel.slice(0, 16);
+  const pogingen = parseInt(cache.get(cacheKey) || '0');
+  if (pogingen >= 10) {
+    return jsonResp_({ geldig: false, fout: 'Te veel validatiepogingen. Probeer over een uur opnieuw.' });
+  }
+  cache.put(cacheKey, String(pogingen + 1), 3600);
 
   try {
     const sheet = getLicentieSheet_();
@@ -676,7 +748,7 @@ function adminPaneel_(e) {
   const ww    = PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '';
   const input = String((e.parameter.ww || '')).trim();
 
-  if (!ww || input !== ww) {
+  if (!ww || !veiligVergelijk_(ww, input)) {
     return HtmlService.createHtmlOutput(
       '<form style="font-family:Arial;padding:30px">' +
       '<h3>Beheerpaneel</h3>' +
@@ -819,7 +891,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
   // Guard — zonder TEMPLATE_SS_ID kan de klant de copy-link niet gebruiken.
   // Stuur een alert naar de eigenaar en markeer de licentie-rij zichtbaar.
   if (!templateId) {
-    Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' (' + sleutel + ') wacht op activatielink.');
+    Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' (' + sleutel.substring(0, 8) + '…) wacht op activatielink.');
     try { markeerTemplateOntbreekt_(sleutel); } catch (_) {}
     try {
       MailApp.sendEmail({
@@ -894,6 +966,19 @@ function stuurLicentiemail_(naam, email, sleutel) {
   </div>
 </body></html>`;
 
+  // Plain-text alternatief — verhoogt deliverability (spam-filters scoren
+  // HTML-only mails hoger als risico).
+  const textBody =
+    'Hoi ' + naam + ',\n\n' +
+    'Gefeliciteerd met je aankoop van ' + productnm + '! Je boekhouding staat klaar om te activeren.\n\n' +
+    (kopieerLink ? 'In 3 stappen aan de slag:\n' +
+      '1. Open je spreadsheet via: ' + kopieerLink + '\n' +
+      '2. Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode\n' +
+      '3. Voer de code in en je boekhouding is direct klaar voor gebruik\n\n' : '') +
+    'Vragen? Stuur een e-mail naar ' + vanEmail + '.\n\n' +
+    productnm + (kvk ? ' · KVK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') +
+    '\nPrivacybeleid: ' + privacyUrl + '\n';
+
   if (brevoKey) {
     UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'post',
@@ -904,13 +989,19 @@ function stuurLicentiemail_(naam, email, sleutel) {
         to:          [{ email: email, name: naam }],
         subject:     'Je ' + productnm + ' is klaar — activeer nu 🚀',
         htmlContent: htmlBody,
+        textContent: textBody,
         tags:        ['licentie', 'dag0'],
         params:      { naam: naam },
       }),
       muteHttpExceptions: true,
     });
   } else {
-    MailApp.sendEmail({ to: email, subject: 'Je ' + productnm + ' is klaar — activeer nu', htmlBody: htmlBody });
+    MailApp.sendEmail({
+      to: email,
+      subject: 'Je ' + productnm + ' is klaar — activeer nu',
+      body: textBody,
+      htmlBody: htmlBody,
+    });
   }
 
   if (brevoKey) maakBrevoContact_(naam, email, sleutel, brevoKey);
