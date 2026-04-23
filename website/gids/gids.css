@@ -372,9 +372,13 @@ a:hover { border-bottom-color: var(--accent); }
 }
 .sticky-cta-close:hover { color: #fff; }
 @media (max-width: 640px) {
-  .sticky-cta { padding: 12px 14px; }
-  .sticky-cta-text { font-size: 13px; }
-  .sticky-cta-btn { padding: 8px 14px; font-size: 13px; }
+  .sticky-cta { padding: 10px 12px; gap: 10px; }
+  .sticky-cta-text { font-size: 13px; line-height: 1.3; }
+  .sticky-cta-btn { padding: 10px 14px; font-size: 13px; }
+  .sticky-cta-close { font-size: 20px; padding: 8px 10px; min-width: 40px; min-height: 40px; }
+}
+@media (max-width: 380px) {
+  .sticky-cta-close { display: none; }
 }
 
 /* Body-padding wanneer sticky-cta zichtbaar, zodat content niet verborgen is */
