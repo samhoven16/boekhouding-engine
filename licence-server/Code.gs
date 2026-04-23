@@ -153,9 +153,13 @@ function betaalPagina_(e) {
   const prijsRw = props.getProperty('PRODUCT_PRIJS') || '49.00';
   // Dubbele fallback: zelfs als zelfHerstelProductConfig_ niet heeft gedraaid,
   // corrigeer alsnog in de render-laag zodat de pagina nooit €4900 toont.
-  const prijs = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
-    ? (parseFloat(prijsRw) / 100).toFixed(2)
-    : prijsRw;
+  const prijsNum = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
+    ? parseFloat(prijsRw) / 100
+    : parseFloat(prijsRw) || 49;
+  // Nederlandse weergave: komma ipv punt, geen trailing .00 bij ronde bedragen
+  const prijs = (prijsNum % 1 === 0)
+    ? prijsNum.toString()
+    : prijsNum.toFixed(2).replace('.', ',');
 
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -953,6 +957,19 @@ function stuurLicentiemail_(naam, email, sleutel) {
   </div>
 </body></html>`;
 
+  // Plain-text alternatief — verhoogt deliverability (spam-filters scoren
+  // HTML-only mails hoger als risico).
+  const textBody =
+    'Hoi ' + naam + ',\n\n' +
+    'Gefeliciteerd met je aankoop van ' + productnm + '! Je boekhouding staat klaar om te activeren.\n\n' +
+    (kopieerLink ? 'In 3 stappen aan de slag:\n' +
+      '1. Open je spreadsheet via: ' + kopieerLink + '\n' +
+      '2. Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode\n' +
+      '3. Voer de code in en je boekhouding is direct klaar voor gebruik\n\n' : '') +
+    'Vragen? Stuur een e-mail naar ' + vanEmail + '.\n\n' +
+    productnm + (kvk ? ' · KVK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') +
+    '\nPrivacybeleid: ' + privacyUrl + '\n';
+
   if (brevoKey) {
     UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'post',
@@ -963,13 +980,19 @@ function stuurLicentiemail_(naam, email, sleutel) {
         to:          [{ email: email, name: naam }],
         subject:     'Je ' + productnm + ' is klaar — activeer nu 🚀',
         htmlContent: htmlBody,
+        textContent: textBody,
         tags:        ['licentie', 'dag0'],
         params:      { naam: naam },
       }),
       muteHttpExceptions: true,
     });
   } else {
-    MailApp.sendEmail({ to: email, subject: 'Je ' + productnm + ' is klaar — activeer nu', htmlBody: htmlBody });
+    MailApp.sendEmail({
+      to: email,
+      subject: 'Je ' + productnm + ' is klaar — activeer nu',
+      body: textBody,
+      htmlBody: htmlBody,
+    });
   }
 
   if (brevoKey) maakBrevoContact_(naam, email, sleutel, brevoKey);
