@@ -256,3 +256,110 @@ function verwerkBankImport_(ss, transacties) {
   try { if (typeof invalideerKpiSnapshot_ === 'function') invalideerKpiSnapshot_(); } catch (_) {}
   return resultaat;
 }
+
+// ─────────────────────────────────────────────
+//  PUBLIC ENDPOINTS (aangeroepen vanuit HTML dialog)
+// ─────────────────────────────────────────────
+
+function previewBankImport_public(csv) {
+  const ss = getSpreadsheet_();
+  const transacties = parseBankCsv_(csv);
+  const gematcht = matchTransactiesMetFacturen_(ss, transacties);
+  return {
+    aantal: gematcht.length,
+    voorbeeld: gematcht.slice(0, 50).map(function(t) {
+      return {
+        datum: t.datum ? Utilities.formatDate(t.datum, 'Europe/Amsterdam', 'dd-MM-yyyy') : '',
+        omschr: String(t.omschr || '').substring(0, 60),
+        bedrag: t.bedrag,
+        tegenpartij: String(t.tegenpartij || '').substring(0, 30),
+        match: t.match ? (t.match.factuurnummer + ' (' + t.match.zekerheid + ')') : '',
+      };
+    }),
+  };
+}
+
+function verwerkBankImport_public(csv) {
+  const ss = getSpreadsheet_();
+  const transacties = parseBankCsv_(csv);
+  const gematcht = matchTransactiesMetFacturen_(ss, transacties);
+  const resultaat = verwerkBankImport_(ss, gematcht);
+  try { schrijfAuditLog_('Bank CSV geïmporteerd', resultaat.toegevoegd + ' transacties, ' + resultaat.gematcht + ' gematcht'); } catch (_) {}
+  return resultaat;
+}
+
+// ─────────────────────────────────────────────
+//  HTML DIALOG
+// ─────────────────────────────────────────────
+
+function _bouwBankImportHtml_() {
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Arial,sans-serif;font-size:13px;color:#1A1A1A;background:#F7F9FC;padding:18px 22px}' +
+    'h2{color:#0D1B4E;font-size:17px;font-weight:700;margin-bottom:4px}' +
+    '.uitleg{color:#5F6B7A;font-size:12px;margin-bottom:14px;line-height:1.5}' +
+    'textarea{width:100%;height:140px;padding:10px;border:1px solid #E5EAF2;border-radius:6px;font-family:monospace;font-size:11px;resize:vertical;background:#fff}' +
+    'textarea:focus{outline:none;border-color:#2EC4B6;box-shadow:0 0 0 3px rgba(46,196,182,.15)}' +
+    '.btn-rij{display:flex;gap:10px;margin-top:10px}' +
+    '.btn{padding:10px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit}' +
+    '.btn-primary{background:#0D1B4E;color:#fff}' +
+    '.btn-primary:hover{background:#1A2A6B}' +
+    '.btn-secondary{background:#fff;color:#0D1B4E;border:1px solid #E5EAF2}' +
+    '.btn-secondary:hover{background:#F7F9FC}' +
+    '.btn:disabled{opacity:.5;cursor:not-allowed}' +
+    '#preview{margin-top:14px;max-height:280px;overflow-y:auto;background:#fff;border:1px solid #E5EAF2;border-radius:6px;display:none}' +
+    'table{width:100%;border-collapse:collapse;font-size:11px}' +
+    'th{background:#F7F9FC;padding:6px 8px;text-align:left;font-weight:600;color:#5F6B7A;border-bottom:1px solid #E5EAF2;position:sticky;top:0}' +
+    'td{padding:6px 8px;border-bottom:1px solid #F3F5F9}' +
+    '.bedrag{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}' +
+    '.pos{color:#15803D}.neg{color:#B91C1C}' +
+    '.match-hoog{background:#E6F7F4;color:#0D6A5B;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600}' +
+    '.match-medium{background:#FFF8E1;color:#7A5A00;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600}' +
+    '.status{margin-top:10px;padding:10px 14px;border-radius:6px;font-size:12px;display:none}' +
+    '.status.ok{background:#E6F7F4;color:#0D6A5B;border:1px solid #A6E2D4;display:block}' +
+    '.status.fout{background:#FDECEC;color:#B91C1C;border:1px solid #F5B3B3;display:block}' +
+    '</style></head><body>' +
+    '<h2>Bankafschrift importeren</h2>' +
+    '<p class="uitleg">Download je bankafschrift als CSV (ING, Bunq, Rabo, ABN, etc.) en plak hier. Open facturen worden automatisch gekoppeld als het bedrag én factuurnummer matchen.</p>' +
+    '<textarea id="csv" placeholder="Plak hier je CSV (met header-rij). Voorbeeld ING: &#10;&#34;Datum&#34;,&#34;Naam / Omschrijving&#34;,&#34;Rekening&#34;,...&#10;&#34;20240115&#34;,&#34;Klant BV&#34;,&#34;NL..&#34;,..."></textarea>' +
+    '<div class="btn-rij">' +
+    '  <button class="btn btn-secondary" onclick="preview()">Controleer preview</button>' +
+    '  <button class="btn btn-primary" id="btn-verwerk" onclick="verwerk()" disabled>Importeer &amp; koppel aan facturen</button>' +
+    '</div>' +
+    '<div id="status" class="status"></div>' +
+    '<div id="preview"></div>' +
+    '<script>' +
+    'function preview(){' +
+    '  var csv=document.getElementById("csv").value.trim();' +
+    '  if(!csv){ zetStatus("fout","Plak eerst je CSV."); return; }' +
+    '  zetStatus("ok","Even geduld — regels worden geparsed…");' +
+    '  google.script.run.withSuccessHandler(render).withFailureHandler(function(e){zetStatus("fout","Fout: "+e.message);}).previewBankImport_public(csv);' +
+    '}' +
+    'function render(res){' +
+    '  if(!res||res.aantal===0){ zetStatus("fout","Geen geldige transacties gevonden. Controleer CSV formaat."); return; }' +
+    '  var h=\'<table><thead><tr><th>Datum</th><th>Omschrijving</th><th>Tegenpartij</th><th style="text-align:right">Bedrag</th><th>Match</th></tr></thead><tbody>\';' +
+    '  res.voorbeeld.forEach(function(t){' +
+    '    var klasse=t.bedrag>=0?"pos":"neg";' +
+    '    var mKlasse=t.match.indexOf("hoog")>=0?"match-hoog":(t.match?"match-medium":"");' +
+    '    h+=\'<tr><td>\'+t.datum+\'</td><td>\'+esc(t.omschr)+\'</td><td>\'+esc(t.tegenpartij)+\'</td><td class="bedrag \'+klasse+\'">\'+fmt(t.bedrag)+\'</td><td>\'+(t.match?\'<span class="\'+mKlasse+\'">\'+esc(t.match)+\'</span>\':"")+\'</td></tr>\';' +
+    '  });' +
+    '  h+="</tbody></table>";' +
+    '  document.getElementById("preview").innerHTML=h;' +
+    '  document.getElementById("preview").style.display="block";' +
+    '  zetStatus("ok",res.aantal+" transacties gevonden. Klik op \'Importeer\' om ze toe te voegen en te matchen aan open facturen.");' +
+    '  document.getElementById("btn-verwerk").disabled=false;' +
+    '}' +
+    'function verwerk(){' +
+    '  var csv=document.getElementById("csv").value.trim();' +
+    '  document.getElementById("btn-verwerk").disabled=true;' +
+    '  zetStatus("ok","Importeren…");' +
+    '  google.script.run.withSuccessHandler(function(r){' +
+    '    zetStatus("ok","✓ "+r.toegevoegd+" transactie(s) toegevoegd, "+r.gematcht+" automatisch gekoppeld aan factuur. "+(r.fouten.length?r.fouten.length+" fouten.":"") );' +
+    '  }).withFailureHandler(function(e){zetStatus("fout","Fout: "+e.message);document.getElementById("btn-verwerk").disabled=false;})' +
+    '   .verwerkBankImport_public(csv);' +
+    '}' +
+    'function zetStatus(k,t){var s=document.getElementById("status");s.className="status "+k;s.textContent=t;}' +
+    'function esc(s){return String(s||"").replace(/[&<>"\\\']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\\\"":"&quot;","\\\'":"&#39;"}[c];});}' +
+    'function fmt(b){b=parseFloat(b)||0;return(b<0?"-€":"€")+Math.abs(b).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2});}' +
+    '<\/script></body></html>';
+}
