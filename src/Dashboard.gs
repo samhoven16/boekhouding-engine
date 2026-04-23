@@ -688,7 +688,8 @@ function _bouwDashboardHtml_() {
     '.btn-ref:hover{background:rgba(255,255,255,.25)}' +
     '.body{flex:1;overflow-y:auto;padding:14px 16px}' +
     '.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}' +
-    '.kpi{background:white;border-radius:8px;padding:13px 14px;border:1px solid #E5E7EB;box-shadow:0 1px 2px rgba(0,0,0,.05)}' +
+    '.kpi{background:white;border-radius:8px;padding:13px 14px;border:1px solid #E5E7EB;box-shadow:0 1px 2px rgba(0,0,0,.05);transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}' +
+    '.kpi:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(13,27,78,.08);border-color:#D0D7E2}' +
     '.kpi .lbl{font-size:10px;font-weight:bold;color:#6B7280;text-transform:uppercase;letter-spacing:.5px}' +
     '.kpi .val{font-size:19px;font-weight:bold;color:#111827;margin:5px 0 3px;line-height:1}' +
     '.kpi .sub{font-size:11px;color:#9CA3AF}' +
@@ -735,6 +736,14 @@ function _bouwDashboardHtml_() {
     '  document.getElementById("h-tm").textContent="Bijgewerkt: "+d.bijgewerkt;' +
     '  var k=d.kpi,btw=k.btwDeadline||{kwartaal:"?",datum:"?",dagenOver:"?",urgent:false},h="";' +
     '  var nettoMaand=Math.round(((k.omzetMaand||0)-(k.kostenMaand||0))*100)/100;' +
+    '  var leeg=!k.banksaldo&&!k.omzetMaand&&!k.kostenMaand&&!k.aantalOpenFacturen&&!k.btwSaldo;' +
+    '  if(leeg){' +
+    '    h+=\'<div style="background:linear-gradient(135deg,#F7F9FC 0%,#E6F7F4 100%);border:1px solid #D0ECE6;border-radius:10px;padding:22px 24px;margin-bottom:14px">\';' +
+    '    h+=\'<div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#2EC4B6;margin-bottom:6px">Eerste stap</div>\';' +
+    '    h+=\'<div style="font-size:15px;font-weight:700;color:#0D1B4E;margin-bottom:6px">Welkom! Start met je eerste boeking.</div>\';' +
+    '    h+=\'<div style="font-size:12px;color:#5F6B7A;line-height:1.55">De getallen hieronder vullen zich vanzelf zodra je een factuur of kostenpost toevoegt. Tip: vul eerst Instellingen → Bedrijfsgegevens in.</div>\';' +
+    '    h+=\'</div>\';' +
+    '  }' +
     '  h+=\'<div class="kpi-grid">\';' +
     '  h+=kpi("Banksaldo",fmt(k.banksaldo||0),"",(k.banksaldo||0)<0?"krit":(k.banksaldo||0)>0?"goed":"");' +
     '  h+=kpi("Omzet deze maand",fmt(k.omzetMaand),"",k.omzetMaand>0?"goed":"");' +

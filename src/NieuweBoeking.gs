@@ -100,10 +100,11 @@ input.ok{border-color:#2e7d32}
 .btn-sec{background:#F7F9FC;color:var(--pk);border:1px solid #E5EAF2}
 .btn-sec:hover{background:#EEF2F8}
 /* ── BEVESTIGING ── */
-.klaar{text-align:center;padding:30px 20px}
-.klaar .groot-icoon{font-size:52px;margin-bottom:12px}
-.klaar h3{color:var(--pk);font-size:18px;margin-bottom:8px}
+.klaar{text-align:center;padding:30px 20px;animation:fadeIn .3s ease}
+.klaar .groot-icoon{font-size:52px;margin-bottom:12px;animation:bounceIn .7s cubic-bezier(.68,-0.55,.265,1.55)}
+.klaar h3{color:var(--pk);font-size:18px;margin-bottom:8px;letter-spacing:-.01em}
 .klaar p{color:#555;font-size:13px;line-height:1.6}
+@keyframes bounceIn{0%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.15)}70%{transform:scale(.95)}100%{transform:scale(1)}}
 /* ── SECTIELABELS ── */
 .sectie{font-size:10px;font-weight:bold;color:var(--pk);text-transform:uppercase;
          letter-spacing:0.5px;margin:12px 0 6px;padding-bottom:3px;

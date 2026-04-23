@@ -85,6 +85,31 @@ function healthEndpoint_() {
 }
 
 /**
+ * Constant-time string comparison.
+ *
+ * Voorkomt timing-attacks waarbij een attacker byte-voor-byte de code
+ * kan achterhalen door microseconde-verschillen te meten tussen een match
+ * op byte 1 vs match op byte 1+2 etc.
+ *
+ * Werkt zonder crypto-module (Apps Script heeft beperkte primitives):
+ * XOR elke byte, OR alle resultaten, eindcontrole = 0.
+ *
+ * @param {string} a
+ * @param {string} b
+ * @return {boolean}
+ */
+function veiligVergelijk_(a, b) {
+  const s1 = String(a == null ? '' : a);
+  const s2 = String(b == null ? '' : b);
+  if (s1.length !== s2.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < s1.length; i++) {
+    mismatch |= (s1.charCodeAt(i) ^ s2.charCodeAt(i));
+  }
+  return mismatch === 0;
+}
+
+/**
  * Zelfherstellende configuratie-laag.
  *
  * Repareert drie historische fouten die in live ScriptProperties kunnen staan:
@@ -175,7 +200,7 @@ function betaalPagina_(e) {
   }
   .herroepingsrecht label{display:flex;gap:10px;align-items:flex-start;font-weight:normal;margin-bottom:8px;cursor:pointer}
   .herroepingsrecht label:last-child{margin-bottom:0}
-  .herroepingsrecht input[type=checkbox]{width:auto;margin-top:3px;flex-shrink:0;accent-color:#2EC4B6}
+  .herroepingsrecht input[type=checkbox]{width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:#2EC4B6;cursor:pointer}
   .btn{
     width:100%;padding:15px 18px;background:#0D1B4E;color:#fff;border:none;
     border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;
@@ -187,6 +212,17 @@ function betaalPagina_(e) {
   .fout{
     background:#FDECEC;color:#B91C1C;padding:10px 14px;border-radius:6px;
     font-size:13px;margin-top:12px;display:none;border:1px solid #F5B3B3;
+    animation:slideDown .25s ease;
+  }
+  @keyframes slideDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .prijs{animation:scaleIn .6s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes scaleIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+  @media(max-width:480px){
+    .card{padding:24px 18px}
+    h1{font-size:19px}
+    .prijs{font-size:36px}
+    .voordelen li{font-size:13px}
+    .btn{font-size:14px;padding:14px 16px}
   }
   .hint{font-size:12px;color:#5F6B7A;text-align:center;margin-top:14px;line-height:1.5}
   .hint strong{color:#1A1A1A;font-weight:600}
@@ -371,7 +407,9 @@ function verwerkMollieWebhook_(e) {
     // Stuur licentiecode per e-mail
     if (email) stuurLicentiemail_(naam, email, sleutel);
 
-    Logger.log('Licentie aangemaakt: ' + sleutel + ' voor ' + email);
+    // Defense-in-depth: log alleen eerste 8 tekens van sleutel zodat
+    // een gelekte log niet direct de volledige code onthult.
+    Logger.log('Licentie aangemaakt: ' + sleutel.substring(0, 8) + '… voor ' + email);
 
   } finally {
     lock.releaseLock();
@@ -429,13 +467,34 @@ function activeerOtpEndpoint_(e) {
 
   if (Date.now() > otpObj.expiry) {
     props.deleteProperty('otp_' + email);
+    props.deleteProperty('otp_pogingen_' + email);
     return jsonResp_({ ok: false, fout: 'Code verlopen (geldig 15 min). Vraag een nieuwe code aan.' });
   }
-  if (otpObj.code !== otp) return jsonResp_({ ok: false, fout: 'Onjuiste code. Controleer je e-mail.' });
 
-  // Eenmalig gebruik — code direct verwijderen
+  // Brute-force bescherming — na 5 foute pogingen, OTP ongeldig verklaren
+  // (attacker moet opnieuw rate-limited aanvraag doen = max 1/min)
+  const pogingenKey = 'otp_pogingen_' + email;
+  const pogingen = parseInt(props.getProperty(pogingenKey) || '0');
+  if (pogingen >= 5) {
+    props.deleteProperty('otp_' + email);
+    props.deleteProperty(pogingenKey);
+    return jsonResp_({ ok: false, fout: 'Te veel foute pogingen. Vraag een nieuwe code aan.' });
+  }
+
+  // Constant-time vergelijk voorkomt timing-attack (leak van code byte-voor-byte)
+  if (!veiligVergelijk_(otpObj.code, otp)) {
+    props.setProperty(pogingenKey, String(pogingen + 1));
+    const resterend = 5 - (pogingen + 1);
+    return jsonResp_({
+      ok: false,
+      fout: 'Onjuiste code. ' + (resterend > 0 ? 'Nog ' + resterend + ' poging(en).' : 'Vraag een nieuwe code aan.'),
+    });
+  }
+
+  // Eenmalig gebruik — code + poging-teller direct verwijderen
   props.deleteProperty('otp_' + email);
   props.deleteProperty('otp_ts_' + email);
+  props.deleteProperty(pogingenKey);
 
   // Zoek actieve licentie voor dit e-mailadres
   const sheet = getLicentieSheet_();
@@ -676,7 +735,7 @@ function adminPaneel_(e) {
   const ww    = PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '';
   const input = String((e.parameter.ww || '')).trim();
 
-  if (!ww || input !== ww) {
+  if (!ww || !veiligVergelijk_(ww, input)) {
     return HtmlService.createHtmlOutput(
       '<form style="font-family:Arial;padding:30px">' +
       '<h3>Beheerpaneel</h3>' +
@@ -819,7 +878,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
   // Guard — zonder TEMPLATE_SS_ID kan de klant de copy-link niet gebruiken.
   // Stuur een alert naar de eigenaar en markeer de licentie-rij zichtbaar.
   if (!templateId) {
-    Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' (' + sleutel + ') wacht op activatielink.');
+    Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' (' + sleutel.substring(0, 8) + '…) wacht op activatielink.');
     try { markeerTemplateOntbreekt_(sleutel); } catch (_) {}
     try {
       MailApp.sendEmail({

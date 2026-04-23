@@ -439,6 +439,12 @@ function berekenKengetallen_(ss) {
   const eigenVermogen = Object.values(saldi).filter(r => r.bw === 'Balans' && r.cat === 'Eigen vermogen')
     .reduce((s, r) => s + r.saldo, 0) + nettowinst;
 
+  // Totaal activa = alle Activa-rekeningen (bank, debiteuren, vaste activa, voorraad, etc.)
+  // Gebruikt voor correcte solvabiliteitsberekening.
+  const totaalActiva = Object.values(saldi)
+    .filter(r => r.type === 'Activa')
+    .reduce((s, r) => s + r.saldo, 0);
+
   return {
     omzet: rondBedrag_(omzet),
     kosten: rondBedrag_(kosten),
@@ -447,10 +453,20 @@ function berekenKengetallen_(ss) {
     debiteuren: rondBedrag_(debiteuren),
     crediteuren: rondBedrag_(crediteuren),
     banksaldo: rondBedrag_(bank),
-    liquiditeit: crediteuren > 0 ? rondBedrag_(bank / crediteuren) : null,
+    totaalActiva: rondBedrag_(totaalActiva),
+    // Quick ratio: (vlottende activa excl. voorraad) / kortlopende schulden.
+    // Voor ZZP is vlottende activa ≈ bank + debiteuren; voorraad is zelden van toepassing.
+    // Vorige formule was `bank / crediteuren` en miste debiteuren (false-negative liquiditeit
+    // wanneer klant veel openstaande facturen heeft).
+    liquiditeit: Math.abs(crediteuren) > 0
+      ? rondBedrag_((bank + debiteuren) / Math.abs(crediteuren))
+      : null,
     eigenVermogen: rondBedrag_(eigenVermogen),
-    solvabiliteit: (eigenVermogen + Math.abs(crediteuren)) > 0
-      ? rondBedrag_((eigenVermogen / (eigenVermogen + Math.abs(crediteuren))) * 100)
+    // Solvabiliteit: eigen vermogen / totaal vermogen (= totaal activa) × 100.
+    // Vorige formule was `EV / (EV + |crediteuren|)` — mathematisch incorrect,
+    // miste andere passiva-posten (langlopende schulden, voorziening, etc.).
+    solvabiliteit: totaalActiva > 0
+      ? rondBedrag_((eigenVermogen / totaalActiva) * 100)
       : null,
   };
 }
