@@ -264,7 +264,7 @@ function maakBtwOverzichtTekst_(ss, jaar) {
 
 function maakAccountantInstructies_(bedrijf, jaar, mapUrl) {
   return `INSTRUCTIES VOOR ACCOUNTANT
-Boekhouding Engine — ${bedrijf} — Boekjaar ${jaar}
+Boekhoudbaar — ${bedrijf} — Boekjaar ${jaar}
 ${'='.repeat(60)}
 
 Beste accountant,
@@ -291,7 +291,7 @@ IMPORT IN BOEKHOUDPAKKET:
 CONTACT:
   Vragen over de data? Neem contact op met de ondernemer.
 
-Gegenereerd via Boekhouding Engine op ${formatDatumTijd_(new Date())}.
+Gegenereerd via Boekhoudbaar op ${formatDatumTijd_(new Date())}.
 `;
 }
 
