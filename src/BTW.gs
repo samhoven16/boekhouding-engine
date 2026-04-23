@@ -104,7 +104,7 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     if (btwLabel.includes('21')) {
       aangifte.r1a_grondslag += grondslag;
       aangifte.r1a_btw += btwBedrag;
-    } else if (btwLabel.includes('9')) {
+    } else if (btwLabel.includes('9%') || btwLabel.includes('laag')) {
       aangifte.r1b_grondslag += grondslag;
       aangifte.r1b_btw += btwBedrag;
     } else if (btwLabel.includes('Vrijgesteld')) {

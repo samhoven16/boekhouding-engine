@@ -320,6 +320,14 @@ a:hover { border-bottom-color: var(--accent); }
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 18px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.auteur-avatar img {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
 }
 .auteur-tekst { color: var(--grijs); }
 .auteur-tekst strong { color: var(--blauw); display: block; margin-bottom: 2px; }

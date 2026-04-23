@@ -50,4 +50,11 @@
     <priority>0.3</priority>
   </url>
 
+  <url>
+    <loc>https://www.boekhoudbaar.nl/transparantie</loc>
+    <lastmod>2026-04-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
 </urlset>
