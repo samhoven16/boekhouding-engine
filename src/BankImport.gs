@@ -131,3 +131,128 @@ function extraheerReferentie_(omschr) {
   const m = s.match(/\b([A-Z]{1,4}[-_]?\d{3,10}|\d{4}[-_]\d{3,6})\b/i);
   return m ? m[1] : '';
 }
+
+// ─────────────────────────────────────────────
+//  AUTO-MATCH: koppel banktransactie aan open factuur
+// ─────────────────────────────────────────────
+
+/**
+ * Probeert elke geparste transactie te matchen met een open verkoopfactuur.
+ * Match-criteria (oplopend in vertrouwen):
+ *   1. Factuurnummer in omschrijving (hoogste zekerheid)
+ *   2. Exact bedrag (±€0.01) én datum binnen 30 dagen na factuurdatum
+ *
+ * Retourneert lijst transacties met `.match = {factuurnummer, klant, zekerheid}` of null.
+ */
+function matchTransactiesMetFacturen_(ss, transacties) {
+  const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (!vfSheet) return transacties;
+  const vfData = vfSheet.getDataRange().getValues();
+  const openFacturen = [];
+  for (let i = 1; i < vfData.length; i++) {
+    const status = vfData[i][14];
+    if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
+    const incl = parseFloat(vfData[i][12]) || 0;
+    const betaald = parseFloat(vfData[i][13]) || 0;
+    const open = rondBedrag_(incl - betaald);
+    if (open <= 0) continue;
+    openFacturen.push({
+      rij: i + 1,
+      nr: String(vfData[i][1] || ''),
+      datum: vfData[i][2] ? new Date(vfData[i][2]) : null,
+      klant: String(vfData[i][5] || ''),
+      openBedrag: open,
+    });
+  }
+
+  return transacties.map(function(t) {
+    // Alleen positieve bedragen (ontvangsten) kunnen facturen betalen
+    if (t.bedrag <= 0) { t.match = null; return t; }
+
+    // Strategie 1: factuurnummer in omschrijving / referentie
+    if (t.referentie) {
+      const hit = openFacturen.find(function(f) {
+        return f.nr && t.referentie.replace(/[-_ ]/g, '').toUpperCase()
+                     === f.nr.replace(/[-_ ]/g, '').toUpperCase();
+      });
+      if (hit && Math.abs(hit.openBedrag - t.bedrag) < 0.02) {
+        t.match = { factuurnummer: hit.nr, klant: hit.klant, zekerheid: 'hoog', rij: hit.rij };
+        return t;
+      }
+    }
+
+    // Strategie 2: exact bedrag + datum binnen 30 dagen
+    const kandidaten = openFacturen.filter(function(f) {
+      if (Math.abs(f.openBedrag - t.bedrag) > 0.02) return false;
+      if (!f.datum || !t.datum) return false;
+      const dagen = (t.datum - f.datum) / (1000 * 60 * 60 * 24);
+      return dagen >= -3 && dagen <= 60; // kan iets vóór of na factuurdatum zijn
+    });
+    if (kandidaten.length === 1) {
+      t.match = { factuurnummer: kandidaten[0].nr, klant: kandidaten[0].klant, zekerheid: 'medium', rij: kandidaten[0].rij };
+    } else {
+      t.match = null; // 0 of meerdere kandidaten → handmatig
+    }
+    return t;
+  });
+}
+
+/**
+ * Verwerk geïmporteerde + gematchte transacties:
+ *   - voeg toe aan BANKTRANSACTIES sheet
+ *   - markeer gematchte facturen als betaald (status + betaald-bedrag)
+ *   - genereer journaalpost voor elke transactie (1200 ↔ 1100/diverse)
+ *
+ * @return {{toegevoegd:number, gematcht:number, fouten:string[]}}
+ */
+function verwerkBankImport_(ss, transacties) {
+  const resultaat = { toegevoegd: 0, gematcht: 0, fouten: [] };
+  const btSheet = ss.getSheetByName(SHEETS.BANKTRANSACTIES);
+  const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (!btSheet) { resultaat.fouten.push('BANKTRANSACTIES-tab ontbreekt'); return resultaat; }
+
+  transacties.forEach(function(t) {
+    try {
+      const transactieId = volgendTransactieId_ ? volgendTransactieId_() : ('BT-' + Date.now());
+      const gekoppeldFactuur = t.match ? t.match.factuurnummer : '';
+      const grootboek = t.bedrag > 0 ? '1100' : '';  // ontvangst → debiteuren; uitgave = onbekend, handmatig categoriseren
+      const status = t.match ? 'Gekoppeld' : 'Ongekoppeld';
+
+      btSheet.appendRow([
+        transactieId,
+        t.datum,
+        t.omschr,
+        t.bedrag,
+        t.bedrag > 0 ? 'Ontvangst' : 'Betaling',
+        '1200',                  // eigen bankrekening
+        t.tegenrekening,
+        t.tegenpartij,
+        t.referentie,
+        grootboek,
+        '',                      // gekoppeld aan relatie (handmatig)
+        gekoppeldFactuur,
+        status,
+        'Import CSV',
+        new Date(),
+      ]);
+      resultaat.toegevoegd++;
+
+      // Markeer factuur als betaald wanneer match zeker is
+      if (t.match && vfSheet) {
+        const rij = t.match.rij;
+        const huidigBetaald = parseFloat(vfSheet.getRange(rij, 14).getValue()) || 0;
+        const nieuwBetaald = rondBedrag_(huidigBetaald + t.bedrag);
+        const totalIncl = parseFloat(vfSheet.getRange(rij, 13).getValue()) || 0;
+        vfSheet.getRange(rij, 14).setValue(nieuwBetaald);
+        vfSheet.getRange(rij, 15).setValue(nieuwBetaald >= totalIncl - 0.01 ? FACTUUR_STATUS.BETAALD : 'Deels betaald');
+        resultaat.gematcht++;
+      }
+    } catch (e) {
+      resultaat.fouten.push('Rij overgeslagen: ' + e.message);
+    }
+  });
+
+  // Invalideer KPI-snapshot zodat dashboard direct nieuwe banksaldo toont
+  try { if (typeof invalideerKpiSnapshot_ === 'function') invalideerKpiSnapshot_(); } catch (_) {}
+  return resultaat;
+}
