@@ -445,7 +445,7 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
       } catch (e) { /* UBL optioneel */ }
     }
 
-    const onderwerp = `Factuur ${factuurNummer} van ${bedrijf}`;
+    const onderwerp = `Factuur ${factuurNummer} · ${formatBedrag_(bedragIncl)} · ${bedrijf}`;
     const tekst =
       `Beste ${klantnaam},\n\n` +
       `Bijgaand ontvangt u factuur ${factuurNummer}.\n\n` +
@@ -457,9 +457,32 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
       `o.v.v.: ${factuurNummer}\n\n` +
       `Met vriendelijke groet,\n${bedrijf}`;
 
+    const htmlBody =
+      '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;max-width:540px;margin:0;padding:0 0 24px;color:#1A1A1A">' +
+      '<div style="background:#0D1B4E;padding:20px 24px;border-radius:8px 8px 0 0">' +
+        '<div style="color:rgba(255,255,255,.78);font-size:11px;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:4px">Factuur</div>' +
+        '<div style="color:#fff;font-size:22px;font-weight:700">' + escHtml_(factuurNummer) + '</div>' +
+      '</div>' +
+      '<div style="background:#fff;border:1px solid #E5EAF2;border-top:none;border-radius:0 0 8px 8px;padding:22px 24px">' +
+        '<p style="margin:0 0 14px;font-size:14px">Beste ' + escHtml_(klantnaam) + ',</p>' +
+        '<p style="margin:0 0 14px;font-size:14px;line-height:1.55">Bijgaand ontvangt u factuur <strong>' + escHtml_(factuurNummer) + '</strong>.</p>' +
+        '<table role="presentation" style="width:100%;border-collapse:collapse;margin:14px 0;background:#F7F9FC;border-radius:6px">' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px">Te betalen</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-weight:700;font-size:15px;color:#0D1B4E">' + formatBedrag_(bedragIncl) + '</td></tr>' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px;border-top:1px solid #E5EAF2">Vóór</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-weight:600;font-size:13px;border-top:1px solid #E5EAF2">' + formatDatum_(vervaldatum) + '</td></tr>' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px;border-top:1px solid #E5EAF2">Naar</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-family:monospace;font-size:12px;border-top:1px solid #E5EAF2">' + escHtml_(iban) + '</td></tr>' +
+          '<tr><td style="padding:10px 14px;color:#5F6B7A;font-size:13px;border-top:1px solid #E5EAF2">Kenmerk</td>' +
+              '<td style="padding:10px 14px;text-align:right;font-family:monospace;font-size:12px;border-top:1px solid #E5EAF2">' + escHtml_(factuurNummer) + '</td></tr>' +
+        '</table>' +
+        '<p style="margin:18px 0 0;font-size:13px;color:#5F6B7A">Met vriendelijke groet,<br><strong style="color:#1A1A1A">' + escHtml_(bedrijf) + '</strong></p>' +
+      '</div></div>';
+
     const opties = {
       attachments: bijlagen,
       name: bedrijf,
+      htmlBody: htmlBody,
     };
     if (eigenEmail) opties.cc = eigenEmail;
 
