@@ -145,28 +145,72 @@ function extraheerReferentie_(omschr) {
  * Retourneert lijst transacties met `.match = {factuurnummer, klant, zekerheid}` of null.
  */
 function matchTransactiesMetFacturen_(ss, transacties) {
+  // ── Open verkoopfacturen (ontvangsten) ─────────────────────────────────
   const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
-  if (!vfSheet) return transacties;
-  const vfData = vfSheet.getDataRange().getValues();
   const openFacturen = [];
-  for (let i = 1; i < vfData.length; i++) {
-    const status = vfData[i][14];
-    if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
-    const incl = parseFloat(vfData[i][12]) || 0;
-    const betaald = parseFloat(vfData[i][13]) || 0;
-    const open = rondBedrag_(incl - betaald);
-    if (open <= 0) continue;
-    openFacturen.push({
-      rij: i + 1,
-      nr: String(vfData[i][1] || ''),
-      datum: vfData[i][2] ? new Date(vfData[i][2]) : null,
-      klant: String(vfData[i][5] || ''),
-      openBedrag: open,
-    });
+  if (vfSheet) {
+    const vfData = vfSheet.getDataRange().getValues();
+    for (let i = 1; i < vfData.length; i++) {
+      const status = vfData[i][14];
+      if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
+      const incl = parseFloat(vfData[i][12]) || 0;
+      const betaald = parseFloat(vfData[i][13]) || 0;
+      const open = rondBedrag_(incl - betaald);
+      if (open <= 0) continue;
+      openFacturen.push({
+        rij: i + 1, nr: String(vfData[i][1] || ''),
+        datum: vfData[i][2] ? new Date(vfData[i][2]) : null,
+        klant: String(vfData[i][5] || ''), openBedrag: open,
+      });
+    }
+  }
+
+  // ── Open inkoopfacturen (uitgaven) ────────────────────────────────────
+  const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  const openInkoop = [];
+  if (ifSheet) {
+    const ifData = ifSheet.getDataRange().getValues();
+    for (let i = 1; i < ifData.length; i++) {
+      if (ifData[i][12] === FACTUUR_STATUS.BETAALD) continue;
+      const incl = parseFloat(ifData[i][11]) || 0;
+      if (incl <= 0) continue;
+      openInkoop.push({
+        rij: i + 1, nr: String(ifData[i][1] || ''),
+        datum: ifData[i][3] ? new Date(ifData[i][3]) : null,
+        leverancier: String(ifData[i][6] || ''),
+        ref: String(ifData[i][4] || ''),
+        openBedrag: rondBedrag_(incl),
+      });
+    }
   }
 
   return transacties.map(function(t) {
-    // Alleen positieve bedragen (ontvangsten) kunnen facturen betalen
+    // Uitgaven (negatieve bedragen) matchen tegen open inkoopfacturen
+    if (t.bedrag < 0) {
+      const bedragAbs = Math.abs(t.bedrag);
+      // Strategie 1: leveranciersreferentie of factuurnummer in omschrijving
+      if (t.referentie) {
+        const hit = openInkoop.find(function(f) {
+          const fId = (f.nr + ' ' + f.ref).replace(/[-_ ]/g, '').toUpperCase();
+          const tId = t.referentie.replace(/[-_ ]/g, '').toUpperCase();
+          return fId.indexOf(tId) >= 0 && Math.abs(f.openBedrag - bedragAbs) < 0.02;
+        });
+        if (hit) { t.match = { type: 'inkoop', factuurnummer: hit.nr, klant: hit.leverancier, zekerheid: 'hoog', rij: hit.rij }; return t; }
+      }
+      // Strategie 2: bedrag + datum binnen 60 dagen na factuurdatum
+      const kandidaten = openInkoop.filter(function(f) {
+        if (Math.abs(f.openBedrag - bedragAbs) > 0.02) return false;
+        if (!f.datum || !t.datum) return false;
+        const dagen = (t.datum - f.datum) / (1000 * 60 * 60 * 24);
+        return dagen >= -3 && dagen <= 90;
+      });
+      if (kandidaten.length === 1) {
+        t.match = { type: 'inkoop', factuurnummer: kandidaten[0].nr, klant: kandidaten[0].leverancier, zekerheid: 'medium', rij: kandidaten[0].rij };
+      } else { t.match = null; }
+      return t;
+    }
+
+    // Ontvangsten (positief) matchen tegen open verkoopfacturen
     if (t.bedrag <= 0) { t.match = null; return t; }
 
     // Strategie 1: factuurnummer in omschrijving / referentie
@@ -252,8 +296,8 @@ function verwerkBankImport_(ss, transacties) {
       ]);
       resultaat.toegevoegd++;
 
-      // Markeer factuur als betaald wanneer match zeker is
-      if (t.match && vfSheet) {
+      // Markeer verkoopfactuur als (deels) betaald — voor ontvangsten
+      if (t.match && t.match.type !== 'inkoop' && vfSheet) {
         const rij = t.match.rij;
         const huidigBetaald = parseFloat(vfSheet.getRange(rij, 14).getValue()) || 0;
         const nieuwBetaald = rondBedrag_(huidigBetaald + t.bedrag);
@@ -261,6 +305,16 @@ function verwerkBankImport_(ss, transacties) {
         vfSheet.getRange(rij, 14).setValue(nieuwBetaald);
         vfSheet.getRange(rij, 15).setValue(nieuwBetaald >= totalIncl - 0.01 ? FACTUUR_STATUS.BETAALD : 'Deels betaald');
         resultaat.gematcht++;
+      }
+      // Markeer inkoopfactuur als betaald — voor uitgaven
+      if (t.match && t.match.type === 'inkoop') {
+        const ifSh = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+        if (ifSh) {
+          const rij = t.match.rij;
+          ifSh.getRange(rij, 13).setValue(FACTUUR_STATUS.BETAALD);   // Status kolom [12] → 1-indexed = 13
+          ifSh.getRange(rij, 14).setValue(t.datum);                  // Betaaldatum kolom [13]
+          resultaat.gematcht++;
+        }
       }
     } catch (e) {
       resultaat.fouten.push('Rij overgeslagen: ' + e.message);
