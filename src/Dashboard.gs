@@ -638,6 +638,9 @@ function getDashboardData() {
       banksaldo:          kpi.banksaldo,
       nettowinst:         kpi.nettowinst,
       winstmarge:         kpi.winstmarge,
+      verwachtIn30d:      kpi.verwachtIn30d,
+      burnRate:           kpi.burnRate,
+      runway:             kpi.runway,
       omzetMaand:         rondBedrag_(omzetMaand),
       kostenMaand:        rondBedrag_(kostenMaand),
       btwSaldo:           kpi.btwSaldo,
@@ -751,7 +754,9 @@ function _bouwDashboardHtml_() {
     '  h+=kpi("Netto (maand)",fmt(nettoMaand),"",nettoMaand>0?"goed":nettoMaand<0?"krit":"");' +
     '  h+=\'</div>\';' +
     '  h+=\'<div class="kpi-grid" style="margin-bottom:14px">\';' +
-    '  h+=kpi("Open facturen",k.aantalOpenFacturen+" stuks",fmt(k.debiteurenOpen),k.aantalOpenFacturen>0?"warn":"goed");' +
+    '  var openSub=fmt(k.debiteurenOpen);' +
+    '  if(k.verwachtIn30d>0){openSub+=" · "+fmt(k.verwachtIn30d)+" binnen 30d";}' +
+    '  h+=kpi("Open facturen",k.aantalOpenFacturen+" stuks",openSub,k.aantalOpenFacturen>0?"warn":"goed");' +
     '  h+=kpi("Te betalen BTW",fmt(k.btwSaldo||0),"",(k.btwSaldo||0)>0?"warn":"goed");' +
     '  h+=kpi("Open crediteuren",fmt(k.crediteurenOpen||0),"","");' +
     '  h+=kpi("BTW aangifte",btw.kwartaal+" \u2014 "+btw.datum,btw.dagenOver+" dagen over",btw.urgent?"krit":"");' +
