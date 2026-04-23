@@ -131,6 +131,24 @@ function verwerkNieuweBoeking(type, data) {
     throw new Error(v.fouten.map(function(f) { return f.bericht; }).join('\n'));
   }
 
+  // 2. Pre-check bedrijfsgegevens voor factuur — voorkomt "Ons Bedrijf" op
+  //    de PDF en klantverwarring. Alleen bij factuur; kosten/declaratie gaan
+  //    nergens naar de klant dus zijn minder kritiek.
+  if (type === 'factuur') {
+    const bedrijf = getInstelling_('Bedrijfsnaam');
+    const iban    = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN');
+    const ontbrekend = [];
+    if (!bedrijf) ontbrekend.push('Bedrijfsnaam');
+    if (!iban)    ontbrekend.push('IBAN');
+    if (ontbrekend.length > 0) {
+      throw new Error(
+        'Je factuur kan niet worden gemaakt — deze bedrijfsgegevens ontbreken: ' +
+        ontbrekend.join(', ') + '.\n\n' +
+        'Vul ze eerst in via het tabblad Instellingen en probeer opnieuw.'
+      );
+    }
+  }
+
   const ss = getSpreadsheet_();
 
   // 2. Saniteer alle velden
