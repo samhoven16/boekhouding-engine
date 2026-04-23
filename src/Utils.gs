@@ -402,7 +402,10 @@ function getVersieInfo() {
 //
 // ScriptProperties value limit: 9 KB per key. Snapshot is ~500 bytes — safe.
 
-const SNAPSHOT_SCHEMA_VERSION  = 1;
+// v2 (apr 2026): banksaldo, crediteurenOpen, nettowinst, winstmarge vereist
+// voor de 8-KPI sidebar. Oude v1-snapshots missen banksaldo → automatisch
+// geïnvalideerd zodat de frontend nooit een kapotte snapshot toont.
+const SNAPSHOT_SCHEMA_VERSION  = 2;
 const KPI_SNAPSHOT_MAX_AGE_MS  = 30 * 60 * 1000; // 30 minutes
 
 // Required numeric keys in data — used by leesKpiSnapshot_ for structural validation.
