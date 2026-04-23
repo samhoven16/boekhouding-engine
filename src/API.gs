@@ -126,7 +126,7 @@ function doGet(e) {
 
   return jsonResponse_({
     succes: true,
-    bericht: 'Boekhouding Engine API actief',
+    bericht: 'Boekhoudbaar API actief',
     acties: ['status', 'klanten', 'facturen'],
   });
 }

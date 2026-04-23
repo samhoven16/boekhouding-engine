@@ -238,7 +238,7 @@ function vernieuwDashboard() {
     rij++;
   });
 
-  // ── ROI Sectie: "Wat heeft Boekhouding Engine u opgeleverd?" ─────────
+  // ── ROI Sectie: "Wat heeft Boekhoudbaar je opgeleverd?" ──────────────
   rij += 2;
   sheet.getRange(rij, 1, 1, 8).merge()
     .setValue('WAT HEEFT BOEKHOUDBAAR JE OPGELEVERD?')
