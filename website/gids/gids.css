@@ -375,3 +375,9 @@ a:hover { border-bottom-color: var(--accent); }
   .sticky-cta-text { font-size: 13px; }
   .sticky-cta-btn { padding: 8px 14px; font-size: 13px; }
 }
+
+/* Body-padding wanneer sticky-cta zichtbaar, zodat content niet verborgen is */
+body:has(.sticky-cta.active) { padding-bottom: 80px; }
+@media (max-width: 640px) {
+  body:has(.sticky-cta.active) { padding-bottom: 110px; }
+}
