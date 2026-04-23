@@ -1,5 +1,5 @@
 /**
- * Boekhouding Engine — Licentieverificatieserver
+ * Boekhoudbaar — Licentieverificatieserver
  *
  * Publiceer dit script als aparte Web App (eigen Google-account):
  *   Implementeren → Nieuwe implementatie → Web-app
@@ -10,8 +10,8 @@
  *   MOLLIE_API_KEY      — test_xxx of live_xxx (dashboard.mollie.com)
  *   ADMIN_WACHTWOORD    — wachtwoord voor het beheerpaneel
  *   INSTALLER_URL       — URL van de installatie-webapp (Installer.gs doGet)
- *   PRODUCT_NAAM        — bijv. "Boekhouding Engine"
- *   PRODUCT_PRIJS       — bijv. "49.00"  (excl. BTW, in EUR)
+ *   PRODUCT_NAAM        — standaard "Boekhoudbaar"
+ *   PRODUCT_PRIJS       — bijv. "49.00"  (incl. BTW, in EUR — géén centen)
  *
  * Vul na publicatie de Web App URL in als LICENTIE_SERVER_URL in de
  * boekhouding-spreadsheet (tabblad Instellingen).
@@ -25,6 +25,11 @@ function doGet(e) {
   if (!PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID')) {
     try { setupLicentieSheet(); } catch (err) { Logger.log('Auto-setup fout: ' + err.message); }
   }
+
+  // Zelfherstellende config — corrigeert historische fouten (prijs in centen,
+  // oude productnaam). Idempotent: runt elke request maar schrijft alleen
+  // wanneer de waarde écht gecorrigeerd moet worden.
+  try { zelfHerstelProductConfig_(); } catch (err) { Logger.log('Self-heal fout: ' + err.message); }
 
   const actie = (e && e.parameter && e.parameter.actie) || '';
 
@@ -79,10 +84,53 @@ function healthEndpoint_() {
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
-function betaalPagina_(e) {
+/**
+ * Zelfherstellende configuratie-laag.
+ *
+ * Repareert drie historische fouten die in live ScriptProperties kunnen staan:
+ *   1. PRODUCT_PRIJS in centen (bv. "4900" → "49.00")
+ *   2. PRODUCT_NAAM = "Boekhouding Engine" → "Boekhoudbaar"
+ *   3. PRODUCT_PRIJS afwezig → default "49.00"
+ *
+ * Idempotent: draait op elke doGet maar schrijft alleen bij daadwerkelijke correctie.
+ * Schrijft een audit-entry zodat we de correctie kunnen terugvinden.
+ */
+function zelfHerstelProductConfig_() {
   const props = PropertiesService.getScriptProperties();
-  const naam  = props.getProperty('PRODUCT_NAAM')  || 'Boekhoudbaar';
-  const prijs = props.getProperty('PRODUCT_PRIJS') || '49';
+
+  // 1. Prijs — als waarde parseet als geheel getal >= 100, is het waarschijnlijk
+  //    in centen opgeslagen door een oude deploy. Converteer naar euro's.
+  const huidigePrijs = props.getProperty('PRODUCT_PRIJS');
+  if (!huidigePrijs) {
+    props.setProperty('PRODUCT_PRIJS', '49.00');
+  } else {
+    const n = parseFloat(huidigePrijs);
+    // Heuristiek: alleen corrigeren bij gehele waarden >= 100 ZONDER komma/punt.
+    // "49.00" blijft ongemoeid, "4900" wordt "49.00".
+    if (Number.isFinite(n) && n >= 100 && !/[.,]/.test(String(huidigePrijs).trim())) {
+      const gecorrigeerd = (n / 100).toFixed(2);
+      props.setProperty('PRODUCT_PRIJS', gecorrigeerd);
+      Logger.log('PRODUCT_PRIJS zelfhersteld: ' + huidigePrijs + ' → ' + gecorrigeerd);
+    }
+  }
+
+  // 2. Productnaam — corrigeer "Boekhouding Engine" → "Boekhoudbaar"
+  const huidigeNaam = props.getProperty('PRODUCT_NAAM');
+  if (!huidigeNaam || /boekhouding\s*engine/i.test(huidigeNaam)) {
+    props.setProperty('PRODUCT_NAAM', 'Boekhoudbaar');
+    if (huidigeNaam) Logger.log('PRODUCT_NAAM zelfhersteld: ' + huidigeNaam + ' → Boekhoudbaar');
+  }
+}
+
+function betaalPagina_(e) {
+  const props   = PropertiesService.getScriptProperties();
+  const naam    = props.getProperty('PRODUCT_NAAM')  || 'Boekhoudbaar';
+  const prijsRw = props.getProperty('PRODUCT_PRIJS') || '49.00';
+  // Dubbele fallback: zelfs als zelfHerstelProductConfig_ niet heeft gedraaid,
+  // corrigeer alsnog in de render-laag zodat de pagina nooit €4900 toont.
+  const prijs = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
+    ? (parseFloat(prijsRw) / 100).toFixed(2)
+    : prijsRw;
 
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -224,9 +272,13 @@ function maakBetaling(klantnaam, klantEmail) {
 
   const props     = PropertiesService.getScriptProperties();
   const mollieKey = props.getProperty('MOLLIE_API_KEY');
-  const prijs     = props.getProperty('PRODUCT_PRIJS') || '49.00';
-  const productnm = props.getProperty('PRODUCT_NAAM')  || 'Boekhouding Engine';
+  const prijsRw   = props.getProperty('PRODUCT_PRIJS') || '49.00';
+  const productnm = props.getProperty('PRODUCT_NAAM')  || 'Boekhoudbaar';
   const webAppUrl = ScriptApp.getService().getUrl();
+  // Dubbele fallback — zelfs als self-heal niet draaide, reken geen €4900 af.
+  const prijs = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
+    ? (parseFloat(prijsRw) / 100).toFixed(2)
+    : prijsRw;
 
   if (!mollieKey) return { fout: 'Betalingsprovider niet geconfigureerd. Neem contact op.' };
 
@@ -995,7 +1047,7 @@ function jsonResp_(data) {
  * Voer deze functie éénmalig uit in de Apps Script editor.
  */
 function setupLicentieSheet() {
-  const ss = SpreadsheetApp.create('Boekhouding Engine — Licentiebeheer');
+  const ss = SpreadsheetApp.create('Boekhoudbaar — Licentiebeheer');
   const props = PropertiesService.getScriptProperties();
   props.setProperty('LICENTIE_SHEET_ID', ss.getId());
 
@@ -1003,7 +1055,7 @@ function setupLicentieSheet() {
   // (MOLLIE_API_KEY, ADMIN_WACHTWOORD, BREVO_API_KEY, TEMPLATE_SS_ID,
   // KVK_NUMMER, BTW_NUMMER) moeten handmatig worden ingevuld per
   // environment — nooit hardcoden.
-  if (!props.getProperty('PRODUCT_NAAM'))  props.setProperty('PRODUCT_NAAM',  'Boekhouding Engine');
+  if (!props.getProperty('PRODUCT_NAAM'))  props.setProperty('PRODUCT_NAAM',  'Boekhoudbaar');
   if (!props.getProperty('PRODUCT_PRIJS')) props.setProperty('PRODUCT_PRIJS', '49.00');
 
   const ontbrekend = [];
