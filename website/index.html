@@ -168,7 +168,9 @@
   .logo { text-decoration: none; display: inline-flex; align-items: center; height: 36px; }
   .logo img { height: 32px; width: auto; display: block; transition: opacity .15s ease; }
   .logo:hover img { opacity: .85; }
-  .nav-links { display: flex; gap: 28px; list-style: none; }
+  .nav-links { display: flex; gap: 28px; list-style: none; align-items: center; }
+  .nav-mobile-actions { display: none; list-style: none; align-items: center; gap: 6px; }
+  .nav-mobile-actions li { list-style: none; }
   .nav-links a { text-decoration: none; color: var(--grijs); font-size: 15px; font-weight: 500; transition: color .15s ease; }
   .nav-links a:not(.nav-cta):hover { color: var(--blauw); }
   .nav-cta {
@@ -620,22 +622,37 @@
   @media (max-width: 768px) {
     section { padding: 52px 20px; }
 
-    .nav-toggle { display: flex; align-items: center; }
+    nav { padding: 0 16px; }
+    .nav-inner { height: 64px; gap: 8px; }
+    .logo img { height: 28px; }
+
+    /* Mobile: CTA + hamburger rechts altijd zichtbaar — andere items via menu */
+    .nav-mobile-actions { display: inline-flex; }
+    .nav-toggle { display: inline-flex; align-items: center; justify-content: center;
+                  min-width: 44px; min-height: 44px; margin-left: 4px; }
 
     .nav-links {
       display: none; flex-direction: column; gap: 0;
-      position: absolute; top: 72px; left: 0; right: 0;
+      position: absolute; top: 64px; left: 0; right: 0;
       background: var(--wit); border-bottom: 1px solid var(--rand);
-      padding: 8px 0; box-shadow: 0 8px 24px rgba(0,0,0,.08);
+      padding: 4px 0; box-shadow: 0 8px 24px rgba(0,0,0,.08);
       z-index: 99;
     }
     .nav-links.open { display: flex; }
-    .nav-links a { padding: 14px 24px; font-size: 16px; border-bottom: 1px solid var(--rand); }
-    .nav-links li:last-child a { border-bottom: none; }
-    .nav-cta {
-      margin: 8px 20px 4px; border-radius: 8px;
-      text-align: center; display: block;
+    .nav-links li { width: 100%; }
+    .nav-links li:not(.nav-cta-mobile) a {
+      padding: 14px 20px; font-size: 16px; display: block;
+      border-bottom: 1px solid var(--rand);
     }
+    .nav-links li:last-child a { border-bottom: none; }
+    /* CTA blijft altijd zichtbaar naast hamburger */
+    .nav-cta-mobile { display: inline-flex !important; align-items: center;
+                      order: 2; list-style: none; }
+    .nav-cta-mobile a.nav-cta {
+      padding: 9px 14px !important; font-size: 13px !important;
+      border-radius: 8px; display: inline-flex;
+    }
+    .nav-links .nav-cta-desktop { display: none; }
 
     .hero { padding: 96px 20px 72px; }
     .hero-ctas { flex-direction: column; align-items: stretch; gap: 12px; }
@@ -718,17 +735,21 @@
     <a href="/" class="logo" aria-label="Boekhoudbaar — home">
       <img src="/logo.svg" alt="" width="260" height="52">
     </a>
-    <button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
-      <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
-    </button>
     <ul class="nav-links" id="nav-menu" role="list">
       <li><a href="#functies">Functies</a></li>
       <li><a href="#vergelijking">Vergelijking</a></li>
       <li><a href="#prijs">Prijs</a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="/gids/">Gidsen</a></li>
-      <li><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+      <li><a href="/over">Over Sam</a></li>
+      <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+    </ul>
+    <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
+      <li class="nav-cta-mobile"><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+      <li><button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
+        <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      </button></li>
     </ul>
   </div>
 </nav>
