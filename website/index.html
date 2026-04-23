@@ -458,46 +458,49 @@
   .oauth-heads-up em { color: #5A3F00; }
   .oauth-heads-up strong { color: #5A3F00; }
 
-  /* ── OPRICHTER ── */
-  .oprichter-sectie { background: var(--bg); }
-  .oprichter-grid {
+  /* ── OPRICHTER (compact teaser → /over/) ── */
+  .oprichter-sectie { background: var(--bg); padding-top: 56px; padding-bottom: 56px; }
+  .oprichter-teaser {
     display: grid;
-    grid-template-columns: 200px 1fr;
-    gap: 40px;
-    margin-top: 40px;
-    align-items: start;
+    grid-template-columns: 96px 1fr;
+    gap: 28px;
+    align-items: center;
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--wit);
+    border: 1px solid var(--rand);
+    border-radius: 14px;
+    padding: 24px 28px;
+    box-shadow: 0 2px 12px rgba(13,27,78,.04);
   }
   .oprichter-foto {
-    width: 200px; height: 200px; border-radius: 50%;
+    width: 96px; height: 96px; border-radius: 50%;
     object-fit: cover; object-position: center top;
-    border: 4px solid var(--wit);
-    box-shadow: var(--shadow);
+    box-shadow: 0 4px 12px rgba(13,27,78,.12);
     display: block;
   }
   .oprichter-foto-initial {
-    width: 200px; height: 200px; border-radius: 50%;
+    width: 96px; height: 96px; border-radius: 50%;
     background: linear-gradient(135deg, #0D1B4E 0%, #1A3A7E 100%);
     color: var(--wit);
     display: none;
     align-items: center; justify-content: center;
-    font-size: 72px; font-weight: 800; letter-spacing: -0.02em;
-    border: 4px solid var(--wit);
-    box-shadow: var(--shadow);
+    font-size: 34px; font-weight: 800;
   }
-  .oprichter-quote {
-    font-size: 22px; font-weight: 600; line-height: 1.4;
-    color: var(--blauw); margin-bottom: 20px;
-    border-left: 3px solid var(--accent);
-    padding-left: 18px;
-    letter-spacing: -0.01em;
+  .oprichter-tekst h2 {
+    font-size: 22px; font-weight: 700; color: var(--blauw);
+    margin-bottom: 8px; letter-spacing: -0.01em; line-height: 1.25;
   }
-  .oprichter-tekst p { margin-bottom: 14px; color: var(--tekst); font-size: 16px; line-height: 1.7; }
-  .oprichter-naam { margin-top: 18px; font-size: 14px; color: var(--grijs); }
-  .oprichter-naam strong { color: var(--tekst); }
-  @media (max-width: 720px) {
-    .oprichter-grid { grid-template-columns: 1fr; justify-items: center; text-align: center; }
-    .oprichter-quote { border-left: none; border-top: 3px solid var(--accent); padding-left: 0; padding-top: 14px; text-align: left; }
-    .oprichter-tekst { text-align: left; }
+  .oprichter-tekst p { margin-bottom: 8px; color: var(--tekst); font-size: 15px; line-height: 1.6; }
+  .oprichter-link {
+    color: var(--blauw); font-weight: 600; text-decoration: none;
+    border-bottom: 2px solid var(--accent); padding-bottom: 1px;
+    transition: color .15s;
+  }
+  .oprichter-link:hover { color: var(--accent); }
+  @media (max-width: 640px) {
+    .oprichter-teaser { grid-template-columns: 1fr; padding: 22px; gap: 16px; text-align: center; justify-items: center; }
+    .oprichter-tekst { text-align: center; }
   }
 
   /* ── PRICING ── */
@@ -904,20 +907,17 @@
   </div>
 </section>
 
-<!-- ── OPRICHTER ── -->
+<!-- ── OPRICHTER (compact teaser → /over) ── -->
 <section class="oprichter-sectie" aria-labelledby="oprichter-heading">
   <div class="container">
-    <p class="section-label">Waarom ik dit maak</p>
-    <h2 id="oprichter-heading">Ik heb het gewoon voor mezelf gebouwd — en toen vroegen anderen erom</h2>
-    <div class="oprichter-grid" data-reveal>
-      <img class="oprichter-foto" src="/sam-hoven.jpg?v=2" alt="Sam Hoven, maker van Boekhoudbaar" width="200" height="200" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="oprichter-teaser" data-reveal>
+      <img class="oprichter-foto" src="/sam-hoven.jpg?v=2" alt="Sam Hoven, maker van Boekhoudbaar" width="96" height="96" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       <div class="oprichter-foto-initial" aria-hidden="true">SH</div>
       <div class="oprichter-tekst">
-        <p class="oprichter-quote">"Ik wilde mijn eigen boekhouding kunnen openen zonder afhankelijk te zijn van andermans software."</p>
-        <p>Boekhoudbaar begon als mijn eigen administratie. Een map in Drive, een paar Sheets, wat formules die ik steeds verder uitwerkte. Geen abonnement dat elk jaar duurder werd. Geen export-gedoe als ik iets anders wilde proberen. Gewoon bestanden, op mijn eigen Drive, die van mij zijn.</p>
-        <p>Na een paar jaar werkte het zo goed dat andere zelfstandigen vroegen of ze het mochten overnemen. Zo is dit product ontstaan. Dezelfde opzet, dezelfde filosofie: je data blijft op jouw Drive, er is niets om op te zeggen, en als ik er ooit mee stop — onwaarschijnlijk, maar stel — werkt je administratie gewoon door. Geen server die uit de lucht gaat, geen lockout.</p>
-        <p>Ik ben Sam, zelfstandig ondernemer uit Nederland. Heb je een vraag vóór je koopt? Stuur me gerust een mail op <a href="mailto:sam@boekhoudbaar.nl">sam@boekhoudbaar.nl</a> — ik lees en beantwoord ze zelf.</p>
-        <p class="oprichter-naam"><strong>Sam Hoven</strong> · maker van Boekhoudbaar</p>
+        <p class="section-label" style="margin-bottom:6px;">Gemaakt door één persoon</p>
+        <h2 id="oprichter-heading">Door Sam — zelfstandig ondernemer, net als jij</h2>
+        <p>Ik bouwde Boekhoudbaar eerst voor mezelf, omdat ik niet afhankelijk wilde zijn van andermans software. Toen vroegen anderen ernaar. Zo is dit product ontstaan.</p>
+        <p><a href="/over/" class="oprichter-link">Lees meer over mij en hoe ik werk →</a></p>
       </div>
     </div>
   </div>
