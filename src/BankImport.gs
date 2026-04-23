@@ -215,8 +215,23 @@ function verwerkBankImport_(ss, transacties) {
     try {
       const transactieId = volgendTransactieId_ ? volgendTransactieId_() : ('BT-' + Date.now());
       const gekoppeldFactuur = t.match ? t.match.factuurnummer : '';
-      const grootboek = t.bedrag > 0 ? '1100' : '';  // ontvangst → debiteuren; uitgave = onbekend, handmatig categoriseren
-      const status = t.match ? 'Gekoppeld' : 'Ongekoppeld';
+
+      // Grootboek-bepaling:
+      //  - Gematchte factuur → 1100 (debiteuren) = ontvangen betaling
+      //  - Ongekoppelde ontvangst → 1100 (klant betaalt voor onbekende factuur)
+      //  - Ongekoppelde uitgave → probeer via SmartCategorisatie keyword-match
+      let grootboek = '';
+      if (t.match) {
+        grootboek = '1100';
+      } else if (t.bedrag > 0) {
+        grootboek = '1100';
+      } else if (typeof suggereerCategorie_ === 'function') {
+        try {
+          const sug = suggereerCategorie_(t.omschr, t.tegenpartij, t.bedrag);
+          if (sug && sug.zekerheid >= 75) grootboek = sug.rekening;
+        } catch (_) { /* suggesties mogen niet breken */ }
+      }
+      const status = t.match ? 'Gekoppeld' : (grootboek ? 'Auto-gecategoriseerd' : 'Ongekoppeld');
 
       btSheet.appendRow([
         transactieId,
