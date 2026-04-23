@@ -226,8 +226,10 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     } else {
       schrijfAuditLog_('Email MISLUKT', factuurNummerOpgemaakt + ' → ' + klantEmail + ' – versturen mislukt');
     }
+  } else if (directMailen && !klantEmail) {
+    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen klant e-mailadres bekend. Vul het e-mailadres in bij de klant-relatie en verstuur handmatig via Boekhouding → Verkoopfacturen.');
   } else if (directMailen && klantEmail && !pdfUrl) {
-    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen PDF beschikbaar, email niet verzonden');
+    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – PDF niet beschikbaar, email niet verzonden');
   }
 
   // Status na werkelijk email-resultaat zetten (niet op intentie)

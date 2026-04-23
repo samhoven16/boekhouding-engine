@@ -575,6 +575,15 @@ function valideerEndpoint_(e) {
 
   if (!sleutel) return jsonResp_({ geldig: false, fout: 'Geen sleutel opgegeven.' });
 
+  // Rate-limit: max 10 validaties per sleutel per uur (beschermt tegen brute-force)
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'valRate_' + sleutel.slice(0, 16);
+  const pogingen = parseInt(cache.get(cacheKey) || '0');
+  if (pogingen >= 10) {
+    return jsonResp_({ geldig: false, fout: 'Te veel validatiepogingen. Probeer over een uur opnieuw.' });
+  }
+  cache.put(cacheKey, String(pogingen + 1), 3600);
+
   try {
     const sheet = getLicentieSheet_();
     const data  = sheet.getDataRange().getValues();

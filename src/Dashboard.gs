@@ -15,8 +15,8 @@ function vernieuwDashboard() {
     try { SpreadsheetApp.getUi().alert('Tabblad "Dashboard" ontbreekt. Run setup() via Boekhouding → Instellingen → Herinstalleer.'); } catch (_) {}
     return;
   }
-  // Non-blokkerende toast zodat gebruiker altijd ziet dat het draait
-  try { ss.toast('Dashboard wordt bijgewerkt…', 'Boekhoudbaar', 3); } catch (_) {}
+  // Progressie-indicator (verdwijnt na 30s als code vastloopt)
+  try { ss.toast('Dashboard wordt bijgewerkt…', 'Boekhoudbaar', 30); } catch (_) {}
   sheet.clearContents();
   sheet.clearFormats();
 
