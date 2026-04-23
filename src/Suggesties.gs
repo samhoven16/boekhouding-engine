@@ -217,6 +217,7 @@ function lezeKpiSnapshotVoorSuggesties_(ss) {
 
 /**
  * Telt openstaande verkoopfacturen (status ≠ Betaald).
+ * Status staat in VERKOOPFACTUREN[14], niet [12] — zie sheet-schemas.md.
  */
 function telOpenstaandeVerkoopfacturen_(ss) {
   try {
@@ -225,15 +226,19 @@ function telOpenstaandeVerkoopfacturen_(ss) {
     const data = sheet.getDataRange().getValues();
     let aantal = 0;
     for (let i = 1; i < data.length; i++) {
-      const status = String(data[i][12] || '').trim();
-      if (status && status !== FACTUUR_STATUS.BETAALD) aantal++;
+      const status = String(data[i][14] || '').trim();
+      if (!status) continue;
+      if (status === FACTUUR_STATUS.BETAALD) continue;
+      if (status === FACTUUR_STATUS.GECREDITEERD) continue;
+      aantal++;
     }
     return aantal;
   } catch (_) { return 0; }
 }
 
 /**
- * Telt actieve herhalende kosten (auto-boek = Ja, niet gepauzeerd).
+ * Telt actieve herhalende kosten (status = 'Actief').
+ * Status staat in HERHALENDE_KOSTEN[8] — zie sheet-schemas.md.
  */
 function telActieveHerhalendeKosten_(ss) {
   try {
@@ -242,8 +247,8 @@ function telActieveHerhalendeKosten_(ss) {
     const data = sheet.getDataRange().getValues();
     let aantal = 0;
     for (let i = 1; i < data.length; i++) {
-      const actief = String(data[i][0] || '').trim().toLowerCase();
-      if (actief === 'ja' || actief === 'actief') aantal++;
+      const status = String(data[i][8] || '').trim();
+      if (status === 'Actief') aantal++;
     }
     return aantal;
   } catch (_) { return 0; }

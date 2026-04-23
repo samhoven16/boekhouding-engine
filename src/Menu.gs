@@ -136,6 +136,7 @@ function onOpen() {
       .addItem('Saldi herberekenen (bij fouten)', 'herberekeningGrootboekSaldi')
       .addSeparator()
       .addItem('Instellingen controleren', 'valideerEnMeldInstellingen')
+      .addItem('Dashboard diagnose (als iets hangt)', 'diagnoseDashboard')
       .addSeparator()
       .addItem('Licentie activeren', 'toonLicentieDialoog')
       .addItem('Licentie-informatie', 'toonLicentieInfo')

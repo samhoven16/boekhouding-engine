@@ -57,7 +57,7 @@ const VALID_KPI = {
 // GAS note: `const` declarations in .gs files are NOT accessible as ctx.X properties
 // (block-scoped in vm — see .claude/test-map.md). Use literal values for constants.
 const KPI_SNAPSHOT_KEY    = 'kpiSnapshot'; // PROP.KPI_SNAPSHOT
-const SCHEMA_VERSION      = 1;             // SNAPSHOT_SCHEMA_VERSION
+const SCHEMA_VERSION      = 2;             // SNAPSHOT_SCHEMA_VERSION (bumped v1→v2 apr 2026 voor 8-KPI sidebar)
 
 // ── Test suite ─────────────────────────────────────────────────────────────
 

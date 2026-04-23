@@ -8,21 +8,22 @@
 //  TABBLAD NAMEN
 // ─────────────────────────────────────────────
 const SHEETS = {
-  DASHBOARD:        'Dashboard',
-  INSTELLINGEN:     'Instellingen',
-  GROOTBOEKSCHEMA:  'Grootboekschema',
-  RELATIES:         'Relaties',
-  VERKOOPFACTUREN:  'Verkoopfacturen',
-  INKOOPFACTUREN:   'Inkoopfacturen',
-  BANKTRANSACTIES:  'Banktransacties',
-  JOURNAALPOSTEN:   'Journaalposten',
-  BTW_AANGIFTE:     'BTW Aangifte',
-  BALANS:           'Balans',
-  WV_REKENING:      'W&V Rekening',
-  CASHFLOW:         'Cashflow',
-  JAARREKENING:     'Jaarrekening',
-  DEBITEUREN:       'Debiteuren',
-  CREDITEUREN:      'Crediteuren',
+  DASHBOARD:         'Dashboard',
+  INSTELLINGEN:      'Instellingen',
+  GROOTBOEKSCHEMA:   'Grootboekschema',
+  RELATIES:          'Relaties',
+  VERKOOPFACTUREN:   'Verkoopfacturen',
+  INKOOPFACTUREN:    'Inkoopfacturen',
+  BANKTRANSACTIES:   'Banktransacties',
+  JOURNAALPOSTEN:    'Journaalposten',
+  BTW_AANGIFTE:      'BTW Aangifte',
+  BALANS:            'Balans',
+  WV_REKENING:       'W&V Rekening',
+  CASHFLOW:          'Cashflow',
+  JAARREKENING:      'Jaarrekening',
+  DEBITEUREN:        'Debiteuren',
+  CREDITEUREN:       'Crediteuren',
+  HERHALENDE_KOSTEN: 'Herhalende Kosten',
 };
 
 // ─────────────────────────────────────────────

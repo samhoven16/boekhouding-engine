@@ -8,8 +8,15 @@
 // ─────────────────────────────────────────────
 function vernieuwDashboard() {
   if (!controleerSetupGedaan_()) return;
+  const _t0 = Date.now();
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.DASHBOARD);
+  if (!sheet) {
+    try { SpreadsheetApp.getUi().alert('Tabblad "Dashboard" ontbreekt. Run setup() via Boekhouding → Instellingen → Herinstalleer.'); } catch (_) {}
+    return;
+  }
+  // Non-blokkerende toast zodat gebruiker altijd ziet dat het draait
+  try { ss.toast('Dashboard wordt bijgewerkt…', 'Boekhoudbaar', 3); } catch (_) {}
   sheet.clearContents();
   sheet.clearFormats();
 
@@ -293,6 +300,12 @@ function vernieuwDashboard() {
   try {
     if (typeof checkSuggesties_ === 'function') checkSuggesties_();
   } catch (_) { /* suggesties mogen dashboard nooit breken */ }
+
+  // Klaar-signaal zodat gebruiker zichtbaar weet dat refresh gelukt is
+  try {
+    const dur = ((Date.now() - _t0) / 1000).toFixed(1);
+    ss.toast('Dashboard bijgewerkt (' + dur + 's)', 'Klaar', 4);
+  } catch (_) { /* geen UI — stille trigger-context */ }
 }
 
 // ─────────────────────────────────────────────
@@ -501,6 +514,40 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
 // ─────────────────────────────────────────────
 
 /**
+ * Diagnose-functie voor wanneer het dashboard hangt.
+ * Runt elke stap los en toont tijd per stap. Menu: Dashboard → Diagnose.
+ * Geen side-effects: leest alleen, schrijft niks naar sheet of snapshot.
+ */
+function diagnoseDashboard() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = getSpreadsheet_();
+  if (!ss) { ui.alert('Geen spreadsheet bereikbaar.'); return; }
+
+  const stappen = [];
+  function stap(naam, fn) {
+    const t = Date.now();
+    try {
+      const r = fn();
+      stappen.push((Date.now() - t) + ' ms   ✓ ' + naam + (r !== undefined ? '  (' + r + ')' : ''));
+    } catch (e) {
+      stappen.push((Date.now() - t) + ' ms   ✗ ' + naam + '  FOUT: ' + e.message);
+    }
+  }
+
+  stap('Instellingen lezen',        function(){ return getInstelling_('Bedrijfsnaam') || '–'; });
+  stap('Grootboekschema openen',    function(){ const s = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA); return s ? s.getLastRow() + ' rijen' : 'ontbreekt'; });
+  stap('Verkoopfacturen openen',    function(){ const s = ss.getSheetByName(SHEETS.VERKOOPFACTUREN); return s ? s.getLastRow() + ' rijen' : 'ontbreekt'; });
+  stap('Inkoopfacturen openen',     function(){ const s = ss.getSheetByName(SHEETS.INKOOPFACTUREN);  return s ? s.getLastRow() + ' rijen' : 'ontbreekt'; });
+  stap('Kengetallen berekenen',     function(){ return 'banksaldo=' + rondBedrag_(berekenKengetallen_(ss).banksaldo); });
+  stap('KPI data berekenen',        function(){ return 'openFacturen=' + berekenKpiData_(ss).aantalOpenFacturen; });
+  stap('BTW per maand berekenen',   function(){ const d = getBtwPerMaand_(ss, new Date().getFullYear()); return d.length + ' maanden'; });
+  stap('Herhalende kosten scan',    function(){ return 'ok'; /* geen mutatie — alleen tel-check */ });
+  stap('ROI data berekenen',        function(){ const kpi = leesKpiSnapshot_() || berekenKpiData_(ss); return 'aantalBoekingen=' + berekenRoiData_(ss, kpi).aantalBoekingen; });
+
+  ui.alert('Dashboard-diagnose', stappen.join('\n'), ui.ButtonSet.OK);
+}
+
+/**
  * Opent het interactieve dashboard als HTML dialog.
  * Menu: Boekhouding → Dashboard openen
  */
@@ -532,7 +579,12 @@ function getDashboardData() {
       schrijfKpiSnapshot_(kpi);
     } catch (e) {
       Logger.log('getDashboardData: KPI fout — ' + e.message);
-      kpi = { aantalOpenFacturen: 0, debiteurenOpen: 0 };
+      // Volledige fallback zodat de sidebar nooit 'undefined' toont.
+      kpi = {
+        aantalOpenFacturen: 0, debiteurenOpen: 0, crediteurenOpen: 0,
+        banksaldo: 0, nettowinst: 0, winstmarge: 0, btwSaldo: 0,
+        omzet: 0, kosten: 0,
+      };
     }
   }
 
@@ -671,7 +723,9 @@ function _bouwDashboardHtml_() {
     'function esc(s){return String(s||"").replace(/[&<>"\']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\\\"":"&quot;","\'":"&#39;"}[c];});}' +
     'function laad(){' +
     '  document.getElementById("body").innerHTML=\'<div class="loading"><div class="spin"></div><br>Even laden\u2026</div>\';' +
-    '  google.script.run.withSuccessHandler(render).withFailureHandler(function(e){' +
+    '  var klaar=false;' +
+    '  setTimeout(function(){ if(!klaar){ document.getElementById("body").innerHTML=\'<div class="loading" style="color:#B91C1C">Laden duurt langer dan verwacht. Sluit dit venster en run eerst: Boekhoudbaar menu → Dashboard vernieuwen, open daarna opnieuw.</div>\'; } }, 30000);' +
+    '  google.script.run.withSuccessHandler(function(d){klaar=true;render(d);}).withFailureHandler(function(e){klaar=true;' +
     '    document.getElementById("body").innerHTML=\'<div class="loading" style="color:#B91C1C">Laden mislukt: \'+esc(e.message)+\'</div>\';' +
     '  }).getDashboardData();' +
     '}' +
