@@ -271,6 +271,18 @@
   }
   .btn-secundair { transition: background .15s ease, border-color .15s ease, transform .15s ease; }
   .btn-secundair:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.6); transform: translateY(-1px); }
+  .hero-trust {
+    list-style: none; margin: 22px auto 0; padding: 0;
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 10px 20px; font-size: 14px;
+    color: rgba(255,255,255,.82);
+    max-width: 680px;
+  }
+  .hero-trust li { display: inline-flex; align-items: center; gap: 6px; }
+  .hero-trust span { color: var(--accent); font-weight: 700; font-size: 13px; }
+  @media (max-width: 640px) {
+    .hero-trust { gap: 6px 16px; font-size: 13px; margin-top: 16px; }
+  }
   .ideal-badge {
     display: inline-flex; align-items: center; gap: 8px;
     background: transparent; border-radius: 0;
@@ -774,6 +786,11 @@
   <div>
     <span class="ideal-badge">Betalen met iDEAL · licentie + installatie-instructie direct in je mail</span>
   </div>
+  <ul class="hero-trust" aria-label="Belangrijke zekerheden">
+    <li><span aria-hidden="true">✓</span> Jouw data blijft in jóuw Drive</li>
+    <li><span aria-hidden="true">✓</span> Geen abonnement — eenmalig</li>
+    <li><span aria-hidden="true">✓</span> Boekhouder gratis meekijken</li>
+  </ul>
 </header>
 
 <main id="main" tabindex="-1">
