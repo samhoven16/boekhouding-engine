@@ -26,38 +26,66 @@
  */
 
 // ─────────────────────────────────────────────
-//  BELASTING TARIEVEN EN GRENZEN (2025)
+//  BELASTING TARIEVEN EN GRENZEN PER JAAR
+//  Bijwerken elk jaar in jan/feb op basis van Prinsjesdag
 // ─────────────────────────────────────────────
-const BELASTING = {
-  ZELFSTANDIGENAFTREK:    2470,    // 2025: €2.470 (daalt jaarlijks richting €900 in 2027)
-  STARTERSAFTREK:         2123,    // 2025: ongewijzigd
-  MKB_WINSTVRIJSTELLING:  0.1270,  // 2025: 12,70% (was 13,31% in 2024)
-  KOR_GRENS:              20000,
-  KIA_MIN:                2801,
-  KIA_MAX:                353973,
-  KIA_PCT:                0.28,
-  FOR_PCT:                0.0944,  // 9,44% van de winst
-  FOR_MAX:                10786,   // 2025: max €10.786
-  MIA_PCT:                0.455,   // Milieu-investeringsaftrek: 45,5%
-  MIA_MIN:                2500,    // Minimale investeringsomvang voor MIA
-  URENCRITERIUM:          1225,
-  ACTIVEER_GRENS:         450,     // Investeringen ≥ €450 moeten worden geactiveerd
-  REISKOSTEN_PER_KM:      0.23,
-  THUISWERK_PER_DAG:      2.40,    // 2025: €2,40/dag (was €2,35)
-  REPRESENTATIE_AFTREK:   0.735,   // 73,5% aftrekbaar
-  LIJFRENTE_MAX:          35987,   // 2025: max €35.987 per jaar
-  LIJFRENTE_PCT:          0.30,    // 30% van premiegrondslag (inkomen minus AOW-franchise)
-  AOW_FRANCHISE:          14110,   // 2025: AOW-franchise voor lijfrenteberekening
-  GIFTEN_DREMPEL_PCT:     0.01,    // min 1% van drempelinkomen
-  GIFTEN_MAX_PCT:         0.10,    // max 10% van drempelinkomen
-  BOX3_GROEN_VRIJSTELLING: 65072,  // 2025: per persoon (€130.144 voor partners)
-  BOX3_GROEN_KORTING_PCT:  0.007,  // 0,7% heffingskorting over vrijgesteld bedrag
-  IB_SCHIJF_1_MAX:        76817,
-  IB_SCHIJF_1_PCT:        0.3582,
-  IB_SCHIJF_2_PCT:        0.495,
-  HEFFINGSKORTING_MAX:    3068,
-  ARBEIDSKORTING_MAX:     5625,
+const BELASTING_PER_JAAR = {
+  2025: {
+    ZELFSTANDIGENAFTREK:    2470,
+    STARTERSAFTREK:         2123,
+    MKB_WINSTVRIJSTELLING:  0.1270,
+    FOR_MAX:                10786,
+    THUISWERK_PER_DAG:      2.40,
+    LIJFRENTE_MAX:          35987,
+    AOW_FRANCHISE:          14110,
+    BOX3_GROEN_VRIJSTELLING: 65072,
+    IB_SCHIJF_1_MAX:        76817,
+    IB_SCHIJF_1_PCT:        0.3582,
+    IB_SCHIJF_2_PCT:        0.495,
+    HEFFINGSKORTING_MAX:    3068,
+    ARBEIDSKORTING_MAX:     5625,
+  },
+  2026: {
+    ZELFSTANDIGENAFTREK:    2470,    // Stabiel t.o.v. 2025 (afbouw gestopt)
+    STARTERSAFTREK:         2123,
+    MKB_WINSTVRIJSTELLING:  0.1270,
+    FOR_MAX:                10786,
+    THUISWERK_PER_DAG:      2.40,
+    LIJFRENTE_MAX:          38000,   // 2026: indicatief hogere jaarruimte
+    AOW_FRANCHISE:          14540,   // 2026: geïndexeerd
+    BOX3_GROEN_VRIJSTELLING: 67000,  // 2026: indicatief geïndexeerd
+    IB_SCHIJF_1_MAX:        76817,   // 2026: ongewijzigd (wet IB herziening 2026)
+    IB_SCHIJF_1_PCT:        0.3693,  // 2026: 36,93%
+    IB_SCHIJF_2_PCT:        0.495,
+    HEFFINGSKORTING_MAX:    3068,
+    ARBEIDSKORTING_MAX:     5599,    // 2026: lichte daling
+  },
 };
+
+function getBelasting_() {
+  const jaar = new Date().getFullYear();
+  const tarieven = BELASTING_PER_JAAR[jaar] || BELASTING_PER_JAAR[2026];
+  return Object.assign({
+    KOR_GRENS:              20000,
+    KIA_MIN:                2801,
+    KIA_MAX:                353973,
+    KIA_PCT:                0.28,
+    FOR_PCT:                0.0944,
+    MIA_PCT:                0.455,
+    MIA_MIN:                2500,
+    URENCRITERIUM:          1225,
+    ACTIVEER_GRENS:         450,
+    REISKOSTEN_PER_KM:      0.23,
+    REPRESENTATIE_AFTREK:   0.735,
+    LIJFRENTE_PCT:          0.30,
+    GIFTEN_DREMPEL_PCT:     0.01,
+    GIFTEN_MAX_PCT:         0.10,
+    BOX3_GROEN_KORTING_PCT: 0.007,
+    TARIEFSJAAR:            tarieven === BELASTING_PER_JAAR[jaar] ? jaar : 2026,
+  }, tarieven);
+}
+
+const BELASTING = getBelasting_();
 
 // ─────────────────────────────────────────────
 //  VOLLEDIG BELASTINGADVIES BEREKENEN
@@ -73,6 +101,18 @@ function berekenBelastingadvies_(ss) {
   const adviezen = [];
   const aftrekken = [];
   let totaalAftrek = 0;
+
+  // Waarschuw als belastingtarieven voor dit jaar nog niet bijgewerkt zijn
+  if (!BELASTING_PER_JAAR[jaar]) {
+    adviezen.push({
+      type: 'WAARSCHUWING',
+      titel: `⚠️ Belastingtarieven ${jaar} nog niet bijgewerkt`,
+      tekst: `De belastingberekeningen gebruiken de tarieven van ${BELASTING.TARIEFSJAAR}. ` +
+             `Controleer na Prinsjesdag of de zelfstandigenaftrek, MKB-vrijstelling en ` +
+             `schijfgrenzen voor ${jaar} zijn bijgewerkt in Belastingadvies.gs.`,
+      besparing: 0,
+    });
+  }
 
   // ── 1. KOR regeling ───────────────────────────────────────────────────
   if (omzet > 0 && omzet < BELASTING.KOR_GRENS) {
@@ -146,7 +186,7 @@ function berekenBelastingadvies_(ss) {
     const winstNaAftrekken = Math.max(0, winst - totaalAftrek);
     const mkbAftrek = rondBedrag_(winstNaAftrekken * BELASTING.MKB_WINSTVRIJSTELLING);
     aftrekken.push({
-      naam: 'MKB-winstvrijstelling (12,70%)',
+      naam: `MKB-winstvrijstelling (${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}%)`,
       bedrag: mkbAftrek,
       voorwaarde: 'Automatisch van toepassing voor ondernemers IB',
       code: '7990',
@@ -154,7 +194,7 @@ function berekenBelastingadvies_(ss) {
     adviezen.push({
       type: 'AFTREKPOST',
       titel: '✅ MKB-winstvrijstelling: ' + formatBedrag_(mkbAftrek),
-      tekst: `12,70% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
+      tekst: `${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
              `Dit wordt automatisch meegenomen in uw aangifte.`,
       besparing: rondBedrag_(mkbAftrek * BELASTING.IB_SCHIJF_1_PCT),
     });

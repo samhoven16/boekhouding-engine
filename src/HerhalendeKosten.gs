@@ -213,6 +213,10 @@ function verwerkHerhalendeKosten_() {
   const sheet = ss.getSheetByName(HERHALENDE_TAB);
   if (!sheet) return { geboekt: 0, komend: [] };
 
+  // Voorkom dubbele boekingen bij gelijktijdige dashboard-refreshes
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(8000)) return { geboekt: 0, komend: [] };
+
   const data = sheet.getDataRange().getValues();
   const vandaag = new Date();
   let geboekt = 0;
@@ -269,6 +273,7 @@ function verwerkHerhalendeKosten_() {
     }
   }
 
+  lock.releaseLock();
   return { geboekt, komend };
 }
 

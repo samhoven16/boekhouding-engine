@@ -441,7 +441,8 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
   if (kpi.nettowinst < 0) waarschuwingen.push(['LET OP', 'Bedrijf maakt verlies dit boekjaar!', '#FFCDD2']);
 
   // Vervallen facturen
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  const _vfWs = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  const vfData = _vfWs ? _vfWs.getDataRange().getValues() : [[]];
   const aantalVervallen = vfData.slice(1).filter(r => r[14] === FACTUUR_STATUS.VERVALLEN).length;
   if (aantalVervallen > 0) waarschuwingen.push(['LET OP', `${aantalVervallen} vervallen factuur/facturen`, '#FFF3E0']);
 
@@ -467,8 +468,9 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
     waarschuwingen.push(['KRITIEK', `Cash runway: ~${kpi.runway} maand(en) bij huidig uitgavenpatroon. Verlaag kosten of vergroot omzet.`, '#FFCDD2']);
   }
 
-  // Crediteuren vervallen waarschuwing (nieuw: Blue10 AP automation pijnpunt)
-  const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  // Crediteuren vervallen waarschuwing
+  const _ifWs = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  const ifData = _ifWs ? _ifWs.getDataRange().getValues() : [[]];
   let vervallenCrediteuren = 0;
   const vandaag30 = nu;
   for (let i = 1; i < ifData.length; i++) {
