@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Bankafschrift boeken als ZZP — CSV importeren en matchen (2026) | Boekhoudbaar</title>
+<meta name="description" content="Hoe boek je een bankafschrift als ZZP'er? CSV-import, matchen met facturen, categoriseren. Met voorbeeld per bank.">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/gids/bankafschrift-boeken-zzp/">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+<meta property="og:type" content="article">
+<meta property="og:title" content="Bankafschrift boeken als ZZP — CSV importeren">
+<meta property="og:description" content="Hoe boek je een bankafschrift als ZZP'er, per bank uitgelegd.">
+<meta property="og:url" content="https://www.boekhoudbaar.nl/gids/bankafschrift-boeken-zzp/">
+<meta property="og:image" content="https://www.boekhoudbaar.nl/og-image.svg">
+<meta property="og:locale" content="nl_NL">
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Article","headline":"Bankafschrift boeken als ZZP","datePublished":"2026-04-23","author":{"@type":"Person","name":"Sam Hoven"},"publisher":{"@type":"Organization","name":"Boekhoudbaar","url":"https://www.boekhoudbaar.nl/"}}
+</script>
+
+<link rel="stylesheet" href="/gids/gids.css">
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
+</head>
+<body>
+
+<nav class="nav" aria-label="Hoofdnavigatie">
+  <div class="nav-inner">
+    <a href="/" class="logo-link"><img src="/logo.svg" alt="Boekhoudbaar" width="130" height="26"></a>
+    <ul>
+      <li><a href="/#hoe-het-werkt">Hoe het werkt</a></li>
+      <li><a href="/#prijs">Prijs</a></li>
+      <li><a href="/gids/">Gidsen</a></li>
+      <li><a href="/kopen" class="nav-cta">Start voor €49</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main class="gids">
+  <p class="breadcrumb"><a href="/">Boekhoudbaar</a><span>›</span><a href="/gids/">Gidsen</a><span>›</span>Bankafschrift boeken ZZP</p>
+
+  <h1>Bankafschrift boeken als ZZP — CSV importeren en matchen (2026)</h1>
+
+  <div class="meta-regel">
+    <span>Door <strong>Sam Hoven</strong></span>
+    <span>Bijgewerkt: april 2026</span>
+    <span>Leestijd: ~7 minuten</span>
+  </div>
+
+  <div class="disclosure" role="note" style="background:#EEF2FF;border-left:4px solid #0D1B4E;color:#1A2A6B;">
+    <strong>Let op —</strong> de Belastingdienst eist dat je zakelijke en privé-rekeningen gescheiden kunt laten zien. Privé-bankafschriften horen <em>niet</em> in je zakelijke administratie, tenzij je expliciet gemixte transacties hebt.
+  </div>
+
+  <div class="tldr">
+    <h2>Samenvatting</h2>
+    <ul>
+      <li>Boek je bankafschrift <strong>minimaal één keer per maand</strong> — uitstellen creëert chaos</li>
+      <li>CSV-export beschikbaar bij alle Nederlandse banken; format verschilt per bank</li>
+      <li>Drie stappen: <strong>importeren</strong>, <strong>matchen</strong> met facturen, <strong>categoriseren</strong> wat overblijft</li>
+      <li>Iedere transactie zonder bijbehorende factuur/bon = vraag: privé of zakelijk? Documenteer</li>
+      <li>Banksaldo aan einde maand moet overeenkomen met jouw administratie — afstemming</li>
+    </ul>
+  </div>
+
+  <h2 id="waarom">Waarom elke maand bijhouden?</h2>
+
+  <p>Bankafschriften verwerken is het saaiste onderdeel van ZZP-boekhouding. En precies daarom wordt het uitgesteld tot december. Drie redenen om dat niet te doen:</p>
+  <ul>
+    <li><strong>Geheugen vervaagt</strong> — een €45 uitgave bij Albert Heijn in januari? Je weet in december niet meer of dat klantlunch was of privé</li>
+    <li><strong>Betalingen missen</strong> — zonder maandelijkse match zie je niet of klanten écht hebben betaald</li>
+    <li><strong>BTW-aangifte wordt stress</strong> — kwartaalaangifte zonder geboekte afschriften = gokken</li>
+  </ul>
+
+  <h2 id="export">CSV-export per bank (2026)</h2>
+
+  <table class="vergelijk">
+    <thead><tr><th>Bank</th><th>Waar te vinden</th><th>Formaat</th></tr></thead>
+    <tbody>
+      <tr><td>bunq Business</td><td>Web → Transacties → Exporteer</td><td>CSV (komma-gescheiden)</td></tr>
+      <tr><td>Knab Zakelijk</td><td>Mijn Knab → Overzichten → Exporteer</td><td>CSV, MT940</td></tr>
+      <tr><td>ING Zakelijk</td><td>Mijn ING → Transactie-overzicht → Download</td><td>CSV, MT940, CAMT.053</td></tr>
+      <tr><td>Rabobank Zakelijk</td><td>Rabo Banking → Transacties → Exporteer</td><td>CSV (puntkomma), MT940</td></tr>
+      <tr><td>Revolut Business</td><td>Web → Statements → Export CSV</td><td>CSV (komma)</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>Tip:</strong> exporteer altijd per kalendermaand (1e t/m laatste dag). Dat matcht met je BTW-kwartalen en maandelijkse afstemming.</p>
+
+  <h2 id="stappen">De 3 stappen</h2>
+
+  <h3>Stap 1 — Importeer in je administratie</h3>
+  <p>Kopieer CSV in je Bankboek-tabblad of upload in je boekhoudsoftware. De meeste systemen herkennen automatisch: datum, bedrag, tegenpartij, omschrijving.</p>
+
+  <h3>Stap 2 — Match inkomsten met facturen</h3>
+  <p>Voor elke <strong>inkomende betaling</strong>:</p>
+  <ul>
+    <li>Zoek de bijbehorende factuur (via bedrag of omschrijving — vaak staat er factuurnummer)</li>
+    <li>Markeer factuur als "Betaald" in je facturen-overzicht</li>
+    <li>Geef betalingsreferentie/-datum aan in je bankboek</li>
+  </ul>
+
+  <p>Klanten die het factuurnummer in hun betalingsomschrijving zetten, zijn goud waard — dat scheelt tijd. Moedig dat aan op je factuur ("bij betaling graag factuurnummer vermelden").</p>
+
+  <h3>Stap 3 — Categoriseer uitgaven</h3>
+  <p>Voor elke <strong>uitgaande betaling</strong>:</p>
+  <ul>
+    <li>Zoek het bijbehorende bonnetje of factuur</li>
+    <li>Boek op juiste grootboekrekening (software, kantoor, reiskosten, etc.)</li>
+    <li>Geen bonnetje? Of privé? Dan: <em>privé-onttrekking</em> (2400 Privéonttrekkingen)</li>
+  </ul>
+
+  <div class="tip-blok" style="background:#FFFBEB;border-left:4px solid #F59E0B;padding:14px 18px;border-radius:0 8px 8px 0;margin:20px 0;font-size:14px;color:#78350F;">
+    <strong>Valkuil —</strong> als je geen bonnetje hebt maar wel een duidelijk zakelijk bedrag (bv. abonnement), maak dan een digitale "herinneringsnotitie" in je administratie. Zonder onderbouwing is aftrek moeilijk verdedigbaar bij controle.
+  </div>
+
+  <h2 id="afstemming">Banksaldo-afstemming</h2>
+
+  <p>Einde maand: vergelijk eindsaldo bank met saldo op rekening 1200 (bank) in je administratie. Moet gelijk zijn. Als er verschil is:</p>
+  <ul>
+    <li>Transactie dubbel geboekt?</li>
+    <li>Transactie vergeten te boeken?</li>
+    <li>Verkeerd bedrag ingevoerd?</li>
+  </ul>
+
+  <p>Een kleine afwijking van enkele centen is vaak een afronding. Meer dan €1: terugzoeken.</p>
+
+  <div class="auteur">
+    <div class="auteur-avatar"><img src="/sam-hoven.jpg" alt="Sam Hoven" width="52" height="52" loading="lazy" decoding="async"></div>
+    <div class="auteur-tekst">
+      <strong>Sam Hoven — maker van Boekhoudbaar</strong>
+      Mijn ritueel: eerste maandag van de maand, 30 minuten, bankafschrift vorige maand importeren en matchen. Alle chaos die eind-jaar ZZP'ers hebben, komt hiervan.
+    </div>
+  </div>
+
+  <section class="faq" aria-label="Veelgestelde vragen">
+    <h2 id="faq">Veelgestelde vragen</h2>
+
+    <details>
+      <summary>Moet ik elke transactie een bon hebben?</summary>
+      <p>Voor zakelijke aftrek en BTW-teruggave: ja. Voor transacties zonder bon (bijv. kleine privé): boek als privé-onttrekking — geen BTW-aftrek, geen kostenaftrek.</p>
+    </details>
+
+    <details>
+      <summary>Wat als mijn bank geen CSV heeft?</summary>
+      <p>Alle Nederlandse banken hebben CSV. Voor buitenlandse accounts (bv. Wise, Revolut non-EU): check documentatie. Handmatig invoeren is altijd mogelijk.</p>
+    </details>
+
+    <details>
+      <summary>Kan ik bankafschrift automatisch laten inlezen?</summary>
+      <p>Live bankfeeds via PSD2 zijn beschikbaar bij Moneybird/e-Boekhouden (abonnement). Boekhoudbaar gebruikt CSV-import met auto-match: plak CSV, systeem koppelt automatisch met openstaande facturen.</p>
+    </details>
+
+    <details>
+      <summary>Hoe lang bewaar ik bankafschriften?</summary>
+      <p>7 jaar (AWR art. 52). Digitale kopie volstaat. Maak aan het eind van elk jaar een PDF-snapshot en archiveer in je Drive-structuur.</p>
+    </details>
+  </section>
+
+  <h2 id="verder">Verder lezen</h2>
+  <ul>
+    <li><a href="/gids/zelf-boekhouding-doen-zzp/">Zelf boekhouding doen</a></li>
+    <li><a href="/gids/zakelijke-rekening-zzp-2026/">Beste zakelijke rekening voor ZZP</a></li>
+    <li><a href="/gids/btw-berekenen-terugvragen-zzp/">BTW berekenen en terugvragen</a></li>
+    <li><a href="/gids/debiteurenbeheer-zzp/">Debiteurenbeheer als ZZP</a></li>
+  </ul>
+
+  <div class="cta-onderaan" style="background:linear-gradient(135deg,#0D1B4E 0%,#1A3A7E 100%);color:#fff;padding:32px 28px;border-radius:12px;margin:40px 0 20px;text-align:center;">
+    <h3 style="color:#fff;margin-bottom:8px;">Bankafschrift importeren in 30 seconden</h3>
+    <p style="color:rgba(255,255,255,.85);margin-bottom:18px;">Boekhoudbaar heeft CSV-import met auto-match: plak je bankafschrift, systeem koppelt betalingen aan openstaande facturen.</p>
+    <a href="/kopen" class="btn" style="background:#2EC4B6;color:#0D1B4E;display:inline-block;padding:12px 28px;border-radius:8px;font-weight:700;text-decoration:none;">Bekijk Boekhoudbaar — €49 eenmalig</a>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 Boekhoudbaar &mdash; <a href="/privacy">Privacy</a> &middot; <a href="/voorwaarden">Voorwaarden</a> &middot; <a href="/transparantie">Transparantie</a></p>
+</footer>
+
+<div class="sticky-cta" id="stickyCta">
+  <div class="sticky-cta-text">Klaar met lezen? <strong>Boekhoudbaar</strong> automatiseert dit — €49 eenmalig.</div>
+  <a href="/kopen" class="sticky-cta-btn">Bekijk →</a>
+  <button class="sticky-cta-close" onclick="document.getElementById('stickyCta').remove()" aria-label="Sluiten">×</button>
+</div>
+<script>
+(function(){
+  var bar = document.getElementById('stickyCta');
+  if (!bar) return;
+  function onScroll(){
+    var h = document.documentElement;
+    var scrolled = (h.scrollTop || document.body.scrollTop) / (h.scrollHeight - h.clientHeight);
+    var footer = document.querySelector('.footer');
+    var footerTop = footer ? footer.getBoundingClientRect().top : Infinity;
+    var nearFooter = footerTop < window.innerHeight + 100;
+    if (scrolled > 0.25 && !nearFooter) bar.classList.add('active');
+    else bar.classList.remove('active');
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+</script>
+
+</body>
+</html>

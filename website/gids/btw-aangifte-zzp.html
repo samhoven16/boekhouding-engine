@@ -343,5 +343,29 @@
   <p>Boekhoudbaar is geen accountantskantoor. Deze gids is informatief, geen fiscaal advies.</p>
 </footer>
 
+
+<div class="sticky-cta" id="stickyCta">
+  <div class="sticky-cta-text">Klaar met lezen? <strong>Boekhoudbaar</strong> automatiseert dit — €49 eenmalig.</div>
+  <a href="/kopen" class="sticky-cta-btn">Bekijk →</a>
+  <button class="sticky-cta-close" onclick="document.getElementById('stickyCta').remove()" aria-label="Sluiten">×</button>
+</div>
+<script>
+(function(){
+  var bar = document.getElementById('stickyCta');
+  if (!bar) return;
+  function onScroll(){
+    var h = document.documentElement;
+    var scrolled = (h.scrollTop || document.body.scrollTop) / (h.scrollHeight - h.clientHeight);
+    var footer = document.querySelector('.footer');
+    var footerTop = footer ? footer.getBoundingClientRect().top : Infinity;
+    var nearFooter = footerTop < window.innerHeight + 100;
+    if (scrolled > 0.25 && !nearFooter) bar.classList.add('active');
+    else bar.classList.remove('active');
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+</script>
+
 </body>
 </html>

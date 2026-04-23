@@ -5,3 +5,20 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://cloudflareinsights.com; frame-src https://docs.google.com
+
+# Static assets — cache 1 uur (pas op voor CSS-updates)
+/*.css
+  Cache-Control: public, max-age=3600, s-maxage=3600
+
+/*.svg
+  Cache-Control: public, max-age=86400, s-maxage=86400
+
+/*.jpg
+  Cache-Control: public, max-age=86400, s-maxage=86400
+
+/*.png
+  Cache-Control: public, max-age=86400, s-maxage=86400
+
+# HTML — korte cache voor snelle iteratie
+/*.html
+  Cache-Control: public, max-age=300, s-maxage=600
