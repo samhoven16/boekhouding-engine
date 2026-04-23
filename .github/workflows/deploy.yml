@@ -64,6 +64,11 @@ jobs:
     if: github.event_name != 'pull_request'
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      # Job-level env zodat step-level `if: env.X != ''` wél evalueert
+      # (step-level `env` is niet beschikbaar voor de step's eigen if-conditie).
+      LICENCE_DEPLOYMENT_ID: ${{ secrets.LICENCE_DEPLOYMENT_ID }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -211,7 +216,6 @@ jobs:
         if: ${{ env.LICENCE_DEPLOYMENT_ID != '' }}
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
-          LICENCE_DEPLOYMENT_ID: ${{ secrets.LICENCE_DEPLOYMENT_ID }}
         run: |
           cd licence-server
           set +e
@@ -227,9 +231,6 @@ jobs:
 
       - name: Cloudflare cache purge (optioneel)
         if: ${{ env.CF_API_TOKEN != '' && env.CF_ZONE_ID != '' }}
-        env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
         run: |
           HTTP=$(curl -s -o /tmp/cf_purge.json -w "%{http_code}" -X POST \
             "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
