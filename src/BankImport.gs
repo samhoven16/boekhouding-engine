@@ -127,8 +127,17 @@ function parseBankBedrag_(s) {
 
 function extraheerReferentie_(omschr) {
   const s = String(omschr || '');
-  // Typische factuurnummer-patronen: F000123, INV-2024-001, 2024-0042
-  const m = s.match(/\b([A-Z]{1,4}[-_]?\d{3,10}|\d{4}[-_]\d{3,6})\b/i);
+  // Typische factuurnummer-patronen:
+  //   F000123            — prefix + cijfers
+  //   INV-2024-001       — prefix + jaar + volgnr (met koppelteken)
+  //   2024-0042          — jaar + volgnr
+  // Probeer eerst het langste patroon (alfa-prefix + meerdere segmenten)
+  // zodat een "INV-2024-001" niet als "INV-2024" wordt afgekapt.
+  let m = s.match(/\b([A-Z]{1,4}[-_]\d{2,4}[-_]\d{1,6})\b/i);
+  if (m) return m[1];
+  m = s.match(/\b([A-Z]{1,4}[-_]?\d{3,10})\b/i);
+  if (m) return m[1];
+  m = s.match(/\b(\d{4}[-_]\d{3,6})\b/);
   return m ? m[1] : '';
 }
 
