@@ -39,7 +39,9 @@ function doPost(e) {
       const bodyKey  = (e.postData && e.postData.contents &&
                         safeJsonParse_(e.postData.contents)['apikey']) || '';
       const meegezonden = queryKey || bodyKey;
-      if (meegezonden !== apiSleutel) {
+      // Constant-time compare voorkomt timing-attacks waarbij een attacker
+      // byte-voor-byte de API-sleutel kan raden via responstijd-verschillen.
+      if (!veiligVergelijkApi_(meegezonden, apiSleutel)) {
         return jsonResponse_({ succes: false, fout: 'Ongeldige of ontbrekende API-sleutel' });
       }
     }
@@ -370,6 +372,21 @@ function jsonResponse_(data, _statusCode) {
   const output = ContentService.createTextOutput(JSON.stringify(data));
   output.setMimeType(ContentService.MimeType.JSON);
   return output;
+}
+
+/**
+ * Constant-time string compare — voorkomt timing-attack op API-sleutel.
+ * Lengte-verschil zelf leaked al info, maar de byte-voor-byte leak is
+ * veel bruikbaarder voor een attacker, dus primair die dichten.
+ */
+function veiligVergelijkApi_(a, b) {
+  const s1 = String(a == null ? '' : a);
+  const s2 = String(b == null ? '' : b);
+  if (!s1 || !s2) return false;
+  if (s1.length !== s2.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < s1.length; i++) mismatch |= (s1.charCodeAt(i) ^ s2.charCodeAt(i));
+  return mismatch === 0;
 }
 
 function safeJsonParse_(str) {
