@@ -736,6 +736,14 @@ function _bouwDashboardHtml_() {
     '  document.getElementById("h-tm").textContent="Bijgewerkt: "+d.bijgewerkt;' +
     '  var k=d.kpi,btw=k.btwDeadline||{kwartaal:"?",datum:"?",dagenOver:"?",urgent:false},h="";' +
     '  var nettoMaand=Math.round(((k.omzetMaand||0)-(k.kostenMaand||0))*100)/100;' +
+    '  var leeg=!k.banksaldo&&!k.omzetMaand&&!k.kostenMaand&&!k.aantalOpenFacturen&&!k.btwSaldo;' +
+    '  if(leeg){' +
+    '    h+=\'<div style="background:linear-gradient(135deg,#F7F9FC 0%,#E6F7F4 100%);border:1px solid #D0ECE6;border-radius:10px;padding:22px 24px;margin-bottom:14px">\';' +
+    '    h+=\'<div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#2EC4B6;margin-bottom:6px">Eerste stap</div>\';' +
+    '    h+=\'<div style="font-size:15px;font-weight:700;color:#0D1B4E;margin-bottom:6px">Welkom! Start met je eerste boeking.</div>\';' +
+    '    h+=\'<div style="font-size:12px;color:#5F6B7A;line-height:1.55">De getallen hieronder vullen zich vanzelf zodra je een factuur of kostenpost toevoegt. Tip: vul eerst Instellingen → Bedrijfsgegevens in.</div>\';' +
+    '    h+=\'</div>\';' +
+    '  }' +
     '  h+=\'<div class="kpi-grid">\';' +
     '  h+=kpi("Banksaldo",fmt(k.banksaldo||0),"",(k.banksaldo||0)<0?"krit":(k.banksaldo||0)>0?"goed":"");' +
     '  h+=kpi("Omzet deze maand",fmt(k.omzetMaand),"",k.omzetMaand>0?"goed":"");' +
