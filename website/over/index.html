@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Over Sam — maker van Boekhoudbaar</title>
+<meta name="description" content="Ik ben Sam Hoven, zelfstandig ondernemer uit Nederland. Ik heb Boekhoudbaar gebouwd omdat ik zelf niet afhankelijk wilde zijn van andermans boekhoudsoftware.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/over/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+<meta property="og:type" content="profile">
+<meta property="og:title" content="Over Sam — maker van Boekhoudbaar">
+<meta property="og:description" content="Waarom ik Boekhoudbaar bouwde, hoe ik werk, en wat je van mij kunt verwachten.">
+<meta property="og:url" content="https://www.boekhoudbaar.nl/over/">
+<meta property="og:image" content="https://www.boekhoudbaar.nl/sam-hoven.jpg">
+<meta property="og:locale" content="nl_NL">
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Person","name":"Sam Hoven","url":"https://www.boekhoudbaar.nl/over/","jobTitle":"Ondernemer, maker van Boekhoudbaar","nationality":"Nederlandse","image":"https://www.boekhoudbaar.nl/sam-hoven.jpg","email":"sam@boekhoudbaar.nl","worksFor":{"@type":"Organization","name":"Boekhoudbaar","url":"https://www.boekhoudbaar.nl/"}}
+</script>
+
+<style>
+  :root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--bg:#F7F9FC;--wit:#ffffff;--rand:#E5EAF2;}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+  ::selection{background:rgba(46,196,182,.28);color:var(--blauw);}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--wit);line-height:1.7;font-size:17px;-webkit-font-smoothing:antialiased;}
+
+  /* ── NAV ── */
+  nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border-bottom:1px solid var(--rand);padding:0 24px;}
+  .nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;gap:8px;}
+  .logo{text-decoration:none;display:inline-flex;align-items:center;}
+  .logo img{height:28px;width:auto;}
+  .nav-links{display:flex;gap:26px;list-style:none;align-items:center;}
+  .nav-links a{text-decoration:none;color:var(--grijs);font-size:15px;font-weight:500;}
+  .nav-links a:hover{color:var(--blauw);}
+  .nav-cta{background:var(--blauw);color:var(--wit)!important;padding:9px 16px;border-radius:8px;font-weight:600!important;font-size:14px!important;display:inline-flex;align-items:center;}
+  .nav-cta:hover{background:var(--blauw-licht)!important;}
+  .nav-mobile-actions{display:none;list-style:none;align-items:center;gap:6px;}
+  .nav-toggle{display:none;background:none;border:none;cursor:pointer;padding:8px;color:var(--blauw);min-width:44px;min-height:44px;align-items:center;justify-content:center;}
+  .nav-toggle svg{display:block;}
+  .nav-toggle[aria-expanded="true"] .icon-open{display:none;}
+  .nav-toggle[aria-expanded="false"] .icon-close{display:none;}
+
+  /* ── CONTENT ── */
+  main{max-width:720px;margin:0 auto;padding:56px 24px 72px;}
+  .breadcrumb{font-size:13px;color:var(--grijs);margin-bottom:24px;}
+  .breadcrumb a{color:var(--grijs);text-decoration:none;}
+  .breadcrumb a:hover{color:var(--blauw);}
+  .breadcrumb span{margin:0 6px;color:#aab2c0;}
+
+  h1{font-size:clamp(30px,4.5vw,44px);font-weight:800;color:var(--blauw);line-height:1.15;letter-spacing:-0.02em;margin-bottom:12px;}
+  .subtitle{font-size:18px;color:var(--grijs);margin-bottom:36px;}
+
+  .intro-grid{display:grid;grid-template-columns:180px 1fr;gap:32px;align-items:start;margin-bottom:40px;padding-bottom:36px;border-bottom:1px solid var(--rand);}
+  .intro-foto{width:180px;height:180px;border-radius:50%;object-fit:cover;object-position:center top;box-shadow:0 8px 24px rgba(13,27,78,.12);}
+  .intro-tekst{font-size:17px;line-height:1.7;}
+  .intro-tekst strong{color:var(--blauw);}
+
+  h2{font-size:22px;font-weight:700;color:var(--blauw);margin:40px 0 14px;letter-spacing:-0.01em;}
+  h2:first-of-type{margin-top:0;}
+  p{margin-bottom:16px;color:var(--tekst);}
+  p a{color:var(--blauw);text-decoration:underline;text-underline-offset:3px;}
+  p a:hover{color:var(--accent);}
+
+  .quote{background:var(--bg);border-left:3px solid var(--accent);padding:18px 22px;border-radius:0 8px 8px 0;margin:24px 0;font-style:italic;color:#333;font-size:17px;}
+
+  .principles{list-style:none;margin:24px 0;padding:0;}
+  .principles li{padding:16px 0;border-bottom:1px solid var(--rand);display:flex;gap:14px;align-items:flex-start;}
+  .principles li:last-child{border-bottom:none;}
+  .principles .num{background:var(--accent);color:#0A4744;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;margin-top:2px;}
+  .principles strong{display:block;color:var(--blauw);margin-bottom:4px;}
+  .principles .bio-text{font-size:15px;color:var(--grijs);line-height:1.6;}
+
+  .contact-card{background:linear-gradient(135deg,#0D1B4E 0%,#1A3A7E 100%);color:#fff;padding:32px 28px;border-radius:12px;margin:40px 0 16px;}
+  .contact-card h3{color:#fff;font-size:20px;margin-bottom:10px;}
+  .contact-card p{color:rgba(255,255,255,.88);margin-bottom:14px;font-size:15px;}
+  .contact-card a{color:#2EC4B6;text-decoration:underline;font-weight:600;}
+  .contact-card a:hover{color:#fff;}
+
+  .related{margin-top:36px;padding-top:28px;border-top:1px solid var(--rand);}
+  .related h3{font-size:14px;font-weight:700;color:var(--grijs);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;}
+  .related ul{list-style:none;padding:0;}
+  .related li{padding:6px 0;}
+  .related a{color:var(--blauw);text-decoration:none;font-weight:600;border-bottom:1px solid transparent;transition:border-color .15s;}
+  .related a:hover{border-bottom-color:var(--accent);}
+
+  /* ── FOOTER ── */
+  footer{background:var(--tekst);color:rgba(255,255,255,.6);padding:40px 24px;font-size:13px;margin-top:40px;}
+  .footer-inner{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+  .footer-links{display:flex;gap:20px;flex-wrap:wrap;}
+  .footer-links a{color:rgba(255,255,255,.55);text-decoration:none;}
+  .footer-links a:hover{color:var(--wit);}
+  :focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px;}
+
+  /* ── RESPONSIVE ── */
+  @media (max-width:768px){
+    nav{padding:0 16px;}
+    .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:var(--wit);border-bottom:1px solid var(--rand);padding:4px 0;box-shadow:0 8px 24px rgba(0,0,0,.08);z-index:99;}
+    .nav-links.open{display:flex;}
+    .nav-links li{width:100%;}
+    .nav-links li a{padding:14px 20px;font-size:16px;display:block;border-bottom:1px solid var(--rand);}
+    .nav-links li:last-child a{border-bottom:none;}
+    .nav-links .nav-cta-desktop{display:none;}
+    .nav-mobile-actions{display:inline-flex;}
+    .nav-cta-mobile a.nav-cta{padding:9px 14px!important;font-size:13px!important;}
+    main{padding:40px 20px 60px;}
+    h1{font-size:28px;}
+    .subtitle{font-size:16px;}
+    .intro-grid{grid-template-columns:1fr;gap:20px;text-align:left;}
+    .intro-foto{width:120px;height:120px;}
+    .footer-inner{flex-direction:column;text-align:center;}
+    .footer-links{justify-content:center;}
+  }
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
+</head>
+<body>
+
+<nav aria-label="Hoofdnavigatie">
+  <div class="nav-inner">
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home"><img src="/logo.svg" alt="Boekhoudbaar" width="130" height="28"></a>
+    <ul class="nav-links" id="nav-menu" role="list">
+      <li><a href="/#functies">Functies</a></li>
+      <li><a href="/#vergelijking">Vergelijking</a></li>
+      <li><a href="/#prijs">Prijs</a></li>
+      <li><a href="/#faq">FAQ</a></li>
+      <li><a href="/gids/">Gidsen</a></li>
+      <li><a href="/over/" aria-current="page">Over Sam</a></li>
+      <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+    </ul>
+    <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
+      <li class="nav-cta-mobile"><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+      <li><button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
+        <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      </button></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+  <p class="breadcrumb"><a href="/">Boekhoudbaar</a><span>›</span>Over Sam</p>
+
+  <h1>Hoi, ik ben Sam.</h1>
+  <p class="subtitle">Zelfstandig ondernemer uit Nederland. Maker van Boekhoudbaar.</p>
+
+  <div class="intro-grid">
+    <img class="intro-foto" src="/sam-hoven.jpg" alt="Sam Hoven" width="180" height="180" loading="lazy" decoding="async">
+    <div class="intro-tekst">
+      <p>Boekhoudbaar begon als <strong>mijn eigen administratie</strong>. Een map in Drive, een paar Sheets, wat formules die ik steeds verder uitwerkte. Geen abonnement dat elk jaar duurder werd. Geen export-gedoe als ik iets anders wilde proberen. Gewoon bestanden, op mijn eigen Drive, die van mij zijn.</p>
+      <p>Na een paar jaar werkte het zo goed dat andere zelfstandigen vroegen of ze het mochten overnemen. Zo is dit product ontstaan.</p>
+    </div>
+  </div>
+
+  <h2>Waarom ik dit bouwde</h2>
+  <div class="quote">"Ik wilde mijn eigen boekhouding kunnen openen zonder afhankelijk te zijn van andermans software."</div>
+  <p>Ik betaalde jaren voor een boekhoudpakket en vond het elke maand opnieuw frustrerend. €25–€40 per maand voor iets wat ik bijna niet gebruikte. En erger: als ik zou stoppen, zat mijn zeven jaar administratie vast in hun systeem — terwijl ik die wettelijk moet bewaren.</p>
+  <p>Dat voelde verkeerd. Dus ik bouwde iets waar <strong>ik</strong> de eigenaar van ben. En bleef dat patroon toepassen toen het een product werd.</p>
+
+  <h2>Hoe ik werk</h2>
+  <ul class="principles">
+    <li>
+      <span class="num">1</span>
+      <div>
+        <strong>Jouw data blijft van jou.</strong>
+        <div class="bio-text">Je boekhouding staat in <em>jouw</em> Google Drive. Ik kan er niet bij, en dat wil ik ook niet. Als ik er morgen mee stop, werkt jouw administratie gewoon door.</div>
+      </div>
+    </li>
+    <li>
+      <span class="num">2</span>
+      <div>
+        <strong>Eenmalig betalen, voor altijd houden.</strong>
+        <div class="bio-text">€49 één keer. Geen abonnement dat je moet opzeggen, geen automatische prijsverhoging, geen verborgen functies die ineens premium worden.</div>
+      </div>
+    </li>
+    <li>
+      <span class="num">3</span>
+      <div>
+        <strong>Eerlijk over geld.</strong>
+        <div class="bio-text">Ik verdien aan €49-verkopen en aan een paar affiliate-links in mijn gidsen. Dat staat letterlijk op mijn <a href="/transparantie">transparantie-pagina</a> — met bedragen erbij.</div>
+      </div>
+    </li>
+    <li>
+      <span class="num">4</span>
+      <div>
+        <strong>Ik lees mijn eigen mail.</strong>
+        <div class="bio-text">Geen support-ticket-bureau, geen chatbot. Je stuurt een mail, ik lees het, ik antwoord.</div>
+      </div>
+    </li>
+  </ul>
+
+  <h2>Waar ik niet aan mee doe</h2>
+  <p>Geen freemium-valkuilen. Geen dark-patterns bij opzeggen (want er is niets om op te zeggen). Geen AI-geschreven gidsen die overal klinken als AI-geschreven gidsen. Geen "unlimited" claims met asterisk.</p>
+  <p>Ik ben geen accountant. Ik ben geen fiscalist. Ik ben ondernemer die iets heeft gebouwd dat voor zichzelf werkt en dat voor anderen ook werkt. Voor fiscale vragen verwijs ik je door naar de Belastingdienst of een adviseur — en dat zeg ik ook.</p>
+
+  <div class="contact-card">
+    <h3>Vraag vóór je koopt? Of iets anders?</h3>
+    <p>Mail me op <a href="mailto:sam@boekhoudbaar.nl">sam@boekhoudbaar.nl</a>. Ik beantwoord meestal binnen een dag. Geen sjabloon-antwoorden — geen support-desk, alleen ik.</p>
+    <p style="margin-bottom:0;font-size:13px;color:rgba(255,255,255,.6);">Boekhoudbaar · Hoven Strategy &amp; Solutions · KVK 87254697</p>
+  </div>
+
+  <div class="related">
+    <h3>Verder lezen</h3>
+    <ul>
+      <li><a href="/transparantie">Hoe Boekhoudbaar geld verdient (met bedragen)</a></li>
+      <li><a href="/gids/">Alle gidsen voor ZZP'ers</a></li>
+      <li><a href="/#prijs">Wat zit er in Boekhoudbaar voor €49?</a></li>
+    </ul>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <span><strong style="color:rgba(255,255,255,.9)">Boekhoudbaar</strong> · KVK 87254697</span>
+    <div class="footer-links">
+      <a href="/over/">Over Sam</a>
+      <a href="/transparantie">Transparantie</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/voorwaarden">Voorwaarden</a>
+      <a href="mailto:sam@boekhoudbaar.nl">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var btn=document.querySelector('.nav-toggle');
+    var menu=document.getElementById('nav-menu');
+    if(!btn||!menu)return;
+    btn.addEventListener('click',function(){
+      var open=menu.classList.toggle('open');
+      btn.setAttribute('aria-expanded',open?'true':'false');
+    });
+    menu.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click',function(){menu.classList.remove('open');btn.setAttribute('aria-expanded','false');});
+    });
+  })();
+</script>
+</body>
+</html>
