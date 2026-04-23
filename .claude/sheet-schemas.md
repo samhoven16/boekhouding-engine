@@ -191,16 +191,19 @@ Key-value sheet. `getInstelling_(sleutel)` reads column[0] for key, returns colu
 Column layout defined by `voegHerhalendeKostToe_()` and read by `verwerkHerhalendeKosten_()`:
 
 ```
-[0]  ID                      number     row number / unique ID
+[0]  ID                      string     e.g. "HK0001"
 [1]  Naam                    string     descriptive name e.g. "Kantoorhuur"
-[2]  Omschrijving            string
-[3]  Bedrag                  number     ← parseFloat; invalid → 0 silently
-[4]  Bedrag incl. BTW        number
+[2]  Leverancier             string     optional counterparty name
+[3]  Bedrag (excl. BTW)      number     ← parseFloat; invalid → 0 silently
+[4]  BTW tarief              string     e.g. "21% (hoog)"
 [5]  Frequentie              string     Wekelijks/Maandelijks/Kwartaal/Halfjaarlijks/Jaarlijks
 [6]  Volgende datum          Date       ← DANGER: must be valid Date; NaN crashes loop silently
-[7]  Kostenrekening          string     e.g. "7000 Overige kosten" → split(' ')[0] → "7000"
+[7]  Grootboekrekening       string     e.g. "7000 Overige kosten" → split(' ')[0] → "7000"
 [8]  Status                  string     'Actief'/'Inactief'
 [9]  Automatisch boeken      string     'Ja'/'Nee'
+[10] Notities                string     optional notes
+[11] Zakelijk %              number     0–100; default 100 (volledig zakelijk)
+                                        privé-deel (100 - %) boekt naar 2400 Privéonttrekkingen
 ```
 
 ---

@@ -114,10 +114,17 @@ function beheerHerhalendeKosten() {
         <option value="Ja">Ja (automatisch boeken bij vernieuwen)</option>
       </select>
     </div>
-    <div class="form-row">
-      <label>Notities</label>
-      <input type="text" id="notities" placeholder="Bijv. contractnummer of looptijd">
+    <div class="row2">
+      <div class="form-row">
+        <label>Zakelijk % (privésplit)</label>
+        <input type="number" id="splitPct" min="0" max="100" value="100" placeholder="100">
+      </div>
+      <div class="form-row">
+        <label>Notities</label>
+        <input type="text" id="notities" placeholder="Bijv. contractnummer of looptijd">
+      </div>
     </div>
+    <div class="info" style="font-size:11px;margin-top:-8px;">100% = volledig zakelijk. Bijv. 70% = 70% kostenrekening + 30% privéonttrekkingen (2400).</div>
 
     <button class="btn" onclick="opslaan()">Opslaan</button>
     <div id="status" style="margin-top:8px;color:green;display:none"></div>
@@ -133,6 +140,7 @@ function beheerHerhalendeKosten() {
         var rekening  = document.getElementById('rekening').value;
         var auto      = document.getElementById('auto').value;
         var notities  = document.getElementById('notities').value.trim();
+        var splitPct  = parseInt(document.getElementById('splitPct').value) || 100;
 
         if (!naam || isNaN(bedrag) || bedrag <= 0) {
           alert('Vul naam en bedrag in.'); return;
@@ -145,10 +153,10 @@ function beheerHerhalendeKosten() {
             el.style.display = 'block';
             setTimeout(function() { google.script.host.close(); }, 1500);
           })
-          .opslaanHerhalendeKost({ naam, leveranc, bedrag, btw, freq, datum, rekening, auto, notities });
+          .opslaanHerhalendeKost({ naam, leveranc, bedrag, btw, freq, datum, rekening, auto, notities, splitPct });
       }
     </script>
-  `).setWidth(500).setHeight(580);
+  `).setWidth(500).setHeight(620);
 
   ui.showModalDialog(html, 'Herhalende kost toevoegen');
 }
@@ -161,7 +169,7 @@ function maakHerhalendeKostenTab_(ss) {
   if (!sheet) {
     sheet = ss.insertSheet(HERHALENDE_TAB);
     sheet.setTabColor('#5C6BC0');
-    const headers = ['ID', 'Naam', 'Leverancier', 'Bedrag (excl.)', 'BTW', 'Frequentie', 'Volgende datum', 'Grootboekrekening', 'Status', 'Automatisch boeken', 'Notities'];
+    const headers = ['ID', 'Naam', 'Leverancier', 'Bedrag (excl.)', 'BTW', 'Frequentie', 'Volgende datum', 'Grootboekrekening', 'Status', 'Automatisch boeken', 'Notities', 'Zakelijk %'];
     sheet.getRange(1, 1, 1, headers.length)
       .setValues([headers])
       .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
@@ -180,6 +188,7 @@ function opslaanHerhalendeKost(data) {
   const huidigAantal = sheet.getLastRow();
   const id = 'HK' + String(huidigAantal).padStart(4, '0');
 
+  const splitPct = Math.min(100, Math.max(0, parseInt(data.splitPct) || 100));
   sheet.appendRow([
     id,
     data.naam,
@@ -192,6 +201,7 @@ function opslaanHerhalendeKost(data) {
     'Actief',
     data.auto || 'Nee',
     data.notities || '',
+    splitPct,
   ]);
 
   sheet.getRange(huidigAantal + 1, 4).setNumberFormat('€#,##0.00');
@@ -233,21 +243,36 @@ function verwerkHerhalendeKosten_() {
     const freq     = String(data[i][5] || 'Maandelijks');
     const rekening = String(data[i][7] || '7000').split(' ')[0];
     const auto     = String(data[i][9] || 'Nee');
+    const splitPct = Math.min(100, Math.max(0, parseFloat(data[i][11] || '100') || 100));
 
     // Is deze betaling vandaag of in het verleden?
     let datumVoorKomend = volgende;
     if (volgende <= vandaag) {
       if (auto === 'Ja') {
-        // Automatisch boeken als journaalpost
+        const zakelijkBedrag = rondBedrag_(bedrag * (splitPct / 100));
+        const privaatBedrag  = rondBedrag_(bedrag - zakelijkBedrag);
+        // Zakelijk deel → kostenrekening
         maakJournaalpost_(ss, {
           datum: volgende,
-          omschr: naam + ' (' + freq + ')',
+          omschr: naam + ' (' + freq + ')' + (splitPct < 100 ? ' — zakelijk ' + splitPct + '%' : ''),
           dagboek: 'Memoriaal',
           debet: rekening,
           credit: '1200',
-          bedrag,
+          bedrag: zakelijkBedrag,
           type: BOEKING_TYPE.MEMORIAAL,
         });
+        // Privé deel → 2400 Privéonttrekkingen (alleen als > 0)
+        if (privaatBedrag > 0) {
+          maakJournaalpost_(ss, {
+            datum: volgende,
+            omschr: naam + ' (' + freq + ') — privé ' + (100 - splitPct) + '%',
+            dagboek: 'Memoriaal',
+            debet: '2400',
+            credit: '1200',
+            bedrag: privaatBedrag,
+            type: BOEKING_TYPE.MEMORIAAL,
+          });
+        }
         geboekt++;
       }
 
