@@ -153,9 +153,13 @@ function betaalPagina_(e) {
   const prijsRw = props.getProperty('PRODUCT_PRIJS') || '49.00';
   // Dubbele fallback: zelfs als zelfHerstelProductConfig_ niet heeft gedraaid,
   // corrigeer alsnog in de render-laag zodat de pagina nooit €4900 toont.
-  const prijs = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
-    ? (parseFloat(prijsRw) / 100).toFixed(2)
-    : prijsRw;
+  const prijsNum = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
+    ? parseFloat(prijsRw) / 100
+    : parseFloat(prijsRw) || 49;
+  // Nederlandse weergave: komma ipv punt, geen trailing .00 bij ronde bedragen
+  const prijs = (prijsNum % 1 === 0)
+    ? prijsNum.toString()
+    : prijsNum.toFixed(2).replace('.', ',');
 
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
