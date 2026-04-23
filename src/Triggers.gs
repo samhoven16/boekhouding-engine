@@ -807,7 +807,55 @@ function dagelijkseTaken() {
     try { schrijfAuditLog_('FOUT dagelijkse taak', 'dashboard/herhalende kosten: ' + e.message); } catch (_) {}
   }
 
+  try {
+    controleerSheetGrootte_(ss);
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT groottecheck: ' + e.message);
+  }
+
   Logger.log('Dagelijkse taken uitgevoerd: ' + new Date());
+}
+
+/**
+ * Detecteert wanneer de spreadsheet zo groot wordt dat prestaties merkbaar
+ * degraderen. Stuurt één waarschuwing per 30 dagen, via audit-log + email
+ * indien eigen e-mail is ingesteld.
+ *
+ * Drempels:
+ *   - VERKOOPFACTUREN + INKOOPFACTUREN samen > 2000 rijen
+ *   - JOURNAALPOSTEN > 8000 rijen
+ * Dan: adviseer "Boekhouding → Beheer → Nieuw boekjaar starten"
+ */
+function controleerSheetGrootte_(ss) {
+  const nu = Date.now();
+  const props = PropertiesService.getScriptProperties();
+  const laatstKey = 'laatsteGrootteWaarschuwing';
+  const laatst = parseInt(props.getProperty(laatstKey) || '0');
+  if (nu - laatst < 30 * 24 * 60 * 60 * 1000) return; // max 1× per 30 dagen
+
+  const vfRijen = (ss.getSheetByName(SHEETS.VERKOOPFACTUREN) || { getLastRow: () => 0 }).getLastRow();
+  const ifRijen = (ss.getSheetByName(SHEETS.INKOOPFACTUREN)  || { getLastRow: () => 0 }).getLastRow();
+  const jrRijen = (ss.getSheetByName(SHEETS.JOURNAALPOSTEN)  || { getLastRow: () => 0 }).getLastRow();
+
+  const teVeelFacturen = (vfRijen + ifRijen) > 2000;
+  const teVeelBoekingen = jrRijen > 8000;
+  if (!teVeelFacturen && !teVeelBoekingen) return;
+
+  const eigenEmail = getInstelling_('Email rapporten naar') || '';
+  const bedrijf = getInstelling_('Bedrijfsnaam') || '';
+  const bericht =
+    'De spreadsheet bevat ' + (vfRijen + ifRijen) + ' facturen en ' + jrRijen + ' journaalposten. ' +
+    'Dit werkt prima, maar het Dashboard-refresh wordt merkbaar trager. ' +
+    'Overweeg om een nieuw boekjaar te starten via Boekhouding → Instellingen → Nieuw boekjaar.';
+
+  try { schrijfAuditLog_('Sheet-grootte waarschuwing', bericht); } catch (_) {}
+  if (eigenEmail) {
+    try {
+      GmailApp.sendEmail(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
+        bericht + '\n\n— Boekhoudbaar' + (bedrijf ? ' (' + bedrijf + ')' : ''));
+    } catch (_) {}
+  }
+  props.setProperty(laatstKey, String(nu));
 }
 
 // ─────────────────────────────────────────────
