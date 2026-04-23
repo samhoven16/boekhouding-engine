@@ -1183,30 +1183,36 @@ function genereerHandmatigeLicentie() {
 const FOLLOWUP_SCHEMA = [
   {
     dag: 3,
-    onderwerp: 'Je eerste BTW-aangifte met Boekhoudbaar',
+    onderwerp: 'BTW-aangifte is minder angstaanjagend dan het klinkt',
     html: (naam) => `<p>Hoi ${naam},</p>
-<p>Je hebt Boekhoudbaar nu 3 dagen. Tijd voor je eerste BTW-aangifte tip:</p>
-<ul>
-  <li>Ga naar <strong>Boekhouding → BTW → Genereer BTW-aangifte</strong></li>
+<p>Je hebt Boekhoudbaar nu 3 dagen. Goeie vraag om jezelf te stellen: <strong>hoeveel facturen staan er al in je boekhouding?</strong> (Het mag nog 0 zijn. Echt.)</p>
+<p>Veel nieuwe ZZP'ers denken dat BTW-aangifte ingewikkeld is. Het geheim: je hoeft zelf niks te berekenen. Boekhoudbaar telt alles op. Jij kopieert het naar Mijn Belastingdienst. Letterlijk 5 minuten.</p>
+<p><strong>Zo werkt het:</strong></p>
+<ol>
+  <li>Open je spreadsheet → <strong>Boekhouding → BTW → Genereer BTW-aangifte</strong></li>
   <li>Kies het juiste kwartaal</li>
-  <li>Kopieer de bedragen naar Mijn Belastingdienst</li>
-</ul>
-<p>Duurt letterlijk 5 minuten. 💪</p>
-<p>Heb je vragen? Stuur gewoon een reply op deze mail.</p>`,
+  <li>Je ziet de bedragen per rubriek — vul ze over in Mijn Belastingdienst</li>
+</ol>
+<p>Eerste keer doe je het in 15 minuten. Tweede keer in 5. Derde keer doe je het ook maar gewoon.</p>
+<p>Heb je vragen of loopt iets vast? Stuur een reply — ik lees mijn mail zelf.</p>
+<p>Sam</p>`,
   },
   {
     dag: 7,
-    onderwerp: 'Heb je al je eerste factuur verstuurd?',
+    onderwerp: 'Je eerste factuur — ja, je mag geld vragen voor je werk',
     html: (naam) => `<p>Hoi ${naam},</p>
-<p>Een week geleden heb je Boekhoudbaar geactiveerd. Heb je al je eerste factuur verstuurd?</p>
-<p>Zo maak je een factuur:</p>
+<p>Je gebruikt Boekhoudbaar nu een week. Volgende stap: je eerste factuur.</p>
+<p>En ja: je mag geld voor je werk vragen. Veel ZZP'ers voelen zich schuldig als ze een factuur sturen. Dat gevoel gaat weg. Stop er nu al mee.</p>
+<p><strong>Factuur maken:</strong></p>
 <ol>
   <li>Open je spreadsheet</li>
-  <li>Klik op <strong>Boekhouding → Nieuwe boeking → Verkoopfactuur</strong></li>
-  <li>Vul klantgegevens en bedrag in</li>
-  <li>Klik op Verzenden — je klant ontvangt direct een PDF</li>
+  <li><strong>Boekhouding → Nieuwe boeking → Verkoopfactuur</strong></li>
+  <li>Vul klantgegevens, beschrijving en bedrag in</li>
+  <li>Klik Verzenden → je klant krijgt direct een PDF per mail</li>
 </ol>
-<p>Tip: sla je klantgegevens één keer op in het Relaties-tabblad, daarna worden ze automatisch ingevuld.</p>`,
+<p><strong>Tip:</strong> sla je klant één keer op in het Relaties-tabblad. Volgende keer vult Boekhoudbaar alles automatisch in. Scheelt je 2 minuten per factuur — klinkt weinig, maar op jaarbasis tel je dat.</p>
+<p>Trouwens: als je een collega-ZZP'er naar Boekhoudbaar stuurt en die koopt het, dan verdien ik een kleine vergoeding. Ik zeg dit omdat ik het eerlijk vind om te zeggen. Jij speelt geen rol in die vergoeding — maar goed om te weten.</p>
+<p>Sam</p>`,
   },
   {
     dag: 14,
