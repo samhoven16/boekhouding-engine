@@ -367,7 +367,8 @@ a:hover { border-bottom-color: var(--accent); }
 .sticky-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(46,196,182,.4); }
 .sticky-cta-close {
   background: transparent; border: none; color: rgba(255,255,255,.6);
-  cursor: pointer; font-size: 20px; padding: 4px 8px;
+  cursor: pointer; font-size: 22px; padding: 10px 14px;
+  min-width: 44px; min-height: 44px; line-height: 1;
 }
 .sticky-cta-close:hover { color: #fff; }
 @media (max-width: 640px) {
