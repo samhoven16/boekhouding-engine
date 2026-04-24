@@ -42,6 +42,8 @@
   .nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;gap:8px;}
   .logo{text-decoration:none;display:inline-flex;align-items:center;}
   .logo img{height:28px;width:auto;}
+  .logo-text{display:none;font-weight:800;font-size:20px;color:var(--blauw);letter-spacing:-0.3px;}
+  .logo-text span{color:var(--accent);}
   .nav-links{display:flex;gap:26px;list-style:none;align-items:center;}
   .nav-links a{text-decoration:none;color:var(--grijs);font-size:15px;font-weight:500;}
   .nav-links a:hover{color:var(--blauw);}
@@ -106,7 +108,9 @@
 
   /* ── RESPONSIVE ── */
   @media (max-width:768px){
-    nav{padding:0 16px;}
+    nav{padding:0 16px;background:#ffffff;box-shadow:0 1px 3px rgba(13,27,78,.08);}
+    .logo-img{display:none;}
+    .logo-text{display:inline;}
     .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:var(--wit);border-bottom:1px solid var(--rand);padding:4px 0;box-shadow:0 8px 24px rgba(0,0,0,.08);z-index:99;}
     .nav-links.open{display:flex;}
     .nav-links li{width:100%;}
@@ -130,7 +134,7 @@
 
 <nav aria-label="Hoofdnavigatie">
   <div class="nav-inner">
-    <a href="/" class="logo" aria-label="Boekhoudbaar — home"><img src="/logo.svg" alt="Boekhoudbaar" width="130" height="28"></a>
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home"><img src="/logo.svg" alt="Boekhoudbaar" width="130" height="28" class="logo-img"><span class="logo-text" aria-hidden="true">Boekhoud<span>baar</span></span></a>
     <ul class="nav-links" id="nav-menu" role="list">
       <li><a href="/#functies">Functies</a></li>
       <li><a href="/#vergelijking">Vergelijking</a></li>
