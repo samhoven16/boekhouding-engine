@@ -290,15 +290,16 @@
   .btn-primair:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(46,196,182,.28), 0 2px 4px rgba(0,0,0,.08); background: #F8FDFC; }
   .btn-secundair {
     display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,.12); color: var(--wit);
-    border: 1.5px solid rgba(255,255,255,.4);
-    padding: 15px 24px; border-radius: 10px;
+    background: rgba(255,255,255,.08); color: var(--wit);
+    border: 1px solid rgba(255,255,255,.22);
+    padding: 15px 26px; border-radius: 12px;
     font-size: 16px; font-weight: 600; text-decoration: none;
-    transition: background .15s;
+    letter-spacing: -0.01em;
     min-height: 56px;
+    backdrop-filter: blur(8px);
+    transition: background .2s ease, border-color .2s ease, transform .2s cubic-bezier(.2,.7,.2,1);
   }
-  .btn-secundair { transition: background .15s ease, border-color .15s ease, transform .15s ease; }
-  .btn-secundair:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.6); transform: translateY(-1px); }
+  .btn-secundair:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.4); transform: translateY(-1px); }
   .hero-trust {
     list-style: none; margin: 22px auto 0; padding: 0;
     display: flex; flex-wrap: wrap; justify-content: center;
