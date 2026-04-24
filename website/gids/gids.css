@@ -58,6 +58,15 @@ a:hover { border-bottom-color: var(--accent); }
 }
 .nav-cta:hover { background: var(--blauw-licht); border: none; }
 
+/* Mobile nav: hide minder belangrijke links, hou logo + CTA zichtbaar */
+@media (max-width: 640px) {
+  .nav-inner { padding: 12px 16px; gap: 8px; }
+  .nav ul { gap: 10px; }
+  .nav ul li:not(:last-child) { display: none; }
+  .nav-cta { padding: 7px 12px; font-size: 13px; }
+  .nav .logo-link img { height: 24px; }
+}
+
 /* ── ARTICLE CONTAINER ───────────────────────────────────── */
 .gids {
   max-width: 820px;
