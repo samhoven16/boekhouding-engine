@@ -176,7 +176,7 @@
   .logo { text-decoration: none; display: inline-flex; align-items: center; height: 36px; }
   .logo img { height: 32px; width: auto; display: block; transition: opacity .15s ease; }
   .logo:hover img { opacity: .85; }
-  /* Tekst-logo — hidden tenzij img faalt. Fallback voor onverwachte render-issues. */
+  /* Tekst-logo: op desktop verborgen (SVG doet 't), op mobiel zichtbaar als primary identifier */
   .logo-text { display: none; font-weight: 800; font-size: 20px; color: var(--blauw); letter-spacing: -0.3px; }
   .logo-text span { color: var(--accent); }
   .nav-links { display: flex; gap: 28px; list-style: none; align-items: center; }
@@ -655,9 +655,9 @@
       box-shadow: 0 1px 3px rgba(13,27,78,.08);
     }
     .nav-inner { height: 64px; gap: 8px; }
-    .logo img { height: 28px; }
-    /* Tekst-logo zichtbaar op mobiel indien SVG faalt of op rare devices */
-    .logo-text { font-size: 20px; }
+    /* Op mobiel: tekst-logo primary, SVG-img verborgen (garantie op zichtbaarheid) */
+    .logo-img { display: none; }
+    .logo-text { display: inline; font-size: 20px; }
 
     /* Mobile: CTA + hamburger rechts altijd zichtbaar — andere items via menu */
     .nav-mobile-actions { display: inline-flex; }
@@ -769,7 +769,7 @@
 <nav aria-label="Hoofdnavigatie">
   <div class="nav-inner">
     <a href="/" class="logo" aria-label="Boekhoudbaar — home">
-      <img src="/logo.svg" alt="" width="260" height="52" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+      <img src="/logo.svg" alt="" width="260" height="52" class="logo-img">
       <span class="logo-text" aria-hidden="true">Boekhoud<span>baar</span></span>
     </a>
     <ul class="nav-links" id="nav-menu" role="list">
