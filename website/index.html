@@ -511,10 +511,15 @@
     max-width: 760px;
     margin: 0 auto;
     background: var(--wit);
-    border: 1px solid var(--rand);
-    border-radius: 14px;
-    padding: 24px 28px;
-    box-shadow: 0 2px 12px rgba(13,27,78,.04);
+    border: 1px solid rgba(229,234,242,.8);
+    border-radius: 16px;
+    padding: 28px 32px;
+    box-shadow: 0 1px 3px rgba(13,27,78,.04), 0 8px 24px rgba(13,27,78,.05);
+    transition: box-shadow .25s ease, transform .25s ease;
+  }
+  .oprichter-teaser:hover {
+    box-shadow: 0 2px 6px rgba(13,27,78,.06), 0 16px 40px rgba(13,27,78,.08);
+    transform: translateY(-2px);
   }
   .oprichter-foto {
     width: 96px; height: 96px; border-radius: 50%;
