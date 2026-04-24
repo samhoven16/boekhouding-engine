@@ -1,0 +1,81 @@
+name: Keep codespaces alive
+
+# Voorkom dat GitHub je codespaces verwijdert na 30 dagen inactiviteit.
+# Draait wekelijks en "start" elke codespace je hebt — telt als activiteit,
+# retentie-klok reset naar 30 dagen.
+#
+# EENMALIGE SETUP:
+#   1. Maak Personal Access Token (fine-grained):
+#      https://github.com/settings/personal-access-tokens/new
+#      - Resource owner: samhoven16
+#      - Expiration: No expiration (of max — anders moet je later refreshen)
+#      - Permissions → Account → "Codespaces" → Read and write
+#   2. Voeg toe als repo secret:
+#      https://github.com/samhoven16/boekhouding-engine/settings/secrets/actions
+#      Naam: CODESPACE_KEEPALIVE_PAT
+#      Value: <de token>
+#   3. Klaar — geen mails meer. Workflow draait elke 21 dagen automatisch.
+
+on:
+  schedule:
+    # Elke 21 dagen (retention is 30 dagen — 9 dagen marge voor weekenden/vakantie)
+    - cron: '0 9 */21 * *'
+  workflow_dispatch: # handmatig triggeren via Actions-tab
+
+permissions:
+  contents: read
+
+jobs:
+  keep-alive:
+    name: Keep all codespaces alive
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping elke codespace via API
+        env:
+          GH_TOKEN: ${{ secrets.CODESPACE_KEEPALIVE_PAT }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Secret CODESPACE_KEEPALIVE_PAT niet ingesteld. Zie workflow-comments bovenaan voor setup."
+            exit 1
+          fi
+
+          echo "== Actieve codespaces ophalen =="
+          codespaces=$(curl -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/user/codespaces)
+
+          total=$(echo "$codespaces" | jq -r '.total_count // 0')
+          echo "Totaal codespaces: $total"
+
+          if [ "$total" = "0" ]; then
+            echo "Geen codespaces om alive te houden."
+            exit 0
+          fi
+
+          echo "== Ping elke codespace =="
+          echo "$codespaces" | jq -r '.codespaces[] | "\(.name)\t\(.repository.full_name)\t\(.state)"' | while IFS=$'\t' read -r name repo state; do
+            echo ""
+            echo "→ $name  (repo: $repo, state: $state)"
+
+            # Alleen starten als niet al actief — voorkomt onnodige billing
+            if [ "$state" = "Available" ] || [ "$state" = "Starting" ]; then
+              echo "   Al actief, retention-timer reset door deze API-call."
+              continue
+            fi
+
+            response=$(curl -sS -w "\nHTTP_STATUS:%{http_code}" -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/user/codespaces/$name/start" || true)
+
+            status=$(echo "$response" | grep "HTTP_STATUS:" | cut -d: -f2)
+            echo "   Start-call: HTTP $status"
+          done
+
+          echo ""
+          echo "== Klaar — retentie-timers gereset =="
