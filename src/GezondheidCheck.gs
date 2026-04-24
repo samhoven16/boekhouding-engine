@@ -97,6 +97,16 @@ function voerGezondheidCheckUit() {
   const totaal = aantalFouten + aantalWaarsch + aantalOk;
   const score  = totaal > 0 ? Math.round(((aantalOk + aantalWaarsch * 0.5) / totaal) * 100) : 100;
 
+  // Cache laatste score + datum zodat Dashboard het zonder re-run kan tonen
+  try {
+    PropertiesService.getDocumentProperties().setProperties({
+      'GEZONDHEID_SCORE':    String(score),
+      'GEZONDHEID_FOUTEN':   String(aantalFouten),
+      'GEZONDHEID_WAARSCH':  String(aantalWaarsch),
+      'GEZONDHEID_DATUM':    new Date().toISOString(),
+    });
+  } catch (e) { Logger.log('GezondheidCheck cache: ' + e.message); }
+
   // Schrijf resultaten naar tabblad
   schrijfGezondheidCheckResultaten_(ss, resultaten, score, aantalFouten, aantalWaarsch, aantalOk);
 
@@ -449,4 +459,23 @@ function schrijfGezondheidCheckResultaten_(ss, resultaten, score, fouten, waarsc
   sheet.setFrozenRows(5);
 
   ss.setActiveSheet(sheet);
+}
+
+/**
+ * Leest gecachte gezondheidscheck-score (van laatste run).
+ * Retourneert null als er nog nooit een check is uitgevoerd.
+ */
+function leesGezondheidScoreCache_() {
+  try {
+    const p = PropertiesService.getDocumentProperties();
+    const score = p.getProperty('GEZONDHEID_SCORE');
+    const datum = p.getProperty('GEZONDHEID_DATUM');
+    if (score === null || datum === null) return null;
+    return {
+      score:   parseInt(score, 10),
+      fouten:  parseInt(p.getProperty('GEZONDHEID_FOUTEN')  || '0', 10),
+      waarsch: parseInt(p.getProperty('GEZONDHEID_WAARSCH') || '0', 10),
+      datum:   new Date(datum),
+    };
+  } catch (e) { Logger.log('leesGezondheidScoreCache_: ' + e.message); return null; }
 }

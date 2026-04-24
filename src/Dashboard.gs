@@ -100,6 +100,32 @@ function vernieuwDashboard() {
   sheet.setRowHeight(4, 30);
   sheet.setRowHeight(5, 42);
 
+  // ── Gezondheidsscore banner (rij 6) ──────────────────────────────────
+  // Geeft gebruiker 1-regel-status. Wordt leeg als nog nooit gecheckt.
+  try {
+    const gez = leesGezondheidScoreCache_();
+    if (gez) {
+      const dagenGeleden = Math.floor((new Date() - gez.datum) / 86400000);
+      const versheid = dagenGeleden === 0 ? 'vandaag' :
+                       dagenGeleden === 1 ? 'gisteren' :
+                       dagenGeleden + ' dagen geleden';
+      const emoji = gez.score >= 90 ? '✅' : gez.score >= 70 ? '⚠️' : '❌';
+      const bg    = gez.score >= 90 ? '#E8F5E9' : gez.score >= 70 ? '#FFF8E1' : '#FFEBEE';
+      const fg    = gez.score >= 90 ? '#1B5E20' : gez.score >= 70 ? '#E65100' : '#B71C1C';
+      const tekst = `${emoji} Gezondheid: ${gez.score}/100  (${gez.fouten} fout · ${gez.waarsch} let op · gecheckt ${versheid})  —  Menu: Boekhouding → Gezondheidscheck`;
+      sheet.getRange(6, 1, 1, 9).merge().setValue(tekst)
+        .setBackground(bg).setFontColor(fg).setFontWeight('bold').setFontSize(10)
+        .setHorizontalAlignment('center');
+      sheet.setRowHeight(6, 22);
+    } else {
+      const tekst = 'ℹ️ Nog geen gezondheidscheck uitgevoerd.  Menu: Boekhouding → Gezondheidscheck uitvoeren';
+      sheet.getRange(6, 1, 1, 9).merge().setValue(tekst)
+        .setBackground('#F7F9FC').setFontColor('#455A64').setFontSize(10)
+        .setHorizontalAlignment('center');
+      sheet.setRowHeight(6, 22);
+    }
+  } catch (e) { Logger.log('Gezondheid-banner: ' + e.message); }
+
   // Verwerk herhalende kosten (automatisch boeken + komende betalingen voor waarschuwingen)
   let herhalendeResult = { geboekt: 0, komend: [] };
   try { herhalendeResult = verwerkHerhalendeKosten_(); } catch (e) { Logger.log('Herhalende kosten: ' + e.message); }
