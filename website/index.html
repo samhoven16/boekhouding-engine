@@ -426,10 +426,14 @@
   }
   .usp-kaart {
     background: var(--wit); border: 1px solid var(--rand);
-    border-radius: var(--radius); padding: 28px;
-    transition: border-color .2s ease, box-shadow .2s ease;
+    border-radius: 14px; padding: 30px 28px;
+    transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
   }
-  .usp-kaart:hover { border-color: rgba(46,196,182,.35); box-shadow: 0 2px 12px rgba(13,27,78,.06); }
+  .usp-kaart:hover {
+    border-color: rgba(46,196,182,.4);
+    box-shadow: 0 12px 32px rgba(13,27,78,.08), 0 1px 3px rgba(13,27,78,.04);
+    transform: translateY(-2px);
+  }
   .usp-icon {
     width: 44px; height: 44px; border-radius: 10px;
     background: rgba(46,196,182,.12);
