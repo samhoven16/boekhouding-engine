@@ -237,15 +237,16 @@
     100% { transform: translate3d(14px, -8px, 0) scale(1.02); }
   }
   .hero > * { position: relative; }
-  .hero-badge, .hero h1, .hero-sub, .hero-ctas, .hero .ideal-badge {
+  .hero-badge, .hero h1, .hero-sub, .hero-ctas, .hero .ideal-badge, .hero-trust {
     opacity: 0;
-    transform: translateY(12px);
-    animation: hero-rise .7s cubic-bezier(.2,.7,.2,1) forwards;
+    transform: translateY(16px);
+    animation: hero-rise .85s cubic-bezier(.16,.84,.4,1) forwards;
   }
-  .hero h1   { animation-delay: .08s; }
-  .hero-sub  { animation-delay: .22s; }
-  .hero-ctas { animation-delay: .36s; }
-  .hero .ideal-badge { animation-delay: .50s; }
+  .hero h1   { animation-delay: .10s; }
+  .hero-sub  { animation-delay: .24s; }
+  .hero-ctas { animation-delay: .38s; }
+  .hero .ideal-badge { animation-delay: .52s; }
+  .hero-trust { animation-delay: .64s; }
   @keyframes hero-rise {
     to { opacity: 1; transform: translateY(0); }
   }
