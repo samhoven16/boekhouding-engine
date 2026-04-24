@@ -447,9 +447,15 @@
 
   /* ── VERGELIJKING ── */
   .vergelijk-sectie { background: var(--bg); }
-  .vergelijk-tabel { width: 100%; border-collapse: collapse; margin-top: 40px; }
+  .vergelijk-wrap {
+    margin-top: 40px; background: var(--wit);
+    border: 1px solid rgba(229,234,242,.8); border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(13,27,78,.04), 0 12px 32px rgba(13,27,78,.05);
+    overflow: hidden;
+  }
+  .vergelijk-tabel { width: 100%; border-collapse: collapse; }
   .vergelijk-tabel th, .vergelijk-tabel td {
-    padding: 14px 16px; text-align: left; font-size: 15px;
+    padding: 16px 20px; text-align: left; font-size: 15px;
     border-bottom: 1px solid var(--rand);
   }
   .vergelijk-tabel th { font-weight: 700; color: var(--grijs); font-size: 13px; text-transform: uppercase; letter-spacing: .8px; }
