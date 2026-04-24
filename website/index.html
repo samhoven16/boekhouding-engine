@@ -84,6 +84,14 @@
         },
         {
           "@type": "Question",
+          "name": "Wat als het niet werkt voor mij?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Mail binnen 14 dagen na aankoop en je krijgt je €49 volledig terug. Geen formulier, geen vragen."
+          }
+        },
+        {
+          "@type": "Question",
           "name": "Waar staat mijn data?",
           "acceptedAnswer": {
             "@type": "Answer",
@@ -168,6 +176,9 @@
   .logo { text-decoration: none; display: inline-flex; align-items: center; height: 36px; }
   .logo img { height: 32px; width: auto; display: block; transition: opacity .15s ease; }
   .logo:hover img { opacity: .85; }
+  /* Tekst-logo: op desktop verborgen (SVG doet 't), op mobiel zichtbaar als primary identifier */
+  .logo-text { display: none; font-weight: 800; font-size: 20px; color: var(--blauw); letter-spacing: -0.3px; }
+  .logo-text span { color: var(--accent); }
   .nav-links { display: flex; gap: 28px; list-style: none; align-items: center; }
   .nav-mobile-actions { display: none; list-style: none; align-items: center; gap: 6px; }
   .nav-mobile-actions li { list-style: none; }
@@ -637,14 +648,24 @@
   @media (max-width: 768px) {
     section { padding: 52px 20px; }
 
-    nav { padding: 0 16px; }
+    /* Solid bg op mobiel — voorkomt dat nav 'verdwijnt' in witte body */
+    nav {
+      background: #ffffff;
+      padding: 0 16px;
+      box-shadow: 0 1px 3px rgba(13,27,78,.08);
+    }
     .nav-inner { height: 64px; gap: 8px; }
-    .logo img { height: 28px; }
+    /* Op mobiel: tekst-logo primary, SVG-img verborgen (garantie op zichtbaarheid) */
+    .logo-img { display: none; }
+    .logo-text { display: inline; font-size: 20px; }
 
     /* Mobile: CTA + hamburger rechts altijd zichtbaar — andere items via menu */
     .nav-mobile-actions { display: inline-flex; }
-    .nav-toggle { display: inline-flex; align-items: center; justify-content: center;
-                  min-width: 44px; min-height: 44px; margin-left: 4px; }
+    .nav-toggle {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 44px; min-height: 44px; margin-left: 4px;
+      color: var(--blauw);
+    }
 
     .nav-links {
       display: none; flex-direction: column; gap: 0;
@@ -748,7 +769,8 @@
 <nav aria-label="Hoofdnavigatie">
   <div class="nav-inner">
     <a href="/" class="logo" aria-label="Boekhoudbaar — home">
-      <img src="/logo.svg" alt="" width="260" height="52">
+      <img src="/logo.svg" alt="" width="260" height="52" class="logo-img">
+      <span class="logo-text" aria-hidden="true">Boekhoud<span>baar</span></span>
     </a>
     <ul class="nav-links" id="nav-menu" role="list">
       <li><a href="#functies">Product</a></li>
@@ -1050,6 +1072,11 @@
       <details>
         <summary>Moet ik elk jaar opnieuw betalen?</summary>
         <p>Nee. Je betaalt één keer €49 en daarna nooit meer. Geen jaarlijkse licentie, geen verlengingsmail, geen verborgen kosten. Krijg ik mijn server-kosten er dan wel uit? Ja — want de sheet draait op jouw Drive, niet op een server van mij.</p>
+      </details>
+
+      <details>
+        <summary>Wat als het niet werkt voor mij?</summary>
+        <p>Mail me binnen <strong>14 dagen</strong> na aankoop op <a href="mailto:hallo@boekhoudbaar.nl">hallo@boekhoudbaar.nl</a> en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening. Ik vind het zelf vervelend om vast te zitten aan iets dat niet bij je past, dus deal ik er ook niet zo mee.</p>
       </details>
 
       <details>
