@@ -299,7 +299,7 @@ function toonFout(t){var e=document.getElementById('fout');e.textContent=t;e.sty
 
   return HtmlService.createHtmlOutput(html)
     .setTitle(naam + ' — Aankoop')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DENY);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
 // ─────────────────────────────────────────────
