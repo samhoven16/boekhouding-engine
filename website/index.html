@@ -161,7 +161,8 @@
   }
 
   /* ── NAV ── Stripe/Linear stijl: rustig, luchtig, solid ── */
-  nav {
+  /* body > nav = alleen header-nav, niet footer-nav */
+  body > nav {
     position: sticky; top: 0; z-index: 100;
     background: rgba(255,255,255,.92);
     -webkit-backdrop-filter: saturate(180%) blur(14px);
@@ -666,7 +667,7 @@
     section { padding: 52px 20px; }
 
     /* Solid bg op mobiel — duidelijk afgebakend, nooit transparent */
-    nav {
+    body > nav {
       background: #ffffff;
       padding: 0 20px;
       box-shadow: 0 1px 0 rgba(13,27,78,.06), 0 6px 20px rgba(13,27,78,.05);
