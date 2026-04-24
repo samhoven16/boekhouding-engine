@@ -37,18 +37,17 @@
   ::selection{background:rgba(46,196,182,.28);color:var(--blauw);}
   body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--wit);line-height:1.7;font-size:17px;-webkit-font-smoothing:antialiased;}
 
-  /* ── NAV ── */
-  nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border-bottom:1px solid var(--rand);padding:0 24px;}
-  .nav-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:64px;gap:8px;}
-  .logo{text-decoration:none;display:inline-flex;align-items:center;}
-  .logo img{height:28px;width:auto;}
-  .logo-text{display:none;font-weight:800;font-size:20px;color:var(--blauw);letter-spacing:-0.3px;}
-  .logo-text span{color:var(--accent);}
-  .nav-links{display:flex;gap:26px;list-style:none;align-items:center;}
-  .nav-links a{text-decoration:none;color:var(--grijs);font-size:15px;font-weight:500;}
-  .nav-links a:hover{color:var(--blauw);}
-  .nav-cta{background:var(--blauw);color:var(--wit)!important;padding:9px 16px;border-radius:8px;font-weight:600!important;font-size:14px!important;display:inline-flex;align-items:center;}
-  .nav-cta:hover{background:var(--blauw-licht)!important;}
+  /* ── NAV ── Stripe/Linear stijl ── */
+  nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid rgba(229,234,242,.8);padding:0 32px;}
+  .nav-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:76px;gap:32px;}
+  .logo{text-decoration:none;display:inline-flex;align-items:center;height:40px;flex-shrink:0;}
+  .logo img{height:36px;width:auto;transition:opacity .2s,transform .2s;}
+  .logo:hover img{opacity:.9;transform:scale(1.02);}
+  .nav-links{display:flex;gap:36px;list-style:none;align-items:center;margin:0;padding:0;}
+  .nav-links a{text-decoration:none;color:#475569;font-size:15px;font-weight:500;letter-spacing:-0.01em;transition:color .15s;}
+  .nav-links a:not(.nav-cta):hover{color:var(--blauw);}
+  .nav-cta{background:var(--blauw);color:var(--wit)!important;padding:10px 20px;border-radius:10px;font-weight:600!important;font-size:14px!important;letter-spacing:-0.01em;display:inline-flex;align-items:center;box-shadow:0 1px 2px rgba(13,27,78,.08);transition:background .18s,transform .18s,box-shadow .25s;}
+  .nav-cta:hover{background:var(--blauw-licht)!important;transform:translateY(-1px);box-shadow:0 8px 20px rgba(13,27,78,.22);}
   .nav-mobile-actions{display:none;list-style:none;align-items:center;gap:6px;}
   .nav-toggle{display:none;background:none;border:none;cursor:pointer;padding:8px;color:var(--blauw);min-width:44px;min-height:44px;align-items:center;justify-content:center;}
   .nav-toggle svg{display:block;}
@@ -107,11 +106,13 @@
   :focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px;}
 
   /* ── RESPONSIVE ── */
+  @media (max-width:900px){ .nav-inner{gap:20px;} .nav-links{gap:26px;} }
   @media (max-width:768px){
-    nav{padding:0 16px;background:#ffffff;box-shadow:0 1px 3px rgba(13,27,78,.08);}
-    .logo-img{display:none;}
-    .logo-text{display:inline;}
-    .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:64px;left:0;right:0;background:var(--wit);border-bottom:1px solid var(--rand);padding:4px 0;box-shadow:0 8px 24px rgba(0,0,0,.08);z-index:99;}
+    nav{padding:0 20px;background:#ffffff;box-shadow:0 1px 0 rgba(13,27,78,.06),0 6px 20px rgba(13,27,78,.05);border-bottom:none;}
+    .nav-inner{height:68px;gap:12px;}
+    .logo{height:32px;}
+    .logo img{height:30px;}
+    .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:68px;left:0;right:0;background:var(--wit);border-bottom:1px solid var(--rand);padding:4px 0;box-shadow:0 12px 32px rgba(13,27,78,.1);z-index:99;}
     .nav-links.open{display:flex;}
     .nav-links li{width:100%;}
     .nav-links li a{padding:14px 20px;font-size:16px;display:block;border-bottom:1px solid var(--rand);}
@@ -134,7 +135,7 @@
 
 <nav aria-label="Hoofdnavigatie">
   <div class="nav-inner">
-    <a href="/" class="logo" aria-label="Boekhoudbaar — home"><img src="/logo.svg" alt="Boekhoudbaar" width="130" height="28" class="logo-img"><span class="logo-text" aria-hidden="true">Boekhoud<span>baar</span></span></a>
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home"><img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52"></a>
     <ul class="nav-links" id="nav-menu" role="list">
       <li><a href="/#functies">Functies</a></li>
       <li><a href="/#vergelijking">Vergelijking</a></li>
