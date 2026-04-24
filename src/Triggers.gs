@@ -803,6 +803,12 @@ function dagelijkseTaken() {
   }
 
   try {
+    voerGezondheidCheckStil_();
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT gezondheidscheck: ' + e.message);
+  }
+
+  try {
     vernieuwDashboard();
   } catch (e) {
     Logger.log('dagelijkse taak FOUT dashboard: ' + e.message);

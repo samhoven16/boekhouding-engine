@@ -60,6 +60,23 @@ const BELASTING_PER_JAAR = {
     HEFFINGSKORTING_MAX:    3068,
     ARBEIDSKORTING_MAX:     5599,    // 2026: lichte daling
   },
+  // 2027: placeholder — vervang met officiële Miljoenennota-cijfers Prinsjesdag 2026.
+  // Bij ontbreken valt getBelasting_() terug op 2026-tarieven met waarschuwing.
+  2027: {
+    ZELFSTANDIGENAFTREK:    2470,    // INDICATIEF — controleer na Prinsjesdag 2026
+    STARTERSAFTREK:         2123,
+    MKB_WINSTVRIJSTELLING:  0.1270,
+    FOR_MAX:                10786,
+    THUISWERK_PER_DAG:      2.40,
+    LIJFRENTE_MAX:          39000,   // geïndexeerde schatting
+    AOW_FRANCHISE:          14800,
+    BOX3_GROEN_VRIJSTELLING: 68000,
+    IB_SCHIJF_1_MAX:        78500,   // geïndexeerde schatting
+    IB_SCHIJF_1_PCT:        0.3693,
+    IB_SCHIJF_2_PCT:        0.495,
+    HEFFINGSKORTING_MAX:    3100,
+    ARBEIDSKORTING_MAX:     5650,
+  },
 };
 
 function getBelasting_() {

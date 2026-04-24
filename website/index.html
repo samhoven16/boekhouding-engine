@@ -168,7 +168,9 @@
   .logo { text-decoration: none; display: inline-flex; align-items: center; height: 36px; }
   .logo img { height: 32px; width: auto; display: block; transition: opacity .15s ease; }
   .logo:hover img { opacity: .85; }
-  .nav-links { display: flex; gap: 28px; list-style: none; }
+  .nav-links { display: flex; gap: 28px; list-style: none; align-items: center; }
+  .nav-mobile-actions { display: none; list-style: none; align-items: center; gap: 6px; }
+  .nav-mobile-actions li { list-style: none; }
   .nav-links a { text-decoration: none; color: var(--grijs); font-size: 15px; font-weight: 500; transition: color .15s ease; }
   .nav-links a:not(.nav-cta):hover { color: var(--blauw); }
   .nav-cta {
@@ -234,11 +236,11 @@
     letter-spacing: .2px;
   }
   .hero h1 {
-    font-size: clamp(34px, 5.2vw, 60px);
+    font-size: clamp(30px, 5.2vw, 60px);
     font-weight: 800;
-    line-height: 1.08;
+    line-height: 1.1;
     letter-spacing: -0.02em;
-    max-width: 820px; margin: 0 auto 22px;
+    max-width: 820px; margin: 0 auto 18px;
   }
   .hero h1 em { font-style: normal; color: var(--accent); }
   .hero-sub {
@@ -269,6 +271,18 @@
   }
   .btn-secundair { transition: background .15s ease, border-color .15s ease, transform .15s ease; }
   .btn-secundair:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.6); transform: translateY(-1px); }
+  .hero-trust {
+    list-style: none; margin: 22px auto 0; padding: 0;
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 10px 20px; font-size: 14px;
+    color: rgba(255,255,255,.82);
+    max-width: 680px;
+  }
+  .hero-trust li { display: inline-flex; align-items: center; gap: 6px; }
+  .hero-trust span { color: var(--accent); font-weight: 700; font-size: 13px; }
+  @media (max-width: 640px) {
+    .hero-trust { gap: 6px 16px; font-size: 13px; margin-top: 16px; }
+  }
   .ideal-badge {
     display: inline-flex; align-items: center; gap: 8px;
     background: transparent; border-radius: 0;
@@ -456,46 +470,49 @@
   .oauth-heads-up em { color: #5A3F00; }
   .oauth-heads-up strong { color: #5A3F00; }
 
-  /* ── OPRICHTER ── */
-  .oprichter-sectie { background: var(--bg); }
-  .oprichter-grid {
+  /* ── OPRICHTER (compact teaser → /over/) ── */
+  .oprichter-sectie { background: var(--bg); padding-top: 56px; padding-bottom: 56px; }
+  .oprichter-teaser {
     display: grid;
-    grid-template-columns: 200px 1fr;
-    gap: 40px;
-    margin-top: 40px;
-    align-items: start;
+    grid-template-columns: 96px 1fr;
+    gap: 28px;
+    align-items: center;
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--wit);
+    border: 1px solid var(--rand);
+    border-radius: 14px;
+    padding: 24px 28px;
+    box-shadow: 0 2px 12px rgba(13,27,78,.04);
   }
   .oprichter-foto {
-    width: 200px; height: 200px; border-radius: 50%;
+    width: 96px; height: 96px; border-radius: 50%;
     object-fit: cover; object-position: center top;
-    border: 4px solid var(--wit);
-    box-shadow: var(--shadow);
+    box-shadow: 0 4px 12px rgba(13,27,78,.12);
     display: block;
   }
   .oprichter-foto-initial {
-    width: 200px; height: 200px; border-radius: 50%;
+    width: 96px; height: 96px; border-radius: 50%;
     background: linear-gradient(135deg, #0D1B4E 0%, #1A3A7E 100%);
     color: var(--wit);
     display: none;
     align-items: center; justify-content: center;
-    font-size: 72px; font-weight: 800; letter-spacing: -0.02em;
-    border: 4px solid var(--wit);
-    box-shadow: var(--shadow);
+    font-size: 34px; font-weight: 800;
   }
-  .oprichter-quote {
-    font-size: 22px; font-weight: 600; line-height: 1.4;
-    color: var(--blauw); margin-bottom: 20px;
-    border-left: 3px solid var(--accent);
-    padding-left: 18px;
-    letter-spacing: -0.01em;
+  .oprichter-tekst h2 {
+    font-size: 22px; font-weight: 700; color: var(--blauw);
+    margin-bottom: 8px; letter-spacing: -0.01em; line-height: 1.25;
   }
-  .oprichter-tekst p { margin-bottom: 14px; color: var(--tekst); font-size: 16px; line-height: 1.7; }
-  .oprichter-naam { margin-top: 18px; font-size: 14px; color: var(--grijs); }
-  .oprichter-naam strong { color: var(--tekst); }
-  @media (max-width: 720px) {
-    .oprichter-grid { grid-template-columns: 1fr; justify-items: center; text-align: center; }
-    .oprichter-quote { border-left: none; border-top: 3px solid var(--accent); padding-left: 0; padding-top: 14px; text-align: left; }
-    .oprichter-tekst { text-align: left; }
+  .oprichter-tekst p { margin-bottom: 8px; color: var(--tekst); font-size: 15px; line-height: 1.6; }
+  .oprichter-link {
+    color: var(--blauw); font-weight: 600; text-decoration: none;
+    border-bottom: 2px solid var(--accent); padding-bottom: 1px;
+    transition: color .15s;
+  }
+  .oprichter-link:hover { color: var(--accent); }
+  @media (max-width: 640px) {
+    .oprichter-teaser { grid-template-columns: 1fr; padding: 22px; gap: 16px; text-align: center; justify-items: center; }
+    .oprichter-tekst { text-align: center; }
   }
 
   /* ── PRICING ── */
@@ -620,24 +637,39 @@
   @media (max-width: 768px) {
     section { padding: 52px 20px; }
 
-    .nav-toggle { display: flex; align-items: center; }
+    nav { padding: 0 16px; }
+    .nav-inner { height: 64px; gap: 8px; }
+    .logo img { height: 28px; }
+
+    /* Mobile: CTA + hamburger rechts altijd zichtbaar — andere items via menu */
+    .nav-mobile-actions { display: inline-flex; }
+    .nav-toggle { display: inline-flex; align-items: center; justify-content: center;
+                  min-width: 44px; min-height: 44px; margin-left: 4px; }
 
     .nav-links {
       display: none; flex-direction: column; gap: 0;
-      position: absolute; top: 72px; left: 0; right: 0;
+      position: absolute; top: 64px; left: 0; right: 0;
       background: var(--wit); border-bottom: 1px solid var(--rand);
-      padding: 8px 0; box-shadow: 0 8px 24px rgba(0,0,0,.08);
+      padding: 4px 0; box-shadow: 0 8px 24px rgba(0,0,0,.08);
       z-index: 99;
     }
     .nav-links.open { display: flex; }
-    .nav-links a { padding: 14px 24px; font-size: 16px; border-bottom: 1px solid var(--rand); }
-    .nav-links li:last-child a { border-bottom: none; }
-    .nav-cta {
-      margin: 8px 20px 4px; border-radius: 8px;
-      text-align: center; display: block;
+    .nav-links li { width: 100%; }
+    .nav-links li:not(.nav-cta-mobile) a {
+      padding: 14px 20px; font-size: 16px; display: block;
+      border-bottom: 1px solid var(--rand);
     }
+    .nav-links li:last-child a { border-bottom: none; }
+    /* CTA blijft altijd zichtbaar naast hamburger */
+    .nav-cta-mobile { display: inline-flex !important; align-items: center;
+                      order: 2; list-style: none; }
+    .nav-cta-mobile a.nav-cta {
+      padding: 9px 14px !important; font-size: 13px !important;
+      border-radius: 8px; display: inline-flex;
+    }
+    .nav-links .nav-cta-desktop { display: none; }
 
-    .hero { padding: 96px 20px 72px; }
+    .hero { padding: 80px 20px 56px; }
     .hero-ctas { flex-direction: column; align-items: stretch; gap: 12px; }
     .btn-primair, .btn-secundair { justify-content: center; width: 100%; }
 
@@ -718,17 +750,20 @@
     <a href="/" class="logo" aria-label="Boekhoudbaar — home">
       <img src="/logo.svg" alt="" width="260" height="52">
     </a>
-    <button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
-      <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
-    </button>
     <ul class="nav-links" id="nav-menu" role="list">
-      <li><a href="#functies">Functies</a></li>
-      <li><a href="#vergelijking">Vergelijking</a></li>
+      <li><a href="#functies">Product</a></li>
       <li><a href="#prijs">Prijs</a></li>
-      <li><a href="#faq">FAQ</a></li>
       <li><a href="/gids/">Gidsen</a></li>
-      <li><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+      <li><a href="/over/">Over</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+    </ul>
+    <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
+      <li class="nav-cta-mobile"><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+      <li><button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
+        <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      </button></li>
     </ul>
   </div>
 </nav>
@@ -745,12 +780,17 @@
       <span>Koop voor €49 →</span>
     </a>
     <a href="#functies" class="btn-secundair">
-      Bekijk de 8 functies ↓
+      Wat zit erin? ↓
     </a>
   </div>
   <div>
     <span class="ideal-badge">Betalen met iDEAL · licentie + installatie-instructie direct in je mail</span>
   </div>
+  <ul class="hero-trust" aria-label="Belangrijke zekerheden">
+    <li><span aria-hidden="true">✓</span> Jouw data blijft in jóuw Drive</li>
+    <li><span aria-hidden="true">✓</span> Geen abonnement — eenmalig</li>
+    <li><span aria-hidden="true">✓</span> Boekhouder gratis meekijken</li>
+  </ul>
 </header>
 
 <main id="main" tabindex="-1">
@@ -768,22 +808,22 @@
       </ul>
     </div>
     <div class="preview-frame" aria-hidden="true" data-reveal>
-      <img src="/preview.svg" alt="Schermvoorbeeld: Boekhoudbaar geopend in Google Sheets met het Instellingen-tabblad en de Dashboard-zijbalk" width="1200" height="720" loading="lazy">
+      <img src="/preview.svg" alt="Schermvoorbeeld: Boekhoudbaar geopend in Google Sheets met het Instellingen-tabblad en de Dashboard-zijbalk" width="1200" height="720" loading="eager" fetchpriority="high" decoding="async">
     </div>
     <p style="text-align:center;margin-top:16px;font-size:13px;color:#5F6B7A">Schermvoorbeeld met demo-cijfers. Jouw sheet ziet er direct na installatie hetzelfde uit — kleuren, menu's, tabbladen en dashboard komen precies zo.</p>
   </div>
 </section>
 
 <!-- ── SOCIAL PROOF STRIP ── -->
-<div class="proof-strip" aria-label="Kenmerken">
+<div class="proof-strip" aria-label="Wat er in zit">
   <p>
-    <strong>Eenmalig €49</strong>
+    <strong>Nederlandse BTW</strong>
     &nbsp;·&nbsp;
-    <strong>Geen abonnement</strong>
+    <strong>KOR &amp; aangifte-assistent</strong>
     &nbsp;·&nbsp;
-    <strong>Data in jouw Google Drive</strong>
+    <strong>Export naar accountant</strong>
     &nbsp;·&nbsp;
-    <strong>Boekhouder gratis meekijken</strong>
+    <strong>Jaarafsluiting in 1 klik</strong>
   </p>
 </div>
 
@@ -883,20 +923,17 @@
   </div>
 </section>
 
-<!-- ── OPRICHTER ── -->
+<!-- ── OPRICHTER (compact teaser → /over) ── -->
 <section class="oprichter-sectie" aria-labelledby="oprichter-heading">
   <div class="container">
-    <p class="section-label">Waarom ik dit maak</p>
-    <h2 id="oprichter-heading">Ik heb het gewoon voor mezelf gebouwd — en toen vroegen anderen erom</h2>
-    <div class="oprichter-grid" data-reveal>
-      <img class="oprichter-foto" src="/sam-hoven.jpg?v=2" alt="Sam Hoven, maker van Boekhoudbaar" width="200" height="200" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="oprichter-teaser" data-reveal>
+      <img class="oprichter-foto" src="/sam-hoven.jpg?v=2" alt="Sam Hoven, maker van Boekhoudbaar" width="96" height="96" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       <div class="oprichter-foto-initial" aria-hidden="true">SH</div>
       <div class="oprichter-tekst">
-        <p class="oprichter-quote">"Ik wilde mijn eigen boekhouding kunnen openen zonder afhankelijk te zijn van andermans software."</p>
-        <p>Boekhoudbaar begon als mijn eigen administratie. Een map in Drive, een paar Sheets, wat formules die ik steeds verder uitwerkte. Geen abonnement dat elk jaar duurder werd. Geen export-gedoe als ik iets anders wilde proberen. Gewoon bestanden, op mijn eigen Drive, die van mij zijn.</p>
-        <p>Na een paar jaar werkte het zo goed dat andere zelfstandigen vroegen of ze het mochten overnemen. Zo is dit product ontstaan. Dezelfde opzet, dezelfde filosofie: je data blijft op jouw Drive, er is niets om op te zeggen, en als ik er ooit mee stop — onwaarschijnlijk, maar stel — werkt je administratie gewoon door. Geen server die uit de lucht gaat, geen lockout.</p>
-        <p>Ik ben Sam, zelfstandig ondernemer uit Nederland. Heb je een vraag vóór je koopt? Stuur me gerust een mail op <a href="mailto:sam@boekhoudbaar.nl">sam@boekhoudbaar.nl</a> — ik lees en beantwoord ze zelf.</p>
-        <p class="oprichter-naam"><strong>Sam Hoven</strong> · maker van Boekhoudbaar</p>
+        <p class="section-label" style="margin-bottom:6px;">Gemaakt door één persoon</p>
+        <h2 id="oprichter-heading">Door Sam — zelfstandig ondernemer, net als jij</h2>
+        <p>Ik bouwde Boekhoudbaar eerst voor mezelf, omdat ik niet afhankelijk wilde zijn van andermans software. Toen vroegen anderen ernaar. Zo is dit product ontstaan.</p>
+        <p><a href="/over/" class="oprichter-link">Lees meer over mij en hoe ik werk →</a></p>
       </div>
     </div>
   </div>
@@ -978,6 +1015,7 @@
   <div class="container">
     <p class="section-label">Wat het kost</p>
     <h2>€49. Eén keer. Klaar.</h2>
+    <p class="sub-tekst">Over 5 jaar bespaart dit ~€1.400 vs een abonnement van €25/mnd. Eén keer kopen, voor altijd houden.</p>
     <div class="pricing-kaart" role="region" aria-labelledby="prijs-heading" data-reveal>
       <div class="pricing-badge">Eenmalige aankoop · geen abonnement</div>
       <div class="prijs-groot" id="prijs-heading"><sup>€</sup>49</div>
@@ -993,9 +1031,10 @@
         <li><span class="vink" aria-hidden="true">✓</span> Updates zolang ik ze maak — voor bestaande klanten gratis</li>
       </ul>
       <a href="/kopen" class="btn-koop">
-        Start met Boekhoudbaar
+        Koop nu voor €49 →
       </a>
       <p class="garantie">Betalen via Mollie (iDEAL, bancontact, creditcard) · licentie direct in je inbox</p>
+      <p class="garantie" style="margin-top:4px;"><strong style="color:var(--blauw)">Werkt het niet voor jou? Mail me binnen 14 dagen</strong> — ik stort je €49 terug, geen vragen.</p>
     </div>
   </div>
 </section>
@@ -1094,9 +1133,11 @@
       Hoven Strategy &amp; Solutions · KVK 87254697 · BTW NL004384587B39
     </div>
     <nav class="footer-links" aria-label="Voetnav">
-      <a href="/privacy">Privacybeleid</a>
-      <a href="/voorwaarden">Algemene voorwaarden</a>
+      <a href="/over/">Over Sam</a>
+      <a href="/gids/">Gidsen</a>
       <a href="/transparantie">Transparantie</a>
+      <a href="/privacy">Privacybeleid</a>
+      <a href="/voorwaarden">Voorwaarden</a>
       <a href="mailto:hallo@boekhoudbaar.nl">Contact</a>
     </nav>
     <p>© 2026 Boekhoudbaar</p>
