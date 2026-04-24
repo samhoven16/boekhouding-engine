@@ -620,20 +620,24 @@
   .garantie { font-size: 13px; color: var(--grijs); margin-top: 14px; }
 
   /* ── FAQ ── */
-  .faq-grid { margin-top: 40px; max-width: 720px; }
+  .faq-grid { margin-top: 40px; max-width: 760px; }
   details {
-    border-bottom: 1px solid var(--rand); padding: 4px 0;
+    border-bottom: 1px solid var(--rand); padding: 6px 0;
+    transition: background .2s ease;
   }
   details:first-of-type { border-top: 1px solid var(--rand); }
+  details[open] { background: linear-gradient(180deg, rgba(247,249,252,.6) 0%, transparent 100%); }
   summary {
-    padding: 18px 0; font-size: 16px; font-weight: 600;
+    padding: 20px 4px; font-size: 16.5px; font-weight: 600;
     cursor: pointer; list-style: none;
     display: flex; justify-content: space-between; align-items: center;
     gap: 16px;
     color: var(--tekst);
     transition: color .15s ease;
+    letter-spacing: -0.01em;
   }
   summary:hover { color: var(--blauw); }
+  details[open] > summary { color: var(--blauw); }
   summary::-webkit-details-marker { display: none; }
   summary::after {
     content: ""; flex-shrink: 0;
