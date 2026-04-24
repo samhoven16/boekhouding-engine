@@ -160,40 +160,52 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* ── NAV ── */
+  /* ── NAV ── Stripe/Linear stijl: rustig, luchtig, solid ── */
   nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: rgba(255,255,255,.94);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--rand);
-    padding: 0 24px;
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,.92);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid rgba(229,234,242,.8);
+    padding: 0 32px;
   }
   .nav-inner {
-    max-width: 1100px; margin: 0 auto;
+    max-width: 1180px; margin: 0 auto;
     display: flex; align-items: center; justify-content: space-between;
-    height: 72px;
+    height: 76px;
+    gap: 32px;
   }
-  .logo { text-decoration: none; display: inline-flex; align-items: center; height: 36px; }
-  .logo img { height: 32px; width: auto; display: block; transition: opacity .15s ease; }
-  .logo:hover img { opacity: .85; }
-  /* Tekst-logo: op desktop verborgen (SVG doet 't), op mobiel zichtbaar als primary identifier */
-  .logo-text { display: none; font-weight: 800; font-size: 20px; color: var(--blauw); letter-spacing: -0.3px; }
-  .logo-text span { color: var(--accent); }
-  .nav-links { display: flex; gap: 28px; list-style: none; align-items: center; }
-  .nav-mobile-actions { display: none; list-style: none; align-items: center; gap: 6px; }
+  .logo {
+    text-decoration: none; display: inline-flex; align-items: center;
+    height: 40px; flex-shrink: 0;
+  }
+  .logo img {
+    height: 36px; width: auto; display: block;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .logo:hover img { opacity: .9; transform: scale(1.02); }
+  .nav-links {
+    display: flex; gap: 36px; list-style: none; align-items: center;
+    margin: 0; padding: 0;
+  }
+  .nav-mobile-actions { display: none; list-style: none; align-items: center; gap: 8px; margin: 0; padding: 0; }
   .nav-mobile-actions li { list-style: none; }
-  .nav-links a { text-decoration: none; color: var(--grijs); font-size: 15px; font-weight: 500; transition: color .15s ease; }
+  .nav-links a {
+    text-decoration: none; color: #475569; font-size: 15px; font-weight: 500;
+    letter-spacing: -0.01em; transition: color .15s ease;
+  }
   .nav-links a:not(.nav-cta):hover { color: var(--blauw); }
   .nav-cta {
     background: var(--blauw); color: var(--wit) !important;
-    padding: 9px 20px; border-radius: 8px; font-weight: 600 !important;
-    font-size: 14px !important;
-    transition: background .15s ease, transform .15s ease, box-shadow .2s ease;
+    padding: 10px 20px; border-radius: 10px; font-weight: 600 !important;
+    font-size: 14px !important; letter-spacing: -0.01em;
+    transition: background .18s ease, transform .18s ease, box-shadow .25s ease;
+    box-shadow: 0 1px 2px rgba(13,27,78,.08);
   }
   .nav-cta:hover {
     background: var(--blauw-licht) !important; color: var(--wit) !important;
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(13,27,78,.22);
+    box-shadow: 0 8px 20px rgba(13,27,78,.22);
   }
 
   /* ── HERO ── */
@@ -201,7 +213,7 @@
     position: relative;
     background: linear-gradient(160deg, #0D1B4E 0%, #132661 55%, #1A3A7E 100%);
     color: var(--wit);
-    padding: 104px 24px 112px;
+    padding: 72px 24px 112px;
     text-align: center;
     overflow: hidden;
   }
@@ -645,33 +657,41 @@
   .nav-toggle[aria-expanded="false"] .icon-close { display: none; }
 
   /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .nav-inner { gap: 20px; }
+    .nav-links { gap: 26px; }
+  }
+
   @media (max-width: 768px) {
     section { padding: 52px 20px; }
 
-    /* Solid bg op mobiel — voorkomt dat nav 'verdwijnt' in witte body */
+    /* Solid bg op mobiel — duidelijk afgebakend, nooit transparent */
     nav {
       background: #ffffff;
-      padding: 0 16px;
-      box-shadow: 0 1px 3px rgba(13,27,78,.08);
+      padding: 0 20px;
+      box-shadow: 0 1px 0 rgba(13,27,78,.06), 0 6px 20px rgba(13,27,78,.05);
+      border-bottom: none;
     }
-    .nav-inner { height: 64px; gap: 8px; }
-    /* Op mobiel: tekst-logo primary, SVG-img verborgen (garantie op zichtbaarheid) */
-    .logo-img { display: none; }
-    .logo-text { display: inline; font-size: 20px; }
+    .nav-inner { height: 68px; gap: 12px; }
+    /* Logo op mobiel: iets kleiner maar duidelijk zichtbaar */
+    .logo { height: 32px; }
+    .logo img { height: 30px; }
 
     /* Mobile: CTA + hamburger rechts altijd zichtbaar — andere items via menu */
     .nav-mobile-actions { display: inline-flex; }
     .nav-toggle {
       display: inline-flex; align-items: center; justify-content: center;
       min-width: 44px; min-height: 44px; margin-left: 4px;
-      color: var(--blauw);
+      color: var(--blauw); border-radius: 8px;
+      transition: background .15s ease;
     }
+    .nav-toggle:hover, .nav-toggle:active { background: rgba(13,27,78,.06); }
 
     .nav-links {
       display: none; flex-direction: column; gap: 0;
-      position: absolute; top: 64px; left: 0; right: 0;
+      position: absolute; top: 68px; left: 0; right: 0;
       background: var(--wit); border-bottom: 1px solid var(--rand);
-      padding: 4px 0; box-shadow: 0 8px 24px rgba(0,0,0,.08);
+      padding: 4px 0; box-shadow: 0 12px 32px rgba(13,27,78,.1);
       z-index: 99;
     }
     .nav-links.open { display: flex; }
@@ -690,7 +710,7 @@
     }
     .nav-links .nav-cta-desktop { display: none; }
 
-    .hero { padding: 80px 20px 56px; }
+    .hero { padding: 48px 20px 64px; }
     .hero-ctas { flex-direction: column; align-items: stretch; gap: 12px; }
     .btn-primair, .btn-secundair { justify-content: center; width: 100%; }
 
@@ -769,8 +789,7 @@
 <nav aria-label="Hoofdnavigatie">
   <div class="nav-inner">
     <a href="/" class="logo" aria-label="Boekhoudbaar — home">
-      <img src="/logo.svg" alt="" width="260" height="52" class="logo-img">
-      <span class="logo-text" aria-hidden="true">Boekhoud<span>baar</span></span>
+      <img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52">
     </a>
     <ul class="nav-links" id="nav-menu" role="list">
       <li><a href="#functies">Product</a></li>
