@@ -61,6 +61,13 @@ function getBedrijfsKleurLicht_() {
 function slaLogoOp(base64Data, mimeType) {
   if (!base64Data || base64Data.length < 10) throw new Error('Geen afbeeldingsdata ontvangen.');
 
+  // Whitelist veilige raster MIME-types — geen SVG (XSS-risico via embedded scripts)
+  const VEILIGE_MIMES = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+  const mt = String(mimeType || 'image/png').toLowerCase();
+  if (VEILIGE_MIMES.indexOf(mt) === -1) {
+    throw new Error('Bestandstype niet ondersteund. Gebruik PNG, JPG, GIF of WebP (geen SVG vanwege beveiliging).');
+  }
+
   // Grootte check: base64 is ~33% groter dan binaire data
   const byteSchatting = base64Data.length * 0.75;
   if (byteSchatting > 200 * 1024) {
@@ -85,7 +92,7 @@ function slaLogoOp(base64Data, mimeType) {
   }
 
   props.setProperty('bedrijfsLogoChunks', String(chunks));
-  props.setProperty(PROP_LOGO_MIME, mimeType || 'image/png');
+  props.setProperty(PROP_LOGO_MIME, mt);
   // Sla ook één waarde op als snelle aanwezigheidscheck
   props.setProperty(PROP_LOGO, base64Data.slice(0, 50) + '...');
 
