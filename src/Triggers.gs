@@ -1014,10 +1014,13 @@ function markeerVervallenFacturen_(ss) {
   const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
   const data = sheet.getDataRange().getValues();
   const vandaag = new Date();
+  // Markeer als VERVALLEN: status is VERZONDEN of DEELS_BETAALD én vervaldatum is voorbij.
+  // Concepts skippen we (nog niet officieel verstuurd), BETAALD/GECREDITEERD is final.
+  const teMarkeren = [FACTUUR_STATUS.VERZONDEN, FACTUUR_STATUS.DEELS_BETAALD];
   for (let i = 1; i < data.length; i++) {
     const status = data[i][14];
     const vervaldatum = data[i][3];
-    if (status === FACTUUR_STATUS.VERZONDEN && vervaldatum && new Date(vervaldatum) < vandaag) {
+    if (teMarkeren.indexOf(status) !== -1 && vervaldatum && new Date(vervaldatum) < vandaag) {
       sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.VERVALLEN);
       sheet.getRange(i + 1, 15).setBackground('#FFCDD2');
     }
