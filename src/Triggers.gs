@@ -128,7 +128,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 
   const korting    = parseBedrag_(data['Korting (in €)'] || '0') || 0;
   const btwTarief  = parseBtwTarief_(data['BTW tarief'] || '21% (hoog)');
-  let totalExcl    = rondBedrag_(regels.reduce((s, r) => s + r.totaal, 0) - korting);
+  const totalExcl    = rondBedrag_(regels.reduce((s, r) => s + r.totaal, 0) - korting);
   const totalBtw   = btwTarief !== null ? rondBedrag_(totalExcl * btwTarief) : 0;
   const totalIncl  = rondBedrag_(totalExcl + totalBtw);
 

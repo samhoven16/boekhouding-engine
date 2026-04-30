@@ -176,7 +176,7 @@ function controleerJournaalposten_(ss) {
   try {
     const data = ss.getSheetByName(SHEETS.JOURNAALPOSTEN).getDataRange().getValues();
 
-    let aantalPosten     = data.length - 1;
+    const aantalPosten     = data.length - 1;
     let zelfboekingen    = 0;
     let nulBedragen      = 0;
     let toekomstDatums   = 0;

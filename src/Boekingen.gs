@@ -573,7 +573,7 @@ function volgendFactuurnummer_() {
   lock.waitLock(10000);
   try {
     const props = PropertiesService.getScriptProperties();
-    let nr = parseInt(props.getProperty(PROP.VOLGEND_FACTUUR_NR) || '1');
+    const nr = parseInt(props.getProperty(PROP.VOLGEND_FACTUUR_NR) || '1');
     props.setProperty(PROP.VOLGEND_FACTUUR_NR, String(nr + 1));
     return nr;
   } finally {
@@ -586,7 +586,7 @@ function volgendInkoopNummer_() {
   lock.waitLock(10000);
   try {
     const props = PropertiesService.getScriptProperties();
-    let nr = parseInt(props.getProperty(PROP.VOLGEND_INKOOP_NR) || '1');
+    const nr = parseInt(props.getProperty(PROP.VOLGEND_INKOOP_NR) || '1');
     props.setProperty(PROP.VOLGEND_INKOOP_NR, String(nr + 1));
     return nr;
   } finally {
@@ -599,7 +599,7 @@ function volgendBoekingId_() {
   lock.waitLock(10000);
   try {
     const props = PropertiesService.getScriptProperties();
-    let nr = parseInt(props.getProperty(PROP.VOLGEND_BOEKING_NR) || '1');
+    const nr = parseInt(props.getProperty(PROP.VOLGEND_BOEKING_NR) || '1');
     props.setProperty(PROP.VOLGEND_BOEKING_NR, String(nr + 1));
     return 'BK' + String(nr).padStart(6, '0');
   } finally {
@@ -613,7 +613,7 @@ function volgendTransactieId_() {
   try {
     const props = PropertiesService.getScriptProperties();
     const sleutel = 'volgendTransactieId';
-    let nr = parseInt(props.getProperty(sleutel) || '1');
+    const nr = parseInt(props.getProperty(sleutel) || '1');
     props.setProperty(sleutel, String(nr + 1));
     return 'TR' + String(nr).padStart(6, '0');
   } finally {
@@ -627,7 +627,7 @@ function volgendRelatieId_() {
   try {
     const props = PropertiesService.getScriptProperties();
     const sleutel = 'volgendRelatieId';
-    let nr = parseInt(props.getProperty(sleutel) || '1');
+    const nr = parseInt(props.getProperty(sleutel) || '1');
     props.setProperty(sleutel, String(nr + 1));
     return 'REL' + String(nr).padStart(4, '0');
   } finally {
@@ -673,7 +673,7 @@ function zoekOfMaakRelatie_(ss, naam, type, email) {
     }
     // Maak nieuwe relatie aan — ID inline gegenereerd (geen geneste lock)
     const props = PropertiesService.getScriptProperties();
-    let nr = parseInt(props.getProperty('volgendRelatieId') || '1');
+    const nr = parseInt(props.getProperty('volgendRelatieId') || '1');
     props.setProperty('volgendRelatieId', String(nr + 1));
     const id = 'REL' + String(nr).padStart(4, '0');
     sheet.appendRow([
