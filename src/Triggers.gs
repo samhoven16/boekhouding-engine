@@ -101,7 +101,6 @@ function verwerkHoofdformulier(e) {
 //  INKOMSTEN (factuur aanmaken)
 // ─────────────────────────────────────────────
 function verwerkInkomstenUitHoofdformulier_(ss, data) {
-  const factuurNr  = volgendFactuurnummer_();
   const klantnaam  = data['Klantnaam'] || '';
   const klantEmail = String(data['Klant e-mailadres'] || '').trim();
   const klantAdres = data['Factuuradres klant'] || '';
@@ -110,7 +109,8 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   const vervaldatum = new Date(datum.getTime() + termijn * 86400000);
   const directMailen = String(data['Factuur direct e-mailen naar klant?'] || '').includes('Ja');
 
-  // Factuurregels (5 regels)
+  // Factuurregels (5 regels) — VALIDEREN VOORDAT factuurnummer-counter wordt bumped.
+  // Belastingdienst eist sequentiële factuurnummers; gat door early-return = audit-flag.
   const regels = [];
   for (let i = 1; i <= 5; i++) {
     const omschr = data[`Regel ${i} – Omschrijving`];
@@ -122,9 +122,12 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   }
 
   if (regels.length === 0) {
-    schrijfAuditLog_('Factuur MISLUKT', 'Geen geldige factuurregels – nr. ' + factuurNr + ' niet aangemaakt');
+    schrijfAuditLog_('Factuur MISLUKT', 'Geen geldige factuurregels — geen nummer geclaimd');
     throw new Error('Geen geldige factuurregels gevonden. Vul minimaal één omschrijving en bedrag in.');
   }
+
+  // Pas NA validatie nummer claimen — voorkomt gap in factuurreeks
+  const factuurNr  = volgendFactuurnummer_();
 
   const korting    = parseBedrag_(data['Korting (in €)'] || '0') || 0;
   const btwTarief  = parseBtwTarief_(data['BTW tarief'] || '21% (hoog)');
@@ -415,12 +418,11 @@ function verwerkVerkoopfactuurFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const factuurNr = volgendFactuurnummer_();
     const datum = data['Factuurdatum'] ? new Date(data['Factuurdatum']) : new Date();
     const termijn = parseInt(data['Betalingstermijn (dagen)'] || '30');
     const vervaldatum = new Date(datum.getTime() + termijn * 24 * 60 * 60 * 1000);
 
-    // Factuurregels berekenen
+    // Factuurregels berekenen — VOOR factuurnummer-claim om gap te voorkomen
     let totalExcl = 0;
     let totalBtw = 0;
     const regels = [];
@@ -434,6 +436,11 @@ function verwerkVerkoopfactuurFormulier(e) {
       regels.push({ omschr, aantal, prijs, totaal: regelBedrag });
       totalExcl += regelBedrag;
     }
+
+    if (regels.length === 0) {
+      throw new Error('Geen geldige factuurregels gevonden — geen factuurnummer geclaimd.');
+    }
+    const factuurNr = volgendFactuurnummer_();
 
     const btwTarief = parseBtwTarief_(data['BTW tarief'] || '21% (hoog)');
     totalBtw = btwTarief !== null ? rondBedrag_(totalExcl * btwTarief) : 0;
