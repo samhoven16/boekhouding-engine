@@ -431,15 +431,24 @@ function schrijfAuditLog_(actie, details) {
     const props     = PropertiesService.getScriptProperties();
     const gebruiker = Session.getActiveUser().getEmail() || 'systeem';
     const tijdstip  = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd HH:mm:ss');
-    const entry     = tijdstip + ' | ' + gebruiker + ' | ' + actie + ' | ' + String(details || '');
+    // Cap details om 9KB ScriptProperties limit te respecteren
+    const detailsCapped = String(details || '').slice(0, 500);
+    const entry        = tijdstip + ' | ' + gebruiker + ' | ' + actie + ' | ' + detailsCapped;
 
-    // Houd laatste 100 regels bij in ScriptProperties
+    // Houd laatste 100 regels bij in ScriptProperties (max ~8KB om 9KB limit veilig te houden)
     const LOG_KEY = 'auditLogBuffer';
     const bestaand = props.getProperty(LOG_KEY) || '';
     const regels   = bestaand ? bestaand.split('\n') : [];
     regels.push(entry);
     if (regels.length > 100) regels.splice(0, regels.length - 100);
-    props.setProperty(LOG_KEY, regels.join('\n'));
+
+    let buffer = regels.join('\n');
+    // Defensieve trim als totaal te groot wordt (zeer lange action-namen e.d.)
+    while (buffer.length > 8000 && regels.length > 1) {
+      regels.shift();
+      buffer = regels.join('\n');
+    }
+    props.setProperty(LOG_KEY, buffer);
     Logger.log('[AUDIT] ' + entry);
   } catch(e) { /* nooit crashen om audit */ }
 }
