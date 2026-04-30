@@ -452,7 +452,10 @@ function aanvraagOtpEndpoint_(e) {
     return jsonResp_({ ok: false, fout: 'Even wachten — je kunt eens per minuut een code aanvragen.' });
   }
 
-  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  // Crypto-secure 6-digit OTP via UUID-bytes (Math.random is voorspelbaar)
+  const uuidHex = Utilities.getUuid().replace(/-/g, '');
+  const otpInt = parseInt(uuidHex.substring(0, 8), 16) % 1000000;
+  const otp = String(otpInt).padStart(6, '0');
   props.setProperty('otp_' + email, JSON.stringify({ code: otp, expiry: Date.now() + 15 * 60 * 1000 }));
   props.setProperty('otp_ts_' + email, String(Date.now()));
   stuurOtpMail_(email, otp);
@@ -1080,13 +1083,19 @@ function maakBrevoContact_(naam, email, sleutel, brevoKey) {
 //  HELPERS
 // ─────────────────────────────────────────────
 function genereerSleutel_() {
+  // Gebruik Utilities.getUuid() voor crypto-secure randomness
+  // (Math.random is V8-xorshift, theoretisch voorspelbaar bij genoeg samples).
+  // UUID v4 → strip dashes → map naar [A-Z2-9] alfabet → 12 chars.
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  function deel() {
-    let s = '';
-    for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    return s;
+  const uuidHex = Utilities.getUuid().replace(/-/g, '');
+  let s = '';
+  for (let i = 0; i < 12; i++) {
+    // Pak 2 hex-chars per output-char → 256 mogelijkheden mod 32 = 8x bias-rond
+    // (verwaarloosbare bias voor licentie-uniqueness)
+    const byte = parseInt(uuidHex.substring(i * 2, i * 2 + 2), 16);
+    s += chars[byte % chars.length];
   }
-  return 'BKHE-' + deel() + '-' + deel() + '-' + deel();
+  return 'BKHE-' + s.substring(0, 4) + '-' + s.substring(4, 8) + '-' + s.substring(8, 12);
 }
 
 function getLicentieSheet_() {
