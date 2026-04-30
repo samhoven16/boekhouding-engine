@@ -305,13 +305,28 @@ function verwerkHerhalendeKosten_() {
 function berekenVolgendeDatum_(huidigDatum, freq) {
   const d = new Date(huidigDatum);
   switch (freq) {
-    case 'Wekelijks':      d.setDate(d.getDate() + 7);    break;
-    case 'Maandelijks':    d.setMonth(d.getMonth() + 1);  break;
-    case 'Kwartaal':       d.setMonth(d.getMonth() + 3);  break;
-    case 'Halfjaarlijks':  d.setMonth(d.getMonth() + 6);  break;
-    case 'Jaarlijks':      d.setFullYear(d.getFullYear() + 1); break;
-    default:               d.setMonth(d.getMonth() + 1);
+    case 'Wekelijks':      d.setDate(d.getDate() + 7);  return d;
+    case 'Maandelijks':    return _addMaandenSafe_(d, 1);
+    case 'Kwartaal':       return _addMaandenSafe_(d, 3);
+    case 'Halfjaarlijks':  return _addMaandenSafe_(d, 6);
+    case 'Jaarlijks':      return _addMaandenSafe_(d, 12);
+    default:               return _addMaandenSafe_(d, 1);
   }
+}
+
+/**
+ * Voegt N maanden toe, maar voorkomt date-overflow.
+ * Voorbeeld: 31 jan + 1 maand → 28/29 feb (niet 3 maart).
+ * Cruciaal voor herhalende kosten op 28/29/30/31e van de maand.
+ */
+function _addMaandenSafe_(datum, n) {
+  const d = new Date(datum);
+  const oorspronkelijkeDag = d.getDate();
+  d.setDate(1);                         // Voorkom roll-over
+  d.setMonth(d.getMonth() + n);
+  // Beperk dag tot max-aantal in nieuwe maand
+  const dagenInMaand = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(oorspronkelijkeDag, dagenInMaand));
   return d;
 }
 

@@ -413,10 +413,12 @@ function getBtwPerMaand_(ss, jaar) {
 // ─────────────────────────────────────────────
 function parseBtwTarief_(label) {
   if (!label) return null;
-  const l = label.toLowerCase();
-  if (l.includes('21')) return 0.21;
-  if (l.includes('9%') || l.includes('laag')) return 0.09;
-  if (l.includes('0%') || l.includes('nultarief')) return 0.00;
+  const l = String(label).toLowerCase();
+  // Strikte percent-detectie — voorkomt dat '21' substring een hypothetisch
+  // toekomstig tarief als '212' of '21,5%' fout zou matchen.
+  if (l.includes('21%') || l.includes('hoog')) return 0.21;
+  if (l.includes('9%')  || l.includes('laag')) return 0.09;
+  if (l.includes('0%')  || l.includes('nultarief')) return 0.00;
   if (l.includes('vrijgesteld') || l.includes('verlegd') || l.includes('geen btw')) return null;
   return 0.21;
 }
