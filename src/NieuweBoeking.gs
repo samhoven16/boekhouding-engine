@@ -12,10 +12,11 @@ function openNieuweBoeking() {
   const kleurLicht = _hexNaarRgba_(kleur, 0.08);
   const kleurMidden = _hexNaarRgba_(kleur, 0.15);
 
+  function _esc(s) { return String(s||'').replace(/[&<>"']/g, function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   const btwOpties = (ctx.btwKeuzes || [])
-    .map(function(k){ return '<option>' + k + '</option>'; }).join('');
+    .map(function(k){ return '<option>' + _esc(k) + '</option>'; }).join('');
   const catOpties = (ctx.categorieen || [])
-    .map(function(c){ return '<option>' + c + '</option>'; }).join('');
+    .map(function(c){ return '<option>' + _esc(c) + '</option>'; }).join('');
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
