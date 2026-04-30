@@ -20,6 +20,7 @@
 // ─────────────────────────────────────────────
 
 function valideerBtwNummer_(btwNr) {
+  btwNr = String(btwNr || '').trim();
   if (!btwNr) return { geldig: false, fout: 'BTW-nummer is leeg.' };
 
   const schoon = btwNr.replace(/\s/g, '').toUpperCase();
@@ -43,6 +44,7 @@ function valideerBtwNummer_(btwNr) {
 // ─────────────────────────────────────────────
 
 function valideerIban_(iban) {
+  iban = String(iban || '').trim();
   if (!iban) return { geldig: false, fout: 'IBAN is leeg.' };
 
   const schoon = iban.replace(/\s/g, '').toUpperCase();
@@ -82,6 +84,7 @@ function valideerIban_(iban) {
 // ─────────────────────────────────────────────
 
 function valideerKvkNummer_(kvk) {
+  kvk = String(kvk || '').trim();
   if (!kvk) return { geldig: false, fout: 'KvK-nummer is leeg.' };
 
   const schoon = kvk.replace(/\s/g, '');
@@ -103,9 +106,10 @@ function valideerKvkNummer_(kvk) {
 // ─────────────────────────────────────────────
 
 function valideerEmail_(email) {
+  email = String(email || '').trim();
   if (!email) return { geldig: false, fout: 'E-mailadres is leeg.' };
 
-  const schoon = email.trim().toLowerCase();
+  const schoon = email.toLowerCase();
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(schoon)) {
     return {
@@ -124,6 +128,7 @@ function valideerEmail_(email) {
 // ─────────────────────────────────────────────
 
 function valideerPostcode_(postcode) {
+  postcode = String(postcode || '').trim();
   if (!postcode) return { geldig: false, fout: 'Postcode is leeg.' };
 
   const schoon = postcode.replace(/\s/g, '').toUpperCase();

@@ -53,6 +53,19 @@ describe('Validaties.gs', () => {
     test('geen B-suffix → niet geldig', () => {
       expect(ctx.valideerBtwNummer_('NL123456789X01').geldig).toBe(false);
     });
+
+    test('null/undefined input → niet geldig (geen crash)', () => {
+      expect(ctx.valideerBtwNummer_(null).geldig).toBe(false);
+      expect(ctx.valideerBtwNummer_(undefined).geldig).toBe(false);
+    });
+
+    test('number input → niet geldig (geen crash)', () => {
+      expect(ctx.valideerBtwNummer_(123).geldig).toBe(false);
+    });
+
+    test('alleen spaties → niet geldig', () => {
+      expect(ctx.valideerBtwNummer_('   ').geldig).toBe(false);
+    });
   });
 
   // ── IBAN ───────────────────────────────────────────────────────────
@@ -76,6 +89,15 @@ describe('Validaties.gs', () => {
     test('MOD-97 faal (1 digit gewijzigd) → niet geldig', () => {
       const r = ctx.valideerIban_('NL92ABNA0417164300');
       expect(r.geldig).toBe(false);
+    });
+
+    test('null/undefined → niet geldig (geen crash)', () => {
+      expect(ctx.valideerIban_(null).geldig).toBe(false);
+      expect(ctx.valideerIban_(undefined).geldig).toBe(false);
+    });
+
+    test('number input → niet geldig (geen crash)', () => {
+      expect(ctx.valideerIban_(91).geldig).toBe(false);
     });
   });
 
