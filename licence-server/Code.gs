@@ -558,7 +558,7 @@ function stuurOtpMail_(email, otp) {
 
   if (brevoKey) {
     try {
-      UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
+      const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'post', contentType: 'application/json',
         headers: { 'api-key': brevoKey, 'accept': 'application/json' },
         payload: JSON.stringify({
@@ -569,9 +569,14 @@ function stuurOtpMail_(email, otp) {
         }),
         muteHttpExceptions: true,
       });
-      return;
-    } catch (_) {}
+      const code = resp.getResponseCode();
+      if (code >= 200 && code < 300) return;  // succes — geen fallback nodig
+      Logger.log('Brevo OTP-mail faalde (HTTP ' + code + '): ' + resp.getContentText().slice(0, 300) + ' — fallback MailApp');
+    } catch (err) {
+      Logger.log('Brevo OTP exception: ' + err.message + ' — fallback MailApp');
+    }
   }
+  // Fallback: MailApp via Google Workspace (lager limiet maar reliable).
   MailApp.sendEmail(email, 'Activeringscode Boekhoudbaar: ' + otp,
     'Code: ' + otp + '\n\nGeldig 15 minuten. Voer in via de spreadsheet.', { htmlBody: html });
 }
@@ -989,23 +994,34 @@ function stuurLicentiemail_(naam, email, sleutel) {
     productnm + (kvk ? ' · KVK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') +
     '\nPrivacybeleid: ' + privacyUrl + '\n';
 
+  let brevoOk = false;
   if (brevoKey) {
-    UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'post',
-      contentType: 'application/json',
-      headers: { 'api-key': brevoKey },
-      payload: JSON.stringify({
-        sender:      { name: vanNaam, email: vanEmail },
-        to:          [{ email: email, name: naam }],
-        subject:     'Je ' + productnm + ' is klaar — activeer nu 🚀',
-        htmlContent: htmlBody,
-        textContent: textBody,
-        tags:        ['licentie', 'dag0'],
-        params:      { naam: naam },
-      }),
-      muteHttpExceptions: true,
-    });
-  } else {
+    try {
+      const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'post',
+        contentType: 'application/json',
+        headers: { 'api-key': brevoKey },
+        payload: JSON.stringify({
+          sender:      { name: vanNaam, email: vanEmail },
+          to:          [{ email: email, name: naam }],
+          subject:     'Je ' + productnm + ' is klaar — activeer nu 🚀',
+          htmlContent: htmlBody,
+          textContent: textBody,
+          tags:        ['licentie', 'dag0'],
+          params:      { naam: naam },
+        }),
+        muteHttpExceptions: true,
+      });
+      const code = resp.getResponseCode();
+      if (code >= 200 && code < 300) brevoOk = true;
+      else Logger.log('::error:: Brevo licentiemail faalde HTTP ' + code + ': ' + resp.getContentText().slice(0, 400) + ' — val terug op MailApp voor ' + email);
+    } catch (err) {
+      Logger.log('::error:: Brevo licentiemail exception: ' + err.message + ' — val terug op MailApp voor ' + email);
+    }
+  }
+  if (!brevoOk) {
+    // Fallback — minder mooie HTML maar reliable Google delivery.
+    // Cruciaal: klant heeft betaald, MOET sleutel ontvangen.
     MailApp.sendEmail({
       to: email,
       subject: 'Je ' + productnm + ' is klaar — activeer nu',
