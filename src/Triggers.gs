@@ -916,6 +916,9 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
     const bedragOpen  = rondBedrag_((data[i][12] || 0) - (data[i][13] || 0));
     const pdfUrl      = data[i][19] || '';
 
+    // Skip als al volledig betaald (negatief = overbetaling, status nog niet bijgewerkt)
+    if (bedragOpen <= 0) continue;
+
     const onderwerp = `Betalingsherinnering ${volgendeStap}/3 – Factuur ${factuurnummer}`;
     const tekst =
       `Beste ${klantnaam},\n\n` +
