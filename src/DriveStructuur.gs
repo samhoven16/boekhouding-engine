@@ -282,15 +282,29 @@ function sluitJaarAf() {
   const props = PropertiesService.getScriptProperties();
   const fouten = [];
 
-  // 1. Archiveer huidige spreadsheet
+  // 1. Archiveer huidige spreadsheet — KRITISCH: zonder backup geen reset
+  let archiefUrl = '';
   try {
     const archief = ss.copy('Boekhoudbaar ' + huidigJaar + ' — Archief');
-    schrijfAuditLog_('Jaarafsluiting', 'Archief aangemaakt: ' + archief.getUrl());
+    archiefUrl = archief.getUrl();
+    schrijfAuditLog_('Jaarafsluiting', 'Archief aangemaakt: ' + archiefUrl);
   } catch (e) {
-    fouten.push('Archief niet gelukt: ' + e.message);
+    // Stop direct. Counters niet resetten zonder bewezen archief —
+    // anders verlies je je sequentiële factuurnummering bij Drive-quota issue.
+    schrijfAuditLog_('Jaarafsluiting AFGEBROKEN', 'Archief mislukt: ' + e.message);
+    ui.alert(
+      'Jaarafsluiting afgebroken',
+      'Het archief kon niet worden aangemaakt:\n\n' + e.message + '\n\n' +
+      'Geen wijzigingen aangebracht. Veelvoorkomende oorzaken:\n' +
+      '• Google Drive opslag vol — ruim ruimte op\n' +
+      '• Geen Drive-rechten — controleer account\n\n' +
+      'Probeer opnieuw zodra het probleem is opgelost.',
+      ui.ButtonSet.OK
+    );
+    return;
   }
 
-  // 2. Reset tellers
+  // 2. Reset tellers (alleen na geslaagd archief)
   props.setProperty(PROP.VOLGEND_FACTUUR_NR, '1');
   props.setProperty(PROP.VOLGEND_INKOOP_NR,  '1');
   _instellingenCache = null; // invalidate cache before writes
