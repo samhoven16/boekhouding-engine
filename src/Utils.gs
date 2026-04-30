@@ -65,6 +65,7 @@ function formatDatumTijd_(datum) {
 function parseDatum_(str) {
   if (!str) return new Date();
   if (str instanceof Date) return str;
+  str = String(str);
 
   // Probeer ISO formaat (yyyy-mm-dd)
   const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -163,22 +164,26 @@ function escHtml_(s) {
 // ─────────────────────────────────────────────
 
 function isGeldigIBAN_(iban) {
+  iban = String(iban || '');
   if (!iban) return false;
   const cleaned = iban.replace(/\s/g, '').toUpperCase();
   return /^[A-Z]{2}\d{2}[A-Z0-9]{4,}$/.test(cleaned);
 }
 
 function isGeldigBTWNummer_(btwNr) {
+  btwNr = String(btwNr || '');
   if (!btwNr) return false;
   return /^NL\d{9}B\d{2}$/.test(btwNr.replace(/\s/g, '').toUpperCase());
 }
 
 function isGeldigKvKNummer_(kvk) {
+  kvk = String(kvk || '');
   if (!kvk) return false;
   return /^\d{8}$/.test(kvk.replace(/\s/g, ''));
 }
 
 function isGeldigEmail_(email) {
+  email = String(email || '');
   if (!email) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
