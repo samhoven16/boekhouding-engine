@@ -762,7 +762,11 @@
 
     .stappen { grid-template-columns: 1fr; gap: 28px; margin-top: 32px; }
 
-    .vergelijk-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .vergelijk-wrap {
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+      -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+    }
     .vergelijk-tabel { font-size: 13px; min-width: 540px; }
     .vergelijk-tabel th, .vergelijk-tabel td { padding: 10px 10px; }
 
