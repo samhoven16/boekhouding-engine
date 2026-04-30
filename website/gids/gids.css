@@ -85,11 +85,11 @@ a:hover { border-bottom-color: var(--accent); }
 
 /* H1 */
 .gids h1 {
-  font-size: clamp(28px, 5vw, 40px);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  font-size: clamp(30px, 5.2vw, 44px);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
   color: var(--blauw);
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   font-weight: 800;
 }
 
