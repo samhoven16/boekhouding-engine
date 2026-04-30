@@ -52,10 +52,11 @@ function doPost(e) {
     verwerkMollieWebhook_(e);
     return ContentService.createTextOutput('OK');
   } catch (err) {
-    Logger.log('Webhook fout: ' + err.message);
-    // Non-200 triggers Mollie retry (max 10x over 26 uur)
-    return ContentService.createTextOutput('ERROR: ' + err.message)
-      .setMimeType(ContentService.MimeType.TEXT);
+    Logger.log('Webhook fout: ' + err.message + '\n' + (err.stack || ''));
+    // Re-throw zodat Apps Script HTTP 500 retourneert → Mollie retried
+    // (max 10x over 26 uur). Een returned ContentService output zou 200
+    // teruggeven en de retry-flow uitschakelen.
+    throw err;
   }
 }
 
@@ -338,15 +339,21 @@ function maakBetaling(klantnaam, klantEmail) {
       muteHttpExceptions: true,
     });
 
-    const data = JSON.parse(resp.getContentText());
-    if (data.status >= 400 || !data._links) {
-      Logger.log('Mollie fout: ' + resp.getContentText());
+    let data;
+    try { data = JSON.parse(resp.getContentText()); }
+    catch (parseErr) {
+      Logger.log('Mollie non-JSON response: ' + resp.getContentText().slice(0, 500));
+      return { fout: 'Betalingsprovider gaf onverwachte respons. Probeer opnieuw of neem contact op.' };
+    }
+
+    if (data.status >= 400 || !data._links || !data._links.checkout || !data._links.checkout.href) {
+      Logger.log('Mollie fout/onvolledige response: ' + resp.getContentText().slice(0, 500));
       return { fout: 'Betaling aanmaken mislukt. Probeer opnieuw.' };
     }
     return { checkoutUrl: data._links.checkout.href };
   } catch (err) {
     Logger.log('maakBetaling fout: ' + err.message);
-    return { fout: 'Netwerkfout bij betaling aanmaken.' };
+    return { fout: 'Netwerkfout bij betaling aanmaken. Probeer over een minuut opnieuw.' };
   }
 }
 
