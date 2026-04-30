@@ -19,24 +19,25 @@ function maakJournaalpost_(ss, opt) {
   const boekDatum = opt.datum instanceof Date ? opt.datum : new Date(opt.datum || new Date());
   const geslotenPeriodes = PropertiesService.getScriptProperties().getProperty('GESLOTEN_PERIODES');
   if (geslotenPeriodes) {
+    let periodes;
     try {
-      const periodes = JSON.parse(geslotenPeriodes);
-      for (const p of periodes) {
-        const van = new Date(p.van);
-        const tot = new Date(p.tot);
-        if (boekDatum >= van && boekDatum <= tot) {
-          throw new Error(
-            `Periode ${Utilities.formatDate(van, 'Europe/Amsterdam', 'MMM yyyy')} is afgesloten. ` +
-            `U kunt geen boekingen meer maken in een afgesloten periode. ` +
-            `Gebruik "Periode ontgrendelen" als dit een correctie is.`
-          );
-        }
-      }
+      periodes = JSON.parse(geslotenPeriodes);
     } catch (jsonErr) {
-      if (jsonErr.message.includes('afgesloten')) throw jsonErr; // Rethrow periode-fout
       Logger.log('GESLOTEN_PERIODES parse fout (ongeldige JSON): ' + jsonErr.message);
       // Sla corrupte waarde op zodat toekomstige boekingen niet geblokkeerd worden
       PropertiesService.getScriptProperties().deleteProperty('GESLOTEN_PERIODES');
+      periodes = [];
+    }
+    for (const p of (periodes || [])) {
+      const van = new Date(p.van);
+      const tot = new Date(p.tot);
+      if (boekDatum >= van && boekDatum <= tot) {
+        throw new Error(
+          `Periode ${Utilities.formatDate(van, 'Europe/Amsterdam', 'MMM yyyy')} is afgesloten. ` +
+          `U kunt geen boekingen meer maken in een afgesloten periode. ` +
+          `Gebruik "Periode ontgrendelen" als dit een correctie is.`
+        );
+      }
     }
   }
 
