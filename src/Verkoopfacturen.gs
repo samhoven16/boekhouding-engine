@@ -386,10 +386,13 @@ function verwerkBankCsvImport(csvTekst, scheidingsteken, kolommen) {
     const koloms = regels[i].split(scheidingsteken).map(k => k.trim().replace(/^"|"$/g, ''));
     if (koloms.length < 3) continue;
 
-    const datumStr = koloms[kolommen.datum];
-    const omschr = koloms[kolommen.omschr];
+    // Defensieve fallback: als kolom niet gemapped of out-of-bounds, gebruik leeg
+    const datumStr = String(koloms[kolommen.datum] || '');
+    const omschr   = String(koloms[kolommen.omschr] || '');
+    const bedragRw = String(koloms[kolommen.bedrag] || '');
+    if (!bedragRw) continue;
     // Normaliseer Nederlandstalig getal: "1.234,56" → "1234.56"
-    const bedragStr = koloms[kolommen.bedrag].replace(/\./g, '').replace(',', '.');
+    const bedragStr = bedragRw.replace(/\./g, '').replace(',', '.');
     const bedrag = parseFloat(bedragStr);
 
     if (isNaN(bedrag)) continue;
