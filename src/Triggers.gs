@@ -1029,26 +1029,35 @@ function markeerVervallenFacturen_(ss) {
 
 function controleerBtwDeadlines_() {
   const vandaag = new Date();
-  const maand = vandaag.getMonth() + 1;
-  const btwDeadlines = [31, 60, 91, 122]; // Deadlines per kwartaal (dag van het jaar)
+  const jaar = vandaag.getFullYear();
+  // Officiële BTW-aangifte deadlines: laatste dag van maand-na-kwartaal
+  // Q1 (jan-mrt) → 30 april
+  // Q2 (apr-jun) → 31 juli
+  // Q3 (jul-sep) → 31 oktober
+  // Q4 (okt-dec) → 31 januari volgend jaar
+  const deadlines = [
+    { kw: 1, datum: new Date(jaar, 3, 30) },
+    { kw: 2, datum: new Date(jaar, 6, 31) },
+    { kw: 3, datum: new Date(jaar, 9, 31) },
+    { kw: 4, datum: new Date(jaar + 1, 0, 31) },
+    // Ook Q4 vorig jaar — voor januari-reminders
+    { kw: 4, datum: new Date(jaar, 0, 31), suffix: ' (' + (jaar - 1) + ')' },
+  ];
+  const email = getInstelling_('Email rapporten naar');
+  if (!email) return;
 
-  // Stuur herinnering als we binnen 14 dagen van een BTW deadline zitten
-  [1, 4, 7, 10].forEach(maandStart => {
-    const deadline = new Date(vandaag.getFullYear(), maandStart + 1, 28); // Einde volgende maand
-    const dagenTot = Math.floor((deadline - vandaag) / (1000 * 60 * 60 * 24));
+  for (const d of deadlines) {
+    const dagenTot = Math.floor((d.datum - vandaag) / 86400000);
     if (dagenTot > 0 && dagenTot <= 14) {
-      const kwartaal = Math.ceil(maandStart / 3);
-      const email = getInstelling_('Email rapporten naar');
-      if (email) {
-        GmailApp.sendEmail(email,
-          `Herinnering: BTW aangifte Q${kwartaal} deadline over ${dagenTot} dagen`,
-          `Beste,\n\nDe deadline voor uw BTW aangifte Q${kwartaal} is ${formatDatum_(deadline)}.\n\n` +
-          `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte Q${kwartaal}\n\n` +
-          `Met vriendelijke groet,\nUw boekhoudprogramma`
-        );
-      }
+      const kwLabel = 'Q' + d.kw + (d.suffix || '');
+      GmailApp.sendEmail(email,
+        `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
+        `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
+        `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
+        `Met vriendelijke groet,\nUw boekhoudprogramma`
+      );
     }
-  });
+  }
 }
 
 function stuurFoutEmail_(context, err) {
