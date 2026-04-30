@@ -8,35 +8,25 @@
 //  HUIDIGE KWARTAAL BEPALEN
 // ─────────────────────────────────────────────
 function huidigeKwartaal_() {
+  // Retourneert het kwartaal waarvoor de eerstvolgende BTW-aangifte
+  // moet worden ingediend (NIET de huidige kalenderkwartaal).
+  //
+  // Voorbeeld: in april 2026 is Q1 2026 al afgesloten en de aangifte
+  // moet binnen Q1 deadline (30 april). Gebruiker moet over Q1 worden
+  // herinnerd, niet over Q2 dat nog 3 maanden duurt.
   const nu = new Date();
-  const maand = nu.getMonth(); // 0-11
-  let kw, van, tot;
+  const jaar = nu.getFullYear();
 
-  if (maand <= 2) {
-    kw = 'Q1';
-    van = new Date(nu.getFullYear(), 0, 1);
-    tot = new Date(nu.getFullYear(), 2, 31);
-  } else if (maand <= 5) {
-    kw = 'Q2';
-    van = new Date(nu.getFullYear(), 3, 1);
-    tot = new Date(nu.getFullYear(), 5, 30);
-  } else if (maand <= 8) {
-    kw = 'Q3';
-    van = new Date(nu.getFullYear(), 6, 1);
-    tot = new Date(nu.getFullYear(), 8, 30);
-  } else {
-    kw = 'Q4';
-    van = new Date(nu.getFullYear(), 9, 1);
-    tot = new Date(nu.getFullYear(), 11, 31);
-  }
+  // Genereer kandidaten: alle deadlines van vorig jaar (Q4) t/m volgend jaar (Q4).
+  // Pak de eerstvolgende deadline ≥ vandaag.
+  const kandidaten = [
+    { kw: 'Q4', jaar: jaar - 1, van: new Date(jaar - 1, 9, 1),  tot: new Date(jaar - 1, 11, 31), deadline: new Date(jaar, 0, 31) },
+    { kw: 'Q1', jaar,           van: new Date(jaar, 0, 1),     tot: new Date(jaar, 2, 31),     deadline: new Date(jaar, 3, 30) },
+    { kw: 'Q2', jaar,           van: new Date(jaar, 3, 1),     tot: new Date(jaar, 5, 30),     deadline: new Date(jaar, 6, 31) },
+    { kw: 'Q3', jaar,           van: new Date(jaar, 6, 1),     tot: new Date(jaar, 8, 30),     deadline: new Date(jaar, 9, 31) },
+    { kw: 'Q4', jaar,           van: new Date(jaar, 9, 1),     tot: new Date(jaar, 11, 31),    deadline: new Date(jaar + 1, 0, 31) },
+  ];
 
-  // Deadline: Q1=30 apr, Q2=31 jul, Q3=31 okt, Q4=31 jan (volgend jaar)
-  const deadlineMap = {
-    Q1: new Date(nu.getFullYear(), 3, 30),
-    Q2: new Date(nu.getFullYear(), 6, 31),
-    Q3: new Date(nu.getFullYear(), 9, 31),
-    Q4: new Date(nu.getFullYear() + 1, 0, 31),
-  };
   const naamMap = {
     Q1: 'Kwartaal 1 (januari – maart)',
     Q2: 'Kwartaal 2 (april – juni)',
@@ -44,7 +34,18 @@ function huidigeKwartaal_() {
     Q4: 'Kwartaal 4 (oktober – december)',
   };
 
-  return { kw, jaar: nu.getFullYear(), van, tot, deadline: deadlineMap[kw], naam: naamMap[kw] };
+  // Pak de eerstvolgende deadline (≥ vandaag of de meest recent verlopene als alle voorbij).
+  const toekomstig = kandidaten.find(k => k.deadline >= nu);
+  const k = toekomstig || kandidaten[kandidaten.length - 1];
+
+  return {
+    kw: k.kw,
+    jaar: k.jaar,
+    van: k.van,
+    tot: k.tot,
+    deadline: k.deadline,
+    naam: naamMap[k.kw],
+  };
 }
 
 // ─────────────────────────────────────────────
