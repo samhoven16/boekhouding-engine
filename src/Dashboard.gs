@@ -151,6 +151,9 @@ function vernieuwDashboard() {
   // een uitnodigend bericht tonen ipv blank zijn.
   try { schrijfEmptyStateHints_(ss); } catch (e) { Logger.log('empty-state hints: ' + e.message); }
 
+  // Conditional formatting op factuur-status kolommen voor visuele scanbaarheid
+  try { zetStatusColorRules_(ss); } catch (e) { Logger.log('status colors: ' + e.message); }
+
   // Verwerk herhalende kosten (automatisch boeken + komende betalingen voor waarschuwingen)
   let herhalendeResult = { geboekt: 0, komend: [] };
   try { herhalendeResult = verwerkHerhalendeKosten_(); } catch (e) { Logger.log('Herhalende kosten: ' + e.message); }
@@ -493,6 +496,47 @@ function berekenRoiData_(ss, kpi) {
   const tijdsBesparing = Math.round(totalMin / 60);
 
   return { aantalFacturen, omzetGeind, btwVerwerkt, aantalBoekingen, tijdsBesparing };
+}
+
+// ─────────────────────────────────────────────
+//  STATUS COLOR RULES — visuele scanbaarheid op data-tabs
+// ─────────────────────────────────────────────
+/**
+ * Past conditional formatting toe op status-kolommen.
+ * - Verkoopfacturen kolom 15: Betaald=groen, Verzonden=blauw, Vervallen=rood, Concept=grijs
+ * - Inkoopfacturen kolom 13: Betaald=groen, Open=oranje
+ * Idempotent: vervangt bestaande Boekhoudbaar-regels per refresh.
+ */
+function zetStatusColorRules_(ss) {
+  function maakRegel(range, tekst, bg, fg) {
+    return SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo(tekst)
+      .setBackground(bg).setFontColor(fg)
+      .setRanges([range]).build();
+  }
+
+  const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (vfSheet) {
+    const vfRange = vfSheet.getRange(2, 15, Math.max(vfSheet.getMaxRows() - 1, 1), 1);
+    vfSheet.setConditionalFormatRules([
+      maakRegel(vfRange, FACTUUR_STATUS.BETAALD,       '#E8F5E9', '#1B5E20'),
+      maakRegel(vfRange, FACTUUR_STATUS.VERZONDEN,     '#E3F2FD', '#0D47A1'),
+      maakRegel(vfRange, FACTUUR_STATUS.VERVALLEN,     '#FFEBEE', '#B71C1C'),
+      maakRegel(vfRange, FACTUUR_STATUS.DEELS_BETAALD, '#FFF8E1', '#5A3F00'),
+      maakRegel(vfRange, FACTUUR_STATUS.CONCEPT,       '#F5F5F5', '#5F6B7A'),
+      maakRegel(vfRange, FACTUUR_STATUS.GECREDITEERD,  '#FCE4EC', '#880E4F'),
+    ]);
+  }
+
+  const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (ifSheet) {
+    const ifRange = ifSheet.getRange(2, 13, Math.max(ifSheet.getMaxRows() - 1, 1), 1);
+    ifSheet.setConditionalFormatRules([
+      maakRegel(ifRange, FACTUUR_STATUS.BETAALD, '#E8F5E9', '#1B5E20'),
+      maakRegel(ifRange, 'Open',                 '#FFF8E1', '#5A3F00'),
+      maakRegel(ifRange, 'Te betalen',           '#FFF8E1', '#5A3F00'),
+    ]);
+  }
 }
 
 // ─────────────────────────────────────────────
