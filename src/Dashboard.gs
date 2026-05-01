@@ -193,7 +193,9 @@ function vernieuwDashboard() {
       .filter(a => a.type === 'VOORDEEL' || a.type === 'ACTIE' || a.type === 'WAARSCHUWING')
       .filter(a => !/btw\s*aangifte.*deadline/i.test(String(a.titel || '')))
       .slice(0, 3);
-    if (topAdviezen.length > 0 || advies.totaalAftrek > 0) {
+    // Empty-state guard: alleen tonen bij omzet-realiteit (anders verwarrend
+    // dat startersaftrek 'wordt aangerekend' op €0 omzet)
+    if ((heeftData) && (topAdviezen.length > 0 || advies.totaalAftrek > 0)) {
       sheet.getRange(rij, 1, 1, 8).merge()
         .setValue('💡 BELASTINGADVIES  |  Totaal aftrekposten: ' + formatBedrag_(advies.totaalAftrek) +
                   '  |  Geschatte IB: ' + formatBedrag_(advies.geschatteIB) +
