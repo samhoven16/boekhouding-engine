@@ -767,19 +767,37 @@
   /* ── CTA BANNER ── */
   .cta-banner {
     position: relative;
-    background: linear-gradient(160deg, #0D1B4E 0%, #132661 100%);
+    background: linear-gradient(160deg, #0D1B4E 0%, #132661 60%, #1A3A7E 100%);
     color: var(--wit);
     text-align: center;
-    padding: 88px 24px;
+    padding: 96px 24px;
     overflow: hidden;
   }
   .cta-banner::before {
     content: "";
     position: absolute; inset: 0;
-    background: radial-gradient(420px 220px at 50% 120%, rgba(46,196,182,.22), transparent 70%);
+    background:
+      radial-gradient(520px 280px at 50% 120%, rgba(46,196,182,.28), transparent 70%),
+      radial-gradient(380px 200px at 20% 0%, rgba(46,196,182,.12), transparent 65%);
+    pointer-events: none;
+    animation: cta-drift 22s ease-in-out infinite alternate;
+  }
+  @keyframes cta-drift {
+    0%   { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-12px, 8px, 0) scale(1.03); }
+  }
+  /* Grid overlay matchend met hero */
+  .cta-banner::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 70% 80% at 50% 50%, #000 30%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 80% at 50% 50%, #000 30%, transparent 80%);
     pointer-events: none;
   }
-  .cta-banner > * { position: relative; }
+  .cta-banner > * { position: relative; z-index: 1; }
   .cta-banner h2 { color: var(--wit); margin-bottom: 12px; }
   .cta-banner p { color: rgba(255,255,255,.78); max-width: 520px; margin: 0 auto 30px; }
   .cta-banner .btn-primair { background: var(--accent); color: var(--blauw); }
