@@ -134,6 +134,26 @@ function vernieuwDashboard() {
   let rij = 7;
   rij = schrijfWaarschuwingen_(sheet, ss, kpi, rij, herhalendeResult.komend);
 
+  // ── BTW-indicatie kwartaal (intelligence-feel) ───────────────────────
+  // Geeft proactief een schatting voor het lopende kwartaal — niet exact
+  // maar als 'persoonlijke assistent'-signaal. Bouwt vertrouwen voor
+  // gebruikers die anders pas in maand-3 de cijfers zien.
+  try {
+    const indicatie = berekenBtwIndicatie_(ss);
+    if (indicatie && indicatie.relevant) {
+      rij++;
+      const tekst = indicatie.tekst;
+      const bg = indicatie.urgent ? '#FFF4E5' : '#E6F7F4';
+      const fg = indicatie.urgent ? '#7A4A00' : '#0E5E54';
+      sheet.getRange(rij, 1, 1, 8).merge()
+        .setValue(tekst)
+        .setBackground(bg).setFontColor(fg)
+        .setFontWeight('bold').setFontSize(11)
+        .setHorizontalAlignment('center').setWrap(true);
+      sheet.setRowHeight(rij, 28);
+    }
+  } catch (e) { Logger.log('BTW-indicatie: ' + e.message); }
+
   // ── Belastingadvies samenvatting ──────────────────────────────────────
   rij++;
   try {
@@ -386,6 +406,54 @@ function berekenRoiData_(ss, kpi) {
   const tijdsBesparing = Math.round(totalMin / 60);
 
   return { aantalFacturen, omzetGeind, btwVerwerkt, aantalBoekingen, tijdsBesparing };
+}
+
+// ─────────────────────────────────────────────
+//  BTW-INDICATIE — proactief signaal voor lopend kwartaal
+// ─────────────────────────────────────────────
+/**
+ * Berekent een ruwe schatting van het BTW-saldo voor het LOPENDE kwartaal
+ * (start van kwartaal t/m vandaag). Niet exact — alleen indicatie.
+ * Markeert urgent=true als deadline binnen 21 dagen.
+ */
+function berekenBtwIndicatie_(ss) {
+  try {
+    const nu = new Date();
+    const maand = nu.getMonth();
+    const kwartaal = Math.floor(maand / 3) + 1;
+    const jaar = nu.getFullYear();
+    const kwartaalStart = new Date(jaar, (kwartaal - 1) * 3, 1);
+    const deadlineMap = {
+      1: new Date(jaar, 3, 30),
+      2: new Date(jaar, 6, 31),
+      3: new Date(jaar, 9, 31),
+      4: new Date(jaar + 1, 0, 31),
+    };
+    const deadline = deadlineMap[kwartaal];
+    const dagenTotDeadline = Math.ceil((deadline - nu) / 86400000);
+
+    const aangifte = berekenBtwAangifte_(ss, kwartaalStart, nu);
+    const saldo = parseFloat(aangifte.saldo) || 0;
+
+    // Niet relevant als saldo <€10 (te klein voor signaal)
+    if (Math.abs(saldo) < 10) return { relevant: false };
+
+    const urgent = dagenTotDeadline >= 0 && dagenTotDeadline <= 21;
+    const bedrag = formatBedrag_(Math.abs(saldo));
+    let tekst;
+    if (saldo > 0) {
+      tekst = `📊 Indicatie Q${kwartaal}: je betaalt waarschijnlijk rond ${bedrag} BTW · deadline ${formatDatum_(deadline)}` +
+              (urgent ? ` (over ${dagenTotDeadline} ${dagenTotDeadline === 1 ? 'dag' : 'dagen'})` : '');
+    } else {
+      tekst = `📊 Indicatie Q${kwartaal}: je krijgt waarschijnlijk rond ${bedrag} terug · deadline ${formatDatum_(deadline)}` +
+              (urgent ? ` (over ${dagenTotDeadline} ${dagenTotDeadline === 1 ? 'dag' : 'dagen'})` : '');
+    }
+
+    return { relevant: true, urgent: urgent, saldo: saldo, dagenTotDeadline: dagenTotDeadline, tekst: tekst };
+  } catch (e) {
+    Logger.log('berekenBtwIndicatie_: ' + e.message);
+    return { relevant: false };
+  }
 }
 
 // ─────────────────────────────────────────────
