@@ -525,8 +525,11 @@
     border-bottom: 1px solid var(--rand);
   }
   .vergelijk-tabel th { font-weight: 700; color: var(--grijs); font-size: 13px; text-transform: uppercase; letter-spacing: .8px; }
+  .vergelijk-tabel tr { transition: background .2s ease; }
+  .vergelijk-tabel tbody tr:hover td { background: rgba(46,196,182,.04); }
   .vergelijk-tabel tr:last-child td { border-bottom: none; }
   .vergelijk-tabel .col-ons { background: rgba(46,196,182,.08); font-weight: 600; color: var(--blauw); }
+  .vergelijk-tabel tbody tr:hover .col-ons { background: rgba(46,196,182,.14); }
   .vergelijk-tabel .col-ons th { color: var(--blauw); }
   .ja { color: var(--groen); font-weight: 700; }
   .nee { color: #b91c1c; }
