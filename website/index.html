@@ -230,8 +230,13 @@
     position: relative;
     transform: perspective(1400px) rotateY(-6deg) rotateX(2deg);
     transition: transform .6s cubic-bezier(.2,.7,.2,1);
+    animation: heroFloat 6.5s cubic-bezier(.45,0,.55,1) infinite;
   }
-  .hero-product:hover { transform: perspective(1400px) rotateY(-3deg) rotateX(1deg) scale(1.02); }
+  @keyframes heroFloat {
+    0%, 100% { transform: perspective(1400px) rotateY(-6deg) rotateX(2deg) translateY(0); }
+    50%      { transform: perspective(1400px) rotateY(-6deg) rotateX(2deg) translateY(-8px); }
+  }
+  .hero-product:hover { transform: perspective(1400px) rotateY(-3deg) rotateX(1deg) scale(1.02); animation-play-state: paused; }
   .hero-product-frame {
     position: relative;
     border-radius: 14px; overflow: hidden;
@@ -249,14 +254,40 @@
     z-index: 1;
   }
   .hero-product-frame img { display: block; width: 100%; height: auto; }
-  /* Cursor-follow glow */
+  /* Cursor-follow glow met magnetic lag (transition op vars) */
   .hero-product::before {
     content: ""; position: absolute; inset: -20px;
-    background: radial-gradient(400px 240px at var(--mx, 50%) var(--my, 50%), rgba(46,196,182,.18), transparent 60%);
+    background: radial-gradient(420px 260px at var(--mx, 50%) var(--my, 50%), rgba(46,196,182,.22), transparent 60%);
     border-radius: 24px; opacity: 0;
-    transition: opacity .35s ease; pointer-events: none; z-index: -1;
+    transition: opacity .35s ease, background-position .25s cubic-bezier(.2,.7,.2,1);
+    pointer-events: none; z-index: -1;
+    will-change: background;
   }
   .hero-product:hover::before { opacity: 1; }
+
+  /* Floating data — random achtergrond cijfers (heel subtiel) */
+  .hero-grid-data {
+    position: absolute; inset: 0; overflow: hidden;
+    pointer-events: none; z-index: 0;
+  }
+  .data-float {
+    position: absolute;
+    font-size: 12px; font-weight: 600;
+    color: rgba(255,255,255,.10);
+    font-family: 'JetBrains Mono', 'Menlo', monospace;
+    letter-spacing: -0.01em;
+    animation: floatData 18s linear infinite;
+    white-space: nowrap;
+  }
+  @keyframes floatData {
+    0%   { transform: translateY(60px); opacity: 0; }
+    15%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { transform: translateY(-180px); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .data-float, .hero-product { animation: none !important; }
+  }
 
   @media (max-width: 1024px) {
     .hero-grid { grid-template-columns: 1fr; gap: 36px; max-width: 720px; }
@@ -335,6 +366,13 @@
   @keyframes drawHighlight {
     to { background-size: 100% 100%; }
   }
+  /* Word-rotator: subtiel cyclen */
+  .rotor { display: inline-block; vertical-align: baseline; min-width: 7ch; }
+  .rotor-w {
+    display: inline-block; opacity: 1;
+    transition: opacity .35s ease, transform .35s cubic-bezier(.2,.7,.2,1);
+  }
+  .rotor-w.swap { opacity: 0; transform: translateY(-6px); }
   .hero-sub {
     font-size: clamp(17px, 2.1vw, 21px);
     color: rgba(255,255,255,.82);
@@ -1114,10 +1152,18 @@
 
 <!-- ── HERO ── -->
 <header class="hero" aria-labelledby="hero-heading">
+  <div class="hero-grid-data" aria-hidden="true">
+    <span class="data-float" style="left:8%;  top:65%;">+€1.240</span>
+    <span class="data-float" style="left:24%; top:80%; animation-delay:3s;">BTW Q2 €312</span>
+    <span class="data-float" style="left:42%; top:88%; animation-delay:6s;">Factuur F-1024</span>
+    <span class="data-float" style="left:58%; top:74%; animation-delay:9s;">−€89,50</span>
+    <span class="data-float" style="left:74%; top:82%; animation-delay:12s;">+€2.480</span>
+    <span class="data-float" style="left:88%; top:68%; animation-delay:15s;">KOR ✓</span>
+  </div>
   <div class="hero-grid">
     <div class="hero-content">
       <div class="hero-badge">Eenmalig €49 · Geen abonnement, nooit</div>
-      <h1 id="hero-heading">Doe je boekhouding in <em>15 minuten</em> per maand.</h1>
+      <h1 id="hero-heading">Doe je boekhouding in <em><span class="rotor"><span class="rotor-w" data-words="15 minuten|±15 min|vaak sneller">15 minuten</span></span></em> per maand.</h1>
       <p class="hero-sub">
         Facturen, BTW-aangifte en overzicht — geregeld in één Google Sheet op jouw eigen Drive. Eenmalig €49. Geen abonnement, geen boekhoudsoftware die je elke maand opnieuw moet leren.
       </p>
@@ -1600,15 +1646,43 @@
     });
   })();
 
-  /* Cursor-follow glow op hero-product */
+  /* Magnetic cursor-follow glow — lerp voor lag */
   (function() {
     var prod = document.querySelector('.hero-product');
     if (!prod || window.matchMedia('(hover: none)').matches) return;
+    var tx = 50, ty = 50, cx = 50, cy = 50, raf = null;
+    function tick() {
+      cx += (tx - cx) * 0.12;
+      cy += (ty - cy) * 0.12;
+      prod.style.setProperty('--mx', cx + '%');
+      prod.style.setProperty('--my', cy + '%');
+      if (Math.abs(tx - cx) > 0.1 || Math.abs(ty - cy) > 0.1) raf = requestAnimationFrame(tick);
+      else raf = null;
+    }
     prod.addEventListener('mousemove', function(e) {
       var r = prod.getBoundingClientRect();
-      prod.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
-      prod.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+      tx = (e.clientX - r.left) / r.width * 100;
+      ty = (e.clientY - r.top) / r.height * 100;
+      if (!raf) raf = requestAnimationFrame(tick);
     });
+  })();
+
+  /* Word-rotator op hero h1 em */
+  (function() {
+    var el = document.querySelector('.rotor-w');
+    if (!el) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var words = (el.getAttribute('data-words') || '').split('|').filter(Boolean);
+    if (words.length < 2) return;
+    var i = 0;
+    setInterval(function() {
+      i = (i + 1) % words.length;
+      el.classList.add('swap');
+      setTimeout(function() {
+        el.textContent = words[i];
+        el.classList.remove('swap');
+      }, 350);
+    }, 3200);
   })();
 
   (function() {
