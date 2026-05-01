@@ -216,9 +216,53 @@
     position: relative;
     background: linear-gradient(160deg, #0D1B4E 0%, #132661 55%, #1A3A7E 100%);
     color: var(--wit);
-    padding: 72px 24px 112px;
-    text-align: center;
+    padding: 72px 24px 96px;
     overflow: hidden;
+  }
+  .hero-grid {
+    position: relative; z-index: 1;
+    max-width: 1280px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.1fr 1fr;
+    gap: 56px; align-items: center;
+  }
+  .hero-content { text-align: left; }
+  .hero-product {
+    position: relative;
+    transform: perspective(1400px) rotateY(-6deg) rotateX(2deg);
+    transition: transform .6s cubic-bezier(.2,.7,.2,1);
+  }
+  .hero-product:hover { transform: perspective(1400px) rotateY(-3deg) rotateX(1deg) scale(1.02); }
+  .hero-product-frame {
+    position: relative;
+    border-radius: 14px; overflow: hidden;
+    background: #fff;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.1) inset,
+      0 4px 12px rgba(0,0,0,.18),
+      0 32px 80px rgba(0,0,0,.4),
+      0 80px 180px rgba(46,196,182,.12);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .hero-product-frame::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,.12) 0%, transparent 30%, transparent 70%, rgba(46,196,182,.08) 100%);
+    z-index: 1;
+  }
+  .hero-product-frame img { display: block; width: 100%; height: auto; }
+  /* Cursor-follow glow */
+  .hero-product::before {
+    content: ""; position: absolute; inset: -20px;
+    background: radial-gradient(400px 240px at var(--mx, 50%) var(--my, 50%), rgba(46,196,182,.18), transparent 60%);
+    border-radius: 24px; opacity: 0;
+    transition: opacity .35s ease; pointer-events: none; z-index: -1;
+  }
+  .hero-product:hover::before { opacity: 1; }
+
+  @media (max-width: 1024px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 36px; max-width: 720px; }
+    .hero-content { text-align: center; }
+    .hero-product { transform: none; max-width: 540px; margin: 0 auto; }
+    .hero-product:hover { transform: scale(1.01); }
   }
   .hero::before {
     content: "";
@@ -298,7 +342,8 @@
     line-height: 1.55;
     letter-spacing: -0.005em;
   }
-  .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+  @media (max-width: 1024px) { .hero-ctas { justify-content: center; } }
   .btn-primair {
     position: relative; overflow: hidden;
     display: inline-flex; align-items: center; gap: 10px;
@@ -335,12 +380,13 @@
   }
   .btn-secundair:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.4); transform: translateY(-1px); }
   .hero-trust {
-    list-style: none; margin: 22px auto 0; padding: 0;
-    display: flex; flex-wrap: wrap; justify-content: center;
+    list-style: none; margin: 22px 0 0; padding: 0;
+    display: flex; flex-wrap: wrap;
     gap: 10px 20px; font-size: 14px;
     color: rgba(255,255,255,.82);
     max-width: 680px;
   }
+  @media (max-width: 1024px) { .hero-trust { margin: 22px auto 0; justify-content: center; } }
   .hero-trust li { display: inline-flex; align-items: center; gap: 6px; }
   .hero-trust span { color: var(--accent); font-weight: 700; font-size: 13px; }
   @media (max-width: 640px) {
@@ -1004,28 +1050,37 @@
 
 <!-- ── HERO ── -->
 <header class="hero" aria-labelledby="hero-heading">
-  <div class="hero-badge">Eenmalig €49 · Geen abonnement, nooit</div>
-  <h1 id="hero-heading">Doe je boekhouding in <em>15 minuten</em> per maand.</h1>
-  <p class="hero-sub">
-    Facturen, BTW-aangifte en overzicht — geregeld in één Google Sheet op jouw eigen Drive. Eenmalig €49. Geen abonnement, geen boekhoudsoftware die je elke maand opnieuw moet leren.
-  </p>
-  <div class="hero-ctas">
-    <a href="/kopen" class="btn-primair">
-      <span>Koop voor €49 →</span>
-    </a>
-    <a href="#functies" class="btn-secundair">
-      Wat zit erin? ↓
-    </a>
+  <div class="hero-grid">
+    <div class="hero-content">
+      <div class="hero-badge">Eenmalig €49 · Geen abonnement, nooit</div>
+      <h1 id="hero-heading">Doe je boekhouding in <em>15 minuten</em> per maand.</h1>
+      <p class="hero-sub">
+        Facturen, BTW-aangifte en overzicht — geregeld in één Google Sheet op jouw eigen Drive. Eenmalig €49. Geen abonnement, geen boekhoudsoftware die je elke maand opnieuw moet leren.
+      </p>
+      <div class="hero-ctas">
+        <a href="/kopen" class="btn-primair">
+          <span>Koop voor €49 →</span>
+        </a>
+        <a href="#functies" class="btn-secundair">
+          Wat zit erin? ↓
+        </a>
+      </div>
+      <div>
+        <span class="ideal-badge">Betalen met iDEAL · licentie + installatie-instructie direct in je mail</span>
+      </div>
+      <ul class="hero-trust" aria-label="Belangrijke zekerheden">
+        <li><span aria-hidden="true">✓</span> Jouw data blijft in jóuw Drive</li>
+        <li><span aria-hidden="true">✓</span> Geen abonnement — eenmalig</li>
+        <li><span aria-hidden="true">✓</span> Boekhouder gratis meekijken</li>
+        <li><span aria-hidden="true">✓</span> 14 dagen geld terug</li>
+      </ul>
+    </div>
+    <div class="hero-product" aria-hidden="true">
+      <div class="hero-product-frame">
+        <img src="/preview.svg" alt="" width="1200" height="720" loading="eager" fetchpriority="high" decoding="async">
+      </div>
+    </div>
   </div>
-  <div>
-    <span class="ideal-badge">Betalen met iDEAL · licentie + installatie-instructie direct in je mail</span>
-  </div>
-  <ul class="hero-trust" aria-label="Belangrijke zekerheden">
-    <li><span aria-hidden="true">✓</span> Jouw data blijft in jóuw Drive</li>
-    <li><span aria-hidden="true">✓</span> Geen abonnement — eenmalig</li>
-    <li><span aria-hidden="true">✓</span> Boekhouder gratis meekijken</li>
-    <li><span aria-hidden="true">✓</span> 14 dagen geld terug</li>
-  </ul>
 </header>
 
 <main id="main" tabindex="-1">
@@ -1402,6 +1457,17 @@
       var stagger = el.getAttribute('data-reveal-stagger');
       if (stagger) el.style.setProperty('--reveal-delay', stagger + 'ms');
       io.observe(el);
+    });
+  })();
+
+  /* Cursor-follow glow op hero-product */
+  (function() {
+    var prod = document.querySelector('.hero-product');
+    if (!prod || window.matchMedia('(hover: none)').matches) return;
+    prod.addEventListener('mousemove', function(e) {
+      var r = prod.getBoundingClientRect();
+      prod.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+      prod.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
     });
   })();
 
