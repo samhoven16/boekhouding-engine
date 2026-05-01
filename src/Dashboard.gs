@@ -147,6 +147,10 @@ function vernieuwDashboard() {
     }
   } catch (e) { Logger.log('Gezondheid-banner: ' + e.message); }
 
+  // Empty-state hints op data-tabs zodat lege Verkoopfacturen/Inkoopfacturen/Banktransacties
+  // een uitnodigend bericht tonen ipv blank zijn.
+  try { schrijfEmptyStateHints_(ss); } catch (e) { Logger.log('empty-state hints: ' + e.message); }
+
   // Verwerk herhalende kosten (automatisch boeken + komende betalingen voor waarschuwingen)
   let herhalendeResult = { geboekt: 0, komend: [] };
   try { herhalendeResult = verwerkHerhalendeKosten_(); } catch (e) { Logger.log('Herhalende kosten: ' + e.message); }
@@ -489,6 +493,46 @@ function berekenRoiData_(ss, kpi) {
   const tijdsBesparing = Math.round(totalMin / 60);
 
   return { aantalFacturen, omzetGeind, btwVerwerkt, aantalBoekingen, tijdsBesparing };
+}
+
+// ─────────────────────────────────────────────
+//  EMPTY-STATE HINTS op data-tabs
+// ─────────────────────────────────────────────
+/**
+ * Schrijft een uitnodigend bericht op rij 2 van Verkoopfacturen/Inkoopfacturen/
+ * Banktransacties wanneer er nog géén data is. Verwijdert het bericht zodra
+ * de gebruiker een echte rij toevoegt.
+ */
+function schrijfEmptyStateHints_(ss) {
+  const tabs = [
+    { naam: SHEETS.VERKOOPFACTUREN, tekst: '→ Nog geen verkoopfacturen — Menu: Boekhoudbaar → Nieuwe boeking → Inkomsten' },
+    { naam: SHEETS.INKOOPFACTUREN,  tekst: '→ Nog geen inkoopfacturen — Menu: Boekhoudbaar → Nieuwe boeking → Uitgaven' },
+    { naam: SHEETS.BANKTRANSACTIES, tekst: '→ Nog geen banktransacties — Menu: Boekhoudbaar → Bank → Bankafschrift importeren' },
+  ];
+  tabs.forEach(function(t) {
+    const sheet = ss.getSheetByName(t.naam);
+    if (!sheet) return;
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      // Echte data aanwezig — verwijder eventueel hint-rij 2 als die placeholder is
+      const cel = sheet.getRange(2, 1);
+      const huidig = String(cel.getValue() || '');
+      if (huidig.indexOf('→ Nog geen') === 0) {
+        const cols = sheet.getLastColumn() || 12;
+        sheet.getRange(2, 1, 1, cols).clearContent().clearFormat();
+      }
+      return;
+    }
+    // Sheet is leeg (alleen headers) — schrijf hint
+    const cols = sheet.getLastColumn() || 12;
+    sheet.getRange(2, 1, 1, cols).breakApart();
+    sheet.getRange(2, 1, 1, cols).merge()
+      .setValue(t.tekst)
+      .setBackground('#F0FBF8').setFontColor('#0E5E54')
+      .setFontStyle('italic').setFontSize(11)
+      .setHorizontalAlignment('center').setVerticalAlignment('middle');
+    sheet.setRowHeight(2, 32);
+  });
 }
 
 // ─────────────────────────────────────────────
