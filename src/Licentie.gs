@@ -456,6 +456,52 @@ function haalConfigOp_() {
   }
 }
 
+// ─────────────────────────────────────────────
+//  FEATURE FLAGS — Remote kill-switch (Tier 2 Isolation)
+// ─────────────────────────────────────────────
+/**
+ * Centraal feature-flag mechanisme. Server kan een feature aanzetten/uitzetten
+ * voor alle klanten zonder dat zij hun sheet hoeven te updaten.
+ *
+ * Default = ENABLED. Als config niet beschikbaar is (geen netwerk), gaat
+ * de feature gewoon door — fail-open, geen disruption.
+ *
+ * Server-side configformat (in config endpoint JSON):
+ *   { features: { btw_aangifte_v2: false, peppol_uitgaand: true } }
+ *
+ * Gebruik:
+ *   if (!isFeatureIngeschakeld_('btw_aangifte_v2')) {
+ *     toonFallback();
+ *     return;
+ *   }
+ */
+function isFeatureIngeschakeld_(naam) {
+  try {
+    const cfg = haalConfigOp_();
+    if (!cfg || !cfg.features) return true; // fail-open default
+    const v = cfg.features[naam];
+    if (v === false || v === 'false' || v === 0) return false;
+    return true;
+  } catch (e) {
+    Logger.log('isFeatureIngeschakeld_ fout (fail-open): ' + e.message);
+    return true;
+  }
+}
+
+/**
+ * Voor flags die een tekst-melding voor de gebruiker hebben.
+ * Server kan zeggen: 'Deze functie is in onderhoud — verwacht binnen X uur'.
+ */
+function featureMelding_(naam) {
+  try {
+    const cfg = haalConfigOp_();
+    if (!cfg || !cfg.featureMeldingen) return '';
+    return String(cfg.featureMeldingen[naam] || '');
+  } catch (_) {
+    return '';
+  }
+}
+
 /**
  * Eénmalig signaal aan de licentieserver dat setup() succesvol is
  * doorlopen. Idempotent: zet een UserProperties-vlag die herhalen
