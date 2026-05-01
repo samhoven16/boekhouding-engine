@@ -20,7 +20,13 @@ function vernieuwDashboard() {
   sheet.clearContents();
   sheet.clearFormats();
 
-  const bedrijf = getInstelling_('Bedrijfsnaam') || 'Mijn Bedrijf';
+  // Bedrijfsnaam: strip placeholder-tekst die per ongeluk in de cel staat
+  // (van oude versies of demo-import). Pak alleen 'echte' input.
+  let bedrijf = String(getInstelling_('Bedrijfsnaam') || '').trim();
+  if (/^←/.test(bedrijf) || /vul.*bedrijfsnaam/i.test(bedrijf) || /placeholder/i.test(bedrijf)) {
+    bedrijf = '';
+  }
+  if (!bedrijf) bedrijf = 'Mijn Bedrijf';
   const jaar = new Date().getFullYear();
   const nu = new Date();
 
@@ -275,77 +281,109 @@ function vernieuwDashboard() {
     .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
   rij++;
 
+  const heeftData = (kpi.omzet > 0 || kpi.kosten > 0 || kpi.banksaldo > 0);
   const kengetallen = [
     {
-      naam: 'Winstmarge', waarde: kpi.winstmarge + '%',
-      norm: '≥ 20%', ok: kpi.winstmarge >= 20,
+      naam: 'Winstmarge',
+      waarde: heeftData ? kpi.winstmarge + '%' : '—',
+      norm: '≥ 20%',
+      ok: !heeftData ? null : kpi.winstmarge >= 20,
     },
     {
-      naam: 'Current ratio (liquiditeit)', waarde: kpi.liquiditeit ? kpi.liquiditeit.toFixed(2) : 'n.v.t.',
-      norm: '≥ 1.5', ok: kpi.liquiditeit === null || kpi.liquiditeit >= 1.5,
+      naam: 'Current ratio (liquiditeit)',
+      waarde: kpi.liquiditeit ? kpi.liquiditeit.toFixed(2) : '—',
+      norm: '≥ 1.5',
+      ok: kpi.liquiditeit === null ? null : kpi.liquiditeit >= 1.5,
     },
     {
-      naam: 'Solvabiliteit', waarde: kpi.solvabiliteit ? kpi.solvabiliteit + '%' : 'n.v.t.',
-      norm: '≥ 25%', ok: kpi.solvabiliteit === null || kpi.solvabiliteit >= 25,
+      naam: 'Solvabiliteit',
+      waarde: kpi.solvabiliteit ? kpi.solvabiliteit + '%' : '—',
+      norm: '≥ 25%',
+      ok: kpi.solvabiliteit === null ? null : kpi.solvabiliteit >= 25,
     },
     {
-      naam: 'Debiteurendagen', waarde: kpi.debiteurendagen + ' dagen',
-      norm: '≤ 45 dagen', ok: kpi.debiteurendagen <= 45,
+      naam: 'Debiteurendagen',
+      waarde: heeftData ? kpi.debiteurendagen + ' dagen' : '—',
+      norm: '≤ 45 dagen',
+      ok: !heeftData ? null : kpi.debiteurendagen <= 45,
     },
     {
-      naam: 'Cash runway', waarde: kpi.runway !== null ? kpi.runway + ' maanden' : 'Winstgevend ✓',
-      norm: '≥ 3 maanden', ok: kpi.runway === null || kpi.runway >= 3,
+      naam: 'Cash runway',
+      waarde: !heeftData ? '—' : (kpi.runway !== null ? kpi.runway + ' maanden' : 'Winstgevend ✓'),
+      norm: '≥ 3 maanden',
+      ok: !heeftData ? null : (kpi.runway === null || kpi.runway >= 3),
     },
     {
-      naam: 'Maandelijkse burn rate', waarde: kpi.burnRate > 0 ? formatBedrag_(kpi.burnRate) : '— (winstgevend)',
-      norm: '< maandomzet', ok: kpi.burnRate === 0,
+      naam: 'Maandelijkse burn rate',
+      waarde: !heeftData ? '—' : (kpi.burnRate > 0 ? formatBedrag_(kpi.burnRate) : '— (winstgevend)'),
+      norm: '< maandomzet',
+      ok: !heeftData ? null : (kpi.burnRate === 0),
     },
   ];
 
   kengetallen.forEach(kg => {
-    sheet.getRange(rij, 1, 1, 4).setValues([[kg.naam, kg.waarde, kg.norm, kg.ok ? '✓ Goed' : '⚠ Let op']]);
-    sheet.getRange(rij, 4).setBackground(kg.ok ? '#E8F5E9' : '#FFF3E0');
+    var beoordeling = (kg.ok === null) ? 'Nog geen data' : (kg.ok ? '✓ Goed' : '⚠ Let op');
+    var bg          = (kg.ok === null) ? '#F7F9FC'        : (kg.ok ? '#E8F5E9'   : '#FFF3E0');
+    sheet.getRange(rij, 1, 1, 4).setValues([[kg.naam, kg.waarde, kg.norm, beoordeling]]);
+    sheet.getRange(rij, 4).setBackground(bg);
     rij++;
   });
 
   // ── ROI Sectie: "Wat heeft Boekhoudbaar je opgeleverd?" ──────────────
   rij += 2;
-  sheet.getRange(rij, 1, 1, 8).merge()
-    .setValue('WAT HEEFT BOEKHOUDBAAR JE OPGELEVERD?')
-    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
-    .setFontWeight('bold').setFontSize(12);
-  rij++;
+  // Empty-state guard — laat ROI niet zien als gebruiker nog geen facturen heeft
+  if (heeftData || (kpi.aantalOpenFacturen || 0) > 0) {
+    sheet.getRange(rij, 1, 1, 8).merge()
+      .setValue('WAT HEEFT BOEKHOUDBAAR JE OPGELEVERD?')
+      .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
+      .setFontWeight('bold').setFontSize(12);
+    rij++;
 
-  const roiData = berekenRoiData_(ss, kpi);
+    const roiData = berekenRoiData_(ss, kpi);
 
-  const roiItems = [
-    { label: 'Facturen verstuurd', waarde: roiData.aantalFacturen + ' stuks', icon: '📋' },
-    { label: 'Omzet geïnd dit jaar', waarde: formatBedrag_(roiData.omzetGeind), icon: '💶' },
-    { label: 'BTW correct verwerkt', waarde: formatBedrag_(roiData.btwVerwerkt), icon: '✅' },
-    { label: 'Geschatte tijdsbesparing', waarde: roiData.tijdsBesparing + ' uur/jaar', icon: '⏱' },
-  ];
+    const roiItems = [
+      { label: 'Facturen verstuurd', waarde: roiData.aantalFacturen + ' stuks', icon: '📋' },
+      { label: 'Omzet geïnd dit jaar', waarde: formatBedrag_(roiData.omzetGeind), icon: '💶' },
+      { label: 'BTW correct verwerkt', waarde: formatBedrag_(roiData.btwVerwerkt), icon: '✅' },
+      { label: 'Geschatte tijdsbesparing', waarde: roiData.tijdsBesparing + ' uur/jaar', icon: '⏱' },
+    ];
 
-  roiItems.forEach((item, i) => {
-    const col = i * 2 + 1;
-    sheet.getRange(rij, col, 1, 2).merge()
-      .setValue(item.icon + '  ' + item.label)
-      .setBackground(KLEUREN.SECTIE_BG).setFontWeight('bold').setFontSize(10)
+    roiItems.forEach((item, i) => {
+      const col = i * 2 + 1;
+      sheet.getRange(rij, col, 1, 2).merge()
+        .setValue(item.icon + '  ' + item.label)
+        .setBackground(KLEUREN.SECTIE_BG).setFontWeight('bold').setFontSize(10)
+        .setHorizontalAlignment('center');
+      sheet.getRange(rij + 1, col, 1, 2).merge()
+        .setValue(item.waarde)
+        .setBackground(KLEUREN.SECTIE_BG).setFontSize(14).setFontWeight('bold')
+        .setHorizontalAlignment('center').setFontColor(KLEUREN.HEADER_BG);
+    });
+
+    sheet.setRowHeight(rij, 28);
+    sheet.setRowHeight(rij + 1, 32);
+    rij += 3;
+
+    // Tijdbesparing motivatietekst
+    sheet.getRange(rij, 1, 1, 8).merge()
+      .setValue(`Op basis van ${roiData.aantalFacturen} facturen, ${roiData.aantalBoekingen} boekingen en automatische categorisering schat Boekhoudbaar ~${roiData.tijdsBesparing} uur administratietijd bespaard dit jaar.`)
+      .setBackground(KLEUREN.SECTIE_BG).setFontSize(10).setWrap(true).setFontColor(KLEUREN.HEADER_BG);
+    sheet.setRowHeight(rij, 30);
+  } else {
+    // Empty-state CTA — uitnodigend, niet leeg
+    sheet.getRange(rij, 1, 1, 8).merge()
+      .setValue('🚀  Boek je eerste factuur of kostenpost — dit dashboard wordt dan vanzelf gevuld.')
+      .setBackground('#E6F7F4').setFontColor('#0E5E54')
+      .setFontWeight('bold').setFontSize(12)
       .setHorizontalAlignment('center');
-    sheet.getRange(rij + 1, col, 1, 2).merge()
-      .setValue(item.waarde)
-      .setBackground(KLEUREN.SECTIE_BG).setFontSize(14).setFontWeight('bold')
-      .setHorizontalAlignment('center').setFontColor(KLEUREN.HEADER_BG);
-  });
-
-  sheet.setRowHeight(rij, 28);
-  sheet.setRowHeight(rij + 1, 32);
-  rij += 3;
-
-  // Tijdbesparing motivatietekst
-  sheet.getRange(rij, 1, 1, 8).merge()
-    .setValue(`Op basis van ${roiData.aantalFacturen} facturen, ${roiData.aantalBoekingen} boekingen en automatische categorisering schat Boekhoudbaar ~${roiData.tijdsBesparing} uur administratietijd bespaard dit jaar.`)
-    .setBackground(KLEUREN.SECTIE_BG).setFontSize(10).setWrap(true).setFontColor(KLEUREN.HEADER_BG);
-  sheet.setRowHeight(rij, 30);
+    sheet.setRowHeight(rij, 36);
+    rij++;
+    sheet.getRange(rij, 1, 1, 8).merge()
+      .setValue('Menu: Boekhoudbaar → Nieuwe boeking — factuur, kosten of declaratie')
+      .setBackground('#F0FBF8').setFontColor('#0E5E54')
+      .setFontSize(10).setHorizontalAlignment('center');
+    sheet.setRowHeight(rij, 22);
+  }
 
   ss.setActiveSheet(sheet);
 
