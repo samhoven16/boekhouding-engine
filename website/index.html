@@ -232,6 +232,17 @@
     animation: hero-drift 26s ease-in-out infinite alternate;
     will-change: transform;
   }
+  /* Subtiele grid-overlay voor depth — Linear/Stripe pattern */
+  .hero::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 30%, transparent 75%);
+    pointer-events: none;
+  }
   @keyframes hero-drift {
     0%   { transform: translate3d(0, 0, 0) scale(1); }
     50%  { transform: translate3d(-18px, 10px, 0) scale(1.04); }
