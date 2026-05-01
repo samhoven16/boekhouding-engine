@@ -154,6 +154,10 @@ function vernieuwDashboard() {
   // Conditional formatting op factuur-status kolommen voor visuele scanbaarheid
   try { zetStatusColorRules_(ss); } catch (e) { Logger.log('status colors: ' + e.message); }
 
+  // Eenmalige opschoning: oude '← Vul hier...' placeholder-waarden leegmaken
+  // (van oude installs die placeholders als data schreven ipv als cell-notes)
+  try { schoonPlaceholderwaarden_(ss); } catch (e) { Logger.log('placeholder cleanup: ' + e.message); }
+
   // Verwerk herhalende kosten (automatisch boeken + komende betalingen voor waarschuwingen)
   let herhalendeResult = { geboekt: 0, komend: [] };
   try { herhalendeResult = verwerkHerhalendeKosten_(); } catch (e) { Logger.log('Herhalende kosten: ' + e.message); }
@@ -532,6 +536,32 @@ function berekenRoiData_(ss, kpi) {
   const tijdsBesparing = Math.round(totalMin / 60);
 
   return { aantalFacturen, omzetGeind, btwVerwerkt, aantalBoekingen, tijdsBesparing };
+}
+
+// ─────────────────────────────────────────────
+//  PLACEHOLDER OPSCHONEN — backwards-compat
+// ─────────────────────────────────────────────
+/**
+ * Oude installs schreven placeholder-tekst als cel-data
+ * ('← Vul hier uw bedrijfsnaam in'). Nieuwe code gebruikt cell-notes.
+ * Deze functie maakt die oude placeholder-waarden eenmalig leeg.
+ */
+function schoonPlaceholderwaarden_(ss) {
+  const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
+  if (!sheet || sheet.getLastRow() < 2) return;
+  const data = sheet.getRange(1, 2, sheet.getLastRow(), 1).getValues();
+  let opgeschoond = 0;
+  for (let i = 0; i < data.length; i++) {
+    const v = String(data[i][0] || '');
+    if (/^←/.test(v) || /^Vul hier/i.test(v) || /^uw\s/i.test(v)) {
+      sheet.getRange(i + 1, 2).setValue('');
+      opgeschoond++;
+    }
+  }
+  if (opgeschoond > 0) {
+    Logger.log(opgeschoond + ' placeholder-waarden opgeruimd in Instellingen');
+    try { wisInstellingenCache_(); } catch (_) {}
+  }
 }
 
 // ─────────────────────────────────────────────
