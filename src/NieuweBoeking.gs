@@ -91,15 +91,17 @@ input.ok{border-color:#2e7d32}
 @keyframes puls{0%,100%{opacity:1}50%{opacity:.6}}
 .spraak-status{font-size:11px;color:#888;font-style:italic;flex:1}
 /* ── FOOTER ── */
-.footer{background:white;border-top:1px solid #E0E0E0;padding:10px 16px;
-         display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0}
-.btn{padding:9px 20px;border:none;border-radius:5px;cursor:pointer;font-size:13px;
-      font-weight:bold;transition:all 0.15s}
-.btn-pri{background:var(--pk);color:white}
-.btn-pri:hover{opacity:0.9}
-.btn-pri:disabled{background:#9E9E9E;cursor:not-allowed}
+.footer{background:white;border-top:1px solid #E5EAF2;padding:12px 18px;
+         display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-shrink:0;
+         box-shadow:0 -2px 8px rgba(13,27,78,.04)}
+.btn{padding:10px 22px;border:none;border-radius:8px;cursor:pointer;font-size:13.5px;
+      font-weight:600;letter-spacing:-0.01em;transition:background .18s ease,transform .18s ease,box-shadow .2s ease;
+      font-family:inherit}
+.btn-pri{background:var(--pk);color:white;box-shadow:0 1px 2px rgba(13,27,78,.08)}
+.btn-pri:hover{background:var(--pk);transform:translateY(-1px);box-shadow:0 6px 16px rgba(13,27,78,.18)}
+.btn-pri:disabled{background:#94A3B8;cursor:not-allowed;transform:none;box-shadow:none}
 .btn-sec{background:#F7F9FC;color:var(--pk);border:1px solid #E5EAF2}
-.btn-sec:hover{background:#EEF2F8}
+.btn-sec:hover{background:#EEF2F8;border-color:#CFD8E3}
 /* ── BEVESTIGING ── */
 .klaar{text-align:center;padding:30px 20px;animation:fadeIn .3s ease}
 .klaar .groot-icoon{font-size:52px;margin-bottom:12px;animation:bounceIn .7s cubic-bezier(.68,-0.55,.265,1.55)}
