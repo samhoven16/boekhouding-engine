@@ -566,6 +566,116 @@
   .fit-kaart li:last-child { border-bottom: none; }
   @media (max-width: 720px) { .fit-grid { grid-template-columns: 1fr; gap: 16px; } }
 
+  /* ── INTERACTIEVE DEMO ── */
+  .demo-sectie { background: var(--wit); padding: 80px 24px; }
+  .demo-sectie .container { max-width: 880px; margin: 0 auto; text-align: center; }
+  .demo-sectie h2 { font-size: clamp(26px, 3.4vw, 38px); }
+  .mini-demo {
+    display: grid; gap: 20px;
+    background: linear-gradient(160deg, #0D1B4E 0%, #132661 100%);
+    border-radius: 20px; padding: 32px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.08) inset,
+      0 4px 12px rgba(13,27,78,.16),
+      0 32px 80px rgba(13,27,78,.18);
+    color: #fff; text-align: left;
+    position: relative; overflow: hidden;
+  }
+  .mini-demo::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(420px 240px at 80% 10%, rgba(46,196,182,.15), transparent 65%);
+    pointer-events: none;
+  }
+  .mini-demo > * { position: relative; z-index: 1; }
+  .mini-demo-actie {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 14px; padding: 18px 22px;
+  }
+  .mini-demo-input { flex: 1; }
+  .mini-demo-label {
+    display: block; font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
+    text-transform: uppercase; color: rgba(46,196,182,.85); margin-bottom: 4px;
+  }
+  .mini-demo-bedrag {
+    font-size: 22px; font-weight: 800; color: #fff;
+    letter-spacing: -0.02em; transition: color .25s ease;
+  }
+  .mini-demo[data-clicks="0"] .mini-demo-bedrag { color: rgba(255,255,255,.4); }
+  .mini-demo-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #0A4744;
+    border: none; padding: 14px 22px; border-radius: 12px;
+    font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+    cursor: pointer; flex-shrink: 0;
+    box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 8px 20px rgba(46,196,182,.35);
+    transition: transform .18s cubic-bezier(.2,.7,.2,1), box-shadow .25s ease, background .15s;
+    font-family: inherit;
+  }
+  .mini-demo-btn:hover { transform: translateY(-2px) scale(1.02); background: #3ED1C3; box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 14px 32px rgba(46,196,182,.45); }
+  .mini-demo-btn:active { transform: scale(.96); transition-duration: .08s; }
+  .mini-demo-btn-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(13,27,78,.15); font-size: 16px; font-weight: 800; line-height: 1;
+  }
+  .mini-demo-pijl {
+    text-align: center; font-size: 11px; font-weight: 700;
+    color: rgba(46,196,182,.7); letter-spacing: 2px; text-transform: uppercase;
+  }
+  .mini-demo-output {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  .mini-demo-cell {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 16px 18px;
+    transition: border-color .25s ease, transform .25s ease;
+  }
+  .mini-demo-cell.kicked {
+    border-color: rgba(46,196,182,.55);
+    animation: cellPulse .55s cubic-bezier(.2,.7,.2,1);
+  }
+  @keyframes cellPulse {
+    0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(46,196,182,.4); }
+    50%  { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(46,196,182,0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46,196,182,0); }
+  }
+  .mini-demo-cell-label {
+    display: block; font-size: 11px; font-weight: 600; letter-spacing: .8px;
+    text-transform: uppercase; color: rgba(255,255,255,.55); margin-bottom: 6px;
+  }
+  .mini-demo-cell-waarde {
+    display: block; font-size: 22px; font-weight: 800; color: #fff;
+    letter-spacing: -0.02em; line-height: 1.1;
+    transition: color .25s ease;
+  }
+  .mini-demo-cell-delta {
+    display: block; font-size: 12px; font-weight: 700; color: var(--accent);
+    margin-top: 4px; min-height: 16px;
+    opacity: 0; transform: translateY(-4px);
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .mini-demo-cell-delta.show { opacity: 1; transform: translateY(0); }
+  .mini-demo-cta {
+    text-align: center; padding-top: 8px;
+    opacity: 0; transform: translateY(8px);
+    transition: opacity .5s ease, transform .5s cubic-bezier(.2,.7,.2,1);
+    pointer-events: none;
+  }
+  .mini-demo-cta.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .mini-demo-cta p { color: rgba(255,255,255,.85); font-size: 14px; margin-bottom: 16px; }
+  .btn-primair-dark { background: var(--accent); color: #0A4744; box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 14px 32px rgba(46,196,182,.4); }
+  .btn-primair-dark:hover { background: #3ED1C3 !important; }
+
+  @media (max-width: 720px) {
+    .mini-demo { padding: 24px; }
+    .mini-demo-actie { flex-direction: column; align-items: stretch; gap: 12px; }
+    .mini-demo-btn { justify-content: center; }
+    .mini-demo-output { grid-template-columns: 1fr; gap: 10px; }
+  }
+
   /* ── TRUST LAYER ── */
   .trust-sectie { background: var(--bg); padding: 80px 24px; }
   .trust-sectie .container { max-width: 880px; margin: 0 auto; }
@@ -1276,6 +1386,49 @@
 
 <main id="main" tabindex="-1">
 
+<!-- ── INTERACTIEVE DEMO — voel het systeem ── -->
+<section class="demo-sectie" aria-labelledby="demo-heading">
+  <div class="container">
+    <p class="section-label">Probeer het gevoel</p>
+    <h2 id="demo-heading">Klik één keer — zo simpel werkt je boekhouding straks.</h2>
+    <p class="sub-tekst" style="margin-bottom:32px">Geen account, geen sign-up. Klik en zie direct wat er gebeurt.</p>
+    <div class="mini-demo" data-clicks="0">
+      <div class="mini-demo-actie">
+        <div class="mini-demo-input">
+          <span class="mini-demo-label">Nieuwe factuur</span>
+          <span class="mini-demo-bedrag" id="demo-bedrag">€0</span>
+        </div>
+        <button type="button" class="mini-demo-btn" id="demo-btn">
+          <span class="mini-demo-btn-icon">+</span>
+          <span class="mini-demo-btn-text">Boek factuur</span>
+        </button>
+      </div>
+      <div class="mini-demo-pijl" aria-hidden="true">↓ direct</div>
+      <div class="mini-demo-output">
+        <div class="mini-demo-cell">
+          <span class="mini-demo-cell-label">Omzet deze maand</span>
+          <strong class="mini-demo-cell-waarde" id="demo-omzet">€0</strong>
+          <span class="mini-demo-cell-delta" id="demo-omzet-delta"></span>
+        </div>
+        <div class="mini-demo-cell">
+          <span class="mini-demo-cell-label">BTW Q-saldo</span>
+          <strong class="mini-demo-cell-waarde" id="demo-btw">€0</strong>
+          <span class="mini-demo-cell-delta" id="demo-btw-delta"></span>
+        </div>
+        <div class="mini-demo-cell">
+          <span class="mini-demo-cell-label">Aantal facturen</span>
+          <strong class="mini-demo-cell-waarde" id="demo-aantal">0</strong>
+          <span class="mini-demo-cell-delta"></span>
+        </div>
+      </div>
+      <div class="mini-demo-cta" id="demo-cta">
+        <p>↑ dit is precies wat de echte sheet doet — alleen automatisch</p>
+        <a href="/kopen" class="btn-primair btn-primair-dark"><span>Koop voor €49 →</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ── TRUST LAYER — eerlijk, geen marketing ── -->
 <section class="trust-sectie" aria-labelledby="trust-heading">
   <div class="container">
@@ -1807,6 +1960,59 @@
       tx = (e.clientX - r.left) / r.width * 100;
       ty = (e.clientY - r.top) / r.height * 100;
       if (!raf) raf = requestAnimationFrame(tick);
+    });
+  })();
+
+  /* Mini-demo interactiviteit */
+  (function() {
+    var btn    = document.getElementById('demo-btn');
+    var bedrag = document.getElementById('demo-bedrag');
+    var omzet  = document.getElementById('demo-omzet');
+    var btw    = document.getElementById('demo-btw');
+    var aantal = document.getElementById('demo-aantal');
+    var omzetDelta = document.getElementById('demo-omzet-delta');
+    var btwDelta   = document.getElementById('demo-btw-delta');
+    var cta    = document.getElementById('demo-cta');
+    var demo   = document.querySelector('.mini-demo');
+    if (!btn) return;
+    var totOmzet = 0, totBtw = 0, count = 0;
+    function fmt(n) { return '€' + Math.round(n).toLocaleString('nl-NL'); }
+    function tick(el, from, to, dur) {
+      var t0 = performance.now();
+      function loop(t) {
+        var p = Math.min(1, (t - t0) / dur);
+        var v = from + (to - from) * (1 - Math.pow(1 - p, 3));
+        el.textContent = (el === aantal) ? Math.round(v) : fmt(v);
+        if (p < 1) requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    }
+    function flash(cell, deltaEl, deltaTekst) {
+      cell.classList.remove('kicked'); void cell.offsetWidth; cell.classList.add('kicked');
+      if (deltaEl) {
+        deltaEl.textContent = deltaTekst;
+        deltaEl.classList.remove('show'); void deltaEl.offsetWidth; deltaEl.classList.add('show');
+        setTimeout(function() { deltaEl.classList.remove('show'); }, 1800);
+      }
+    }
+    btn.addEventListener('click', function() {
+      // Realistische ZZP-bedragen tussen €120 en €580
+      var b = Math.floor(Math.random() * 460 + 120);
+      var b21 = Math.round(b * 0.21);
+      var prevOmzet = totOmzet, prevBtw = totBtw;
+      totOmzet += b; totBtw += b21; count++;
+      demo.dataset.clicks = count;
+      tick(bedrag, parseFloat(bedrag.dataset.v||0), b, 280); bedrag.dataset.v = b;
+      tick(omzet,  prevOmzet, totOmzet, 700);
+      tick(btw,    prevBtw, totBtw, 700);
+      tick(aantal, count - 1, count, 400);
+      var omzetCell = omzet.parentElement;
+      var btwCell   = btw.parentElement;
+      var aantalCell = aantal.parentElement;
+      flash(omzetCell, omzetDelta, '+' + fmt(b));
+      flash(btwCell,   btwDelta,   '+' + fmt(b21));
+      flash(aantalCell, null, '');
+      if (count >= 3) cta.classList.add('show');
     });
   })();
 
