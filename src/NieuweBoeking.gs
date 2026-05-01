@@ -24,12 +24,13 @@ function openNieuweBoeking() {
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;color:#212121;background:#F8F9FA;height:100vh;display:flex;flex-direction:column}
 /* ── TABBAR ── */
-.tabbar{display:flex;background:white;border-bottom:2px solid #E0E0E0;flex-shrink:0}
-.tab{flex:1;padding:10px 4px;text-align:center;cursor:pointer;font-size:12px;font-weight:bold;
-     color:#777;border-bottom:3px solid transparent;transition:all 0.15s;user-select:none}
+.tabbar{display:flex;background:white;border-bottom:1px solid #E5EAF2;flex-shrink:0}
+.tab{flex:1;padding:14px 6px;text-align:center;cursor:pointer;font-size:12.5px;font-weight:600;
+     letter-spacing:-0.01em;color:#5F6B7A;border-bottom:2px solid transparent;
+     transition:color .15s ease,border-color .15s ease,background .15s ease;user-select:none}
 .tab:hover{color:var(--pk);background:var(--pk-licht)}
 .tab.actief{color:var(--pk);border-bottom-color:var(--pk);background:var(--pk-licht)}
-.tab .icon{display:block;font-size:20px;margin-bottom:2px}
+.tab .icon{display:block;font-size:20px;margin-bottom:4px}
 /* ── PANELS ── */
 .panels{flex:1;overflow:auto;padding:14px 16px}
 .panel{display:none;animation:fadeIn 0.15s ease}
