@@ -51,6 +51,21 @@ function vernieuwDashboard() {
   sheet.setRowHeight(1, 48);
   sheet.setRowHeight(2, 24);
 
+  // ── COMMAND CENTER — wat is er NU belangrijk? ─────────────────────
+  // Synthetiseert top-prioriteit signalen in 1 zin.
+  // Geen "raw numbers" maar een handeling: wat moet user doen?
+  try {
+    const status = bepaalStatusNu_(ss, kpi);
+    sheet.getRange(3, 1, 1, 8).merge()
+      .setValue(status.tekst)
+      .setBackground(status.bg).setFontColor(status.fg)
+      .setFontWeight('bold').setFontSize(13)
+      .setHorizontalAlignment('center')
+      .setVerticalAlignment('middle')
+      .setBorder(true, true, true, true, false, false, status.border, SpreadsheetApp.BorderStyle.SOLID);
+    sheet.setRowHeight(3, 38);
+  } catch (e) { Logger.log('Status NU: ' + e.message); }
+
   // ── KPI Blokken (rij 4) ───────────────────────────────────────────────
   // Burn rate + cash runway (pijnpunt: Fractional CFO / Qonto / Bunq "geen echte boekhouding")
   const burnRate = kpi.kosten > 0 && kpi.omzet > 0
@@ -477,6 +492,71 @@ function berekenRoiData_(ss, kpi) {
 }
 
 // ─────────────────────────────────────────────
+//  STATUS NU — Command Center top-banner
+// ─────────────────────────────────────────────
+/**
+ * Synthetiseert de #1 actie die de gebruiker NU moet zien.
+ * Volgorde van urgentie:
+ *   1. BTW-deadline binnen 14 dagen        (rood)
+ *   2. Open vervallen facturen              (oranje)
+ *   3. Anomalies gedetecteerd               (oranje)
+ *   4. Lege boekhouding                     (info)
+ *   5. Alles op orde                        (groen)
+ */
+function bepaalStatusNu_(ss, kpi) {
+  // 1. BTW-deadline check
+  try {
+    if (typeof huidigeKwartaal_ === 'function') {
+      const kw = huidigeKwartaal_();
+      const dagenTot = Math.ceil((kw.deadline - new Date()) / 86400000);
+      if (dagenTot >= 0 && dagenTot <= 14) {
+        return {
+          tekst: '🔴  BTW-aangifte ' + kw.kw + ' over ' + dagenTot + (dagenTot === 1 ? ' dag' : ' dagen') +
+                 ' — Menu: Boekhouding → BTW → BTW-aangifte assistent',
+          bg: '#FEE4E2', fg: '#7A1A1A', border: '#DC2626',
+        };
+      }
+    }
+  } catch (_) {}
+
+  // 2. Vervallen facturen
+  if ((kpi.aantalVervallenFacturen || 0) > 0) {
+    return {
+      tekst: '⚠  ' + kpi.aantalVervallenFacturen + ' factu(u)r(en) vervallen — ' +
+             'Menu: Boekhouding → Facturen → Betalingsherinneringen versturen',
+      bg: '#FFE8C7', fg: '#7A4A00', border: '#F5A623',
+    };
+  }
+
+  // 3. Anomalies (re-use detector)
+  try {
+    if (typeof detecteerAfwijkingen_ === 'function') {
+      const a = detecteerAfwijkingen_(ss);
+      if (a.length > 0) {
+        return {
+          tekst: '⚠  ' + a.length + ' afwijking(en) gedetecteerd — scroll naar beneden voor details',
+          bg: '#FFE8C7', fg: '#7A4A00', border: '#F5A623',
+        };
+      }
+    }
+  } catch (_) {}
+
+  // 4. Lege boekhouding
+  if (!kpi.omzet && !kpi.kosten && !kpi.banksaldo) {
+    return {
+      tekst: '🚀  Klaar om te starten — boek je eerste factuur of kostenpost via Menu: Boekhouding → Nieuwe boeking',
+      bg: '#E6F7F4', fg: '#0E5E54', border: '#2EC4B6',
+    };
+  }
+
+  // 5. Alles goed
+  return {
+    tekst: '✓  Alles op orde — geen acties vereist',
+    bg: '#E8F5E9', fg: '#1B5E20', border: '#4CAF50',
+  };
+}
+
+// ─────────────────────────────────────────────
 //  ANOMALIE-DETECTIE — AI-feel zonder AI
 // ─────────────────────────────────────────────
 /**
@@ -601,6 +681,7 @@ function berekenKpiData_(ss) {
   const vandaag = new Date();
   const over30d = new Date(vandaag.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+  let aantalVervallenFacturen = 0;
   for (let i = 1; i < vfData.length; i++) {
     const status = vfData[i][14];
     if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
@@ -610,6 +691,7 @@ function berekenKpiData_(ss) {
     if (open <= 0) continue;
     debiteurenOpen += open;
     aantalOpenFacturen++;
+    if (status === FACTUUR_STATUS.VERVALLEN) aantalVervallenFacturen++;
     const datum = vfData[i][2] ? new Date(vfData[i][2]) : vandaag;
     totaalDagenOpen += Math.floor((vandaag - datum) / (1000 * 60 * 60 * 24));
     // Verwacht binnen 30 dagen: vervaldatum (col 3) valt op of vóór 30d grens
@@ -643,6 +725,7 @@ function berekenKpiData_(ss) {
     crediteurenOpen: rondBedrag_(crediteurenOpen),
     btwSaldo: rondBedrag_(btwSaldo),
     aantalOpenFacturen,
+    aantalVervallenFacturen,
     debiteurendagen: aantalOpenFacturen > 0 ? Math.round(totaalDagenOpen / aantalOpenFacturen) : 0,
     liquiditeit: kg.liquiditeit,
     solvabiliteit: kg.solvabiliteit,
