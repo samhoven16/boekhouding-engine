@@ -469,6 +469,63 @@
   h2 { font-size: clamp(30px, 3.8vw, 46px); font-weight: 800; line-height: 1.12; letter-spacing: -0.022em; color: var(--blauw); }
   .sub-tekst { font-size: 18px; color: var(--grijs); margin-top: 14px; max-width: 640px; line-height: 1.55; letter-spacing: -0.005em; }
 
+  /* ── ONMISBAAR — verlies-naar-oplossing + flow ── */
+  .onmisbaar-sectie { background: var(--bg); padding: 88px 24px; }
+  .onmisbaar-sectie .container { max-width: 1180px; margin: 0 auto; }
+  .onmisbaar-grid {
+    display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: center;
+  }
+  .verlies-naar-oplossing { list-style: none; padding: 0; margin: 28px 0 0; }
+  .verlies-naar-oplossing li {
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    gap: 14px; align-items: center;
+    padding: 16px 0; border-bottom: 1px solid var(--rand);
+  }
+  .verlies-naar-oplossing li:last-child { border-bottom: none; }
+  .vno-was { font-size: 14.5px; color: #94A3B8; text-decoration: line-through; text-decoration-color: rgba(220,38,38,.4); }
+  .vno-pijl { color: var(--accent); font-size: 18px; font-weight: 700; }
+  .vno-nu { font-size: 14.5px; color: var(--tekst); }
+  .vno-nu strong { color: var(--blauw); font-weight: 700; }
+
+  /* Mini animated flow */
+  .onmisbaar-flow {
+    background: var(--wit);
+    border: 1px solid rgba(229,234,242,.8);
+    border-radius: 16px; padding: 26px 24px;
+    box-shadow: 0 1px 3px rgba(13,27,78,.04), 0 12px 32px rgba(13,27,78,.06);
+    text-align: center;
+  }
+  .flow-stap { animation: flowPulse 4s ease-in-out infinite; }
+  .flow-2 { animation-delay: 1.4s; }
+  @keyframes flowPulse {
+    0%, 60%, 100% { opacity: .55; transform: scale(.985); }
+    20%, 40%      { opacity: 1;   transform: scale(1); }
+  }
+  .flow-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+  }
+  .flow-card {
+    background: linear-gradient(135deg, rgba(46,196,182,.08), rgba(46,196,182,.02));
+    border: 1px solid rgba(46,196,182,.22); border-radius: 10px;
+    padding: 14px 18px; font-size: 15px; color: var(--blauw); font-weight: 600;
+  }
+  .flow-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 13px; }
+  .flow-row + .flow-row { border-top: 1px solid rgba(229,234,242,.6); margin-top: 4px; padding-top: 8px; }
+  .flow-row span:first-child { color: var(--grijs); font-weight: 500; }
+  .flow-num { color: var(--accent); font-weight: 700; }
+  .flow-arrow { font-size: 22px; color: var(--accent); margin: 14px 0; animation: flowDrop 4s ease-in-out infinite; }
+  @keyframes flowDrop {
+    0%, 30%, 100% { transform: translateY(0); opacity: .4; }
+    50%, 70%      { transform: translateY(4px); opacity: 1; }
+  }
+
+  @media (max-width: 900px) {
+    .onmisbaar-grid { grid-template-columns: 1fr; gap: 32px; }
+    .verlies-naar-oplossing li { grid-template-columns: 1fr; gap: 4px; text-align: left; }
+    .vno-pijl { display: none; }
+  }
+
   /* ── FIT SECTIE — voor wie wel/niet ── */
   .fit-sectie { background: #fff; padding: 80px 24px; }
   .fit-sectie .container { max-width: 1080px; margin: 0 auto; }
@@ -1320,6 +1377,51 @@
 </section>
 
 <!-- ── FUNCTIES ── -->
+<!-- ── ONMISBAAR — wat je normaal kwijt bent ── -->
+<section class="onmisbaar-sectie" aria-labelledby="onmisbaar-heading">
+  <div class="container">
+    <div class="onmisbaar-grid">
+      <div>
+        <p class="section-label">Wat je normaal kwijt bent</p>
+        <h2 id="onmisbaar-heading">Niet meer puzzelen.</h2>
+        <p class="sub-tekst">Drie dingen die elke ZZP'er kost: tijd zoeken, BTW uitrekenen, facturen bijhouden. Hier zijn ze er gewoon.</p>
+        <ul class="verlies-naar-oplossing" role="list">
+          <li>
+            <span class="vno-was">Zoeken naar cijfers in Excel + bonnen-doos</span>
+            <span class="vno-pijl" aria-hidden="true">→</span>
+            <span class="vno-nu"><strong>Direct zichtbaar</strong> op één dashboard</span>
+          </li>
+          <li>
+            <span class="vno-was">BTW per factuur handmatig uitrekenen</span>
+            <span class="vno-pijl" aria-hidden="true">→</span>
+            <span class="vno-nu"><strong>Al gedaan</strong> — kwartaal-aangifte 1 klik</span>
+          </li>
+          <li>
+            <span class="vno-was">Wie heeft niet betaald, wat staat open?</span>
+            <span class="vno-pijl" aria-hidden="true">→</span>
+            <span class="vno-nu"><strong>Automatisch</strong> bijgehouden + herinneringen</span>
+          </li>
+        </ul>
+      </div>
+      <div class="onmisbaar-flow" aria-hidden="true">
+        <!-- CSS-only animated mini-flow: factuur → dashboard update -->
+        <div class="flow-stap flow-1">
+          <div class="flow-label">Factuur ingevoerd</div>
+          <div class="flow-card">€1.240 + 21% BTW</div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-stap flow-2">
+          <div class="flow-label">Dashboard update</div>
+          <div class="flow-card">
+            <div class="flow-row"><span>Omzet YTD</span><span class="flow-num">+€1.240</span></div>
+            <div class="flow-row"><span>BTW Q2</span><span class="flow-num">+€260</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ── EXPERT MOMENT — voor wie wel/niet ── -->
 <section class="fit-sectie" aria-labelledby="fit-heading">
   <div class="container">
