@@ -134,6 +134,28 @@ function vernieuwDashboard() {
   let rij = 7;
   rij = schrijfWaarschuwingen_(sheet, ss, kpi, rij, herhalendeResult.komend);
 
+  // ── ANOMALIE-DETECTIE (AI-feel zonder AI) ───────────────────────────
+  // Scant recente boekingen op afwijkingen die aandacht verdienen.
+  try {
+    const afwijkingen = detecteerAfwijkingen_(ss);
+    if (afwijkingen.length > 0) {
+      rij++;
+      sheet.getRange(rij, 1, 1, 8).merge()
+        .setValue('⚠ ' + afwijkingen.length + (afwijkingen.length === 1 ? ' afwijking' : ' afwijkingen') + ' gedetecteerd — even checken')
+        .setBackground('#FFF4E5').setFontColor('#7A4A00')
+        .setFontWeight('bold').setFontSize(11)
+        .setHorizontalAlignment('center');
+      sheet.setRowHeight(rij, 26);
+      afwijkingen.slice(0, 3).forEach(function(a) {
+        rij++;
+        sheet.getRange(rij, 1, 1, 8).merge()
+          .setValue('  • ' + a.tekst)
+          .setBackground('#FFFBF0').setFontColor('#7A4A00')
+          .setFontSize(10).setWrap(true);
+      });
+    }
+  } catch (e) { Logger.log('Anomalie-detectie: ' + e.message); }
+
   // ── BTW-indicatie kwartaal (intelligence-feel) ───────────────────────
   // Geeft proactief een schatting voor het lopende kwartaal — niet exact
   // maar als 'persoonlijke assistent'-signaal. Bouwt vertrouwen voor
@@ -406,6 +428,66 @@ function berekenRoiData_(ss, kpi) {
   const tijdsBesparing = Math.round(totalMin / 60);
 
   return { aantalFacturen, omzetGeind, btwVerwerkt, aantalBoekingen, tijdsBesparing };
+}
+
+// ─────────────────────────────────────────────
+//  ANOMALIE-DETECTIE — AI-feel zonder AI
+// ─────────────────────────────────────────────
+/**
+ * Scant recente boekingen op afwijkingen die normaal niet voorkomen.
+ * Geeft per afwijking een actiegerichte tekst voor het Dashboard.
+ * Patterns:
+ *  - Verkoopfactuur met BTW 0% terwijl meeste 21% zijn → verlegd? export?
+ *  - Inkoop zonder kostenrekening
+ *  - Bedrag-uitschieter (>3x maandgemiddelde)
+ */
+function detecteerAfwijkingen_(ss) {
+  const afwijkingen = [];
+  try {
+    const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+    if (vfSheet && vfSheet.getLastRow() > 5) {
+      const data = vfSheet.getDataRange().getValues();
+      // Tel BTW-tarieven van laatste 30 dagen
+      const dertigDagen = new Date(Date.now() - 30 * 86400000);
+      let aantal21 = 0, aantal0 = 0;
+      const nul21Refs = [];
+      for (let i = 1; i < data.length; i++) {
+        const datum = data[i][2] ? new Date(data[i][2]) : null;
+        if (!datum || datum < dertigDagen) continue;
+        const tarief = String(data[i][10] || '');
+        if (tarief.indexOf('21') !== -1) aantal21++;
+        else if (tarief.indexOf('0%') !== -1 || tarief.indexOf('0 ') === 0) {
+          aantal0++;
+          nul21Refs.push(data[i][1]);
+        }
+      }
+      // Als ≥3 facturen 21% en 1+ factuur 0% (zonder reden) → flag
+      if (aantal21 >= 3 && aantal0 > 0 && aantal0 < aantal21) {
+        afwijkingen.push({
+          tekst: nul21Refs.length + ' factu(u)r(en) met 0% BTW deze maand: ' + nul21Refs.slice(0, 3).join(', ') +
+                 (nul21Refs.length > 3 ? '…' : '') + ' — check of dit klopt (KOR/verlegd/export?)',
+        });
+      }
+    }
+
+    // Inkoopfacturen zonder categorisatie/kostenrekening
+    const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+    if (ifSheet && ifSheet.getLastRow() > 1) {
+      const data = ifSheet.getDataRange().getValues();
+      let zonderCat = 0;
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] && !data[i][9]) zonderCat++;  // kolom 9 = kostenrekening
+      }
+      if (zonderCat >= 3) {
+        afwijkingen.push({
+          tekst: zonderCat + ' inkopen zonder kostenrekening — categoriseer voor correcte rapportages',
+        });
+      }
+    }
+  } catch (e) {
+    Logger.log('detecteerAfwijkingen_: ' + e.message);
+  }
+  return afwijkingen;
 }
 
 // ─────────────────────────────────────────────
