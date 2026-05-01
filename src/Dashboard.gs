@@ -188,7 +188,11 @@ function vernieuwDashboard() {
   rij++;
   try {
     const advies = berekenBelastingadvies_(ss);
-    const topAdviezen = advies.adviezen.filter(a => a.type === 'VOORDEEL' || a.type === 'ACTIE' || a.type === 'WAARSCHUWING').slice(0, 3);
+    // Skip BTW-deadline ACTIE — wordt al door waarschuwingen-rij getoond, geen duplicate.
+    const topAdviezen = advies.adviezen
+      .filter(a => a.type === 'VOORDEEL' || a.type === 'ACTIE' || a.type === 'WAARSCHUWING')
+      .filter(a => !/btw\s*aangifte.*deadline/i.test(String(a.titel || '')))
+      .slice(0, 3);
     if (topAdviezen.length > 0 || advies.totaalAftrek > 0) {
       sheet.getRange(rij, 1, 1, 8).merge()
         .setValue('💡 BELASTINGADVIES  |  Totaal aftrekposten: ' + formatBedrag_(advies.totaalAftrek) +
