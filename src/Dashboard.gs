@@ -413,6 +413,42 @@ function vernieuwDashboard() {
     sheet.setRowHeight(rij, 22);
   }
 
+  // ── SNELLE ACTIES — onderaan command-center ──────────────────────────
+  rij += 2;
+  sheet.getRange(rij, 1, 1, 8).merge()
+    .setValue('SNELLE ACTIES')
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
+    .setFontWeight('bold').setFontSize(11).setHorizontalAlignment('center');
+  sheet.setRowHeight(rij, 26);
+  rij++;
+  const snelleActies = [
+    { icon: '+', titel: 'Nieuwe boeking',      sub: 'Factuur · kosten · declaratie' },
+    { icon: '€', titel: 'BTW-aangifte',        sub: 'Genereer kwartaal-aangifte' },
+    { icon: '⛁', titel: 'Bank importeren',    sub: 'CSV-afschrift verwerken' },
+    { icon: '✓', titel: 'Gezondheidscheck',    sub: 'Controleer admin-kwaliteit' },
+  ];
+  snelleActies.forEach(function(a, i) {
+    const col = i * 2 + 1;
+    sheet.getRange(rij, col, 1, 2).merge()
+      .setValue(a.icon + '  ' + a.titel)
+      .setBackground('#F7F9FC').setFontColor(KLEUREN.HEADER_BG)
+      .setFontWeight('bold').setFontSize(11).setHorizontalAlignment('center')
+      .setBorder(true, true, false, true, false, false, '#E5EAF2', SpreadsheetApp.BorderStyle.SOLID);
+    sheet.getRange(rij + 1, col, 1, 2).merge()
+      .setValue(a.sub)
+      .setBackground('#F7F9FC').setFontColor('#5F6B7A')
+      .setFontSize(9).setHorizontalAlignment('center')
+      .setBorder(false, true, true, true, false, false, '#E5EAF2', SpreadsheetApp.BorderStyle.SOLID);
+  });
+  sheet.setRowHeight(rij, 24);
+  sheet.setRowHeight(rij + 1, 20);
+  rij += 2;
+  sheet.getRange(rij, 1, 1, 8).merge()
+    .setValue('Open via menu: Boekhoudbaar → Nieuwe boeking · BTW · Bank · Controle & Export → Gezondheidscheck')
+    .setBackground('#FAFBFC').setFontColor('#5F6B7A')
+    .setFontSize(9).setFontStyle('italic').setHorizontalAlignment('center');
+  sheet.setRowHeight(rij, 22);
+
   ss.setActiveSheet(sheet);
 
   // First-run empty-state hint: als alles nul is én bedrijfsnaam nog op
