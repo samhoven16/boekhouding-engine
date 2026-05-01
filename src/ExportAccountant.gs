@@ -315,30 +315,50 @@ function maakBackup() {
 
   try {
     // XLSX export via de Google Sheets export-URL (vereist OAuth-token van de eigenaar)
-    const exportUrl = 'https://docs.google.com/spreadsheets/d/' + ssId +
-                      '/export?format=xlsx&access_token=' +
-                      encodeURIComponent(ScriptApp.getOAuthToken());
-    const blob = UrlFetchApp.fetch(
+    const resp = UrlFetchApp.fetch(
       'https://docs.google.com/spreadsheets/d/' + ssId + '/export?format=xlsx',
       { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
         muteHttpExceptions: true }
-    ).getBlob().setName(bestandsnaam);
+    );
+    const code = resp.getResponseCode();
+    if (code < 200 || code >= 300) {
+      throw new Error('Google Sheets export gaf HTTP ' + code + ' \u2014 heb je voldoende Drive-rechten?');
+    }
+    const blob = resp.getBlob().setName(bestandsnaam);
+    if (blob.getBytes().length < 1000) {
+      throw new Error('Backup-bestand is verdacht klein (' + blob.getBytes().length + ' bytes). Mogelijk auth-probleem.');
+    }
 
-    // Sla op in de map "Boekhouding Backups" (aanmaken als die niet bestaat)
+    // Sla op in de map "Boekhouding Backups" (aanmaken als die niet bestaat).
+    // Pak de oudste matchende map zodat backups bij elkaar blijven, ook bij dubbele.
     const mappen = DriveApp.getFoldersByName('Boekhouding Backups');
-    const map = mappen.hasNext() ? mappen.next() : DriveApp.createFolder('Boekhouding Backups');
+    let map;
+    if (mappen.hasNext()) {
+      map = mappen.next();
+    } else {
+      map = DriveApp.createFolder('Boekhouding Backups');
+    }
     const file = map.createFile(blob);
+    const fileUrl = file.getUrl();
+    const mapUrl  = map.getUrl();
 
     ui.alert('Backup gemaakt',
       'Backup opgeslagen als:\n' + bestandsnaam +
-      '\n\nLocatie: Google Drive \u2192 Boekhouding Backups\n\n' +
+      '\n\nGrootte: ' + Math.round(blob.getBytes().length / 1024) + ' KB' +
+      '\nLocatie: Google Drive \u2192 Boekhouding Backups\n' +
+      'Map: ' + mapUrl + '\n\n' +
       'Tip: maak maandelijks een backup om te voldoen aan de 7-jaar bewaarplicht.',
       ui.ButtonSet.OK);
 
-    Logger.log('Backup aangemaakt: ' + file.getUrl());
+    Logger.log('Backup aangemaakt: ' + fileUrl);
+    try { schrijfAuditLog_('Backup', 'XLSX gemaakt: ' + bestandsnaam + ' (' + Math.round(blob.getBytes().length / 1024) + ' KB)'); } catch (_) {}
   } catch (e) {
     Logger.log('Backup mislukt: ' + e.message);
-    ui.alert('Backup mislukt', 'Er ging iets mis: ' + e.message, ui.ButtonSet.OK);
+    try { schrijfAuditLog_('FOUT Backup', e.message); } catch (_) {}
+    ui.alert('Backup mislukt',
+      'Er ging iets mis:\n\n' + e.message +
+      '\n\nMogelijke oorzaken:\n\u2022 Drive-quota vol \u2014 ruim ruimte op\n\u2022 Geen schrijfrechten op Drive\n\u2022 Tijdelijke Google API-fout \u2014 probeer over een minuut opnieuw',
+      ui.ButtonSet.OK);
   }
 }
 
