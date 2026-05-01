@@ -431,6 +431,32 @@
   h2 { font-size: clamp(30px, 3.8vw, 46px); font-weight: 800; line-height: 1.12; letter-spacing: -0.022em; color: var(--blauw); }
   .sub-tekst { font-size: 18px; color: var(--grijs); margin-top: 14px; max-width: 640px; line-height: 1.55; letter-spacing: -0.005em; }
 
+  /* ── FIT SECTIE — voor wie wel/niet ── */
+  .fit-sectie { background: #fff; padding: 80px 24px; }
+  .fit-sectie .container { max-width: 1080px; margin: 0 auto; }
+  .fit-sectie h2 { font-size: clamp(26px, 3.4vw, 38px); }
+  .fit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; }
+  .fit-kaart {
+    border-radius: 16px; padding: 28px 30px;
+    border: 1px solid rgba(229,234,242,.8);
+    box-shadow: 0 1px 3px rgba(13,27,78,.04), 0 12px 32px rgba(13,27,78,.04);
+  }
+  .fit-ja { background: linear-gradient(180deg, rgba(46,196,182,.06) 0%, transparent 50%); border-color: rgba(46,196,182,.28); }
+  .fit-nee { background: linear-gradient(180deg, rgba(220,38,38,.04) 0%, transparent 50%); border-color: rgba(220,38,38,.18); }
+  .fit-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .fit-head strong { font-size: 17px; letter-spacing: -0.01em; color: var(--blauw); }
+  .fit-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800;
+  }
+  .fit-ja .fit-icon { background: rgba(46,196,182,.18); color: #0E8C7E; }
+  .fit-nee .fit-icon { background: rgba(220,38,38,.12); color: #B91C1C; }
+  .fit-kaart ul { list-style: none; padding: 0; margin: 0; }
+  .fit-kaart li { padding: 8px 0; font-size: 15px; color: var(--tekst); line-height: 1.5; border-bottom: 1px solid rgba(229,234,242,.6); }
+  .fit-kaart li:last-child { border-bottom: none; }
+  @media (max-width: 720px) { .fit-grid { grid-template-columns: 1fr; gap: 16px; } }
+
   /* ── TRUST LAYER ── */
   .trust-sectie { background: var(--bg); padding: 80px 24px; }
   .trust-sectie .container { max-width: 880px; margin: 0 auto; }
@@ -1218,6 +1244,43 @@
 </section>
 
 <!-- ── FUNCTIES ── -->
+<!-- ── EXPERT MOMENT — voor wie wel/niet ── -->
+<section class="fit-sectie" aria-labelledby="fit-heading">
+  <div class="container">
+    <p class="section-label">Voor wie dit is — en niet</p>
+    <h2 id="fit-heading">Wanneer dit voor jou werkt (en wanneer niet).</h2>
+    <p class="sub-tekst">Ik schrijf liever vooraf wie hier niet bij past dan dat je achteraf teleurgesteld bent.</p>
+    <div class="fit-grid">
+      <div class="fit-kaart fit-ja">
+        <div class="fit-head">
+          <span class="fit-icon" aria-hidden="true">✓</span>
+          <strong>Werkt wél voor</strong>
+        </div>
+        <ul role="list">
+          <li>ZZP'ers en eenmanszaken</li>
+          <li>Kleine BV met 1 administratie</li>
+          <li>Mensen die zelf controle willen over hun data</li>
+          <li>Wie genoeg heeft van maandelijkse abonnementen</li>
+          <li>Boekhouders die meekijken in een sheet (gratis)</li>
+        </ul>
+      </div>
+      <div class="fit-kaart fit-nee">
+        <div class="fit-head">
+          <span class="fit-icon" aria-hidden="true">✗</span>
+          <strong>Werkt níet voor</strong>
+        </div>
+        <ul role="list">
+          <li>Complexe BV-structuren met meerdere entiteiten</li>
+          <li>Internationale BTW-constructies (OSS, ICP buiten EU)</li>
+          <li>Loonadministratie / salarisverwerking</li>
+          <li>Bedrijven met &gt;500 facturen per maand</li>
+          <li>Wie liever een traditioneel SaaS-pakket heeft met support-team</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="functies">
   <div class="container">
     <p class="section-label">Wat er écht in zit</p>
