@@ -106,16 +106,39 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 .btn-sec{background:#F7F9FC;color:var(--pk);border:1px solid #E5EAF2}
 .btn-sec:hover{background:#EEF2F8;border-color:#CFD8E3}
 /* ── BEVESTIGING ── */
-.klaar{text-align:center;padding:36px 20px 20px;animation:fadeIn .3s ease}
-.klaar .groot-icoon{font-size:52px;margin-bottom:12px;animation:bounceIn .7s cubic-bezier(.68,-0.55,.265,1.55)}
-.klaar h3{color:var(--pk);font-size:20px;margin:14px 0 6px;letter-spacing:-.012em;font-weight:700}
-.klaar p{color:#555;font-size:14px;line-height:1.55}
-.check-ring{display:inline-block;margin-bottom:6px}
-.check-ring svg{transform:rotate(-90deg);overflow:visible}
-.check-ring circle{transition:stroke-dashoffset .55s cubic-bezier(.2,.7,.2,1)}
-.check-ring path{transition:stroke-dashoffset .35s cubic-bezier(.2,.7,.2,1);transform-origin:center;transform:rotate(90deg)}
+.klaar{
+  text-align:center;padding:40px 20px 24px;position:relative;
+  animation:klaarAppear .55s cubic-bezier(.16,.84,.4,1) .15s both;
+}
+@keyframes klaarAppear{
+  from{opacity:0;transform:scale(.96)}
+  to  {opacity:1;transform:scale(1)}
+}
+.klaar::before{
+  content:"";position:absolute;inset:-20px 0 30%;
+  background:radial-gradient(ellipse 70% 80% at 50% 30%, rgba(46,196,182,.18), transparent 70%);
+  pointer-events:none;opacity:0;
+  animation:klaarGlow 1.4s ease-out .35s forwards;
+}
+@keyframes klaarGlow{
+  0%  {opacity:0}
+  30% {opacity:1}
+  100%{opacity:.4}
+}
+.klaar > *{position:relative}
+.klaar h3{color:var(--pk);font-size:20px;margin:16px 0 6px;letter-spacing:-.012em;font-weight:700;
+  animation:klaarRise .6s cubic-bezier(.16,.84,.4,1) .55s both}
+.klaar p{color:#555;font-size:14px;line-height:1.55;
+  animation:klaarRise .6s cubic-bezier(.16,.84,.4,1) .65s both}
+@keyframes klaarRise{
+  from{opacity:0;transform:translateY(6px)}
+  to  {opacity:1;transform:translateY(0)}
+}
+.check-ring{display:inline-block;margin-bottom:8px}
+.check-ring svg{transform:rotate(-90deg);overflow:visible;filter:drop-shadow(0 6px 18px rgba(46,196,182,.4))}
+.check-ring circle{transition:stroke-dashoffset .65s cubic-bezier(.2,.7,.2,1)}
+.check-ring path{transition:stroke-dashoffset .4s cubic-bezier(.2,.7,.2,1);transform-origin:center;transform:rotate(90deg)}
 .check-ring path{transform:rotate(0deg)}
-.check-ring svg{filter:drop-shadow(0 4px 12px rgba(46,196,182,.32))}
 @keyframes bounceIn{0%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.15)}70%{transform:scale(.95)}100%{transform:scale(1)}}
 /* ── SECTIELABELS ── */
 .sectie{font-size:10px;font-weight:bold;color:var(--pk);text-transform:uppercase;
@@ -688,13 +711,13 @@ function toonKlaar(r, emailKlant) {
     + pdfLink
     + emailSectie
     + '</div>';
-  // Trigger ring-draw animation (CSS does the rest)
+  // Trigger ring-draw animation NA scale-in delay (150ms), zodat fadeIn voltooid is
   setTimeout(function() {
     var c = document.querySelector('.check-ring circle');
     var p = document.querySelector('.check-ring path');
     if (c) c.style.strokeDashoffset = '0';
-    if (p) setTimeout(function() { p.style.strokeDashoffset = '0'; }, 280);
-  }, 50);
+    if (p) setTimeout(function() { p.style.strokeDashoffset = '0'; }, 320);
+  }, 280);
   document.querySelector('.tabbar').style.display = 'none';
   var footer = document.querySelector('.footer');
   footer.innerHTML = '<button class="btn btn-pri" onclick="google.script.host.close()">Sluiten</button>'
