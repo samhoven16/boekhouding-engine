@@ -197,39 +197,39 @@ function controleerJournaalposten_(ss) {
     }
 
     resultaten.push({
-      check: 'Journaalposten – Totaal',
+      check: 'Boekingen – Totaal',
       status: 'OK',
-      bericht: `${aantalPosten} journaalposten gevonden.`,
+      bericht: `${aantalPosten} boekingen gevonden.`,
     });
 
     if (zelfboekingen > 0) {
       resultaten.push({
-        check: 'Journaalposten – Zelfboekingen',
+        check: 'Boekingen – Foutieve regels',
         status: 'FOUT',
-        bericht: `${zelfboekingen} journaalpost(en) hebben dezelfde rekening op debet én credit. Dit is altijd fout — dezelfde rekening kan niet tegelijkertijd debet en credit zijn.`,
+        bericht: `${zelfboekingen} boeking(en) hebben dezelfde rekening aan beide kanten. Dat kan niet — een boeking gaat altijd van één rekening naar een andere.`,
       });
     } else {
-      resultaten.push({ check: 'Journaalposten – Zelfboekingen', status: 'OK', bericht: 'Geen zelfboekingen gevonden.' });
+      resultaten.push({ check: 'Boekingen – Foutieve regels', status: 'OK', bericht: 'Geen foutieve regels gevonden.' });
     }
 
     if (nulBedragen > 0) {
       resultaten.push({
-        check: 'Journaalposten – Nulbedragen',
+        check: 'Boekingen – Nulbedragen',
         status: 'WAARSCHUWING',
-        bericht: `${nulBedragen} journaalpost(en) met bedrag €0,00. Controleer of dit correct is.`,
+        bericht: `${nulBedragen} boeking(en) met bedrag €0,00. Controleer of dit klopt.`,
       });
     }
 
     if (toekomstDatums > 0) {
       resultaten.push({
-        check: 'Journaalposten – Toekomstige datums',
+        check: 'Boekingen – Toekomstige datums',
         status: 'WAARSCHUWING',
-        bericht: `${toekomstDatums} journaalpost(en) met een datum in de toekomst. Controleer of dit bedoeld is.`,
+        bericht: `${toekomstDatums} boeking(en) met een datum in de toekomst. Controleer of dit bedoeld is.`,
       });
     }
 
   } catch (e) {
-    resultaten.push({ check: 'Journaalposten', status: 'FOUT', bericht: 'Fout bij controleren: ' + e.message });
+    resultaten.push({ check: 'Boekingen', status: 'FOUT', bericht: 'Fout bij controleren: ' + e.message });
   }
 
   return resultaten;
