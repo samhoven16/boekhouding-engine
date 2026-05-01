@@ -254,8 +254,11 @@ function berekenBelastingadvies_(ss) {
   }
 
   // ── 6. Reiskosten analyse ─────────────────────────────────────────────
+  // Alleen tonen als er ÜBERHAUPT al boekhouding is — anders confronteer je
+  // een nieuwe gebruiker met advies over iets wat hij nog niet eens
+  // gebruikt heeft (geeft 'aftrek-aanrekenen op €0 omzet'-gevoel).
   const reiskosten = getGrootboekSaldo_(ss, '7350');
-  if (reiskosten === 0) {
+  if (reiskosten === 0 && winst > 0) {
     adviezen.push({
       type: 'TIP',
       titel: '💡 Reiskosten aftrekken?',
