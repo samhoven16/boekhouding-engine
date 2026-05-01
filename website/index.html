@@ -667,16 +667,31 @@
     background: rgba(46,196,182,.14);
   }
   .btn-koop {
+    position: relative; overflow: hidden;
     display: block; width: 100%;
-    background: var(--blauw); color: var(--wit);
-    padding: 18px; border-radius: 10px;
+    background: linear-gradient(180deg, var(--blauw) 0%, #112256 100%);
+    color: var(--wit);
+    padding: 18px; border-radius: 12px;
     font-size: 17px; font-weight: 700; text-decoration: none;
+    letter-spacing: -0.01em;
     text-align: center; margin-top: 8px;
-    transition: background .15s;
+    box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 8px 24px rgba(13,27,78,.18);
+    transition: transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, background .2s ease;
     min-height: 56px; line-height: 1.3;
   }
-  .btn-koop { transition: background .15s ease, transform .15s ease, box-shadow .15s ease; }
-  .btn-koop:hover { background: var(--blauw-licht); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(13,27,78,.20); }
+  .btn-koop::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 30%, rgba(46,196,182,.30) 50%, transparent 70%);
+    transform: translateX(-100%);
+    transition: transform .8s cubic-bezier(.2,.7,.2,1);
+    pointer-events: none;
+  }
+  .btn-koop:hover::after { transform: translateX(100%); }
+  .btn-koop:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 16px 40px rgba(46,196,182,.25), 0 4px 8px rgba(13,27,78,.12);
+  }
+  .btn-koop:active { transform: translateY(0); transition-duration: .08s; }
   .garantie { font-size: 13px; color: var(--grijs); margin-top: 14px; }
 
   /* ── FAQ ── */
