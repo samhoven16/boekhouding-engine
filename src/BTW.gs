@@ -147,7 +147,79 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     aangifte[k] = rondBedrag_(aangifte[k]);
   });
 
+  // Self-check invariants — run after computation, voor het returned wordt.
+  // Wiskundige consistentie-controles. Bij afwijking → audit-log + waarschuwing
+  // op aangifte-object zodat de UI 'm kan tonen. Geen auto-fix — alleen detectie.
+  try {
+    const issues = valideerBtwInvariants_(aangifte);
+    if (issues.length > 0) {
+      aangifte._invariantIssues = issues;
+      schrijfAuditLog_('BTW invariants WAARSCHUWING',
+        issues.length + ' afwijking(en): ' + issues.map(function(i){return i.code;}).join(', '));
+    }
+  } catch (e) { Logger.log('BTW-invariants check: ' + e.message); }
+
   return aangifte;
+}
+
+/**
+ * Wiskundige invariants op berekende BTW-aangifte.
+ * Faalt het systeem ergens? Dan zien we het hier — niet bij de Belastingdienst.
+ * Tolerantie €0,02 voor rounding (GAS rondAfBredrag_ kan 1ct afwijking geven).
+ */
+function valideerBtwInvariants_(a) {
+  const issues = [];
+  const TOL = 0.02;
+  function near(x, y) { return Math.abs((x || 0) - (y || 0)) <= TOL; }
+
+  // 1. r1a_btw moet ongeveer r1a_grondslag * 0.21 zijn
+  if (a.r1a_grondslag > 0) {
+    const verwacht = rondBedrag_(a.r1a_grondslag * 0.21);
+    if (!near(a.r1a_btw, verwacht)) {
+      issues.push({ code: 'BTW-21-MISMATCH', tekst: '21%-rubriek BTW (' + a.r1a_btw + ') wijkt af van grondslag×21% (' + verwacht + ')' });
+    }
+  }
+
+  // 2. r1b_btw moet ongeveer r1b_grondslag * 0.09 zijn
+  if (a.r1b_grondslag > 0) {
+    const verwacht = rondBedrag_(a.r1b_grondslag * 0.09);
+    if (!near(a.r1b_btw, verwacht)) {
+      issues.push({ code: 'BTW-9-MISMATCH', tekst: '9%-rubriek BTW (' + a.r1b_btw + ') wijkt af van grondslag×9% (' + verwacht + ')' });
+    }
+  }
+
+  // 3. r5a (totaal verschuldigd) = som van rubrieken
+  const verschuldigdSom = rondBedrag_(
+    (a.r1a_btw || 0) + (a.r1b_btw || 0) + (a.r1c_btw || 0) +
+    (a.r1e_btw || 0) + (a.r3a_btw || 0) + (a.r4a_btw || 0)
+  );
+  if (!near(a.r5a, verschuldigdSom)) {
+    issues.push({ code: 'BTW-R5A-SOM', tekst: 'Totaal verschuldigd (r5a=' + a.r5a + ') wijkt af van som rubrieken (' + verschuldigdSom + ')' });
+  }
+
+  // 4. saldo = r5a - r5b (verschuldigd minus voorbelasting)
+  const saldoVerwacht = rondBedrag_((a.r5a || 0) - (a.r5b || 0));
+  if (!near(a.saldo, saldoVerwacht)) {
+    issues.push({ code: 'BTW-SALDO', tekst: 'Saldo (' + a.saldo + ') wijkt af van r5a−r5b (' + saldoVerwacht + ')' });
+  }
+
+  // 5. Geen NaN of oneindigheid
+  ['r1a_btw','r1b_btw','r5a','r5b','saldo'].forEach(function(k) {
+    const v = a[k];
+    if (v !== undefined && (!isFinite(v) || isNaN(v))) {
+      issues.push({ code: 'BTW-NAN', tekst: 'Ongeldige waarde voor ' + k + ': ' + v });
+    }
+  });
+
+  // 6. Negatieve grondslagen zijn verdacht (creditnota → wel mogelijk maar log)
+  if (a.r1a_grondslag < 0 || a.r1b_grondslag < 0) {
+    issues.push({
+      code: 'BTW-NEG-GRONDSLAG',
+      tekst: 'Negatieve grondslag(en) — vaak door creditnota; controleer dat dit klopt',
+    });
+  }
+
+  return issues;
 }
 
 // ─────────────────────────────────────────────
