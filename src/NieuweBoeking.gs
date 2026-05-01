@@ -41,11 +41,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;fo
 .veld label{display:block;font-size:10px;font-weight:bold;color:#666;text-transform:uppercase;
             letter-spacing:0.4px;margin-bottom:3px}
 input[type=text],input[type=email],input[type=number],input[type=date],select,textarea{
-  width:100%;padding:7px 9px;border:1.5px solid #DDD;border-radius:5px;font-size:13px;
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;transition:border-color 0.15s;background:white}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pk)}
-input.fout,select.fout{border-color:#c62828;background:#FFF5F5}
-input.ok{border-color:#2e7d32}
+  width:100%;padding:9px 11px;border:1px solid #E5EAF2;border-radius:8px;font-size:13.5px;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+  transition:border-color .15s ease,box-shadow .2s ease;background:white;color:#1A1A1A}
+input:hover,select:hover,textarea:hover{border-color:#CFD8E3}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pk);box-shadow:0 0 0 3px var(--pk-licht)}
+input.fout,select.fout{border-color:#DC2626;background:#FEF2F2;box-shadow:0 0 0 3px rgba(220,38,38,.1)}
+input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 .foutmelding{font-size:11px;color:#c62828;margin-top:2px;display:none}
 .foutmelding.zichtbaar{display:block}
 /* ── REGELLIJST ── */
