@@ -106,10 +106,16 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 .btn-sec{background:#F7F9FC;color:var(--pk);border:1px solid #E5EAF2}
 .btn-sec:hover{background:#EEF2F8;border-color:#CFD8E3}
 /* ── BEVESTIGING ── */
-.klaar{text-align:center;padding:30px 20px;animation:fadeIn .3s ease}
+.klaar{text-align:center;padding:36px 20px 20px;animation:fadeIn .3s ease}
 .klaar .groot-icoon{font-size:52px;margin-bottom:12px;animation:bounceIn .7s cubic-bezier(.68,-0.55,.265,1.55)}
-.klaar h3{color:var(--pk);font-size:18px;margin-bottom:8px;letter-spacing:-.01em}
-.klaar p{color:#555;font-size:13px;line-height:1.6}
+.klaar h3{color:var(--pk);font-size:20px;margin:14px 0 6px;letter-spacing:-.012em;font-weight:700}
+.klaar p{color:#555;font-size:14px;line-height:1.55}
+.check-ring{display:inline-block;margin-bottom:6px}
+.check-ring svg{transform:rotate(-90deg);overflow:visible}
+.check-ring circle{transition:stroke-dashoffset .55s cubic-bezier(.2,.7,.2,1)}
+.check-ring path{transition:stroke-dashoffset .35s cubic-bezier(.2,.7,.2,1);transform-origin:center;transform:rotate(90deg)}
+.check-ring path{transform:rotate(0deg)}
+.check-ring svg{filter:drop-shadow(0 4px 12px rgba(46,196,182,.32))}
 @keyframes bounceIn{0%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.15)}70%{transform:scale(.95)}100%{transform:scale(1)}}
 /* ── SECTIELABELS ── */
 .sectie{font-size:10px;font-weight:bold;color:var(--pk);text-transform:uppercase;
@@ -665,17 +671,30 @@ function toonKlaar(r, emailKlant) {
       + '<div id="email-status" style="margin-top:4px;font-size:11px;color:#555"></div>'
       + '</div>';
   }
-  // Vervang panels met succes-melding
+  // Subtle dopamine-feedback: confetti-burst + \u2713 animation
+  var loftBericht = r.factuurnummer
+    ? 'Factuur ' + r.factuurnummer + ' staat erin'
+    : 'Verwerkt \u2014 je administratie is weer bij';
   document.querySelector('.panels').innerHTML =
     '<div class="klaar">'
-    + '<div class="groot-icoon">\u2705</div>'
-    + '<h3>' + (r.factuurnummer ? 'Factuur ' + r.factuurnummer + ' aangemaakt!' : 'Opgeslagen!') + '</h3>'
-    + '<p>' + escHtml(r.bericht || '') + '</p>'
-    + (r.emailVerzonden ? '<p style="margin-top:8px;color:#2e7d32">\ud83d\udce7 E-mail verstuurd!</p>' : '')
-    + (r.bonUrl ? '<p style="margin-top:8px;color:#2e7d32">\ud83d\udcc4 Bon opgeslagen in Google Drive.</p>' : '')
+    + '<div class="check-ring"><svg viewBox="0 0 52 52" width="64" height="64" aria-hidden="true">'
+    + '<circle cx="26" cy="26" r="24" stroke="#2EC4B6" stroke-width="2.5" fill="none" stroke-dasharray="151" stroke-dashoffset="151"/>'
+    + '<path d="M14 27 l8 8 l16 -18" stroke="#2EC4B6" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="48" stroke-dashoffset="48"/>'
+    + '</svg></div>'
+    + '<h3>' + escHtml(loftBericht) + '</h3>'
+    + (r.factuurnummer ? '<p style="color:#5F6B7A">' + escHtml(r.bericht || 'Klant kan dit factuur ontvangen.') + '</p>' : '<p style="color:#5F6B7A">' + escHtml(r.bericht || '') + '</p>')
+    + (r.emailVerzonden ? '<p style="margin-top:8px;color:#0E8C7E;font-weight:600">\u2709 Mail verzonden naar klant</p>' : '')
+    + (r.bonUrl ? '<p style="margin-top:8px;color:#0E8C7E;font-weight:600">\u25fb Bon in Drive opgeslagen</p>' : '')
     + pdfLink
     + emailSectie
     + '</div>';
+  // Trigger ring-draw animation (CSS does the rest)
+  setTimeout(function() {
+    var c = document.querySelector('.check-ring circle');
+    var p = document.querySelector('.check-ring path');
+    if (c) c.style.strokeDashoffset = '0';
+    if (p) setTimeout(function() { p.style.strokeDashoffset = '0'; }, 280);
+  }, 50);
   document.querySelector('.tabbar').style.display = 'none';
   var footer = document.querySelector('.footer');
   footer.innerHTML = '<button class="btn btn-pri" onclick="google.script.host.close()">Sluiten</button>'
