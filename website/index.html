@@ -221,8 +221,8 @@
   }
   .hero-grid {
     position: relative; z-index: 1;
-    max-width: 1280px; margin: 0 auto;
-    display: grid; grid-template-columns: 1.1fr 1fr;
+    max-width: 1320px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1.18fr;
     gap: 56px; align-items: center;
   }
   .hero-content { text-align: left; }
@@ -236,17 +236,18 @@
     0%, 100% { transform: perspective(1400px) rotateY(-6deg) rotateX(2deg) translateY(0); }
     50%      { transform: perspective(1400px) rotateY(-6deg) rotateX(2deg) translateY(-8px); }
   }
-  .hero-product:hover { transform: perspective(1400px) rotateY(-3deg) rotateX(1deg) scale(1.02); animation-play-state: paused; }
+  .hero-product:hover { transform: perspective(1400px) rotateY(-3deg) rotateX(1deg) scale(1.025); animation-play-state: paused; }
   .hero-product-frame {
     position: relative;
-    border-radius: 14px; overflow: hidden;
+    border-radius: 16px; overflow: hidden;
     background: #fff;
     box-shadow:
       0 1px 0 rgba(255,255,255,.1) inset,
       0 4px 12px rgba(0,0,0,.18),
-      0 32px 80px rgba(0,0,0,.4),
-      0 80px 180px rgba(46,196,182,.12);
+      0 36px 96px rgba(0,0,0,.45),
+      0 96px 220px rgba(46,196,182,.14);
     border: 1px solid rgba(255,255,255,.08);
+    transition: filter .4s ease;
   }
   .hero-product-frame::before {
     content: ""; position: absolute; inset: 0; pointer-events: none;
@@ -254,6 +255,18 @@
     z-index: 1;
   }
   .hero-product-frame img { display: block; width: 100%; height: auto; }
+  .hero-product:hover .hero-product-frame { filter: contrast(1.03) saturate(1.06); }
+  /* Reflection — subtle mirror onder frame */
+  .hero-product::after {
+    content: ""; position: absolute;
+    left: 4%; right: 4%; top: 100%;
+    height: 32%;
+    background: linear-gradient(180deg, rgba(46,196,182,.18), transparent 70%);
+    filter: blur(28px);
+    transform: scaleY(.5) translateY(-30%);
+    opacity: .55;
+    pointer-events: none; z-index: -2;
+  }
   /* Cursor-follow glow met magnetic lag (transition op vars) */
   .hero-product::before {
     content: ""; position: absolute; inset: -20px;
@@ -273,10 +286,11 @@
   .data-float {
     position: absolute;
     font-size: 12px; font-weight: 600;
-    color: rgba(255,255,255,.10);
+    color: rgba(255,255,255,.05);
     font-family: 'JetBrains Mono', 'Menlo', monospace;
     letter-spacing: -0.01em;
-    animation: floatData 18s linear infinite;
+    filter: blur(.6px);
+    animation: floatData 22s linear infinite;
     white-space: nowrap;
   }
   @keyframes floatData {
@@ -402,8 +416,8 @@
     pointer-events: none;
   }
   .btn-primair:hover::before { transform: translateX(100%); }
-  .btn-primair:hover { transform: translateY(-2px); box-shadow: 0 18px 42px rgba(46,196,182,.32), 0 2px 4px rgba(0,0,0,.1); background: #F8FDFC; }
-  .btn-primair:active { transform: translateY(0); transition-duration: .08s; }
+  .btn-primair:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 22px 56px rgba(46,196,182,.36), 0 4px 10px rgba(0,0,0,.12); background: #F8FDFC; }
+  .btn-primair:active { transform: scale(.97) translateY(0); transition-duration: .08s; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
   .btn-primair > * { position: relative; }
   .btn-secundair {
     display: inline-flex; align-items: center; gap: 8px;
@@ -942,10 +956,10 @@
   }
   .btn-koop:hover::after { transform: translateX(100%); }
   .btn-koop:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 16px 40px rgba(46,196,182,.25), 0 4px 8px rgba(13,27,78,.12);
+    transform: translateY(-2px) scale(1.015);
+    box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 22px 52px rgba(46,196,182,.3), 0 4px 10px rgba(13,27,78,.16);
   }
-  .btn-koop:active { transform: translateY(0); transition-duration: .08s; }
+  .btn-koop:active { transform: scale(.97); transition-duration: .08s; }
   .garantie { font-size: 13px; color: var(--grijs); margin-top: 14px; }
 
   /* ── FAQ ── */
@@ -1223,17 +1237,14 @@
 <!-- ── HERO ── -->
 <header class="hero" aria-labelledby="hero-heading">
   <div class="hero-grid-data" aria-hidden="true">
-    <span class="data-float" style="left:8%;  top:65%;">+€1.240</span>
-    <span class="data-float" style="left:24%; top:80%; animation-delay:3s;">BTW Q2 €312</span>
-    <span class="data-float" style="left:42%; top:88%; animation-delay:6s;">Factuur F-1024</span>
-    <span class="data-float" style="left:58%; top:74%; animation-delay:9s;">−€89,50</span>
-    <span class="data-float" style="left:74%; top:82%; animation-delay:12s;">+€2.480</span>
-    <span class="data-float" style="left:88%; top:68%; animation-delay:15s;">KOR ✓</span>
+    <span class="data-float" style="left:10%; top:78%;">Factuur #1024 betaald</span>
+    <span class="data-float" style="left:48%; top:84%; animation-delay:7s;">BTW Q2 €312</span>
+    <span class="data-float" style="left:80%; top:76%; animation-delay:14s;">+€1.240 omzet</span>
   </div>
   <div class="hero-grid">
     <div class="hero-content">
       <div class="hero-badge">Eenmalig €49 · Geen abonnement, nooit</div>
-      <h1 id="hero-heading">Doe je boekhouding in <em><span class="rotor"><span class="rotor-w" data-words="15 minuten|±15 min|vaak sneller">15 minuten</span></span></em> per maand.</h1>
+      <h1 id="hero-heading">Doe je boekhouding in <em>15 minuten</em> per maand.</h1>
       <p class="hero-sub">
         Facturen, BTW-aangifte en overzicht — geregeld in één Google Sheet op jouw eigen Drive. Eenmalig €49. Geen abonnement, geen boekhoudsoftware die je elke maand opnieuw moet leren.
       </p>
@@ -1273,23 +1284,23 @@
     <ul class="trust-feiten" role="list">
       <li>
         <span class="trust-icon" aria-hidden="true">▦</span>
-        <div><strong>Google Sheets + Apps Script</strong>
-        <p>Het systeem draait in een gewone Google Spreadsheet, met scripts die acties automatiseren (factuur maken, BTW berekenen).</p></div>
+        <div><strong>Google-infrastructuur</strong>
+        <p>Draait op dezelfde systemen als Gmail en Docs.</p></div>
       </li>
       <li>
         <span class="trust-icon" aria-hidden="true">↺</span>
-        <div><strong>Data in jouw eigen Drive</strong>
-        <p>Het bestand staat op jouw Google Drive. Niet op mijn server, niet op een derde partij. Jij bent eigenaar, jij bepaalt toegang.</p></div>
+        <div><strong>Jouw data</strong>
+        <p>Staat alleen in jouw eigen Google Drive.</p></div>
       </li>
       <li>
         <span class="trust-icon" aria-hidden="true">⛨</span>
-        <div><strong>Google-infrastructuur</strong>
-        <p>Zelfde uptime, beveiliging en backup als Gmail of Docs. Geen extra single-point-of-failure die ik onderhoud.</p></div>
+        <div><strong>Geen toegang</strong>
+        <p>Ik kan je boekhouding niet zien of kopiëren.</p></div>
       </li>
       <li>
         <span class="trust-icon" aria-hidden="true">∅</span>
-        <div><strong>Ik heb geen toegang tot je data</strong>
-        <p>Het bestand is van jou. Ik kan het niet lezen, kopiëren of verwijderen — zelfs als ik dat zou willen.</p></div>
+        <div><strong>Geen vendor-lock</strong>
+        <p>Stop je ooit? Sheet werkt door, data blijft van jou.</p></div>
       </li>
     </ul>
     <div class="trust-context">

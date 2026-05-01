@@ -141,17 +141,19 @@ function vernieuwDashboard() {
     if (afwijkingen.length > 0) {
       rij++;
       sheet.getRange(rij, 1, 1, 8).merge()
-        .setValue('⚠ ' + afwijkingen.length + (afwijkingen.length === 1 ? ' afwijking' : ' afwijkingen') + ' gedetecteerd — even checken')
-        .setBackground('#FFF4E5').setFontColor('#7A4A00')
-        .setFontWeight('bold').setFontSize(11)
-        .setHorizontalAlignment('center');
-      sheet.setRowHeight(rij, 26);
+        .setValue('⚠ ' + afwijkingen.length + (afwijkingen.length === 1 ? ' afwijking' : ' afwijkingen') + ' gedetecteerd — dit wijkt af van normaal gedrag')
+        .setBackground('#FFE8C7').setFontColor('#7A4A00')
+        .setFontWeight('bold').setFontSize(11.5)
+        .setHorizontalAlignment('center')
+        .setBorder(true, true, true, true, false, false, '#F5A623', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+      sheet.setRowHeight(rij, 30);
       afwijkingen.slice(0, 3).forEach(function(a) {
         rij++;
         sheet.getRange(rij, 1, 1, 8).merge()
-          .setValue('  • ' + a.tekst)
-          .setBackground('#FFFBF0').setFontColor('#7A4A00')
-          .setFontSize(10).setWrap(true);
+          .setValue('  ↳ ' + a.tekst)
+          .setBackground('#FFF8EC').setFontColor('#5A3F00')
+          .setFontSize(10.5).setWrap(true)
+          .setBorder(false, true, false, true, false, false, '#F5C46E', SpreadsheetApp.BorderStyle.SOLID);
       });
     }
   } catch (e) { Logger.log('Anomalie-detectie: ' + e.message); }
