@@ -495,11 +495,17 @@
     transform: translateY(-2px);
   }
   .usp-icon {
-    width: 44px; height: 44px; border-radius: 10px;
-    background: rgba(46,196,182,.12);
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, rgba(46,196,182,.18) 0%, rgba(46,196,182,.06) 100%);
     color: var(--accent);
     display: flex; align-items: center;
-    justify-content: center; margin-bottom: 16px;
+    justify-content: center; margin-bottom: 18px;
+    box-shadow: 0 1px 2px rgba(46,196,182,.1), inset 0 1px 0 rgba(255,255,255,.6);
+    transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease;
+  }
+  .usp-kaart:hover .usp-icon {
+    transform: scale(1.08) rotate(-3deg);
+    box-shadow: 0 4px 12px rgba(46,196,182,.2), inset 0 1px 0 rgba(255,255,255,.6);
   }
   .usp-icon svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
   .usp-kaart h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: var(--tekst); }
