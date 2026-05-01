@@ -444,7 +444,23 @@
   }
 
   /* ── PROBLEEM ── */
-  .probleem-sectie { background: #0D1B4E; color: rgba(255,255,255,.88); }
+  .probleem-sectie {
+    position: relative;
+    background: #0D1B4E; color: rgba(255,255,255,.88);
+    overflow: hidden;
+  }
+  .probleem-sectie::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(500px 280px at 80% 20%, rgba(46,196,182,.12), transparent 65%),
+      linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+    background-size: auto, 64px 64px, 64px 64px;
+    mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 30%, transparent 85%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 30%, transparent 85%);
+    pointer-events: none;
+  }
+  .probleem-sectie > * { position: relative; z-index: 1; }
   .probleem-sectie .section-label { color: var(--accent); }
   .probleem-sectie h2 { color: var(--wit); }
   .probleem-sectie .sub-tekst { color: rgba(255,255,255,.7); }
