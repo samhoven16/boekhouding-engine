@@ -574,35 +574,60 @@ function schoonPlaceholderwaarden_(ss) {
  * Idempotent: vervangt bestaande Boekhoudbaar-regels per refresh.
  */
 function zetStatusColorRules_(ss) {
-  function maakRegel(range, tekst, bg, fg) {
+  // Marker zodat we onze eigen rules kunnen herkennen en vervangen
+  // — zonder dat we user-defined conditional formatting wegblazen.
+  const MARKER = '__bhb_status__';
+
+  function bouwMarkedRule(range, tekst, bg, fg) {
     return SpreadsheetApp.newConditionalFormatRule()
       .whenTextEqualTo(tekst)
       .setBackground(bg).setFontColor(fg)
-      .setRanges([range]).build();
+      .setRanges([range])
+      .build();
   }
 
-  const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
-  if (vfSheet) {
-    const vfRange = vfSheet.getRange(2, 15, Math.max(vfSheet.getMaxRows() - 1, 1), 1);
-    vfSheet.setConditionalFormatRules([
-      maakRegel(vfRange, FACTUUR_STATUS.BETAALD,       '#E8F5E9', '#1B5E20'),
-      maakRegel(vfRange, FACTUUR_STATUS.VERZONDEN,     '#E3F2FD', '#0D47A1'),
-      maakRegel(vfRange, FACTUUR_STATUS.VERVALLEN,     '#FFEBEE', '#B71C1C'),
-      maakRegel(vfRange, FACTUUR_STATUS.DEELS_BETAALD, '#FFF8E1', '#5A3F00'),
-      maakRegel(vfRange, FACTUUR_STATUS.CONCEPT,       '#F5F5F5', '#5F6B7A'),
-      maakRegel(vfRange, FACTUUR_STATUS.GECREDITEERD,  '#FCE4EC', '#880E4F'),
-    ]);
+  function vervangBoekhoudbaarRules(sheet, kolomNr, statusMap) {
+    if (!sheet || sheet.getLastColumn() < kolomNr) return;
+    const huidigeRules = sheet.getConditionalFormatRules() || [];
+    // Filter onze eigen rules eruit (dezelfde kolom + bekende status-tekst)
+    const targetColumn = kolomNr;
+    const onsBekend = Object.keys(statusMap).map(function(k){return statusMap[k].tekst;});
+    const overgebleven = huidigeRules.filter(function(r) {
+      try {
+        const cond = r.getBooleanCondition && r.getBooleanCondition();
+        if (!cond) return true;
+        const args = cond.getCriteriaValues && cond.getCriteriaValues();
+        if (!args || !args[0]) return true;
+        const ranges = r.getRanges();
+        const inOnzeKolom = ranges.some(function(rng) {
+          return rng.getColumn() === targetColumn && rng.getNumColumns() === 1;
+        });
+        return !(inOnzeKolom && onsBekend.indexOf(args[0]) !== -1);
+      } catch (_) { return true; }
+    });
+    const range = sheet.getRange(2, kolomNr, Math.max(sheet.getMaxRows() - 1, 1), 1);
+    const nieuwe = Object.keys(statusMap).map(function(k) {
+      const s = statusMap[k];
+      return bouwMarkedRule(range, s.tekst, s.bg, s.fg);
+    });
+    sheet.setConditionalFormatRules(overgebleven.concat(nieuwe));
   }
 
-  const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
-  if (ifSheet) {
-    const ifRange = ifSheet.getRange(2, 13, Math.max(ifSheet.getMaxRows() - 1, 1), 1);
-    ifSheet.setConditionalFormatRules([
-      maakRegel(ifRange, FACTUUR_STATUS.BETAALD, '#E8F5E9', '#1B5E20'),
-      maakRegel(ifRange, 'Open',                 '#FFF8E1', '#5A3F00'),
-      maakRegel(ifRange, 'Te betalen',           '#FFF8E1', '#5A3F00'),
-    ]);
-  }
+  vervangBoekhoudbaarRules(ss.getSheetByName(SHEETS.VERKOOPFACTUREN), 15, {
+    a: { tekst: FACTUUR_STATUS.BETAALD,       bg: '#E8F5E9', fg: '#1B5E20' },
+    b: { tekst: FACTUUR_STATUS.VERZONDEN,     bg: '#E3F2FD', fg: '#0D47A1' },
+    c: { tekst: FACTUUR_STATUS.VERVALLEN,     bg: '#FFEBEE', fg: '#B71C1C' },
+    d: { tekst: FACTUUR_STATUS.DEELS_BETAALD, bg: '#FFF8E1', fg: '#5A3F00' },
+    e: { tekst: FACTUUR_STATUS.CONCEPT,       bg: '#F5F5F5', fg: '#5F6B7A' },
+    f: { tekst: FACTUUR_STATUS.GECREDITEERD,  bg: '#FCE4EC', fg: '#880E4F' },
+  });
+  vervangBoekhoudbaarRules(ss.getSheetByName(SHEETS.INKOOPFACTUREN), 13, {
+    a: { tekst: FACTUUR_STATUS.BETAALD, bg: '#E8F5E9', fg: '#1B5E20' },
+    b: { tekst: 'Open',                 bg: '#FFF8E1', fg: '#5A3F00' },
+    c: { tekst: 'Te betalen',           bg: '#FFF8E1', fg: '#5A3F00' },
+  });
+  // MARKER intentionally unused — pattern reserved voor toekomstige rules
+  void MARKER;
 }
 
 // ─────────────────────────────────────────────
@@ -756,7 +781,11 @@ function detecteerAfwijkingen_(ss) {
       const data = ifSheet.getDataRange().getValues();
       let zonderCat = 0;
       for (let i = 1; i < data.length; i++) {
-        if (data[i][0] && !data[i][9]) zonderCat++;  // kolom 9 = kostenrekening
+        // Inkoopfacturen-headers (0-indexed):
+        // 0=Inkoop ID, 1=Intern nr, 2=Datum ontvangst, 3=Factuurdatum lev, 4=Factuurref,
+        // 5=Lev ID, 6=Lev naam, 7=Omschr, 8=Excl, 9=BTW%, 10=BTW€, 11=Incl,
+        // 12=Status, 13=Betaaldatum, 14=Betaalrekening, 15=Kostenrekening
+        if (data[i][0] && !data[i][15]) zonderCat++;
       }
       if (zonderCat >= 3) {
         afwijkingen.push({
