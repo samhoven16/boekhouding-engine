@@ -185,8 +185,10 @@ function opslaanHerhalendeKost(data) {
   const ss = getSpreadsheet_();
   const sheet = maakHerhalendeKostenTab_(ss);
 
+  // ID via Properties-counter (race-safe + uniek). Het oude
+  // `getLastRow()`-patroon kon duplicaten geven na een verwijderde rij.
+  const id = _volgendHerhalendKostId_();
   const huidigAantal = sheet.getLastRow();
-  const id = 'HK' + String(huidigAantal).padStart(4, '0');
 
   const splitPct = Math.min(100, Math.max(0, parseInt(data.splitPct) || 100));
   sheet.appendRow([
@@ -227,79 +229,92 @@ function verwerkHerhalendeKosten_() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(8000)) return { geboekt: 0, komend: [] };
 
-  const data = sheet.getDataRange().getValues();
-  const vandaag = new Date();
+  // Cap inhaal-iteraties: voorkomt runaway-loops als iemand een datum
+  // in 1990 invoert (ongeluk of ongeldige migratie).
+  const MAX_INHAAL = 36;
   let geboekt = 0;
   const komend = [];
 
-  for (let i = 1; i < data.length; i++) {
-    const status = String(data[i][8] || '');
-    if (status !== 'Actief') continue;
+  try {
+    const data = sheet.getDataRange().getValues();
+    const vandaag = new Date();
 
-    const volgende = data[i][6] ? new Date(data[i][6]) : null;
-    if (!volgende || isNaN(volgende.getTime())) {
-      Logger.log('Herhalende kosten rij ' + (i + 1) + ': ongeldige datum, overgeslagen.');
-      continue;
-    }
+    for (let i = 1; i < data.length; i++) {
+      const status = String(data[i][8] || '');
+      if (status !== 'Actief') continue;
 
-    const naam     = data[i][1];
-    const bedrag   = parseFloat(data[i][3]) || 0;
-    const freq     = String(data[i][5] || 'Maandelijks');
-    const rekening = String(data[i][7] || '7000').split(' ')[0];
-    const auto     = String(data[i][9] || 'Nee');
-    const splitPct = Math.min(100, Math.max(0, parseFloat(data[i][11] || '100') || 100));
-
-    // Is deze betaling vandaag of in het verleden?
-    let datumVoorKomend = volgende;
-    if (volgende <= vandaag) {
-      if (auto === 'Ja') {
-        const zakelijkBedrag = rondBedrag_(bedrag * (splitPct / 100));
-        const privaatBedrag  = rondBedrag_(bedrag - zakelijkBedrag);
-        // Zakelijk deel → kostenrekening
-        maakJournaalpost_(ss, {
-          datum: volgende,
-          omschr: naam + ' (' + freq + ')' + (splitPct < 100 ? ' — zakelijk ' + splitPct + '%' : ''),
-          dagboek: 'Memoriaal',
-          debet: rekening,
-          credit: '1200',
-          bedrag: zakelijkBedrag,
-          type: BOEKING_TYPE.MEMORIAAL,
-        });
-        // Privé deel → 2400 Privéonttrekkingen (alleen als > 0)
-        if (privaatBedrag > 0) {
-          maakJournaalpost_(ss, {
-            datum: volgende,
-            omschr: naam + ' (' + freq + ') — privé ' + (100 - splitPct) + '%',
-            dagboek: 'Memoriaal',
-            debet: '2400',
-            credit: '1200',
-            bedrag: privaatBedrag,
-            type: BOEKING_TYPE.MEMORIAAL,
-          });
-        }
-        geboekt++;
+      let volgende = data[i][6] ? new Date(data[i][6]) : null;
+      if (!volgende || isNaN(volgende.getTime())) {
+        Logger.log('Herhalende kosten rij ' + (i + 1) + ': ongeldige datum, overgeslagen.');
+        continue;
       }
 
-      // Volgende datum berekenen en opslaan
-      const volgendeDatum = berekenVolgendeDatum_(volgende, freq);
-      sheet.getRange(i + 1, 7).setValue(volgendeDatum);
-      datumVoorKomend = volgendeDatum; // Gebruik de nieuwe datum voor de "komend" check
-    }
+      const naam     = data[i][1];
+      const bedrag   = parseFloat(data[i][3]) || 0;
+      const freq     = String(data[i][5] || 'Maandelijks');
+      const rekening = String(data[i][7] || '7000').split(' ')[0];
+      const auto     = String(data[i][9] || 'Nee');
+      const splitPct = Math.min(100, Math.max(0, parseFloat(data[i][11] || '100') || 100));
 
-    // Komende betalingen (volgende 30 dagen — gebaseerd op nieuwe/huidige datum)
-    const dagenTot = Math.ceil((datumVoorKomend - vandaag) / (1000 * 60 * 60 * 24));
-    if (dagenTot >= 0 && dagenTot <= 30) {
-      komend.push({
-        naam,
-        bedrag,
-        datum: datumVoorKomend,
-        dagenTot,
-      });
+      // Inhaal-loop: boek élke gemiste periode tot vandaag (begrensd).
+      let iteratie = 0;
+      while (volgende <= vandaag && iteratie < MAX_INHAAL) {
+        if (auto === 'Ja' && bedrag > 0) {
+          const zakelijkBedrag = rondBedrag_(bedrag * (splitPct / 100));
+          const privaatBedrag  = rondBedrag_(bedrag - zakelijkBedrag);
+          if (zakelijkBedrag > 0) {
+            maakJournaalpost_(ss, {
+              datum: volgende,
+              omschr: naam + ' (' + freq + ')' + (splitPct < 100 ? ' — zakelijk ' + splitPct + '%' : ''),
+              dagboek: 'Memoriaal',
+              debet: rekening,
+              credit: '1200',
+              bedrag: zakelijkBedrag,
+              type: BOEKING_TYPE.MEMORIAAL,
+            });
+          }
+          if (privaatBedrag > 0) {
+            maakJournaalpost_(ss, {
+              datum: volgende,
+              omschr: naam + ' (' + freq + ') — privé ' + (100 - splitPct) + '%',
+              dagboek: 'Memoriaal',
+              debet: '2400',
+              credit: '1200',
+              bedrag: privaatBedrag,
+              type: BOEKING_TYPE.MEMORIAAL,
+            });
+          }
+          geboekt++;
+        }
+        volgende = berekenVolgendeDatum_(volgende, freq);
+        iteratie++;
+      }
+      sheet.getRange(i + 1, 7).setValue(volgende);
+
+      // Komende betalingen (volgende 30 dagen)
+      const dagenTot = Math.ceil((volgende - vandaag) / (1000 * 60 * 60 * 24));
+      if (dagenTot >= 0 && dagenTot <= 30) {
+        komend.push({ naam, bedrag, datum: volgende, dagenTot });
+      }
     }
+  } finally {
+    lock.releaseLock();
   }
-
-  lock.releaseLock();
   return { geboekt, komend };
+}
+
+function _volgendHerhalendKostId_() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const sleutel = 'volgendHerhalendKostId';
+    const nr = parseInt(props.getProperty(sleutel) || '1');
+    props.setProperty(sleutel, String(nr + 1));
+    return 'HK' + String(nr).padStart(4, '0');
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function berekenVolgendeDatum_(huidigDatum, freq) {

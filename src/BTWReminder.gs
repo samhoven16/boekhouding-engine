@@ -20,11 +20,11 @@ function huidigeKwartaal_() {
   // Genereer kandidaten: alle deadlines van vorig jaar (Q4) t/m volgend jaar (Q4).
   // Pak de eerstvolgende deadline ≥ vandaag.
   const kandidaten = [
-    { kw: 'Q4', jaar: jaar - 1, van: new Date(jaar - 1, 9, 1),  tot: new Date(jaar - 1, 11, 31), deadline: new Date(jaar, 0, 31) },
-    { kw: 'Q1', jaar,           van: new Date(jaar, 0, 1),     tot: new Date(jaar, 2, 31),     deadline: new Date(jaar, 3, 30) },
-    { kw: 'Q2', jaar,           van: new Date(jaar, 3, 1),     tot: new Date(jaar, 5, 30),     deadline: new Date(jaar, 6, 31) },
-    { kw: 'Q3', jaar,           van: new Date(jaar, 6, 1),     tot: new Date(jaar, 8, 30),     deadline: new Date(jaar, 9, 31) },
-    { kw: 'Q4', jaar,           van: new Date(jaar, 9, 1),     tot: new Date(jaar, 11, 31),    deadline: new Date(jaar + 1, 0, 31) },
+    { kw: 'Q4', jaar: jaar - 1, van: new Date(jaar - 1, 9, 1),  tot: new Date(jaar - 1, 11, 31, 23, 59, 59, 999), deadline: new Date(jaar, 0, 31) },
+    { kw: 'Q1', jaar,           van: new Date(jaar, 0, 1),     tot: new Date(jaar, 2, 31, 23, 59, 59, 999),     deadline: new Date(jaar, 3, 30) },
+    { kw: 'Q2', jaar,           van: new Date(jaar, 3, 1),     tot: new Date(jaar, 5, 30, 23, 59, 59, 999),     deadline: new Date(jaar, 6, 31) },
+    { kw: 'Q3', jaar,           van: new Date(jaar, 6, 1),     tot: new Date(jaar, 8, 30, 23, 59, 59, 999),     deadline: new Date(jaar, 9, 31) },
+    { kw: 'Q4', jaar,           van: new Date(jaar, 9, 1),     tot: new Date(jaar, 11, 31, 23, 59, 59, 999),    deadline: new Date(jaar + 1, 0, 31) },
   ];
 
   const naamMap = {

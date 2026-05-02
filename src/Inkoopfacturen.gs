@@ -26,6 +26,14 @@ function markeerInkoopfactuurBetaald() {
       const bedrag = parseFloat(data[i][11]) || 0;
       const leverancier = data[i][6];
       const datum = new Date();
+      const huidigeStatus = String(data[i][12] || '');
+
+      // Idempotency-guard: voorkom dubbel boeken bij meerdere klikken op een
+      // factuur die al BETAALD staat — anders dubbele journaalpost in 4000/1200.
+      if (huidigeStatus === FACTUUR_STATUS.BETAALD) {
+        ui.alert(`Inkoopfactuur ${zoekNr} staat al op BETAALD — geen nieuwe boeking gemaakt.`);
+        return;
+      }
 
       sheet.getRange(i + 1, 13).setValue(FACTUUR_STATUS.BETAALD);
       sheet.getRange(i + 1, 14).setValue(datum);

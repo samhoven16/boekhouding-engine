@@ -121,6 +121,10 @@ const BELASTING = getBelasting_();
 // ─────────────────────────────────────────────
 function berekenBelastingadvies_(ss) {
   const jaar = new Date().getFullYear();
+  // Re-evaluate per call zodat server-side tarief-overrides en jaar-rollovers
+  // niet pas na een script-reload worden opgepikt. Module-scope BELASTING is
+  // bevroren bij script-load; we lezen hier vers.
+  const BELASTING = getBelasting_();
   const kg = berekenKengetallen_(ss);
   const omzet = kg.omzet;
   const winst = kg.nettowinst;
@@ -189,9 +193,12 @@ function berekenBelastingadvies_(ss) {
   }
 
   // ── 3. Startersaftrek (eerste 3 jaar) ────────────────────────────────
-  if (isZzp) {
+  if (isZzp && winst > 0) {
     const startjaar = parseInt(getInstelling_('Startjaar onderneming') || '0');
-    if (startjaar > 0 && (jaar - startjaar) < 3) {
+    // startjaar > 0:        ingevuld (anders default 0)
+    // startjaar <= jaar:    voorkomt foutieve toekomst-datum
+    // (jaar - startjaar) < 3: eerste 3 jaren
+    if (startjaar > 0 && startjaar <= jaar && (jaar - startjaar) < 3) {
       const aftrek = BELASTING.STARTERSAFTREK;
       aftrekken.push({
         naam: 'Startersaftrek',
@@ -589,7 +596,8 @@ function genereerBelastingadvies() {
 
   ss.setActiveSheet(sheet);
 
-  const totaalBesparing = advies.aftrekken.reduce((s, a) => s + rondBedrag_(a.bedrag * BELASTING.IB_SCHIJF_1_PCT), 0);
+  const ibPct1 = getBelasting_().IB_SCHIJF_1_PCT;
+  const totaalBesparing = advies.aftrekken.reduce((s, a) => s + rondBedrag_(a.bedrag * ibPct1), 0);
   SpreadsheetApp.getUi().alert(
     'Belastingadvies bijgewerkt',
     `${advies.adviezen.length + prive.length} adviezen / ${advies.aftrekken.length} aftrekposten gevonden.\n\n` +
@@ -609,12 +617,13 @@ function scanAfschrijvingskandidaten_(ss) {
   const data = sheet.getDataRange().getValues();
   const kandidaten = [];
   const huidigJaar = new Date().getFullYear();
+  const activeerGrens = getBelasting_().ACTIVEER_GRENS;
 
   data.slice(1).forEach(r => {
     const bedrag = parseFloat(r[8]) || 0;           // [8] = bedrag excl. BTW
     const kostenRek = String(r[15] || '');           // [15] = kostenrekening
     const datum = r[3] instanceof Date ? r[3] : new Date(r[3]);
-    if (bedrag < BELASTING.ACTIVEER_GRENS) return;
+    if (bedrag < activeerGrens) return;
     if (isNaN(datum.getTime()) || datum.getFullYear() < huidigJaar) return;
     if (kostenRek.startsWith('0')) return;           // al geactiveerd
     kandidaten.push({
@@ -634,8 +643,9 @@ function scanAfschrijvingskandidaten_(ss) {
 // ─────────────────────────────────────────────
 function signaleerAfschrijvingskandidaat_(ss, bedrag, leverancier, omschr) {
   try {
+    const grens = getBelasting_().ACTIVEER_GRENS;
     schrijfAuditLog_('AFSCHRIJVING KANDIDAAT',
-      `Aankoop ${formatBedrag_(bedrag)} bij ${leverancier} – "${omschr}" kan worden geactiveerd (≥ €${BELASTING.ACTIVEER_GRENS}). ` +
+      `Aankoop ${formatBedrag_(bedrag)} bij ${leverancier} – "${omschr}" kan worden geactiveerd (≥ €${grens}). ` +
       `Boek op 0xxx-rekening + jaarlijkse afschrijving voor KIA (28% extra aftrek).`);
   } catch (_e) {}
 }
@@ -644,6 +654,8 @@ function signaleerAfschrijvingskandidaat_(ss, bedrag, leverancier, omschr) {
 //  PRIVÉ BELASTINGVOORDELEN
 // ─────────────────────────────────────────────
 function berekenPriveBelastingvoordelen_(winst) {
+  // Lees vers — zelfde reden als in berekenBelastingadvies_.
+  const BELASTING = getBelasting_();
   const adviezen = [];
   const inkomen = winst || 0;
 

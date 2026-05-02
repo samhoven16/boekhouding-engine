@@ -439,10 +439,11 @@ function berekenKengetallen_(ss) {
   const eigenVermogen = Object.values(saldi).filter(r => r.bw === 'Balans' && r.cat === 'Eigen vermogen')
     .reduce((s, r) => s + r.saldo, 0) + nettowinst;
 
-  // Totaal activa = alle Activa-rekeningen (bank, debiteuren, vaste activa, voorraad, etc.)
-  // Gebruikt voor correcte solvabiliteitsberekening.
+  // Totaal activa = alle Actief-rekeningen op de balans (bank, debiteuren, vaste activa,
+  // voorraad, etc.). Type-naam is 'Actief' (zie Config.gs GROOTBOEKSCHEMA), NIET 'Activa'
+  // — eerdere typo zorgde dat totaalActiva altijd 0 was waardoor solvabiliteit altijd null.
   const totaalActiva = Object.values(saldi)
-    .filter(r => r.type === 'Activa')
+    .filter(r => r.type === 'Actief' && r.bw === 'Balans')
     .reduce((s, r) => s + r.saldo, 0);
 
   return {

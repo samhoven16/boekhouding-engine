@@ -292,16 +292,43 @@ function maakCreditnota(factuurNummer) {
 
   sheet.appendRow(creditRij);
 
-  // Stornoboeking
+  // Stornoboeking — reverseer de twee originele journaalposten:
+  //  1) Debet omzet, Credit 1100  (omzet-deel excl.)
+  //  2) Debet BTW-afdracht, Credit 1100  (BTW-deel)
+  // Tot voorheen werd alleen leg-1 geboekt waardoor de BTW-afdracht in
+  // het grootboek niet werd terugverlegd — administratief onjuist.
+  const btwLabel  = origineel[10];
+  const btwTarief = parseBtwTarief_(btwLabel);
+  const omzetExcl = Math.abs(origineel[9]);
+  const btwBedrag = Math.abs(origineel[11]);
+  const omschrCN  = `Creditnota ${creditPrefix}CN${creditNr} (storno ${factuurNummer})`;
+
   maakJournaalpost_(ss, {
     datum,
-    omschr: `Creditnota ${creditPrefix}CN${creditNr} (storno ${factuurNummer})`,
+    omschr: omschrCN,
     dagboek: 'Verkoopboek',
-    debet: bepaalOmzetRekening_(origineel[10]),
+    debet: bepaalOmzetRekening_(btwLabel),
     credit: '1100',
-    bedrag: Math.abs(origineel[9]),
+    bedrag: omzetExcl,
+    btwTarief,
+    btwBedrag: 0,
+    ref: `${creditPrefix}CN${creditNr}`,
     type: BOEKING_TYPE.MEMORIAAL,
   });
+  if (btwBedrag > 0) {
+    maakJournaalpost_(ss, {
+      datum,
+      omschr: omschrCN + ' (BTW)',
+      dagboek: 'Verkoopboek',
+      debet: bepaalBtwVerkoopRekening_(btwLabel),
+      credit: '1100',
+      bedrag: btwBedrag,
+      btwTarief,
+      btwBedrag,
+      ref: `${creditPrefix}CN${creditNr}`,
+      type: BOEKING_TYPE.MEMORIAAL,
+    });
+  }
 }
 
 // ─────────────────────────────────────────────

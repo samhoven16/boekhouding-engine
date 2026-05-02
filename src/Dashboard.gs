@@ -760,7 +760,7 @@ function detecteerAfwijkingen_(ss) {
         const datum = data[i][2] ? new Date(data[i][2]) : null;
         if (!datum || datum < dertigDagen) continue;
         const tarief = String(data[i][10] || '');
-        if (tarief.indexOf('21') !== -1) aantal21++;
+        if (tarief.indexOf('21%') !== -1 || /\bhoog\b/i.test(tarief)) aantal21++;
         else if (tarief.indexOf('0%') !== -1 || tarief.indexOf('0 ') === 0) {
           aantal0++;
           nul21Refs.push(data[i][1]);

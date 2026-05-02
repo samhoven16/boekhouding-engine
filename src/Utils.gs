@@ -293,7 +293,7 @@ function getBoekjaarPeriode_() {
   const eindeStr = getInstelling_('Boekjaar einde');
   return {
     van: parseDatum_(startStr) || new Date(new Date().getFullYear(), 0, 1),
-    tot: parseDatum_(eindeStr) || new Date(new Date().getFullYear(), 11, 31),
+    tot: parseDatum_(eindeStr) || new Date(new Date().getFullYear(), 11, 31, 23, 59, 59, 999),
   };
 }
 

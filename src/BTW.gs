@@ -392,7 +392,7 @@ function controleerKor() {
   const ss = getSpreadsheet_();
   const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
   const jaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
-  const periode = { van: new Date(jaar, 0, 1), tot: new Date(jaar, 11, 31) };
+  const periode = { van: new Date(jaar, 0, 1), tot: new Date(jaar, 11, 31, 23, 59, 59, 999) };
 
   const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
   let totaalOmzet = 0;
@@ -501,11 +501,13 @@ function parseBtwTarief_(label) {
 }
 
 function bepaalBtwPeriode_(kwartaal, jaar) {
+  // tot-datum is end-of-day (23:59:59.999) zodat boekingen op de laatste dag
+  // van het kwartaal mét tijdcomponent (>00:00) niet ten onrechte buiten vallen.
   const periodes = {
-    'Q1': { van: new Date(jaar, 0, 1),  tot: new Date(jaar, 2, 31) },
-    'Q2': { van: new Date(jaar, 3, 1),  tot: new Date(jaar, 5, 30) },
-    'Q3': { van: new Date(jaar, 6, 1),  tot: new Date(jaar, 8, 30) },
-    'Q4': { van: new Date(jaar, 9, 1),  tot: new Date(jaar, 11, 31) },
+    'Q1': { van: new Date(jaar, 0, 1),  tot: new Date(jaar, 2, 31, 23, 59, 59, 999) },
+    'Q2': { van: new Date(jaar, 3, 1),  tot: new Date(jaar, 5, 30, 23, 59, 59, 999) },
+    'Q3': { van: new Date(jaar, 6, 1),  tot: new Date(jaar, 8, 30, 23, 59, 59, 999) },
+    'Q4': { van: new Date(jaar, 9, 1),  tot: new Date(jaar, 11, 31, 23, 59, 59, 999) },
   };
   return periodes[kwartaal] || periodes['Q1'];
 }

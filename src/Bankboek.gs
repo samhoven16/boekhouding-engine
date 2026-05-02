@@ -177,6 +177,9 @@ function verwerkPriveCorrectie(data) {
   const datum = parseDatum_(data.datum);
   const isStorting = data.type === 'storting';
 
+  if (!(bedrag > 0)) throw new Error('Bedrag moet groter zijn dan €0,00.');
+  if (!datum || isNaN(datum.getTime())) throw new Error('Vul een geldige datum in.');
+
   // Storting: Bank debet | Privéstortingen credit
   // Onttrekking: Privéonttrekkingen debet | Bank credit
   maakJournaalpost_(ss, {
@@ -198,6 +201,8 @@ function verwerkPriveCorrectie(data) {
 function boekDgaTransactie(isOpname, bedrag, omschr) {
   const ss = getSpreadsheet_();
   const datum = new Date();
+  const bedragNum = parseBedrag_(bedrag);
+  if (!(bedragNum > 0)) throw new Error('DGA-bedrag moet groter zijn dan €0,00.');
 
   // Opname: RC DGA debet | Bank credit
   // Storting: Bank debet | RC DGA credit
@@ -207,7 +212,7 @@ function boekDgaTransactie(isOpname, bedrag, omschr) {
     dagboek: 'Privé',
     debet: isOpname ? '4500' : '1200',
     credit: isOpname ? '1200' : '4500',
-    bedrag,
+    bedrag: bedragNum,
     type: BOEKING_TYPE.MEMORIAAL,
   });
 }
