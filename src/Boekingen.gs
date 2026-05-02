@@ -692,25 +692,29 @@ function zoekOfMaakRelatie_(ss, naam, type, email) {
 // ─────────────────────────────────────────────
 function bepaalOmzetRekening_(btwLabel) {
   if (!btwLabel) return '8000';
-  if (btwLabel.includes('21')) return '8000';
-  if (btwLabel.includes('9')) return '8010';
-  if (btwLabel.includes('0%') || btwLabel.includes('nultarief')) return '8020';
-  if (btwLabel.includes('Vrijgesteld')) return '8030';
-  if (btwLabel.includes('Verlegd')) return '8040';
+  const l = String(btwLabel);
+  // Strikte detectie — voorkomt '21' substring matches in '212' of '21,5%'
+  if (l.includes('21%') || /\bhoog\b/i.test(l)) return '8000';
+  if (l.includes('9%')  || /\blaag\b/i.test(l)) return '8010';
+  if (l.includes('0%')  || /nultarief/i.test(l)) return '8020';
+  if (/Vrijgesteld/i.test(l)) return '8030';
+  if (/Verlegd/i.test(l))     return '8040';
   return '8000';
 }
 
 function bepaalBtwVerkoopRekening_(btwLabel) {
   if (!btwLabel) return '4110';
-  if (btwLabel.includes('21')) return '4110';
-  if (btwLabel.includes('9')) return '4120';
+  const l = String(btwLabel);
+  if (l.includes('21%') || /\bhoog\b/i.test(l)) return '4110';
+  if (l.includes('9%')  || /\blaag\b/i.test(l)) return '4120';
   return '4100';
 }
 
 function bepaalBtwVoorbelastingRekening_(btwLabel) {
   if (!btwLabel) return '1410';
-  if (btwLabel.includes('21')) return '1410';
-  if (btwLabel.includes('9')) return '1420';
+  const l = String(btwLabel);
+  if (l.includes('21%') || /\bhoog\b/i.test(l)) return '1410';
+  if (l.includes('9%')  || /\blaag\b/i.test(l)) return '1420';
   return '1400';
 }
 

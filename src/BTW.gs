@@ -101,10 +101,11 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     const btwBedrag = parseFloat(vfData[i][11]) || 0;
     const btwLabel  = String(vfData[i][10] || '');
 
-    if (btwLabel.includes('21')) {
+    // Strikte tarief-detectie: '21%' substring (niet los '21' want 212 = ook match)
+    if (btwLabel.includes('21%') || /\bhoog\b/i.test(btwLabel)) {
       aangifte.r1a_grondslag += grondslag;
       aangifte.r1a_btw += btwBedrag;
-    } else if (btwLabel.includes('9%') || btwLabel.includes('laag')) {
+    } else if (btwLabel.includes('9%') || /\blaag\b/i.test(btwLabel)) {
       aangifte.r1b_grondslag += grondslag;
       aangifte.r1b_btw += btwBedrag;
     } else if (btwLabel.includes('Vrijgesteld')) {
@@ -454,10 +455,11 @@ function getBtwPerMaand_(ss, jaar) {
     const btwBedrag = parseFloat(vfData[i][11]) || 0;
     const btwLabel = String(vfData[i][10] || '');
 
-    if (btwLabel.includes('21')) {
+    // Strikte detectie — '21' substring zou '212' of '21.5%' fout matchen
+    if (btwLabel.includes('21%') || /\bhoog\b/i.test(btwLabel)) {
       resultaat[m].omzetHoog += grondslag;
       resultaat[m].btwHoog += btwBedrag;
-    } else if (btwLabel.includes('9')) {
+    } else if (btwLabel.includes('9%') || /\blaag\b/i.test(btwLabel)) {
       resultaat[m].omzetLaag += grondslag;
       resultaat[m].btwLaag += btwBedrag;
     }
