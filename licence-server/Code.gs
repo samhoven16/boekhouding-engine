@@ -311,6 +311,11 @@ function maakBetaling(klantnaam, klantEmail) {
   klantnaam  = String(klantnaam  || '').trim();
   klantEmail = String(klantEmail || '').trim().toLowerCase();
   if (!klantnaam || !klantEmail) return { fout: 'Naam en e-mail zijn verplicht.' };
+  // Format-check zodat de licentie-mail later (na betaling) niet crasht.
+  // Voor klant beter om vroeg te falen dan na betaling.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(klantEmail)) {
+    return { fout: 'Vul een geldig e-mailadres in (bijv. naam@voorbeeld.nl).' };
+  }
 
   const props     = PropertiesService.getScriptProperties();
   const mollieKey = props.getProperty('MOLLIE_API_KEY');
@@ -591,9 +596,11 @@ function valideerEndpoint_(e) {
 
   if (!sleutel) return jsonResp_({ geldig: false, fout: 'Geen sleutel opgegeven.' });
 
-  // Rate-limit: max 10 validaties per sleutel per uur (beschermt tegen brute-force)
+  // Rate-limit: max 10 validaties per sleutel per uur (beschermt tegen brute-force).
+  // Gebruik volledige sleutel ipv eerste 16 tekens — anders zouden twee licenties
+  // met gelijke prefix dezelfde rate-limit bucket delen (cross-user DoS-risico).
   const cache = CacheService.getScriptCache();
-  const cacheKey = 'valRate_' + sleutel.slice(0, 16);
+  const cacheKey = 'valRate_' + sleutel;
   const pogingen = parseInt(cache.get(cacheKey) || '0');
   if (pogingen >= 10) {
     return jsonResp_({ geldig: false, fout: 'Te veel validatiepogingen. Probeer over een uur opnieuw.' });
@@ -697,6 +704,15 @@ function telemetryEndpoint_(e) {
     .map(function(b) { return ('0' + (b & 0xff).toString(16)).slice(-2); })
     .join('').slice(0, 12);
 
+  // Server-side rate-limit op (hash, code) — max 1× per uur per (klant, code).
+  // Client throttled al naar 1×/uur, maar bij gemanipuleerd verzoek of
+  // verschillende installaties van dezelfde licentie zou de Telemetry-tab
+  // anders ongelimiteerd kunnen groeien.
+  const cache = CacheService.getScriptCache();
+  const rateKey = 'tel_' + hash + '_' + code.replace(/[^a-z0-9_-]/gi, '').slice(0, 40);
+  if (cache.get(rateKey)) return jsonResp_({ ok: true, throttled: true });
+  cache.put(rateKey, '1', 3600);
+
   try {
     const ss = SpreadsheetApp.openById(getLicentieSheet_().getParent().getId());
     let tel = ss.getSheetByName('Telemetry');
@@ -706,6 +722,10 @@ function telemetryEndpoint_(e) {
       tel.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#0D1B4E').setFontColor('#fff');
     }
     tel.appendRow([new Date(), hash, code, bericht, versie]);
+
+    // Trim — houd max 5000 rijen om sheet-quotum niet te halen.
+    const last = tel.getLastRow();
+    if (last > 5001) tel.deleteRows(2, last - 5001);
   } catch (err) {
     Logger.log('telemetry write failed: ' + err.message);
   }
