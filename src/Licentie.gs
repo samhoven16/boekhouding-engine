@@ -312,7 +312,7 @@ function aanvraagOtp(email) {
   try {
     const url  = serverUrl + '?actie=aanvraag-otp&email=' + encodeURIComponent(email);
     const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
-    return safeJsonParse_(resp.getContentText());
+    return parseServerJson_(resp.getContentText());
   } catch (err) {
     return { ok: false, fout: 'Netwerkfout: ' + err.message };
   }
@@ -337,7 +337,7 @@ function activeerMetOtp(email, otp) {
       + '&otp='    + encodeURIComponent(otp)
       + '&ssId='   + encodeURIComponent(huidigSsId);
     const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
-    const res  = safeJsonParse_(resp.getContentText());
+    const res  = parseServerJson_(resp.getContentText());
 
     if (res.ok && res.sleutel) {
       // Sla licentie op in Script Properties
@@ -591,7 +591,7 @@ function valideerLicentieOpServer_(sleutel) {
       muteHttpExceptions: true, followRedirects: true,
       headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
     });
-    if (resp.getResponseCode() === 200) return safeJsonParse_(resp.getContentText());
+    if (resp.getResponseCode() === 200) return parseServerJson_(resp.getContentText());
 
     // Server niet bereikbaar → vertrouw lokale cache
     const props = PropertiesService.getScriptProperties();
@@ -640,6 +640,11 @@ function toonLicentieDialoog() {
 // ─────────────────────────────────────────────
 //  HELPER
 // ─────────────────────────────────────────────
-function safeJsonParse_(tekst) {
+// Hernoemd van safeJsonParse_ → parseServerJson_ omdat API.gs dezelfde
+// naam gebruikt met andere fallback-vorm ({}). In Apps Script delen alle
+// .gs-bestanden één globale namespace; de definitie die het laatst geladen
+// wordt overschrijft. Hierdoor was niet-deterministisch welke versie de
+// API-webhook kreeg. Nu eigen naam = geen collision.
+function parseServerJson_(tekst) {
   try { return JSON.parse(tekst); } catch (_) { return { geldig: false, fout: 'Ongeldig serverantwoord.' }; }
 }
