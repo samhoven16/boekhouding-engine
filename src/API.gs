@@ -97,7 +97,8 @@ function doGet(e) {
   const apiSleutel = getInstelling_('Webhook API sleutel');
   if (apiSleutel) {
     const meegezonden = (e && e.parameter && e.parameter.apikey) || '';
-    if (meegezonden !== apiSleutel) {
+    // Constant-time compare (zelfde als doPost) — voorkomt timing-attack
+    if (!veiligVergelijkApi_(meegezonden, apiSleutel)) {
       return jsonResponse_({ succes: false, fout: 'Ongeldige of ontbrekende API-sleutel' });
     }
   }

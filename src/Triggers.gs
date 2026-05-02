@@ -358,6 +358,26 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
       ref: 'IK' + inkoopNr, type: BOEKING_TYPE.INKOOPFACTUUR,
     });
   }
+
+  // Als de gebruiker de uitgave direct als BETAALD markeert: ook de
+  // betaal-boeking aanmaken (4000 → 1200/2400). Anders accumuleert het
+  // crediteurensaldo terwijl de uitgave op de inkoop-tab al "Betaald" staat.
+  const betaaldDirect = data['Betalingsstatus uitgave'] === 'Betaald';
+  if (betaaldDirect) {
+    const betaalmethode = String(data['Betaalmethode'] || '').toLowerCase();
+    const isPrive = betaalmethode.includes('priv');
+    maakJournaalpost_(ss, {
+      datum,
+      omschr: omschr + ' (betaling)',
+      dagboek: 'Bankboek',
+      debet:  '4000',
+      credit: isPrive ? '2400' : '1200',  // privé-betaling → privéonttrekking, anders bank
+      bedrag: bedragIncl,
+      ref:    'IK' + inkoopNr,
+      type:   BOEKING_TYPE.BANKBETALING,
+    });
+  }
+
   Logger.log(`Inkoopfactuur IK${inkoopNr} geregistreerd voor ${leverancier}`);
 
   // Proactief signaal: aankoop ≥ €450 kan worden geactiveerd als investering.
@@ -407,15 +427,47 @@ function verwerkDeclaratieUitHoofdformulier_(ss, data) {
 
   ss.getSheetByName(SHEETS.INKOOPFACTUREN).appendRow(inkoopData);
 
-  // Privé-onttrekking boeking: Kosten debet | Rekening-courant eigenaar credit
+  // Privé-voorgeschoten kosten: kostenrekening (excl) + BTW-voorbelasting → 4500 (incl).
+  // Eerdere versie boekte alleen excl. waardoor BTW niet als voorbelasting werd
+  // teruggevorderd én 4500 onvolledig was (€100 ipv €121 bij 21% declaratie).
+  const omschrDecl = `Declaratie ${betaaldDoor} – ${data['Omschrijving declaratie'] || categorie}`;
   maakJournaalpost_(ss, {
     datum,
-    omschr: `Declaratie ${betaaldDoor} – ${data['Omschrijving declaratie'] || categorie}`,
+    omschr: omschrDecl,
     dagboek: 'Memoriaal',
     debet: kostenRek || '7990', credit: '4500',
     bedrag: bedragExcl,
+    btwTarief, btwBedrag: 0,
     ref: 'DECL' + inkoopNr, type: BOEKING_TYPE.MEMORIAAL,
   });
+  if (btwBedrag > 0) {
+    maakJournaalpost_(ss, {
+      datum,
+      omschr: omschrDecl + ' (BTW voorbelasting)',
+      dagboek: 'Memoriaal',
+      debet: bepaalBtwVoorbelastingRekening_(data['BTW tarief declaratie']),
+      credit: '4500',
+      bedrag: btwBedrag,
+      btwTarief, btwBedrag,
+      ref: 'DECL' + inkoopNr, type: BOEKING_TYPE.MEMORIAAL,
+    });
+  }
+
+  // Als de declaratie al 'Terugbetaald' is: ook de uitbetaling boeken
+  // (4500 debet, Bank credit). Anders blijft 4500-saldo open ondanks 'Betaald'.
+  if (data['Declaratie status'] === 'Terugbetaald') {
+    maakJournaalpost_(ss, {
+      datum,
+      omschr: omschrDecl + ' (terugbetaling)',
+      dagboek: 'Bankboek',
+      debet: '4500',
+      credit: '1200',
+      bedrag: bedragIncl,
+      ref: 'DECL' + inkoopNr,
+      type: BOEKING_TYPE.BANKBETALING,
+    });
+  }
+
   Logger.log(`Declaratie DECL${inkoopNr} geregistreerd voor ${betaaldDoor}`);
 }
 
@@ -588,12 +640,21 @@ function verwerkInkoopfactuurFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const inkoopNr = volgendInkoopNummer_();
     const datum = data['Factuurdatum'] ? new Date(data['Factuurdatum']) : new Date();
-    const leverancier = data['Leveranciernaam'] || '';
+    const leverancier = String(data['Leveranciernaam'] || '').trim();
+    const bedragExcl = parseBedrag_(data['Bedrag excl. BTW'] || '0');
+    // Validatie EERST — voorkom gap in inkoopnummer-reeks bij lege submit
+    if (!leverancier) {
+      schrijfAuditLog_('Inkoopfactuur (legacy) geweigerd', 'leverancier ontbreekt');
+      throw new Error('Leveranciernaam is verplicht.');
+    }
+    if (bedragExcl <= 0) {
+      schrijfAuditLog_('Inkoopfactuur (legacy) geweigerd', 'bedragExcl ≤ 0');
+      throw new Error('Vul een bedrag in groter dan €0,00');
+    }
+    const inkoopNr = volgendInkoopNummer_();
     const leverancierId = zoekOfMaakRelatie_(ss, leverancier, RELATIE_TYPE.LEVERANCIER);
 
-    const bedragExcl = parseBedrag_(data['Bedrag excl. BTW'] || '0');
     const btwTarief = parseBtwTarief_(data['BTW tarief'] || '21% (hoog)');
     let btwBedrag = parseBedrag_(data['BTW bedrag'] || '0');
 
@@ -988,36 +1049,54 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
 //  HELPERS TRIGGERS
 // ─────────────────────────────────────────────
 function koppelBankTransactieAanFactuur_(ss, transactieId, ref, bedrag, isOntvangst, datum) {
+  // Strikte match: ref is alleen geldig als hij EXACT in fnr staat
+  // (eerder: fnr.includes(ref) || ref.includes(fnr) → 'F100' matchte 'F1000').
+  // We accepteren een match als (a) ref === fnr, of (b) ref voorkomt als
+  // hele woordeenheid in fnr (case-insensitive).
+  const refNorm = String(ref || '').trim();
+  if (!refNorm) return;
+  const refRe = new RegExp('(^|\\W)' + refNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\W|$)', 'i');
+  const matchFnr = (fnr) => {
+    const f = String(fnr || '');
+    return f === refNorm || refRe.test(f);
+  };
+
   if (isOntvangst) {
     // Zoek open verkoopfactuur
     const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       const fnr = String(data[i][1]); // Factuurnummer
-      if (fnr.includes(ref) || ref.includes(fnr)) {
-        const openstaand = data[i][12] - data[i][13]; // incl - betaald
-        const nieuwBetaald = rondBedrag_(data[i][13] + Math.min(bedrag, openstaand));
-        const nieuwStatus = nieuwBetaald >= data[i][12]
-          ? FACTUUR_STATUS.BETAALD
-          : FACTUUR_STATUS.DEELS_BETAALD;
-        sheet.getRange(i + 1, 14).setValue(nieuwBetaald);   // Betaald bedrag
-        sheet.getRange(i + 1, 15).setValue(nieuwStatus);    // Status
-        if (nieuwStatus === FACTUUR_STATUS.BETAALD) {
-          sheet.getRange(i + 1, 16).setValue(datum);        // Betaaldatum
-
-          // Debiteuren → Bank journaalpost
-          maakJournaalpost_(ss, {
-            datum,
-            omschr: `Ontvangst factuur ${fnr}`,
-            dagboek: 'Bankboek',
-            debet: '1200', credit: '1100',
-            bedrag: nieuwBetaald,
-            ref: fnr,
-            type: BOEKING_TYPE.BANKONTVANGST,
-          });
-        }
-        break;
+      if (!matchFnr(fnr)) continue;
+      const totalIncl = parseFloat(data[i][12]) || 0;
+      const reedsBetaald = parseFloat(data[i][13]) || 0;
+      const openstaand = rondBedrag_(totalIncl - reedsBetaald);
+      const tePlaatsen = Math.max(0, Math.min(bedrag, openstaand));
+      if (tePlaatsen <= 0) break;
+      const nieuwBetaald = rondBedrag_(reedsBetaald + tePlaatsen);
+      const nieuwStatus = nieuwBetaald + 0.005 >= totalIncl
+        ? FACTUUR_STATUS.BETAALD
+        : FACTUUR_STATUS.DEELS_BETAALD;
+      sheet.getRange(i + 1, 14).setValue(nieuwBetaald);   // Betaald bedrag
+      sheet.getRange(i + 1, 15).setValue(nieuwStatus);    // Status
+      if (nieuwStatus === FACTUUR_STATUS.BETAALD) {
+        sheet.getRange(i + 1, 16).setValue(datum);        // Betaaldatum
       }
+      // Boek de daadwerkelijke betaling van DEZE transactie (niet cumulatief).
+      // Vóór de fix werd `nieuwBetaald` geboekt waardoor bij een tweede
+      // deelbetaling het hele cumulatieve bedrag dubbel werd geboekt.
+      maakJournaalpost_(ss, {
+        datum,
+        omschr: nieuwStatus === FACTUUR_STATUS.BETAALD
+          ? `Ontvangst factuur ${fnr}`
+          : `Deelbetaling factuur ${fnr}`,
+        dagboek: 'Bankboek',
+        debet: '1200', credit: '1100',
+        bedrag: tePlaatsen,
+        ref: fnr,
+        type: BOEKING_TYPE.BANKONTVANGST,
+      });
+      break;
     }
   } else {
     // Zoek open inkoopfactuur
@@ -1025,22 +1104,24 @@ function koppelBankTransactieAanFactuur_(ss, transactieId, ref, bedrag, isOntvan
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       const fnr = String(data[i][4]); // Factuurref leverancier
-      if (fnr.includes(ref) || ref.includes(fnr)) {
-        sheet.getRange(i + 1, 13).setValue(FACTUUR_STATUS.BETAALD);
-        sheet.getRange(i + 1, 14).setValue(datum);
+      if (!matchFnr(fnr)) continue;
+      // Idempotency-guard: als al BETAALD, geen tweede journaalpost.
+      const huidigeStatus = String(data[i][12] || '');
+      if (huidigeStatus === FACTUUR_STATUS.BETAALD) break;
+      sheet.getRange(i + 1, 13).setValue(FACTUUR_STATUS.BETAALD);
+      sheet.getRange(i + 1, 14).setValue(datum);
 
-        // Crediteuren → Bank journaalpost
-        maakJournaalpost_(ss, {
-          datum,
-          omschr: `Betaling factuur ${fnr}`,
-          dagboek: 'Bankboek',
-          debet: '4000', credit: '1200',
-          bedrag,
-          ref: fnr,
-          type: BOEKING_TYPE.BANKBETALING,
-        });
-        break;
-      }
+      // Crediteuren → Bank journaalpost
+      maakJournaalpost_(ss, {
+        datum,
+        omschr: `Betaling factuur ${fnr}`,
+        dagboek: 'Bankboek',
+        debet: '4000', credit: '1200',
+        bedrag,
+        ref: fnr,
+        type: BOEKING_TYPE.BANKBETALING,
+      });
+      break;
     }
   }
 }
