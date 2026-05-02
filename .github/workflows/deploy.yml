@@ -244,3 +244,38 @@ jobs:
             echo "::warning title=CF cache purge mislukt (HTTP $HTTP)::Controleer CF_API_TOKEN en CF_ZONE_ID secrets."
           fi
 
+      # ── SMOKE TEST: licentieserver bereikbaar + healthy?
+      # Voorkomt dat een geslaagde deploy stilletjes een broken endpoint achterlaat.
+      - name: Smoke-test licentieserver
+        if: ${{ env.LICENCE_DEPLOYMENT_ID != '' }}
+        env:
+          LICENCE_EXEC_URL: ${{ secrets.LICENCE_EXEC_URL }}
+        run: |
+          if [ -z "$LICENCE_EXEC_URL" ]; then
+            echo "::warning title=LICENCE_EXEC_URL ontbreekt::Stel deze secret in voor automatische health-check (de /exec URL van je licentieserver-deploy)."
+            exit 0
+          fi
+          HTTP=$(curl -s -L -o /tmp/health.json -w "%{http_code}" \
+            "${LICENCE_EXEC_URL}?actie=health")
+          BODY=$(cat /tmp/health.json | head -c 500)
+          echo "Status: $HTTP — Body: $BODY"
+          if [ "$HTTP" != "200" ]; then
+            echo "::error title=Licentieserver onbereikbaar::HTTP $HTTP. Recente deploy mogelijk broken — check Apps Script Executions log."
+            exit 1
+          fi
+          if echo "$BODY" | grep -qi '"ok"\s*:\s*true\|"healthy"\s*:\s*true'; then
+            echo "✅ Licentieserver healthy"
+          else
+            echo "::warning title=Licentieserver bereikbaar maar geen ok-response::Body: $BODY"
+          fi
+
+      # ── FAIL-NOTIFICATION via email naar owner als hierboven faalt
+      - name: E-mail bij deploy-falen
+        if: failure()
+        env:
+          OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+        run: |
+          if [ -z "$OWNER_EMAIL" ]; then exit 0; fi
+          echo "::warning::Deploy faalde. OWNER_EMAIL secret aanwezig maar GitHub Actions kan niet direct mailen — gebruik notification-rules in GitHub of een third-party action."
+          echo "Tip: stel een 'Workflow runs' notification in via GitHub → Settings → Notifications → Actions → Failures only."
+

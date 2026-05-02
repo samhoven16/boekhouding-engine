@@ -1,0 +1,68 @@
+name: Daily health-monitor
+
+# Pingt website + licentieserver elke ochtend.
+# Faalt? GitHub stuurt automatisch een notification (Settings → Actions → Failures).
+#
+# EENMALIGE SETUP — secrets:
+#   LICENCE_EXEC_URL — de /exec URL van je licentieserver-deploy
+#   (optioneel) WEBSITE_URL — default: https://www.boekhoudbaar.nl
+
+on:
+  schedule:
+    - cron: '0 7 * * *'   # elke dag 09:00 NL-tijd
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: Check live endpoints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Website bereikbaar?
+        env:
+          WEBSITE_URL: ${{ secrets.WEBSITE_URL }}
+        run: |
+          URL="${WEBSITE_URL:-https://www.boekhoudbaar.nl}"
+          HTTP=$(curl -s -o /tmp/site.html -w "%{http_code}" -L "$URL")
+          if [ "$HTTP" != "200" ]; then
+            echo "::error title=Website down (HTTP $HTTP)::$URL onbereikbaar"
+            exit 1
+          fi
+          if ! grep -qi "boekhoudbaar" /tmp/site.html; then
+            echo "::error title=Website body verdacht::geen 'boekhoudbaar' in HTML — mogelijk DNS/cache-issue"
+            exit 1
+          fi
+          echo "✅ Website OK ($URL → HTTP 200, brand intact)"
+
+      - name: Licentieserver healthy?
+        env:
+          LICENCE_EXEC_URL: ${{ secrets.LICENCE_EXEC_URL }}
+        run: |
+          if [ -z "$LICENCE_EXEC_URL" ]; then
+            echo "::warning title=LICENCE_EXEC_URL ontbreekt::Stel secret in voor monitoring"
+            exit 0
+          fi
+          HTTP=$(curl -s -L -o /tmp/health.json -w "%{http_code}" \
+            "${LICENCE_EXEC_URL}?actie=health")
+          BODY=$(cat /tmp/health.json | head -c 600)
+          echo "Status: $HTTP — Body: $BODY"
+          if [ "$HTTP" != "200" ]; then
+            echo "::error title=Licentieserver down (HTTP $HTTP)::Klanten kunnen geen licentie activeren of valideren"
+            exit 1
+          fi
+          if echo "$BODY" | grep -qi '"healthy"\s*:\s*false\|"ok"\s*:\s*false'; then
+            echo "::error title=Licentieserver unhealthy::config-issue gerapporteerd"
+            exit 1
+          fi
+          echo "✅ Licentieserver healthy"
+
+      - name: Mollie API bereikbaar?
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" "https://api.mollie.com/v2/methods")
+          if [ "$HTTP" != "200" ] && [ "$HTTP" != "401" ]; then
+            echo "::error title=Mollie API down (HTTP $HTTP)::Betalingen werken niet"
+            exit 1
+          fi
+          echo "✅ Mollie API up (HTTP $HTTP, 401 = ok zonder key)"
