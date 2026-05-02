@@ -416,7 +416,8 @@
     pointer-events: none;
   }
   .btn-primair:hover::before { transform: translateX(100%); }
-  .btn-primair:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 22px 56px rgba(46,196,182,.36), 0 4px 10px rgba(0,0,0,.12); background: #F8FDFC; }
+  .btn-primair { transform: translate3d(var(--mag-x, 0), var(--mag-y, 0), 0); }
+  .btn-primair:hover { transform: translate3d(var(--mag-x, 0), calc(var(--mag-y, 0px) - 2px), 0) scale(1.03); box-shadow: 0 22px 56px rgba(46,196,182,.36), 0 4px 10px rgba(0,0,0,.12); background: #F8FDFC; }
   .btn-primair:active { transform: scale(.97) translateY(0); transition-duration: .08s; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
   .btn-primair > * { position: relative; }
   .btn-secundair {
@@ -1074,6 +1075,13 @@
 
   /* ── FAQ ── */
   .faq-grid { margin-top: 40px; max-width: 760px; }
+  .faq-meer-toggle {
+    display: none; background: transparent; border: 1px solid var(--rand);
+    color: var(--blauw); padding: 10px 20px; border-radius: 100px;
+    font: inherit; font-weight: 600; cursor: pointer;
+    transition: background .2s, border-color .2s, transform .15s;
+  }
+  .faq-meer-toggle:hover { background: var(--bg); border-color: var(--accent); transform: translateY(-1px); }
   details {
     border-bottom: 1px solid var(--rand); padding: 6px 0;
     transition: background .2s ease;
@@ -1194,7 +1202,18 @@
   }
 
   @media (max-width: 768px) {
-    section { padding: 64px 20px; }
+    section { padding: 44px 20px; }
+    /* Mobile-compact — verberg pure 'extras' op mobiel om scrollen te beperken */
+    .onmisbaar-flow { display: none; }  /* visuele flow-demo schaalt slecht op klein */
+    .oprichter-sectie { padding: 32px 20px; }
+    .vergelijk-sectie { padding-top: 36px; padding-bottom: 36px; }
+    .demo-sectie { padding: 36px 20px; }
+    .trust-sectie { padding: 40px 20px; }
+    .fit-sectie { padding: 40px 20px; }
+    /* FAQ comprimer: gebruiker kan klikken om meer te zien */
+    .faq-grid > details:nth-child(n+6) { display: none; }
+    .faq-grid.faq-open > details:nth-child(n+6) { display: block; animation: faqOpen .35s cubic-bezier(.2,.7,.2,1); }
+    .faq-meer-toggle { display: block !important; margin: 16px auto 0; }
 
     /* Solid bg op mobiel — duidelijk afgebakend, nooit transparent */
     body > nav {
@@ -1241,7 +1260,13 @@
     }
     .nav-links .nav-cta-desktop { display: none; }
 
-    .hero { padding: 48px 20px 64px; }
+    .hero { padding: 32px 20px 40px; }
+    .hero-grid { gap: 24px; }
+    .hero h1 { font-size: 30px !important; }
+    .hero-sub { font-size: 15px; margin-bottom: 28px; }
+    .hero-product { transform: none !important; }
+    /* Floating data is teveel ruis op smal scherm */
+    .hero-grid-data { display: none; }
     .hero-ctas { flex-direction: column; align-items: stretch; gap: 12px; }
     .btn-primair, .btn-secundair { justify-content: center; width: 100%; }
 
@@ -1485,25 +1510,6 @@
 </section>
 
 <!-- ── PRODUCT PREVIEW (verdere context) ── -->
-<section class="preview-sectie" aria-labelledby="preview-heading">
-  <div class="container">
-    <div class="preview-head">
-      <p class="section-label">Dit krijg je precies</p>
-      <h2 id="preview-heading">Het is een Google&nbsp;Spreadsheet — met superkrachten</h2>
-      <p class="sub-tekst">Geen nieuwe app om te leren. Je opent je boekhouding in Google Sheets, klikt op het menu <b>Boekhoudbaar</b>, en links naast je sheet verschijnt het dashboard met al je cijfers. Eerlijk: zo ziet het er echt uit.</p>
-      <ul class="preview-bullets" role="list">
-        <li>Tabbladen voor facturen, kosten, bank, BTW en rapportages</li>
-        <li>Dashboard-zijbalk met live cijfers en snelle acties</li>
-        <li>Eigen Google Drive — jij bent en blijft eigenaar</li>
-      </ul>
-    </div>
-    <div class="preview-frame" aria-hidden="true" data-reveal>
-      <img src="/preview.svg" alt="Schermvoorbeeld: Boekhoudbaar geopend in Google Sheets met het Instellingen-tabblad en de Dashboard-zijbalk" width="1200" height="720" loading="eager" fetchpriority="high" decoding="async">
-    </div>
-    <p style="text-align:center;margin-top:16px;font-size:13px;color:#5F6B7A">Schermvoorbeeld met demo-cijfers. Jouw sheet ziet er direct na installatie hetzelfde uit — kleuren, menu's, tabbladen en dashboard komen precies zo.</p>
-  </div>
-</section>
-
 <!-- ── SOCIAL PROOF STRIP ── -->
 <div class="proof-strip" aria-label="Wat er in zit">
   <p>
@@ -1890,6 +1896,10 @@
       </details>
 
     </div>
+    <button type="button" class="faq-meer-toggle" id="faq-meer-toggle" aria-expanded="false">
+      <span class="faq-meer-toon">Toon nog 7 vragen ↓</span>
+      <span class="faq-meer-verberg" hidden>Toon minder ↑</span>
+    </button>
   </div>
 </section>
 
@@ -2013,6 +2023,75 @@
       flash(btwCell,   btwDelta,   '+' + fmt(b21));
       flash(aantalCell, null, '');
       if (count >= 3) cta.classList.add('show');
+    });
+  })();
+
+  /* Counter-animatie: KPIs in trust-stats tellen omhoog wanneer in view */
+  (function() {
+    if (!('IntersectionObserver' in window)) return;
+    var stats = document.querySelectorAll('.trust-stat strong');
+    if (!stats.length) return;
+    function animeer(el) {
+      var doel = el.textContent;
+      var match = doel.match(/^(\d+(?:[,.]\d+)?)/);
+      if (!match) return;
+      var num = parseFloat(match[1].replace(',', '.'));
+      var suffix = doel.slice(match[0].length);
+      var prefix = '';
+      if (/^9/.test(doel)) prefix = '';
+      var t0 = performance.now();
+      var dur = 1400;
+      function tick(t) {
+        var p = Math.min(1, (t - t0) / dur);
+        var eased = 1 - Math.pow(1 - p, 3);
+        var v = (num * eased).toFixed(num % 1 ? 1 : 0).replace('.', ',');
+        el.textContent = prefix + v + suffix;
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = doel; // exact eindstand
+      }
+      requestAnimationFrame(tick);
+    }
+    var io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) { animeer(e.target); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.4 });
+    stats.forEach(function(el) {
+      el.dataset.eind = el.textContent;
+      el.textContent = '0';
+      io.observe(el);
+    });
+  })();
+
+  /* Magnetic CTA — buttons trekken cursor naar centrum */
+  (function() {
+    if (window.matchMedia('(hover: none)').matches) return;
+    var ctas = document.querySelectorAll('.btn-primair, .btn-koop, .nav-cta');
+    ctas.forEach(function(btn) {
+      btn.addEventListener('mousemove', function(e) {
+        var r = btn.getBoundingClientRect();
+        var dx = (e.clientX - r.left - r.width / 2) * 0.15;
+        var dy = (e.clientY - r.top - r.height / 2) * 0.15;
+        btn.style.setProperty('--mag-x', dx + 'px');
+        btn.style.setProperty('--mag-y', dy + 'px');
+      });
+      btn.addEventListener('mouseleave', function() {
+        btn.style.setProperty('--mag-x', '0px');
+        btn.style.setProperty('--mag-y', '0px');
+      });
+    });
+  })();
+
+  /* FAQ 'toon meer' toggle (mobile only) */
+  (function() {
+    var btn = document.getElementById('faq-meer-toggle');
+    var grid = document.getElementById('faq-lijst');
+    if (!btn || !grid) return;
+    btn.addEventListener('click', function() {
+      var open = grid.classList.toggle('faq-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.querySelector('.faq-meer-toon').hidden = open;
+      btn.querySelector('.faq-meer-verberg').hidden = !open;
     });
   })();
 
