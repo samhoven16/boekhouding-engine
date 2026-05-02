@@ -75,12 +75,12 @@ function valideerBoeking(type, data) {
  * @returns {excl, btw, incl, tarief}
  */
 function berekenBtw(tarief, bedragExcl, bedragIncl) {
-  // Strikte tarief-detectie: gebruik exacte percent-substrings ('21%' / '9%')
-  // ipv los cijfer. Voorkomt dat '21% hoog' fout naar 9% mappen, of een
-  // toekomstig '29%' tarief ten onrechte als 9% telt.
+  // Strikte tarief-detectie: '21%' óf '\bhoog\b' voor 21%, '9%' (na 21%-check
+   // zodat '21%' niet als 9% telt) óf '\blaag\b' voor 9%. Voorkomt dat
+   // '21% hoog' fout naar 9% mapt, of toekomstig '29%' als 9% telt.
   const t = String(tarief || '');
-  const pct = t.includes('21%') ? 0.21
-            : (t.includes('9%') || /\blaag\b/i.test(t)) ? 0.09
+  const pct = (t.includes('21%') || /\bhoog\b/i.test(t)) ? 0.21
+            : (t.includes('9%')  || /\blaag\b/i.test(t)) ? 0.09
             : 0;
   const isVrijgesteld = !tarief || t.includes('Vrijgesteld') || t.includes('Verlegd');
   let excl, btw, incl;
