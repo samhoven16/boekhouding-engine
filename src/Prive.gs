@@ -177,16 +177,24 @@ function voegPriveTransactieToe() {
 }
 
 function opslaanPriveTransactie(data) {
+  // Server-side validatie — de dialog-side check kan omzeild worden.
+  const bedragNum = parseFloat(data && data.bedrag);
+  if (!isFinite(bedragNum) || bedragNum === 0) {
+    throw new Error('Vul een geldig bedrag in (groter dan €0,00).');
+  }
+  const omschr = String((data && data.omschr) || '').trim();
+  if (!omschr) throw new Error('Omschrijving is verplicht.');
+
   const ss = getSpreadsheet_();
   maakPriveTabbladen_(ss);
   const sheet = ss.getSheetByName(PRIVE_TAB);
   const bedrag = data.type === 'Uitgave'
-    ? -Math.abs(parseFloat(data.bedrag) || 0)
-    :  Math.abs(parseFloat(data.bedrag) || 0);
+    ? -Math.abs(bedragNum)
+    :  Math.abs(bedragNum);
 
   sheet.appendRow([
     data.datum ? new Date(data.datum) : new Date(),
-    data.omschr,
+    omschr,
     data.categorie,
     bedrag,
     data.type,

@@ -172,6 +172,12 @@ function emailNaarAccountant() {
 }
 
 function verstuurSamenvattingAccountant(emailAccountant, persoonlijkBericht) {
+  // Server-side e-mail validatie — dialog-side validatie kan
+  // omzeild worden via custom HTTP-clients of devtools.
+  emailAccountant = String(emailAccountant || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailAccountant)) {
+    throw new Error('Ongeldig e-mailadres: ' + emailAccountant);
+  }
   const ss      = getSpreadsheet_();
   const bedrijf = getInstelling_('Bedrijfsnaam') || 'Mijn Bedrijf';
   const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();

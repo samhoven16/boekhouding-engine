@@ -70,9 +70,12 @@ function controleerBtwDeadline_() {
   const periodeKey = kw.kw + '_' + kw.jaar;
   if (verstuurd === periodeKey) return;
 
-  // E-mailadres ophalen
+  // E-mailadres ophalen + valideren — voorkomt GmailApp-crash op invalid input.
   const email = getInstelling_('E-mailadres') || Session.getActiveUser().getEmail();
-  if (!email) return;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email))) {
+    Logger.log('BTW reminder overgeslagen: geen of ongeldig e-mailadres (' + email + ')');
+    return;
+  }
 
   // BTW berekening voor het kwartaal
   let saldoTekst = '';
@@ -102,9 +105,17 @@ https://mijn.belastingdienst.nl
 Met vriendelijke groet,
 Uw boekhoudprogramma`;
 
-  GmailApp.sendEmail(email, onderwerp, body);
-  props.setProperty(verstuurdKey, periodeKey);
-  Logger.log('BTW herinnering verstuurd naar ' + email);
+  // Try/catch zodat een GmailApp-quota-fout de trigger-keten niet stopt;
+  // props alleen bijwerken bij geslaagde verzending (anders wordt morgen
+  // opnieuw geprobeerd — gewenst gedrag).
+  try {
+    GmailApp.sendEmail(email, onderwerp, body);
+    props.setProperty(verstuurdKey, periodeKey);
+    Logger.log('BTW herinnering verstuurd naar ' + email);
+  } catch (e) {
+    Logger.log('BTW herinnering MISLUKT: ' + e.message);
+    try { schrijfAuditLog_('BTW reminder MISLUKT', e.message); } catch (_) {}
+  }
 }
 
 // ─────────────────────────────────────────────
