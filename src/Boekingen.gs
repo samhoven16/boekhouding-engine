@@ -80,6 +80,10 @@ function maakJournaalpost_(ss, opt) {
 // ─────────────────────────────────────────────
 function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
   if (!rekeningCode) return;
+  // Coerce bedrag → numeriek, anders 0+'100' = '0100' string-concat → corrupte cel.
+  const bedragNum = parseFloat(bedrag) || 0;
+  if (bedragNum === 0) return; // Geen wijziging nodig
+
   const sheet = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
   const data = sheet.getDataRange().getValues();
 
@@ -96,9 +100,9 @@ function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
       const isDebet = zijde === 'debet';
 
       if (type === 'Actief' || type === 'Kosten') {
-        huidigSaldo += isDebet ? bedrag : -bedrag;
+        huidigSaldo += isDebet ? bedragNum : -bedragNum;
       } else {
-        huidigSaldo += isDebet ? -bedrag : bedrag;
+        huidigSaldo += isDebet ? -bedragNum : bedragNum;
       }
 
       sheet.getRange(i + 1, 6).setValue(rondBedrag_(huidigSaldo));

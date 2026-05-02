@@ -510,7 +510,11 @@ function verwijderRegel(n) {
 function fmt(n){ return '\u20ac\u00a0' + parseFloat(n||0).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function btwPct(sel){
   var v = document.getElementById(sel).value;
-  return v.includes('21') ? 0.21 : v.includes('9') ? 0.09 : 0;
+  // Strikte detectie: gebruik '21%' / '9%' niet kale cijfers — anders matcht
+   // '212' of een hypothetisch toekomst-tarief als '29%' fout naar 9%.
+  if (v.indexOf('21%') !== -1 || /\\bhoog\\b/i.test(v)) return 0.21;
+  if (v.indexOf('9%') !== -1 || /\\blaag\\b/i.test(v)) return 0.09;
+  return 0;
 }
 
 function herbereken() {
