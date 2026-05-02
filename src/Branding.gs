@@ -96,7 +96,7 @@ function slaLogoOp(base64Data, mimeType) {
   // Sla ook één waarde op als snelle aanwezigheidscheck
   props.setProperty(PROP_LOGO, base64Data.slice(0, 50) + '...');
 
-  auditLog_('Logo geüpload', mime + ', ' + Math.round(byteSchatting / 1024) + ' KB');
+  auditLog_('Logo geüpload', mt + ', ' + Math.round(byteSchatting / 1024) + ' KB');
   return true;
 }
 
