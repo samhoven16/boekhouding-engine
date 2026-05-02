@@ -626,27 +626,40 @@ function genereerUBL_(factuurNr, klantnaam, klantadres, regels, totalExcl, total
 //  SEPA QR CODE (base64 voor PDF insluiting)
 // ─────────────────────────────────────────────
 function haalSepaQrBase64_(iban, bedrijfNaam, bedrag, referentie) {
-  try {
-    const ibanClean = String(iban || '').replace(/\s/g, '');
-    if (!ibanClean) return null;
-    const qrData = [
-      'BCD', '001', '1', 'SCT', '',
-      String(bedrijfNaam || '').substring(0, 70),
-      ibanClean,
-      'EUR' + Number(bedrag || 0).toFixed(2),
-      '', '',
-      String(referentie || '').substring(0, 35),
-    ].join('\n');
-    const url = 'https://chart.googleapis.com/chart?cht=qr&chs=180x180&chl=' +
-      encodeURIComponent(qrData);
-    const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-    if (resp.getResponseCode() === 200) {
-      return 'data:image/png;base64,' + Utilities.base64Encode(resp.getContent());
+  // Google Image Charts API (chart.googleapis.com) is in maart 2024 uitgezet
+  // → primaire fallback is quickchart.io (de officiële vervanger), met
+  // api.qrserver.com als secundaire fallback. Beide zijn gratis tiers.
+  const ibanClean = String(iban || '').replace(/\s/g, '');
+  if (!ibanClean) return null;
+  const qrData = [
+    'BCD', '001', '1', 'SCT', '',
+    String(bedrijfNaam || '').substring(0, 70),
+    ibanClean,
+    'EUR' + Number(bedrag || 0).toFixed(2),
+    '', '',
+    String(referentie || '').substring(0, 35),
+  ].join('\n');
+  const enc = encodeURIComponent(qrData);
+  const urls = [
+    'https://quickchart.io/qr?size=180&text=' + enc,
+    'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + enc,
+  ];
+  for (const url of urls) {
+    try {
+      const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+      if (resp.getResponseCode() === 200) {
+        const blob = resp.getBlob();
+        // quickchart kan PNG of SVG terugsturen — alleen PNG inline embedden
+        const mime = blob.getContentType() || 'image/png';
+        if (mime.indexOf('image/') === 0) {
+          return 'data:' + mime + ';base64,' + Utilities.base64Encode(resp.getContent());
+        }
+      }
+    } catch (e) {
+      Logger.log('SEPA QR primaire bron faalt (' + url + '): ' + e.message);
     }
-  } catch (e) {
-    Logger.log('SEPA QR fout (niet fataal): ' + e.message);
   }
-  return null;
+  return null; // niet fataal — factuur PDF wordt zonder QR gegenereerd
 }
 
 // ─────────────────────────────────────────────
