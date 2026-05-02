@@ -425,8 +425,15 @@ function verwerkBankCsvImport(csvTekst, scheidingsteken, kolommen) {
  * Wordt automatisch aangeroepen vanuit de form-handler als 'Ja, direct versturen'.
  */
 function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedragIncl, vervaldatum, pdfUrl, ublUrl) {
+  klantEmail = String(klantEmail || '').trim();
   if (!klantEmail || !pdfUrl) {
     Logger.log('stuurFactuurEmailNaarKlant_: klantEmail of pdfUrl ontbreekt, mail overgeslagen.');
+    return false;
+  }
+  // Format-validatie — voorkomt GmailApp.sendEmail crash op invalid input
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(klantEmail)) {
+    Logger.log('stuurFactuurEmailNaarKlant_: e-mail niet geldig formaat: ' + klantEmail);
+    try { schrijfAuditLog_('Factuur-mail geweigerd', 'Ongeldig e-mailformaat: ' + klantEmail); } catch (_) {}
     return false;
   }
   const fileId = extractFileId_(pdfUrl);

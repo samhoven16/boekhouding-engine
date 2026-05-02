@@ -658,16 +658,23 @@ function zoekGrootboekBwType_(code) {
 //  HELPERS RELATIES
 // ─────────────────────────────────────────────
 function zoekOfMaakRelatie_(ss, naam, type, email) {
+  // Defensieve normalisatie — voorkomt crashes op non-string input + matcht
+  // case-insensitive én trim-onafhankelijk ('Klant ' = 'klant').
+  const naamNorm = String(naam || '').trim().toLowerCase();
+  if (!naamNorm) throw new Error('Relatie-naam mag niet leeg zijn');
+  const emailNorm = String(email || '').trim().toLowerCase();
+
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const sheet = ss.getSheetByName(SHEETS.RELATIES);
+    if (!sheet) throw new Error('Tabblad Relaties ontbreekt — run setup opnieuw');
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][2]).toLowerCase() === naam.toLowerCase()) {
+      if (String(data[i][2] || '').trim().toLowerCase() === naamNorm) {
         // Sla e-mail op als die nog niet bekend was (kolom 11 = index 10)
-        if (email && !data[i][10]) {
-          sheet.getRange(i + 1, 11).setValue(email);
+        if (emailNorm && !data[i][10]) {
+          sheet.getRange(i + 1, 11).setValue(emailNorm);
         }
         return data[i][0]; // Relatie ID
       }
@@ -677,9 +684,11 @@ function zoekOfMaakRelatie_(ss, naam, type, email) {
     const nr = parseInt(props.getProperty('volgendRelatieId') || '1');
     props.setProperty('volgendRelatieId', String(nr + 1));
     const id = 'REL' + String(nr).padStart(4, '0');
+    // Gebruik de oorspronkelijke (getrimde) naam voor display, niet lowercase
+    const displayNaam = String(naam || '').trim();
     sheet.appendRow([
-      id, type, naam, '', '', '', '', 'Nederland',
-      '', '', email || '', '', '', 30, '21% (hoog)', '', 'Ja', '', new Date()
+      id, type, displayNaam, '', '', '', '', 'Nederland',
+      '', '', emailNorm, '', '', 30, '21% (hoog)', '', 'Ja', '', new Date()
     ]);
     return id;
   } finally {

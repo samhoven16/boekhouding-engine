@@ -301,11 +301,20 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 //  UITGAVEN (inkoopfactuur registreren)
 // ─────────────────────────────────────────────
 function verwerkUitgavenUitHoofdformulier_(ss, data) {
-  const inkoopNr    = volgendInkoopNummer_();
-  const leverancier = data['Leveranciernaam'] || '';
-  const levId       = zoekOfMaakRelatie_(ss, leverancier, RELATIE_TYPE.LEVERANCIER);
+  const leverancier = String(data['Leveranciernaam'] || '').trim();
   const datum       = data['Factuurdatum uitgave'] ? new Date(data['Factuurdatum uitgave']) : new Date();
   const bedragExcl  = parseBedrag_(data['Bedrag excl. BTW'] || '0');
+  // Validatie EERST — voorkom gap in inkoopnummer-reeks
+  if (!leverancier) {
+    schrijfAuditLog_('Uitgave geweigerd', 'leverancier ontbreekt');
+    throw new Error('Leveranciernaam is verplicht.');
+  }
+  if (bedragExcl <= 0) {
+    schrijfAuditLog_('Uitgave geweigerd', 'bedragExcl ≤ 0');
+    throw new Error('Vul een bedrag in groter dan €0,00');
+  }
+  const inkoopNr    = volgendInkoopNummer_();
+  const levId       = zoekOfMaakRelatie_(ss, leverancier, RELATIE_TYPE.LEVERANCIER);
   const btwTarief   = parseBtwTarief_(data['BTW tarief uitgave'] || '21% (hoog)');
   let btwBedrag     = parseBedrag_(data['BTW bedrag uitgave'] || '0');
   if (btwBedrag === 0 && btwTarief !== null) {
@@ -363,9 +372,14 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
 //  DECLARATIE (privé voorgeschoten)
 // ─────────────────────────────────────────────
 function verwerkDeclaratieUitHoofdformulier_(ss, data) {
-  const inkoopNr   = volgendInkoopNummer_();
   const datum      = data['Datum declaratie'] ? new Date(data['Datum declaratie']) : new Date();
   const bedragExcl = parseBedrag_(data['Bedrag excl. BTW declaratie'] || '0');
+  // Validatie EERST — voorkom gap in inkoopnummer-reeks bij lege submit
+  if (bedragExcl <= 0) {
+    schrijfAuditLog_('Declaratie geweigerd', 'bedragExcl ≤ 0 — geen inkoopnummer geclaimd');
+    throw new Error('Vul een bedrag in groter dan €0,00');
+  }
+  const inkoopNr   = volgendInkoopNummer_();
   const btwTarief  = parseBtwTarief_(data['BTW tarief declaratie'] || '0% (nultarief)');
   // Use pre-computed BTW bedrag if provided (avoids cascaded rounding errors from excl*rate);
   // fall back to computed value for Forms submissions that don't include this field.
