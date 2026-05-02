@@ -366,6 +366,7 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
       signaleerAfschrijvingskandidaat_(ss, bedragExcl, leverancier, data['Omschrijving uitgave'] || categorie);
     } catch (_) {}
   }
+  return { ok: true, inkoopnummer: 'IK' + inkoopNr, bedragExcl: bedragExcl, bedragIncl: bedragIncl };
 }
 
 // ─────────────────────────────────────────────

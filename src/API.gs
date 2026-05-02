@@ -164,14 +164,14 @@ function verwerkFactuurWebhook_(ss, p) {
   };
 
   try {
-    verwerkInkomstenUitHoofdformulier_(ss, data);
-    const factuurNr = parseInt(PropertiesService.getScriptProperties()
-      .getProperty(PROP.VOLGEND_FACTUUR_NR) || '1') - 1;
-    const prefix = getInstelling_('Factuurprefix') || 'F';
+    // Pak de factuurnummer DIRECT uit het resultaat — voorkomt race-condition
+    // waarbij parallelle invocations VOLGEND_FACTUUR_NR ondertussen ophogen.
+    const result = verwerkInkomstenUitHoofdformulier_(ss, data);
     return jsonResponse_({
       succes: true,
       bericht: 'Factuur aangemaakt',
-      factuurnummer: formatFactuurnummer_(factuurNr, prefix, 6),
+      factuurnummer: result && result.factuurnummer ? result.factuurnummer : 'onbekend',
+      pdfUrl: result && result.pdfUrl ? result.pdfUrl : null,
     });
   } catch (err) {
     return jsonResponse_({ succes: false, fout: err.message });
@@ -200,8 +200,11 @@ function verwerkKostenWebhook_(ss, p) {
   };
 
   try {
-    verwerkUitgavenUitHoofdformulier_(ss, data);
-    return jsonResponse_({ succes: true, bericht: 'Kosten geboekt' });
+    const res = verwerkUitgavenUitHoofdformulier_(ss, data);
+    return jsonResponse_({
+      succes: true, bericht: 'Kosten geboekt',
+      inkoopnummer: res && res.inkoopnummer ? res.inkoopnummer : null,
+    });
   } catch (err) {
     return jsonResponse_({ succes: false, fout: err.message });
   }
