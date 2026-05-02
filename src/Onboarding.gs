@@ -133,11 +133,45 @@ function controleerOpUpdate_() {
   const props = PropertiesService.getScriptProperties();
   const opgeslagenVersie = props.getProperty(VERSIE_PROP) || '1.0.0';
 
+  // Pad: lokale upgrade door owner (clasp push) → "Bijgewerkt naar X" toast
   if (opgeslagenVersie !== HUIDIGE_VERSIE) {
-    // Nieuwe versie beschikbaar
     props.setProperty(VERSIE_PROP, HUIDIGE_VERSIE);
     toonUpdateMelding_(opgeslagenVersie, HUIDIGE_VERSIE);
+    return;
   }
+
+  // Hybride pad: server kan vertellen dat een NIEUWERE versie beschikbaar is
+  // dan wat de klant draait. Toon dan toast met instructie.
+  try {
+    if (typeof haalConfigOp_ !== 'function') return;
+    const cfg = haalConfigOp_();
+    if (!cfg || !cfg.versie) return;
+    if (_versieIsNieuwer_(cfg.versie, HUIDIGE_VERSIE)) {
+      // Throttle: max 1× per 7 dagen — niet zeuren
+      const userProps = PropertiesService.getUserProperties();
+      const last = parseInt(userProps.getProperty('serverVersieToastTs') || '0');
+      if (Date.now() - last < 7 * 24 * 3600 * 1000) return;
+      userProps.setProperty('serverVersieToastTs', String(Date.now()));
+      try {
+        SpreadsheetApp.getActiveSpreadsheet().toast(
+          'Versie ' + cfg.versie + ' is beschikbaar (jij draait ' + HUIDIGE_VERSIE + '). ' +
+          'Menu: Boekhoudbaar → Licentie & Updates → Wat is er nieuw?',
+          '↑ Update beschikbaar', 10
+        );
+      } catch (_) {}
+    }
+  } catch (_) {}
+}
+
+/** Vergelijkt 'a.b.c' versie-strings. Returns true als a > b. */
+function _versieIsNieuwer_(a, b) {
+  const pa = String(a || '0').split('.').map(function(x) { return parseInt(x) || 0; });
+  const pb = String(b || '0').split('.').map(function(x) { return parseInt(x) || 0; });
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff > 0;
+  }
+  return false;
 }
 
 function toonUpdateMelding_(oudeVersie, nieuweVersie) {

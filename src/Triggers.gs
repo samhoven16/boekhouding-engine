@@ -170,11 +170,31 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 
   // Idempotency: blokkeer dubbele verwerking van hetzelfde factuurnummer
   const bestaandeRijen = vfSheet.getDataRange().getValues();
+  const datumStr = Utilities.formatDate(datum, 'Europe/Amsterdam', 'yyyy-MM-dd');
+  let recenteDuplicate = null;
   for (let i = 1; i < bestaandeRijen.length; i++) {
     if (bestaandeRijen[i][0] === factuurNr) {
       schrijfAuditLog_('Factuur DUBBEL geblokkeerd', factuurNummerOpgemaakt + ' bestaat al in sheet');
       throw new Error('Factuur ' + factuurNummerOpgemaakt + ' bestaat al — dubbele verwerking geblokkeerd.');
     }
+    // Self-healing: detecteer 'gevoelsmatige' duplicate — zelfde klant + zelfde
+    // datum + zelfde bedrag binnen 5 minuten = waarschijnlijk dubbel-submit.
+    // Geen blokkade (kan legitiem zijn), wél waarschuwing in audit-log.
+    const exDatum = bestaandeRijen[i][2];
+    const exKlant = String(bestaandeRijen[i][5] || '');
+    const exIncl  = parseFloat(bestaandeRijen[i][12]) || 0;
+    if (exDatum) {
+      const exDatumStr = Utilities.formatDate(new Date(exDatum), 'Europe/Amsterdam', 'yyyy-MM-dd');
+      if (exDatumStr === datumStr && exKlant === klantnaam && Math.abs(exIncl - totalIncl) < 0.01) {
+        recenteDuplicate = bestaandeRijen[i][1] || ('rij ' + (i + 1));
+      }
+    }
+  }
+  if (recenteDuplicate) {
+    schrijfAuditLog_('Factuur dubbel-submit verdacht',
+      factuurNummerOpgemaakt + ' lijkt op bestaande ' + recenteDuplicate +
+      ' (zelfde klant/datum/bedrag) — niet geblokkeerd, audit-flag gezet');
+    try { if (typeof rapporteerAnomalie_ === 'function') rapporteerAnomalie_('factuur_mogelijk_dubbel', 'similar to ' + recenteDuplicate); } catch (_) {}
   }
 
   vfSheet.appendRow(factuurData);
