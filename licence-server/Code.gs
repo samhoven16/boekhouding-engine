@@ -646,11 +646,18 @@ function valideerEndpoint_(e) {
 function configEndpoint_(e) {
   const props = PropertiesService.getScriptProperties();
   let flags = {};
+  let belastingTarieven = null;
+  let featureMeldingen = {};
   try { flags = JSON.parse(props.getProperty('FEATURE_FLAGS') || '{}'); } catch (_) {}
+  try { belastingTarieven = JSON.parse(props.getProperty('BELASTING_TARIEVEN') || 'null'); } catch (_) {}
+  try { featureMeldingen = JSON.parse(props.getProperty('FEATURE_MELDINGEN') || '{}'); } catch (_) {}
   return jsonResp_({
-    versie:  props.getProperty('PRODUCT_VERSIE') || '2.1.0',
-    bericht: props.getProperty('GLOBAL_BERICHT') || '',
-    flags:   flags,
+    versie:           props.getProperty('PRODUCT_VERSIE') || '2.1.0',
+    bericht:          props.getProperty('GLOBAL_BERICHT') || '',
+    flags:            flags,
+    features:         flags,           // alias voor isFeatureIngeschakeld_
+    featureMeldingen: featureMeldingen,
+    belastingTarieven: belastingTarieven,  // null = client gebruikt lokale fallback
   });
 }
 

@@ -81,7 +81,19 @@ const BELASTING_PER_JAAR = {
 
 function getBelasting_() {
   const jaar = new Date().getFullYear();
-  const tarieven = BELASTING_PER_JAAR[jaar] || BELASTING_PER_JAAR[2026];
+  // Server-side override — bij wetswijziging update centrale config zonder dat
+  // klanten een nieuwe sheet hoeven te kopiëren. Fallback naar lokale tabel.
+  let serverTarieven = null;
+  try {
+    if (typeof haalConfigOp_ === 'function') {
+      const cfg = haalConfigOp_();
+      if (cfg && cfg.belastingTarieven && cfg.belastingTarieven[jaar]) {
+        serverTarieven = cfg.belastingTarieven[jaar];
+      }
+    }
+  } catch (_) { /* fail-open naar lokale tarieven */ }
+
+  const tarieven = serverTarieven || BELASTING_PER_JAAR[jaar] || BELASTING_PER_JAAR[2026];
   return Object.assign({
     KOR_GRENS:              20000,
     KIA_MIN:                2801,
