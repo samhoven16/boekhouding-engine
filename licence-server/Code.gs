@@ -39,6 +39,7 @@ function doGet(e) {
   if (actie === 'activeer-otp')  return activeerOtpEndpoint_(e);
   if (actie === 'onboarded')     return onboardedEndpoint_(e);
   if (actie === 'config')        return configEndpoint_(e);
+  if (actie === 'telemetry')     return telemetryEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   if (actie === 'admin')         return adminPaneel_(e);
 
@@ -672,6 +673,45 @@ function configEndpoint_(e) {
  *
  * Idempotent — overschrijft een bestaande timestamp niet.
  */
+/**
+ * TELEMETRY-endpoint — klant rapporteert anomalies (BTW-invariant fail,
+ * detecteerAfwijkingen_ matches, exception-traces).
+ *
+ * Schrijft naar 'Telemetry'-tabblad op licence-sheet zodat jij in
+ * realtime ziet welke klanten welke fout krijgen op welke versie.
+ *
+ * Privacy: ontvangt GEEN boekhouddata, alleen structurele info
+ *   (sleutel-hash, code, message, versie, timestamp).
+ */
+function telemetryEndpoint_(e) {
+  const sleutel = String((e.parameter.sleutel || '')).trim().toUpperCase();
+  const code    = String((e.parameter.code    || '')).slice(0, 80);
+  const bericht = String((e.parameter.bericht || '')).slice(0, 500);
+  const versie  = String((e.parameter.versie  || '')).slice(0, 20);
+
+  if (!sleutel || !code) return jsonResp_({ ok: false, fout: 'sleutel + code verplicht' });
+
+  // Privacy: hash sleutel voor opslag — wij hoeven niet te weten wélke klant,
+  // alleen of meerdere klanten dezelfde fout hebben.
+  const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, sleutel)
+    .map(function(b) { return ('0' + (b & 0xff).toString(16)).slice(-2); })
+    .join('').slice(0, 12);
+
+  try {
+    const ss = SpreadsheetApp.openById(getLicentieSheet_().getParent().getId());
+    let tel = ss.getSheetByName('Telemetry');
+    if (!tel) {
+      tel = ss.insertSheet('Telemetry');
+      tel.appendRow(['Datum', 'Klant-hash', 'Code', 'Bericht', 'Versie']);
+      tel.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#0D1B4E').setFontColor('#fff');
+    }
+    tel.appendRow([new Date(), hash, code, bericht, versie]);
+  } catch (err) {
+    Logger.log('telemetry write failed: ' + err.message);
+  }
+  return jsonResp_({ ok: true });
+}
+
 function onboardedEndpoint_(e) {
   const sleutel = String((e.parameter.sleutel || '')).trim().toUpperCase();
   const ssId    = String((e.parameter.ssId    || '')).trim();

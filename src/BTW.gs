@@ -154,8 +154,11 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     const issues = valideerBtwInvariants_(aangifte);
     if (issues.length > 0) {
       aangifte._invariantIssues = issues;
-      schrijfAuditLog_('BTW invariants WAARSCHUWING',
-        issues.length + ' afwijking(en): ' + issues.map(function(i){return i.code;}).join(', '));
+      const codeStr = issues.map(function(i){return i.code;}).join(', ');
+      schrijfAuditLog_('BTW invariants WAARSCHUWING', issues.length + ' afwijking(en): ' + codeStr);
+      // Telemetry naar server zodat ik kan zien als meerdere klanten dezelfde
+      // bug krijgen (= productie-issue, geen gebruikersfout).
+      try { if (typeof rapporteerAnomalie_ === 'function') rapporteerAnomalie_('btw_invariant_' + issues[0].code, codeStr); } catch (_) {}
     }
   } catch (e) { Logger.log('BTW-invariants check: ' + e.message); }
 

@@ -502,6 +502,45 @@ function featureMelding_(naam) {
   }
 }
 
+// ─────────────────────────────────────────────
+//  TELEMETRY — anomaly reporting naar server (Tier 1 distribution)
+// ─────────────────────────────────────────────
+/**
+ * Rapporteert een anomalie/exception aan de licentieserver. Privacy-veilig:
+ * stuurt alleen structurele info (code, korte bericht, versie) en NOOIT
+ * boekhouddata, klantgegevens of bedragen-detail.
+ *
+ * Throttle: 1 rapport per code per uur per sheet — voorkomt server-flood
+ * bij looping bug.
+ *
+ * Fail-silent: telemetry mag NOOIT iets blokkeren of crashen.
+ */
+function rapporteerAnomalie_(code, bericht) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const sleutel = props.getProperty(LICENTIE_PROP_KEY);
+    if (!sleutel) return; // niet geactiveerd → geen telemetry
+    const serverUrl = getLicentieServerUrl_();
+    if (!serverUrl) return;
+
+    // Throttle
+    const userProps = PropertiesService.getUserProperties();
+    const throttleKey = 'tlm_' + code;
+    const last = parseInt(userProps.getProperty(throttleKey) || '0');
+    if (Date.now() - last < 3600 * 1000) return; // 1× per uur per code
+    userProps.setProperty(throttleKey, String(Date.now()));
+
+    const versie = (typeof HUIDIGE_VERSIE !== 'undefined') ? HUIDIGE_VERSIE : '?';
+    const url = serverUrl
+      + '?actie=telemetry'
+      + '&sleutel=' + encodeURIComponent(sleutel)
+      + '&code='    + encodeURIComponent(String(code).slice(0, 80))
+      + '&bericht=' + encodeURIComponent(String(bericht || '').slice(0, 500))
+      + '&versie='  + encodeURIComponent(versie);
+    UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
+  } catch (_) { /* fail-silent */ }
+}
+
 /**
  * Eénmalig signaal aan de licentieserver dat setup() succesvol is
  * doorlopen. Idempotent: zet een UserProperties-vlag die herhalen
