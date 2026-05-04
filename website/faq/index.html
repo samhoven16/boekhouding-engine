@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Veelgestelde vragen — Boekhoudbaar | 30+ antwoorden voor ZZP'ers</title>
+<meta name="description" content="Alles wat je wilt weten over Boekhoudbaar: prijs, data-eigenaarschap, BTW-aangifte, boekhouder-toegang, KOR, afschrijvingen, declaraties en meer. 30+ vragen beantwoord.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/faq/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Veelgestelde vragen — Boekhoudbaar">
+<meta property="og:description" content="30+ vragen over Boekhoudbaar beantwoord: prijs, data, BTW, boekhouder, KOR en meer.">
+<meta property="og:url" content="https://www.boekhoudbaar.nl/faq/">
+<meta property="og:image" content="https://www.boekhoudbaar.nl/og-image.svg">
+<meta property="og:locale" content="nl_NL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Veelgestelde vragen — Boekhoudbaar">
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+  {"@type":"BreadcrumbList","itemListElement":[
+    {"@type":"ListItem","position":1,"name":"Boekhoudbaar","item":"https://www.boekhoudbaar.nl/"},
+    {"@type":"ListItem","position":2,"name":"FAQ","item":"https://www.boekhoudbaar.nl/faq/"}
+  ]},
+  {"@type":"FAQPage","mainEntity":[
+    {"@type":"Question","name":"Moet ik elk jaar opnieuw betalen?","acceptedAnswer":{"@type":"Answer","text":"Nee. Je betaalt één keer €49 en daarna nooit meer. Geen jaarlijkse licentie, geen verlengingsmail, geen verborgen kosten."}},
+    {"@type":"Question","name":"Wat als het niet werkt voor mij?","acceptedAnswer":{"@type":"Answer","text":"Mail binnen 14 dagen na aankoop op hallo@boekhoudbaar.nl en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening."}},
+    {"@type":"Question","name":"Waar staan mijn gegevens precies?","acceptedAnswer":{"@type":"Answer","text":"In één Google Spreadsheet, in jouw eigen Google Drive. Alleen jij — en wie jij expliciet toegang geeft — kan erbij. Ik kan er niet bij, Google gebruikt de inhoud niet voor advertenties."}},
+    {"@type":"Question","name":"Kan mijn boekhouder meekijken?","acceptedAnswer":{"@type":"Answer","text":"Ja, gratis. Je klikt op Delen in Google Sheets, typt het mailadres van je boekhouder, en klaar. Geen extra licentie."}},
+    {"@type":"Question","name":"Werkt het ook op een Mac of tablet?","acceptedAnswer":{"@type":"Answer","text":"Ja. Boekhoudbaar draait in je browser, dus je kunt het openen op Mac, Windows, Linux, iPad, zelfs je telefoon."}},
+    {"@type":"Question","name":"Mag ik de sheet zelf aanpassen?","acceptedAnswer":{"@type":"Answer","text":"Ja. Het is jouw bestand — voeg kolommen toe, maak een extra tabblad, pas kleuren aan. Verander alleen niet de formules in de systeem-tabbladen."}},
+    {"@type":"Question","name":"Krijg ik ook updates na mijn aankoop?","acceptedAnswer":{"@type":"Answer","text":"Ja, gratis. Ik werk Boekhoudbaar door, en je krijgt een mail bij elke nieuwe versie."}},
+    {"@type":"Question","name":"Wat heb ik nodig om te beginnen?","acceptedAnswer":{"@type":"Answer","text":"Een Google-account (gratis) en een browser. Geen Office-licentie, geen Windows, geen installatie."}},
+    {"@type":"Question","name":"Moet ik een nieuw @gmail.com-adres aanmaken?","acceptedAnswer":{"@type":"Answer","text":"Nee. Google laat je een account aanmaken met elk bestaand e-mailadres — bijvoorbeeld sam@jouwdomein.nl."}},
+    {"@type":"Question","name":"Hoe verwerk ik betalingen van Mollie of Stripe?","acceptedAnswer":{"@type":"Answer","text":"Elke uitbetaling naar je bank boek je als bankontvangst, de transactiekosten als bankkosten (BTW-vrij). Stap-voor-stap voorbeeld in de meegeleverde instructie."}},
+    {"@type":"Question","name":"Kan ik Boekhoudbaar gebruiken voor mijn KOR-aangifte?","acceptedAnswer":{"@type":"Answer","text":"Ja. Vul in instellingen aan dat KOR actief is, en de sheet rekent geen BTW meer op je facturen. Je doet jaarlijks een KOR-aangifte (op = op €20.000 omzet)."}},
+    {"@type":"Question","name":"Werkt Boekhoudbaar offline?","acceptedAnswer":{"@type":"Answer","text":"Niet volledig. Google Sheets heeft een offline-mode, maar de live functies (PDF genereren, e-mailen, BTW-aangifte) hebben internet nodig."}}
+  ]}
+]}
+</script>
+
+<style>
+:root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--bg:#F7F9FC;--wit:#fff;--rand:#E5EAF2;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+::selection{background:rgba(46,196,182,.28);color:var(--blauw);}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--wit);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;}
+img{max-width:100%;height:auto;}
+
+/* NAV */
+body>nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid rgba(229,234,242,.8);padding:0 32px;}
+.nav-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:76px;gap:32px;}
+.logo{text-decoration:none;display:inline-flex;align-items:center;height:40px;flex-shrink:0;}
+.logo img{height:36px;width:auto;}
+.nav-links{display:flex;gap:36px;list-style:none;align-items:center;}
+.nav-links a{text-decoration:none;color:#475569;font-size:15px;font-weight:500;letter-spacing:-0.01em;transition:color .15s;}
+.nav-links a:not(.nav-cta):hover{color:var(--blauw);}
+.nav-cta{background:var(--blauw);color:var(--wit)!important;padding:10px 20px;border-radius:10px;font-weight:600!important;font-size:14px!important;display:inline-flex;align-items:center;box-shadow:0 1px 2px rgba(13,27,78,.08);transition:background .18s,transform .18s,box-shadow .25s;}
+.nav-cta:hover{background:var(--blauw-licht)!important;transform:translateY(-1px);box-shadow:0 8px 20px rgba(13,27,78,.22);}
+.nav-mobile-actions{display:none;list-style:none;align-items:center;gap:6px;}
+.nav-toggle{display:none;background:none;border:none;cursor:pointer;padding:8px;color:var(--blauw);min-width:44px;min-height:44px;align-items:center;justify-content:center;}
+.nav-toggle svg{display:block;}
+.nav-toggle[aria-expanded="true"] .icon-open{display:none;}
+.nav-toggle[aria-expanded="false"] .icon-close{display:none;}
+
+/* PAGE */
+main{max-width:860px;margin:0 auto;padding:48px 24px 72px;}
+.breadcrumb{font-size:13px;color:var(--grijs);margin-bottom:24px;}
+.breadcrumb a{color:var(--grijs);text-decoration:none;}
+.breadcrumb a:hover{color:var(--blauw);}
+.breadcrumb span{margin:0 6px;color:#aab2c0;}
+
+.hero-faq{text-align:center;padding:24px 0 40px;border-bottom:1px solid var(--rand);margin-bottom:36px;}
+.hero-faq h1{font-size:clamp(32px,5vw,46px);font-weight:800;color:var(--blauw);line-height:1.15;letter-spacing:-0.025em;margin-bottom:14px;}
+.hero-faq p{font-size:18px;color:var(--grijs);max-width:600px;margin:0 auto;}
+.hero-faq a{color:var(--blauw);text-decoration:underline;text-underline-offset:3px;}
+
+/* FILTER + SEARCH */
+.faq-search{display:flex;gap:8px;margin-bottom:24px;}
+.faq-search input{flex:1;padding:13px 16px;border:1.5px solid var(--rand);border-radius:10px;font-size:15px;font-family:inherit;color:var(--tekst);background:var(--wit);transition:border-color .15s;}
+.faq-search input:focus{outline:none;border-color:var(--accent);}
+.faq-cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;}
+.faq-cat{background:var(--bg);border:1px solid var(--rand);color:var(--blauw);padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;}
+.faq-cat:hover{background:var(--wit);border-color:var(--accent);}
+.faq-cat.active{background:var(--blauw);color:var(--wit);border-color:var(--blauw);}
+
+.faq-categorie{margin:36px 0;}
+.faq-categorie-titel{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:var(--blauw);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--rand);}
+.faq-categorie-titel::before{content:"";width:4px;height:14px;background:var(--accent);border-radius:2px;}
+
+details{background:var(--wit);border:1px solid var(--rand);border-radius:10px;padding:0;margin-bottom:10px;transition:border-color .15s,box-shadow .15s;}
+details[open]{border-color:rgba(46,196,182,.5);box-shadow:0 6px 18px rgba(13,27,78,.06);}
+summary{padding:18px 22px;cursor:pointer;font-weight:600;color:var(--blauw);font-size:16px;letter-spacing:-0.01em;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:14px;}
+summary::-webkit-details-marker{display:none;}
+summary::after{content:"+";color:var(--accent);font-size:22px;font-weight:300;transition:transform .25s;flex-shrink:0;}
+details[open] summary::after{content:"−";}
+details p{padding:0 22px 22px;font-size:15px;color:var(--tekst);line-height:1.65;}
+details p a{color:var(--blauw);text-decoration:underline;text-underline-offset:3px;}
+details p a:hover{color:var(--accent);}
+details.hidden{display:none;}
+
+.geen-resultaat{display:none;text-align:center;padding:32px;color:var(--grijs);font-style:italic;}
+.geen-resultaat.show{display:block;}
+
+/* CTA */
+.page-cta{background:linear-gradient(135deg,#0D1B4E 0%,#1A3A7E 100%);color:var(--wit);padding:36px 28px;border-radius:14px;text-align:center;margin-top:48px;}
+.page-cta h2{color:var(--wit);font-size:22px;margin-bottom:8px;}
+.page-cta p{color:rgba(255,255,255,.85);margin-bottom:18px;font-size:15px;}
+.btn-koop{display:inline-block;background:var(--accent);color:#0A4744;padding:12px 24px;border-radius:10px;font-weight:700;text-decoration:none;font-size:15px;transition:transform .18s,box-shadow .25s;}
+.btn-koop:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(46,196,182,.4);}
+
+/* RELATED */
+.related{margin-top:40px;padding-top:32px;border-top:1px solid var(--rand);}
+.related h3{font-size:14px;font-weight:700;color:var(--grijs);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;}
+.related-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;}
+.related-grid a{display:block;padding:14px 16px;background:var(--bg);border:1px solid var(--rand);border-radius:10px;color:var(--blauw);text-decoration:none;font-weight:600;font-size:14.5px;transition:border-color .18s,background .18s;}
+.related-grid a:hover{background:var(--wit);border-color:var(--accent);}
+
+footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px;font-size:13.5px;margin-top:40px;}
+.footer-inner{max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;}
+.footer-links{display:flex;gap:24px;flex-wrap:wrap;}
+.footer-links a{color:rgba(255,255,255,.55);text-decoration:none;font-weight:500;transition:color .18s;}
+.footer-links a:hover{color:var(--wit);}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px;}
+
+@media (max-width:768px){
+  body>nav{padding:0 20px;background:#fff;box-shadow:0 1px 0 rgba(13,27,78,.06),0 6px 20px rgba(13,27,78,.05);border-bottom:none;}
+  .nav-inner{height:68px;gap:12px;}.logo{height:32px;}.logo img{height:30px;}
+  .nav-links{display:none;flex-direction:column;gap:0;position:absolute;top:68px;left:0;right:0;background:var(--wit);border-bottom:1px solid var(--rand);padding:4px 0;box-shadow:0 12px 32px rgba(13,27,78,.1);z-index:99;}
+  .nav-links.open{display:flex;}
+  .nav-links li{width:100%;list-style:none;}
+  .nav-links li a{padding:14px 20px;font-size:16px;display:block;border-bottom:1px solid var(--rand);}
+  .nav-links li:last-child a{border-bottom:none;}
+  .nav-links .nav-cta-desktop{display:none;}
+  .nav-mobile-actions{display:inline-flex;}
+  .nav-toggle{display:inline-flex;}
+  .nav-cta-mobile a.nav-cta{padding:9px 14px!important;font-size:13px!important;}
+  main{padding:32px 18px 48px;}
+  .footer-inner{flex-direction:column;text-align:center;}.footer-links{justify-content:center;}
+}
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
+</head>
+<body>
+
+<nav aria-label="Hoofdnavigatie">
+  <div class="nav-inner">
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home"><img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52"></a>
+    <ul class="nav-links" id="nav-menu" role="list">
+      <li><a href="/functies/">Functies</a></li>
+      <li><a href="/vergelijking/">Vergelijking</a></li>
+      <li><a href="/gids/">Gidsen</a></li>
+      <li><a href="/over/">Over</a></li>
+      <li><a href="/faq/" aria-current="page">FAQ</a></li>
+      <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+    </ul>
+    <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
+      <li class="nav-cta-mobile"><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+      <li><button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
+        <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      </button></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+  <p class="breadcrumb"><a href="/">Boekhoudbaar</a><span>›</span>FAQ</p>
+
+  <div class="hero-faq">
+    <h1>Veelgestelde vragen</h1>
+    <p>30+ antwoorden over Boekhoudbaar — over prijs, data, BTW, KOR, boekhouder-toegang en meer. Staat je vraag er niet tussen? <a href="mailto:hallo@boekhoudbaar.nl">Mail me</a>, meestal antwoord ik dezelfde dag.</p>
+  </div>
+
+  <div class="faq-search">
+    <input type="search" id="faq-zoek" placeholder="Zoek in vragen — bijv. 'BTW' of 'boekhouder'…" aria-label="Zoek in FAQ">
+  </div>
+
+  <div class="faq-cats" role="tablist" aria-label="Filter op categorie">
+    <button type="button" class="faq-cat active" data-cat="alle">Alle</button>
+    <button type="button" class="faq-cat" data-cat="prijs">Prijs &amp; abonnement</button>
+    <button type="button" class="faq-cat" data-cat="data">Data &amp; privacy</button>
+    <button type="button" class="faq-cat" data-cat="gebruik">Gebruik</button>
+    <button type="button" class="faq-cat" data-cat="btw">BTW &amp; aangifte</button>
+    <button type="button" class="faq-cat" data-cat="boekhouder">Boekhouder</button>
+    <button type="button" class="faq-cat" data-cat="techniek">Techniek</button>
+  </div>
+
+  <p class="geen-resultaat" id="geen-resultaat">Geen vragen gevonden. <a href="mailto:hallo@boekhoudbaar.nl">Stel je vraag direct →</a></p>
+
+  <!-- PRIJS -->
+  <div class="faq-categorie">
+    <h2 class="faq-categorie-titel">Prijs &amp; abonnement</h2>
+
+    <details data-cat="prijs">
+      <summary>Moet ik elk jaar opnieuw betalen?</summary>
+      <p>Nee. Je betaalt één keer €49 en daarna nooit meer. Geen jaarlijkse licentie, geen verlengingsmail, geen verborgen kosten. Krijg ik mijn server-kosten er dan wel uit? Ja — want de sheet draait op jouw Drive, niet op een server van mij.</p>
+    </details>
+
+    <details data-cat="prijs">
+      <summary>Wat als het niet werkt voor mij?</summary>
+      <p>Mail me binnen <strong>14 dagen</strong> na aankoop op <a href="mailto:hallo@boekhoudbaar.nl">hallo@boekhoudbaar.nl</a> en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening.</p>
+    </details>
+
+    <details data-cat="prijs">
+      <summary>Krijg ik ook updates na mijn aankoop?</summary>
+      <p>Ja, gratis. Ik werk Boekhoudbaar door, en als er een nieuwe versie is krijg je een mail met wat er veranderd is en hoe je het kunt updaten. Je bestaande data blijft staan — alleen de formules/code worden bijgewerkt.</p>
+    </details>
+
+    <details data-cat="prijs">
+      <summary>Kan ik later overstappen naar Moneybird of e-Boekhouden?</summary>
+      <p>Ja, altijd. Het is jouw spreadsheet — je exporteert alle data naar Excel of CSV en importeert die in elk ander pakket. Geen lock-in. Een van de redenen waarom ik dit zo gebouwd heb: vrijheid is belangrijker dan een kunstmatige drempel om te blijven.</p>
+    </details>
+
+    <details data-cat="prijs">
+      <summary>Bieden jullie korting voor studenten of starters?</summary>
+      <p>Niet expliciet — €49 eenmalig is al de scherpste prijs in de markt. Vergelijk: Moneybird ZZP kost minimaal €15/mnd = €180/jaar. Een Boekhoudbaar-licentie verdient zich binnen 4 maanden terug.</p>
+    </details>
+
+    <details data-cat="prijs">
+      <summary>Kan ik Boekhoudbaar aanbevelen aan mijn klanten?</summary>
+      <p>Ja, graag. Ben je boekhouder, accountant of ondernemerscoach? Mail me voor het partnermodel — je krijgt een vergoeding per klant die jij aanmeldt. Geen minimum, geen contract.</p>
+    </details>
+  </div>
+
+  <!-- DATA -->
+  <div class="faq-categorie">
+    <h2 class="faq-categorie-titel">Data &amp; privacy</h2>
+
+    <details data-cat="data">
+      <summary>Waar staan mijn gegevens precies?</summary>
+      <p>In één Google Spreadsheet, in jouw eigen Google Drive. Alleen jij — en wie jij expliciet toegang geeft — kan erbij. Ik kan er niet bij, Google gebruikt de inhoud niet voor advertenties, en de zeven-jaar bewaarplicht is automatisch geregeld omdat het bestand gewoon in je Drive blijft staan.</p>
+    </details>
+
+    <details data-cat="data">
+      <summary>Hoe weet ik dat jullie niet meekijken in mijn cijfers?</summary>
+      <p>Boekhoudbaar is een script dat in jouw Apps Script-omgeving draait. Het maakt geen externe API-calls naar mijn servers met jouw data. Voor licentie-validatie wordt alleen je sleutel + installatie-ID verstuurd (geen boekhouddata). Bekijk de <a href="/transparantie">transparantie-pagina</a> voor exact wat wel en niet wordt verstuurd.</p>
+    </details>
+
+    <details data-cat="data">
+      <summary>Wat gebeurt er met mijn data als jullie stoppen?</summary>
+      <p>Niets. Je sheet blijft gewoon in jouw Drive werken — de formules zijn lokaal, niet afhankelijk van mijn servers. De licentie-server is alleen nodig voor activatie en updates. Stop ik morgen? Je sheet werkt door zoals hij is, voor altijd.</p>
+    </details>
+
+    <details data-cat="data">
+      <summary>Voldoet Boekhoudbaar aan de AVG / GDPR?</summary>
+      <p>Ja. Omdat je data in jouw eigen Google Drive staat, ben jij de verwerkingsverantwoordelijke. Wij ontvangen geen klantgegevens. Voor de licentie-flow is een verwerkersovereenkomst niet nodig — wij verwerken alleen jouw e-mail (voor activatie) en betalingsgegevens (via Mollie als verwerker).</p>
+    </details>
+
+    <details data-cat="data">
+      <summary>Mag ik mijn boekhouding meenemen naar Excel?</summary>
+      <p>Ja. Bestand → Downloaden → Microsoft Excel (.xlsx). Of CSV per tabblad. Je hele administratie gaat met je mee, zonder restricties.</p>
+    </details>
+  </div>
+
+  <!-- GEBRUIK -->
+  <div class="faq-categorie">
+    <h2 class="faq-categorie-titel">Gebruik &amp; aanpassingen</h2>
+
+    <details data-cat="gebruik">
+      <summary>Mag ik de sheet zelf aanpassen?</summary>
+      <p>Ja. Het is jouw bestand — voeg kolommen toe, maak een extra tabblad, pas kleuren aan. Eén waarschuwing: als je formules in de <em>systeem</em>-tabbladen (Dashboard, BTW-aangifte, Balans, W&amp;V) verandert, kunnen berekeningen fout gaan. Wil je iets specifieks toevoegen? Mail me — vaak kan ik het in de volgende update meenemen.</p>
+    </details>
+
+    <details data-cat="gebruik">
+      <summary>Wat heb ik nodig om te beginnen?</summary>
+      <p>Een Google-account (gratis) en een browser. Dat is het. Geen Office-licentie, geen Windows, geen installatie. Als je Gmail of Google Drive kunt openen, kun je Boekhoudbaar gebruiken.</p>
+    </details>
+
+    <details data-cat="gebruik">
+      <summary>Moet ik een nieuw @gmail.com-adres aanmaken?</summary>
+      <p>Nee. Google laat je een account aanmaken met <strong>elk bestaand e-mailadres</strong> — bijvoorbeeld <em>sam@jouwdomein.nl</em> of je Outlook-adres. Ga naar <a href="https://accounts.google.com/signup" target="_blank" rel="noopener">accounts.google.com/signup</a> en kies onderaan "Gebruik mijn huidige e-mailadres". Je Google Drive, Google Sheets en Boekhoudbaar werken dan precies hetzelfde.</p>
+    </details>
+
+    <details data-cat="gebruik">
+      <summary>Ik heb meerdere BV's of eenmanszaken. Hoe werkt dat?</summary>
+      <p>Eén licentie = één administratie = één bedrijf. Heb je twee entiteiten? Dan koop je twee licenties, krijg je twee aparte sheets in je Drive, en houd je ze lekker gescheiden. Dat is ook wat de Belastingdienst wil.</p>
+    </details>
+
+    <details data-cat="gebruik">
+      <summary>En afschrijvingen op een auto, laptop of inventaris?</summary>
+      <p>Je boekt de aanschaf als investering (bijv. rekening 0252 voor auto's), en schrijft daarna jaarlijks af over de gebruiksduur. In de meegeleverde uitleg staan voorbeeldbedragen en standaard-termijnen die je kunt overnemen. Zie ook de <a href="/gids/afschrijven-zzp-uitleg/">afschrijven-gids</a>.</p>
+    </details>
+
+    <details data-cat="gebruik">
+      <summary>Hoe boek ik privé-uitgaven die ik zakelijk wil declareren?</summary>
+      <p>Via het declaratie-formulier. Je betaalde de kosten privé, declareert ze zakelijk: het systeem boekt het bedrag op de juiste kostenrekening en houdt bij wat de zaak je nog schuldig is. Je krijgt het bedrag later vanuit de zakelijke rekening overgemaakt.</p>
+    </details>
+
+    <details data-cat="gebruik">
+      <summary>Ik werk met Mollie of Stripe — hoe verwerk ik die uitbetalingen?</summary>
+      <p>Elke uitbetaling naar je bank boek je als een bankontvangst, de transactiekosten als bankkosten (BTW-vrij). In de meegeleverde instructies staat een voorbeeld waarin je dit voor één Mollie-uitbetaling stap voor stap doet — daarna snap je het patroon.</p>
+    </details>
+  </div>
+
+  <!-- BTW -->
+  <div class="faq-categorie">
+    <h2 class="faq-categorie-titel">BTW &amp; belastingaangifte</h2>
+
+    <details data-cat="btw">
+      <summary>Hoe werkt de BTW-aangifte met Boekhoudbaar?</summary>
+      <p>Elk kwartaal genereer je met één klik een BTW-aangifte. Het systeem berekent automatisch rubrieken 1a (21% omzet), 1b (9% omzet), 1d (verlegd), 1e (export EU), 3b (intracommunautaire prestaties) en 5b (voorbelasting). Je neemt de bedragen letterlijk over in <a href="https://mijn.belastingdienst.nl" target="_blank" rel="noopener">mijn.belastingdienst.nl</a>. Zie de <a href="/gids/btw-aangifte-zzp/">BTW-aangifte-gids</a>.</p>
+    </details>
+
+    <details data-cat="btw">
+      <summary>Kan ik Boekhoudbaar gebruiken voor mijn KOR-aangifte?</summary>
+      <p>Ja. Vul in instellingen aan dat KOR actief is, en de sheet rekent geen BTW meer op je facturen. Je doet jaarlijks een KOR-aangifte (op = op €20.000 omzet — daarboven moet je weer BTW gaan rekenen). De KOR-melding zelf doe je via <a href="https://mijn.belastingdienst.nl" target="_blank" rel="noopener">mijn.belastingdienst.nl</a>.</p>
+    </details>
+
+    <details data-cat="btw">
+      <summary>Wat als ik internationale klanten heb (BTW verlegd)?</summary>
+      <p>Bij EU-zakelijke klanten met BTW-nummer kies je "Verlegd" als BTW-tarief op de factuur. De omzet komt automatisch in rubriek 1e + ICP-listing. Voor klanten buiten de EU kies je "0% (export)". Boekhoudbaar ondersteunt nog géén OSS/IOSS voor consumenten in de EU — dat is bewust niet erin omdat het complex is.</p>
+    </details>
+
+    <details data-cat="btw">
+      <summary>Doet Boekhoudbaar ook de IB-aangifte (inkomstenbelasting)?</summary>
+      <p>Niet automatisch — IB doe je via mijn.belastingdienst.nl of via een aangifteprogramma als <em>Pareto</em>. Maar Boekhoudbaar geeft je wel: winst-en-verliesrekening, balans en automatische berekening van zelfstandigenaftrek, MKB-vrijstelling, KIA en FOR. Je hebt alle cijfers klaar staan om in te vullen.</p>
+    </details>
+
+    <details data-cat="btw">
+      <summary>Wat doe ik bij een BTW-correctie of suppletie-aangifte?</summary>
+      <p>Een suppletie doe je apart op mijn.belastingdienst.nl als de fout meer dan €1.000 BTW betreft. Boekhoudbaar bewaart je oorspronkelijke aangifte als snapshot, dus je kunt zien wat er gewijzigd is. Lees <a href="/gids/suppletie-aangifte-btw/">de suppletie-gids</a> voor stap-voor-stap.</p>
+    </details>
+  </div>
+
+  <!-- BOEKHOUDER -->
+  <div class="faq-categorie">
+    <h2 class="faq-categorie-titel">Boekhouder &amp; samenwerking</h2>
+
+    <details data-cat="boekhouder">
+      <summary>Kan mijn boekhouder meekijken?</summary>
+      <p>Ja, gratis. Je klikt op "Delen" in Google Sheets, typt het mailadres van je boekhouder, en klaar. Geen extra licentie, geen "boekhouder-portaal" dat weer €10 per maand kost. Hij of zij kijkt live mee in jouw sheet, kan opmerkingen plaatsen op cellen, en exporteert wat nodig is.</p>
+    </details>
+
+    <details data-cat="boekhouder">
+      <summary>Begrijpt mijn boekhouder de structuur van Boekhoudbaar?</summary>
+      <p>Ja. Het grootboekschema volgt de standaard Nederlandse RGS-structuur (1xxx = activa, 4xxx = passiva, 7xxx = kosten, 8xxx = omzet). Balans, W&amp;V en cashflow zien er hetzelfde uit als in elk ander pakket. Een ervaren boekhouder vindt direct zijn weg.</p>
+    </details>
+
+    <details data-cat="boekhouder">
+      <summary>Kan ik een accountantspakket exporteren voor jaarafsluiting?</summary>
+      <p>Ja. Menu &gt; Boekhouding &gt; Export naar accountant. Hij krijgt een ZIP met: balans, W&amp;V, kasstroom, alle journaalposten als CSV, en een SAF-T-achtig overzicht. Klaar voor inlevering.</p>
+    </details>
+  </div>
+
+  <!-- TECHNIEK -->
+  <div class="faq-categorie">
+    <h2 class="faq-categorie-titel">Techniek &amp; problemen</h2>
+
+    <details data-cat="techniek">
+      <summary>Werkt het ook op een Mac of tablet?</summary>
+      <p>Ja. Boekhoudbaar draait in je browser, dus je kunt het openen op Mac, Windows, Linux, iPad, zelfs je telefoon. Geen installatie, geen app-store. Openen, inloggen met Google, werken.</p>
+    </details>
+
+    <details data-cat="techniek">
+      <summary>Werkt Boekhoudbaar offline?</summary>
+      <p>Niet volledig. Google Sheets heeft een offline-modus voor het basis-bekijken en typen, maar de slimme functies (PDF genereren, e-mailen, BTW-aangifte berekenen) hebben internet nodig omdat ze via Apps Script draaien.</p>
+    </details>
+
+    <details data-cat="techniek">
+      <summary>Wat doe ik als er #VERW of #REF staat?</summary>
+      <p>Dat betekent: een formule verwijst naar een cel of tabblad dat niet meer bestaat. Meestal is een systeemtabblad per ongeluk verwijderd. Mail me een screenshot — ik help je 'm terugzetten zonder dat je iets kwijtraakt.</p>
+    </details>
+
+    <details data-cat="techniek">
+      <summary>Mijn dashboard laadt traag — wat nu?</summary>
+      <p>Bij &gt;5.000 transacties wordt het dashboard merkbaar langzamer (Google Sheets-limiet). Oplossing: gebruik "Nieuw boekjaar starten" elke 1-2 jaar — oude data wordt gearchiveerd, het werkbestand blijft snel. De archief-spreadsheet blijft natuurlijk volledig raadpleegbaar.</p>
+    </details>
+
+    <details data-cat="techniek">
+      <summary>Wat gebeurt er als Google Sheets stopt?</summary>
+      <p>Onwaarschijnlijk in de komende 10+ jaar — Google Sheets is een kerndienst van Google Workspace. Maar mocht het ooit gebeuren: je data is gewoon een Excel-bestand vermomd. Exporteer naar .xlsx en open in Microsoft Excel of LibreOffice. Geen lock-in, niet bij ons en niet bij Google.</p>
+    </details>
+
+    <details data-cat="techniek">
+      <summary>Kan ik bank-transacties automatisch laten matchen?</summary>
+      <p>Ja. Importeer je bank-CSV (ING, Bunq, Rabo, ABN — alle Nederlandse banken). Boekhoudbaar matcht automatisch op factuurnummer, bedrag en datum. Wat niet matcht zet je handmatig op de juiste grootboekrekening — vaak gaat dat na 5-10 keer ook automatisch dankzij geleerde patronen.</p>
+    </details>
+  </div>
+
+  <!-- CTA -->
+  <div class="page-cta">
+    <h2>Nog vragen?</h2>
+    <p>Mail me direct — meestal antwoord ik dezelfde dag, persoonlijk.</p>
+    <a href="mailto:hallo@boekhoudbaar.nl" class="btn-koop">Stel je vraag →</a>
+  </div>
+
+  <!-- RELATED -->
+  <div class="related">
+    <h3>Lees verder</h3>
+    <div class="related-grid">
+      <a href="/functies/">Wat zit er in Boekhoudbaar? →</a>
+      <a href="/vergelijking/">Vergelijking met Moneybird & e-Boekhouden →</a>
+      <a href="/gids/">ZZP-gidsen (32+ artikelen) →</a>
+      <a href="/over/">Over Sam, de maker →</a>
+      <a href="/transparantie">Hoe Boekhoudbaar werkt achter de schermen →</a>
+      <a href="/kopen">Boekhoudbaar kopen voor €49 →</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <span><strong style="color:rgba(255,255,255,.9)">Boekhoudbaar</strong> · KVK 87254697</span>
+    <div class="footer-links">
+      <a href="/over/">Over Sam</a>
+      <a href="/transparantie">Transparantie</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/voorwaarden">Voorwaarden</a>
+      <a href="mailto:hallo@boekhoudbaar.nl">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  /* Mobile nav */
+  (function(){
+    var btn=document.querySelector('.nav-toggle');
+    var menu=document.getElementById('nav-menu');
+    if(!btn||!menu)return;
+    btn.addEventListener('click',function(){
+      var open=menu.classList.toggle('open');
+      btn.setAttribute('aria-expanded',open?'true':'false');
+    });
+    menu.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click',function(){menu.classList.remove('open');btn.setAttribute('aria-expanded','false');});
+    });
+  })();
+
+  /* FAQ filter + search */
+  (function(){
+    var zoek = document.getElementById('faq-zoek');
+    var cats = document.querySelectorAll('.faq-cat');
+    var details = document.querySelectorAll('details[data-cat]');
+    var geen = document.getElementById('geen-resultaat');
+    var huidigCat = 'alle';
+
+    function filter() {
+      var q = (zoek.value || '').toLowerCase().trim();
+      var zichtbaar = 0;
+      details.forEach(function(d) {
+        var catMatch = huidigCat === 'alle' || d.dataset.cat === huidigCat;
+        var tekst = d.textContent.toLowerCase();
+        var qMatch = !q || tekst.indexOf(q) !== -1;
+        if (catMatch && qMatch) {
+          d.classList.remove('hidden');
+          zichtbaar++;
+        } else {
+          d.classList.add('hidden');
+          d.removeAttribute('open');
+        }
+      });
+      // Verberg leeg-categorieën-titels
+      document.querySelectorAll('.faq-categorie').forEach(function(cat) {
+        var openItems = cat.querySelectorAll('details[data-cat]:not(.hidden)');
+        cat.style.display = openItems.length ? '' : 'none';
+      });
+      geen.classList.toggle('show', zichtbaar === 0);
+    }
+
+    zoek.addEventListener('input', filter);
+    cats.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        cats.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        huidigCat = btn.dataset.cat;
+        filter();
+      });
+    });
+  })();
+</script>
+</body>
+</html>
