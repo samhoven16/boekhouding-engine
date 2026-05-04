@@ -58,21 +58,40 @@
 /*.html
   Cache-Control: public, max-age=300, s-maxage=3600
 
-# Index-pagina's van sub-folders
+# Index-pagina's van sub-folders + Link-headers voor Early Hints (HTTP 103).
+# Browser kan deze resources al starten vóór de HTML binnen is.
 /
   Cache-Control: public, max-age=300, s-maxage=3600
+  Link: </logo.svg>; rel=preload; as=image
+  Link: </preview.svg>; rel=preload; as=image; fetchpriority=high
+  Link: <https://fonts.googleapis.com>; rel=preconnect
+  Link: <https://fonts.gstatic.com>; rel=preconnect; crossorigin
 
 /functies/
   Cache-Control: public, max-age=300, s-maxage=3600
+  Link: </logo.svg>; rel=preload; as=image
+  Link: <https://fonts.googleapis.com>; rel=preconnect
+  Link: <https://fonts.gstatic.com>; rel=preconnect; crossorigin
 
 /vergelijking/
   Cache-Control: public, max-age=300, s-maxage=3600
+  Link: </logo.svg>; rel=preload; as=image
+  Link: <https://fonts.googleapis.com>; rel=preconnect
+  Link: <https://fonts.gstatic.com>; rel=preconnect; crossorigin
 
 /faq/
   Cache-Control: public, max-age=300, s-maxage=3600
+  Link: </logo.svg>; rel=preload; as=image
+  Link: <https://fonts.googleapis.com>; rel=preconnect
+  Link: <https://fonts.gstatic.com>; rel=preconnect; crossorigin
 
 /over/
   Cache-Control: public, max-age=300, s-maxage=3600
+  Link: </logo.svg>; rel=preload; as=image
+  Link: </sam-hoven.jpg>; rel=preload; as=image
+  Link: <https://fonts.googleapis.com>; rel=preconnect
 
 /gids/
   Cache-Control: public, max-age=300, s-maxage=3600
+  Link: </logo.svg>; rel=preload; as=image
+  Link: <https://fonts.googleapis.com>; rel=preconnect

@@ -1,0 +1,25 @@
+{
+  "name": "Boekhoudbaar",
+  "short_name": "Boekhoudbaar",
+  "description": "Boekhouding voor ZZP'ers in Google Sheets — eenmalig €49.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F9FC",
+  "theme_color": "#0D1B4E",
+  "lang": "nl-NL",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "finance", "productivity"]
+}
