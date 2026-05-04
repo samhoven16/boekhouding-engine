@@ -250,7 +250,151 @@ function getSeizoensTipRender_() {
 }
 
 // ─────────────────────────────────────────────
-//  WAT-ALS SIMULATOR
+//  WAT-ALS SIMULATOR — HTML DIALOG
+// ─────────────────────────────────────────────
+
+/**
+ * Toont de wat-als simulator als HTML-dialog. Klant voert in:
+ *   - Extra omzet dit jaar
+ *   - Extra investering (KIA-relevant)
+ *   - Extra lijfrente-storting
+ * Direct zicht op delta IB, Zvw, totale fiscale last + netto-effect.
+ */
+function toonWatAlsSimulator() {
+  if (typeof controleerSetupGedaan_ === 'function' && !controleerSetupGedaan_()) return;
+  const ss = getSpreadsheet_();
+  let basis;
+  try { basis = berekenBelastingadvies_(ss); }
+  catch (e) {
+    SpreadsheetApp.getUi().alert('Wat-als simulator', 'Kon huidige fiscale situatie niet bepalen: ' + e.message, SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+
+  const html = HtmlService.createHtmlOutput(`
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+     padding:18px;font-size:13px;color:#1A1A1A;background:#F7F9FC;margin:0}
+h2{color:#0D1B4E;margin:0 0 6px;font-size:18px;font-weight:800;letter-spacing:-0.01em}
+.sub{color:#5F6B7A;font-size:12px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+label{display:block;font-weight:600;font-size:11px;color:#0D1B4E;margin-bottom:4px;letter-spacing:.3px;text-transform:uppercase}
+input[type=number]{width:100%;padding:8px 10px;border:1px solid #E5EAF2;border-radius:6px;font-size:14px;font-family:inherit;background:#fff}
+input[type=number]:focus{outline:none;border-color:#2EC4B6}
+.huidig{background:#fff;border:1px solid #E5EAF2;border-radius:8px;padding:14px;margin-bottom:12px}
+.huidig .lbl{color:#5F6B7A;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+.huidig .v{font-weight:700;color:#0D1B4E;font-size:14px}
+.huidig table{width:100%;border-collapse:collapse}
+.huidig td{padding:4px 0}
+.huidig td:last-child{text-align:right}
+.resultaat{background:#0D1B4E;color:white;border-radius:8px;padding:16px;margin-top:14px}
+.resultaat h3{margin:0 0 10px;font-size:14px;font-weight:700;letter-spacing:.3px}
+.resultaat table{width:100%;border-collapse:collapse}
+.resultaat td{padding:5px 0;font-size:13px}
+.resultaat td:last-child{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.delta-pos{color:#FFC107}
+.delta-neg{color:#81C784}
+.netto{border-top:1px solid rgba(255,255,255,.2);padding-top:10px;margin-top:8px;font-size:15px;font-weight:800}
+.tip{background:#FFF8E1;color:#5A3F00;border-radius:6px;padding:10px 12px;font-size:11px;margin-top:14px;line-height:1.5}
+.btn{background:#2EC4B6;color:white;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;width:100%;margin-top:12px}
+.btn:hover{background:#28B0A4}
+</style></head>
+<body>
+<h2>💡 Wat-als simulator</h2>
+<div class="sub">Speel scenario's: hoeveel meer/minder belasting bij wijziging in omzet of investeringen?</div>
+
+<div class="huidig">
+  <div class="lbl">Huidige situatie (op basis van uw boekhouding YTD)</div>
+  <table>
+    <tr><td>Winst</td><td><span class="v">${formatBedrag_(basis.winstVoorAftrek || 0)}</span></td></tr>
+    <tr><td>Aftrekposten</td><td><span class="v">${formatBedrag_(basis.totaalAftrek || 0)}</span></td></tr>
+    <tr><td>Geschatte IB</td><td><span class="v">${formatBedrag_(basis.geschatteIB || 0)}</span></td></tr>
+    <tr><td>Zvw-bijdrage</td><td><span class="v">${formatBedrag_(basis.zvwBijdrage || 0)}</span></td></tr>
+    <tr><td>Totale fiscale last</td><td><span class="v" style="color:#B71C1C">${formatBedrag_(basis.totaleFiscaleLast || basis.geschatteIB || 0)}</span></td></tr>
+  </table>
+</div>
+
+<div class="grid">
+  <div>
+    <label>Extra omzet</label>
+    <input id="extraOmzet" type="number" min="0" step="500" value="0">
+  </div>
+  <div>
+    <label>Extra investering</label>
+    <input id="extraInv" type="number" min="0" step="500" value="0">
+  </div>
+  <div>
+    <label>Extra lijfrente-storting</label>
+    <input id="extraLijfrente" type="number" min="0" step="100" value="0">
+  </div>
+  <div>
+    <label>&nbsp;</label>
+    <button class="btn" onclick="simuleer()">Bereken impact</button>
+  </div>
+</div>
+
+<div id="output" class="resultaat" style="display:none">
+  <h3>📊 Impact op uw fiscale last</h3>
+  <table>
+    <tr><td>Extra IB</td><td id="dIB">€ 0,00</td></tr>
+    <tr><td>Extra Zvw</td><td id="dZvw">€ 0,00</td></tr>
+    <tr><td>Aftrek-besparing</td><td id="dAftrek">€ 0,00</td></tr>
+    <tr><td>Totale extra fiscale last</td><td id="dTot">€ 0,00</td></tr>
+    <tr class="netto"><td>Netto effect (omzet − belasting)</td><td id="netto">€ 0,00</td></tr>
+  </table>
+</div>
+
+<div class="tip">
+  <strong>💡 Tip:</strong> Investeringen tussen €2.901 en €69.765 geven 28% KIA-aftrek
+  (max €19.769). Lijfrente-storting voor jaareinde benut jaarruimte (vervalt 7 jaar later).
+</div>
+
+<script>
+function fmt(n){var p=Number(n).toFixed(2).split('.');p[0]=p[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g,'.');return (n<0?'-':'')+'€\u00A0'+p.join(',').replace('-','');}
+
+function simuleer(){
+  var data={
+    extraOmzet: parseFloat(document.getElementById('extraOmzet').value)||0,
+    extraInvestering: parseFloat(document.getElementById('extraInv').value)||0,
+    extraLijfrente: parseFloat(document.getElementById('extraLijfrente').value)||0,
+  };
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r) return;
+      document.getElementById('output').style.display='block';
+      document.getElementById('dIB').textContent=fmt(r.deltaIB);
+      document.getElementById('dZvw').textContent=fmt(r.deltaZvw);
+      document.getElementById('dAftrek').textContent=fmt(-(r.deltaAftrek||0));
+      document.getElementById('dTot').textContent=fmt(r.deltaTotaal);
+      var n=document.getElementById('netto');
+      n.textContent=fmt(r.nettoEffect);
+      n.style.color=r.nettoEffect>=0?'#81C784':'#FFC107';
+    })
+    .withFailureHandler(function(e){alert('Fout: '+e.message);})
+    .runWatAlsSimulator(data);
+}
+</script>
+</body></html>
+  `).setWidth(540).setHeight(620);
+
+  SpreadsheetApp.getUi().showModalDialog(html, '💡 Wat-als simulator');
+}
+
+/**
+ * Server-side handler voor de wat-als-dialog. Roept simuleerWatAls_ aan
+ * met huidige fiscale situatie als basis.
+ */
+function runWatAlsSimulator(mutatie) {
+  const ss = getSpreadsheet_();
+  const basis = berekenBelastingadvies_(ss);
+  const B = getBelasting_();
+  return simuleerWatAls_(basis, B, mutatie || {});
+}
+
+// ─────────────────────────────────────────────
+//  WAT-ALS SIMULATOR (CORE BEREKENING)
 // ─────────────────────────────────────────────
 
 /**

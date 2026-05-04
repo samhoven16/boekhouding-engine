@@ -94,6 +94,7 @@ function onOpen() {
     // ── Hulp & advies ─────────────────────────
     .addItem('Hulp & Assistent', 'openAssistent')
     .addItem('Belastingtips & besparingen', 'genereerBelastingadvies')
+    .addItem('💡 Wat-als simulator (impact extra omzet/investering)', 'toonWatAlsSimulator')
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────
