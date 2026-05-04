@@ -956,15 +956,43 @@
     padding: 56px 24px; font-size: 13.5px;
     border-top: 1px solid rgba(255,255,255,.06);
   }
-  .footer-inner {
-    max-width: 1180px; margin: 0 auto;
-    display: flex; justify-content: space-between; align-items: center;
-    flex-wrap: wrap; gap: 20px;
+  .footer-brand { color: rgba(255,255,255,.95); font-weight: 700; letter-spacing: -0.01em; font-size: 18px; }
+
+  /* Rich footer — sitemap-stijl, geeft crawl-budget aan gidsen */
+  .footer-rich {
+    max-width: 1180px; margin: 0 auto; padding: 8px 0 32px;
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px;
   }
-  .footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
-  .footer-links a { color: rgba(255,255,255,.55); text-decoration: none; transition: color .18s ease; font-weight: 500; }
-  .footer-links a:hover { color: var(--wit); }
-  .footer-brand { color: rgba(255,255,255,.95); font-weight: 700; letter-spacing: -0.01em; }
+  .footer-col h3.footer-h {
+    color: rgba(255,255,255,.92); font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px;
+  }
+  .footer-col ul { list-style: none; padding: 0; margin: 0; }
+  .footer-col li { padding: 4px 0; }
+  .footer-col a {
+    color: rgba(255,255,255,.65); text-decoration: none; font-size: 13.5px;
+    transition: color .15s ease; font-weight: 500;
+  }
+  .footer-col a:hover { color: var(--wit); }
+  .footer-brand-col .footer-claim {
+    color: rgba(255,255,255,.55); font-size: 13.5px; line-height: 1.55;
+    margin: 8px 0 14px; max-width: 320px;
+  }
+  .footer-brand-col .footer-meta {
+    color: rgba(255,255,255,.4); font-size: 12px; line-height: 1.55;
+  }
+  .footer-bottom {
+    max-width: 1180px; margin: 0 auto; padding-top: 18px;
+    border-top: 1px solid rgba(255,255,255,.06);
+    color: rgba(255,255,255,.4); font-size: 12.5px; text-align: center;
+  }
+  @media (max-width: 768px) {
+    .footer-rich { grid-template-columns: 1fr 1fr; gap: 28px 20px; padding: 8px 24px 24px; }
+    .footer-brand-col { grid-column: 1 / -1; }
+  }
+  @media (max-width: 480px) {
+    .footer-rich { grid-template-columns: 1fr; }
+  }
 
   /* ── HAMBURGERMENU ── */
   .nav-toggle {
@@ -1051,8 +1079,6 @@
     .cta-banner { padding: 56px 20px; }
     .cta-banner h2 { font-size: 26px; }
 
-    .footer-inner { flex-direction: column; text-align: center; }
-    .footer-links { justify-content: center; }
   }
 
   @media (max-width: 420px) {
@@ -1392,22 +1418,48 @@
   <a href="/kopen" class="btn-primair"><span>Koop Boekhoudbaar voor €49 →</span></a>
 </section>
 
-<!-- ── FOOTER ── -->
+<!-- ── FOOTER ── (rijke sitemap voor SEO + crawl-budget) -->
 <footer>
-  <div class="footer-inner">
-    <div>
-      <span class="footer-brand">Boekhoudbaar</span><br>
-      Hoven Strategy &amp; Solutions · KVK 87254697 · BTW NL004384587B39
+  <div class="footer-rich" aria-label="Site-navigatie">
+    <div class="footer-col footer-brand-col">
+      <span class="footer-brand">Boekhoudbaar</span>
+      <p class="footer-claim">Boekhouding voor ZZP'ers in Google Sheets. Eenmalig €49, geen abonnement.</p>
+      <p class="footer-meta">Hoven Strategy &amp; Solutions<br>KVK 87254697 · BTW NL004384587B39</p>
     </div>
-    <nav class="footer-links" aria-label="Voetnav">
-      <a href="/over/">Over Sam</a>
-      <a href="/gids/">Gidsen</a>
-      <a href="/transparantie">Transparantie</a>
-      <a href="/privacy">Privacybeleid</a>
-      <a href="/voorwaarden">Voorwaarden</a>
-      <a href="mailto:hallo@boekhoudbaar.nl">Contact</a>
-    </nav>
-    <p>© 2026 Boekhoudbaar</p>
+    <div class="footer-col">
+      <h3 class="footer-h">Product</h3>
+      <ul>
+        <li><a href="/functies/">Functies</a></li>
+        <li><a href="/vergelijking/">Vergelijken met Moneybird</a></li>
+        <li><a href="/#prijs">Prijs · €49</a></li>
+        <li><a href="/kopen">Kopen</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h3 class="footer-h">Gidsen</h3>
+      <ul>
+        <li><a href="/gids/btw-aangifte-zzp/">BTW-aangifte ZZP</a></li>
+        <li><a href="/gids/zelfstandigenaftrek-2026/">Zelfstandigenaftrek 2026</a></li>
+        <li><a href="/gids/factuur-opstellen-zzp/">Factuur opstellen</a></li>
+        <li><a href="/gids/zzp-uurtarief-berekenen/">ZZP-uurtarief berekenen</a></li>
+        <li><a href="/gids/aftrekbare-kosten-zzp/">Aftrekbare kosten</a></li>
+        <li><a href="/gids/">Alle gidsen →</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h3 class="footer-h">Bedrijf</h3>
+      <ul>
+        <li><a href="/over/">Over Sam</a></li>
+        <li><a href="/transparantie">Transparantie</a></li>
+        <li><a href="/faq/">FAQ</a></li>
+        <li><a href="mailto:hallo@boekhoudbaar.nl">Contact</a></li>
+        <li><a href="/privacy">Privacybeleid</a></li>
+        <li><a href="/voorwaarden">Voorwaarden</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
   </div>
 </footer>
 
