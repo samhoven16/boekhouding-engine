@@ -29,6 +29,25 @@ function onOpen() {
   // Eénmalig welkom-modal na geslaagde setup — 3 quick-start acties
   try { toonPostSetupWelkomModal_(); } catch (e) { Logger.log('Welkom-modal overgeslagen: ' + e.message); }
 
+  // Smart toast — urgent seizoens-tip bij elke open. Discreet, 7 sec rechtsonder.
+  // Klant ziet automatisch wat dit moment belangrijk is (BTW-deadline, KIA-grens
+  // etc.) zonder dat hij naar dashboard hoeft te navigeren of zelf moet onthouden.
+  try {
+    if (typeof getSeizoensTip_ === 'function') {
+      const tip = getSeizoensTip_();
+      if (tip && tip.urgent) {
+        const ss2 = getSpreadsheet_();
+        if (ss2 && ss2.toast) {
+          ss2.toast(
+            tip.deadline ? 'Deadline ' + tip.deadline + '. Open Dashboard voor details.' : tip.titel,
+            tip.titel,
+            7
+          );
+        }
+      }
+    }
+  } catch (e) { Logger.log('Seizoens-tip toast overgeslagen: ' + e.message); }
+
   // Globaal bericht van licentieserver (bv. onderhoud, nieuwe versie) — max 1×/dag/bericht.
   try { toonGlobaalBerichtIndienNieuw_(); } catch (e) { Logger.log('Globaal bericht overgeslagen: ' + e.message); }
 
@@ -81,6 +100,7 @@ function onOpen() {
     // ── Kwaliteit & Controle ──────────────────
     .addSubMenu(ui.createMenu('Controle & Export')
       .addItem('Gezondheidscheck uitvoeren', 'voerGezondheidCheckUit')
+      .addItem('✨ Tabbladen opnieuw opmaken (kleuren + format)', 'verfraaiTabbladen')
       .addSeparator()
       .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
       .addItem('Accountantspakket exporteren', 'exporteerAccountantsPakket')
