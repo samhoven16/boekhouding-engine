@@ -28,54 +28,81 @@
 // ─────────────────────────────────────────────
 //  BELASTING TARIEVEN EN GRENZEN PER JAAR
 //  Bijwerken elk jaar in jan/feb op basis van Prinsjesdag
+//  Bronnen: belastingdienst.nl + kvk.nl/geldzaken/belastingtarieven-{jaar}
 // ─────────────────────────────────────────────
+//
+// IB Box 1 jonger dan AOW heeft drie schijven:
+//   schijf 1 (laagste tarief, incl. premies)
+//   schijf 2 (middeltarief, incl. premies)
+//   schijf 3 (hoogste tarief, alleen IB — geen premies meer)
+//
+// Voor backwards-compat behouden we IB_SCHIJF_1_PCT/IB_SCHIJF_2_PCT als
+// snelle besparing-benadering (= schijf 1 voor de meeste ZZP'ers).
+// Voor de geschatteIB-berekening gebruiken we nu IB_SCHIJVEN array.
 const BELASTING_PER_JAAR = {
   2025: {
     ZELFSTANDIGENAFTREK:    2470,
     STARTERSAFTREK:         2123,
     MKB_WINSTVRIJSTELLING:  0.1270,
-    FOR_MAX:                10786,
+    FOR_MAX:                10786,    // FOR afgeschaft 2023 — alleen oude saldo's
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          35987,
     AOW_FRANCHISE:          14110,
     BOX3_GROEN_VRIJSTELLING: 65072,
-    IB_SCHIJF_1_MAX:        76817,
-    IB_SCHIJF_1_PCT:        0.3582,
-    IB_SCHIJF_2_PCT:        0.495,
+    // Legacy — gebruikt voor snelle besparing-schatting + backwards compat.
+    IB_SCHIJF_1_MAX:        76817,    // = bovengrens schijf 2 (legacy naam)
+    IB_SCHIJF_1_PCT:        0.3582,   // = schijf 1 tarief
+    IB_SCHIJF_2_PCT:        0.495,    // = schijf 3 tarief (legacy naam)
     HEFFINGSKORTING_MAX:    3068,
     ARBEIDSKORTING_MAX:     5625,
+    // Nieuw — expliciete 3-schijven structuur voor accurate IB-berekening
+    IB_SCHIJVEN: [
+      { tot: 38441,    pct: 0.3582 },  // schijf 1: 8,17% IB + 27,65% premies = 35,82%
+      { tot: 76817,    pct: 0.3748 },  // schijf 2: 37,48%
+      { tot: Infinity, pct: 0.495  },  // schijf 3: 49,5%
+    ],
   },
   2026: {
-    ZELFSTANDIGENAFTREK:    2470,    // Stabiel t.o.v. 2025 (afbouw gestopt)
-    STARTERSAFTREK:         2123,
-    MKB_WINSTVRIJSTELLING:  0.1270,
-    FOR_MAX:                10786,
+    ZELFSTANDIGENAFTREK:    1200,    // Verlaagd per 2026 (was €2.470 in 2025)
+    STARTERSAFTREK:         2123,    // Ongewijzigd
+    MKB_WINSTVRIJSTELLING:  0.1270,  // Ongewijzigd t.o.v. 2025
+    FOR_MAX:                10786,   // Geen nieuwe FOR-vorming sinds 2023
     THUISWERK_PER_DAG:      2.40,
-    LIJFRENTE_MAX:          38000,   // 2026: indicatief hogere jaarruimte
-    AOW_FRANCHISE:          14540,   // 2026: geïndexeerd
-    BOX3_GROEN_VRIJSTELLING: 67000,  // 2026: indicatief geïndexeerd
-    IB_SCHIJF_1_MAX:        76817,   // 2026: ongewijzigd (wet IB herziening 2026)
-    IB_SCHIJF_1_PCT:        0.3693,  // 2026: 36,93%
-    IB_SCHIJF_2_PCT:        0.495,
+    LIJFRENTE_MAX:          38000,
+    AOW_FRANCHISE:          14540,
+    BOX3_GROEN_VRIJSTELLING: 67000,
+    IB_SCHIJF_1_MAX:        79137,   // bovengrens schijf 2
+    IB_SCHIJF_1_PCT:        0.357,   // schijf 1: 35,7%
+    IB_SCHIJF_2_PCT:        0.495,   // schijf 3: 49,5% (legacy naam)
     HEFFINGSKORTING_MAX:    3068,
-    ARBEIDSKORTING_MAX:     5599,    // 2026: lichte daling
+    ARBEIDSKORTING_MAX:     5599,
+    IB_SCHIJVEN: [
+      { tot: 38883,    pct: 0.357  },  // schijf 1
+      { tot: 79137,    pct: 0.3756 },  // schijf 2
+      { tot: Infinity, pct: 0.495  },  // schijf 3
+    ],
   },
   // 2027: placeholder — vervang met officiële Miljoenennota-cijfers Prinsjesdag 2026.
   // Bij ontbreken valt getBelasting_() terug op 2026-tarieven met waarschuwing.
   2027: {
-    ZELFSTANDIGENAFTREK:    2470,    // INDICATIEF — controleer na Prinsjesdag 2026
+    ZELFSTANDIGENAFTREK:    900,     // INDICATIEF — afbouw zet door
     STARTERSAFTREK:         2123,
     MKB_WINSTVRIJSTELLING:  0.1270,
     FOR_MAX:                10786,
     THUISWERK_PER_DAG:      2.40,
-    LIJFRENTE_MAX:          39000,   // geïndexeerde schatting
+    LIJFRENTE_MAX:          39000,
     AOW_FRANCHISE:          14800,
     BOX3_GROEN_VRIJSTELLING: 68000,
-    IB_SCHIJF_1_MAX:        78500,   // geïndexeerde schatting
-    IB_SCHIJF_1_PCT:        0.3693,
+    IB_SCHIJF_1_MAX:        80500,
+    IB_SCHIJF_1_PCT:        0.357,
     IB_SCHIJF_2_PCT:        0.495,
     HEFFINGSKORTING_MAX:    3100,
     ARBEIDSKORTING_MAX:     5650,
+    IB_SCHIJVEN: [
+      { tot: 39500,    pct: 0.357  },
+      { tot: 80500,    pct: 0.3756 },
+      { tot: Infinity, pct: 0.495  },
+    ],
   },
 };
 
@@ -96,9 +123,19 @@ function getBelasting_() {
   const tarieven = serverTarieven || BELASTING_PER_JAAR[jaar] || BELASTING_PER_JAAR[2026];
   return Object.assign({
     KOR_GRENS:              20000,
-    KIA_MIN:                2801,
-    KIA_MAX:                353973,
+    // KIA 2025 (bron: belastingdienst.nl/.../kleinschaligheidsinvesteringsaftrek-2025)
+    //  - investering < €2.901          → geen KIA
+    //  - €2.901  – €69.765             → 28% van investeringsbedrag
+    //  - €69.765 – €130.744            → vast €19.769
+    //  - €130.744 – €392.230           → €19.769 − 7,56% × (investering − €130.744)
+    //  - investering > €392.230        → geen KIA
+    KIA_MIN:                2901,
+    KIA_MAX:                392230,
     KIA_PCT:                0.28,
+    KIA_VAST_VAN:           69765,
+    KIA_VAST_BEDRAG:        19769,
+    KIA_AFBOUW_START:       130744,
+    KIA_AFBOUW_PCT:         0.0756,
     FOR_PCT:                0.0944,
     MIA_PCT:                0.455,
     MIA_MIN:                2500,
@@ -115,6 +152,58 @@ function getBelasting_() {
 }
 
 const BELASTING = getBelasting_();
+
+// ─────────────────────────────────────────────
+//  HELPERS — KIA + IB BEREKENING
+// ─────────────────────────────────────────────
+
+/**
+ * KIA-aftrek volgens 4-zone tabel (zie BELASTING constants).
+ * Returns 0 buiten geldige zone.
+ *
+ * @param {number} investering Som van investeringen in jaar (excl. BTW).
+ * @param {Object} B           BELASTING-config (uit getBelasting_()).
+ * @return {number} KIA-aftrek-bedrag, afgerond op 2 decimalen.
+ */
+function berekenKiaAftrek_(investering, B) {
+  const inv = parseFloat(investering) || 0;
+  if (inv < B.KIA_MIN || inv > B.KIA_MAX) return 0;
+  if (inv <= B.KIA_VAST_VAN)         return rondBedrag_(inv * B.KIA_PCT);
+  if (inv <= B.KIA_AFBOUW_START)     return rondBedrag_(B.KIA_VAST_BEDRAG);
+  // Afbouwzone: vast bedrag − afbouwpct × overschrijding
+  const overschrijding = inv - B.KIA_AFBOUW_START;
+  const aftrek = B.KIA_VAST_BEDRAG - B.KIA_AFBOUW_PCT * overschrijding;
+  return rondBedrag_(Math.max(0, aftrek));
+}
+
+/**
+ * Progressieve IB-berekening volgens schijven-array.
+ * Werkt voor zowel 2- als 3-schijven configs (vooruit-compatibel).
+ *
+ * @param {number} belastbaarInkomen Belastbaar inkomen Box 1 (na aftrekken).
+ * @param {Object} B                 BELASTING-config met IB_SCHIJVEN array.
+ * @return {number} Geschatte IB voor heffingskortingen.
+ */
+function berekenIBProgressief_(belastbaarInkomen, B) {
+  const inkomen = parseFloat(belastbaarInkomen) || 0;
+  if (inkomen <= 0) return 0;
+  // Fallback voor configs zonder IB_SCHIJVEN array (legacy 2-schijven model)
+  if (!Array.isArray(B.IB_SCHIJVEN)) {
+    if (inkomen <= B.IB_SCHIJF_1_MAX) return inkomen * B.IB_SCHIJF_1_PCT;
+    return B.IB_SCHIJF_1_MAX * B.IB_SCHIJF_1_PCT
+         + (inkomen - B.IB_SCHIJF_1_MAX) * B.IB_SCHIJF_2_PCT;
+  }
+  let belasting = 0;
+  let onder = 0;
+  for (const schijf of B.IB_SCHIJVEN) {
+    const boven = Math.min(inkomen, schijf.tot);
+    if (boven <= onder) break;
+    belasting += (boven - onder) * schijf.pct;
+    onder = boven;
+    if (inkomen <= schijf.tot) break;
+  }
+  return belasting;
+}
 
 // ─────────────────────────────────────────────
 //  VOLLEDIG BELASTINGADVIES BEREKENEN
@@ -283,10 +372,24 @@ function berekenBelastingadvies_(ss) {
     }
   });
 
-  if (investeringen >= BELASTING.KIA_MIN && investeringen <= BELASTING.KIA_MAX) {
-    const kiaAftrek = rondBedrag_(investeringen * BELASTING.KIA_PCT);
+  // KIA-tabel kent 4 zones (zie BELASTING constants):
+  //  - <€2.901:                        geen KIA
+  //  - €2.901  – €69.765:              28% van investering
+  //  - €69.765 – €130.744:             vast €19.769
+  //  - €130.744 – €392.230:            afbouw: €19.769 − 7,56% × (inv − €130.744)
+  //  - >€392.230:                      geen KIA (max bereikt)
+  const kiaAftrek = berekenKiaAftrek_(investeringen, BELASTING);
+  if (kiaAftrek > 0) {
+    let kiaToelichting;
+    if (investeringen <= BELASTING.KIA_VAST_VAN) {
+      kiaToelichting = `28% van ${formatBedrag_(investeringen)} = ${formatBedrag_(kiaAftrek)}`;
+    } else if (investeringen <= BELASTING.KIA_AFBOUW_START) {
+      kiaToelichting = `vast bedrag ${formatBedrag_(kiaAftrek)} (zone €${BELASTING.KIA_VAST_VAN.toLocaleString('nl-NL')} – €${BELASTING.KIA_AFBOUW_START.toLocaleString('nl-NL')})`;
+    } else {
+      kiaToelichting = `afbouw vanaf €${BELASTING.KIA_AFBOUW_START.toLocaleString('nl-NL')}: ${formatBedrag_(kiaAftrek)}`;
+    }
     aftrekken.push({
-      naam: 'KIA – Kleinschaligheidsinvesteringsaftrek (28%)',
+      naam: 'KIA – Kleinschaligheidsinvesteringsaftrek',
       bedrag: kiaAftrek,
       voorwaarde: `Investeringen tussen €${BELASTING.KIA_MIN.toLocaleString('nl-NL')} en €${BELASTING.KIA_MAX.toLocaleString('nl-NL')}`,
       code: '7990',
@@ -295,7 +398,7 @@ function berekenBelastingadvies_(ss) {
     adviezen.push({
       type: 'AFTREKPOST',
       titel: '✅ KIA Investeringsaftrek: ' + formatBedrag_(kiaAftrek),
-      tekst: `U heeft ${formatBedrag_(investeringen)} geïnvesteerd. De KIA geeft 28% extra aftrek: ${formatBedrag_(kiaAftrek)}. ` +
+      tekst: `U heeft ${formatBedrag_(investeringen)} geïnvesteerd → ${kiaToelichting}. ` +
              `Zorg dat investeringen ≥ €450 zijn en voor bedrijfsmatig gebruik.`,
       besparing: rondBedrag_(kiaAftrek * BELASTING.IB_SCHIJF_1_PCT),
     });
@@ -305,6 +408,15 @@ function berekenBelastingadvies_(ss) {
       titel: '💡 Tip: Extra investering voor KIA',
       tekst: `U heeft ${formatBedrag_(investeringen)} geïnvesteerd. Investeer nog ${formatBedrag_(BELASTING.KIA_MIN - investeringen)} meer ` +
              `dit jaar om in aanmerking te komen voor de KIA (28% extra aftrek = ${formatBedrag_((BELASTING.KIA_MIN) * BELASTING.KIA_PCT)}).`,
+      besparing: null,
+    });
+  } else if (investeringen > BELASTING.KIA_MAX) {
+    // Boven KIA-plafond — geen KIA, maar mogelijk andere regelingen
+    adviezen.push({
+      type: 'INFO',
+      titel: 'ℹ️ Investeringen boven KIA-plafond',
+      tekst: `U heeft ${formatBedrag_(investeringen)} geïnvesteerd, boven het KIA-plafond van ` +
+             `€${BELASTING.KIA_MAX.toLocaleString('nl-NL')}. Geen KIA dit jaar. Bekijk MIA/VAMIL voor milieu-investeringen of EIA voor energie-investeringen.`,
       besparing: null,
     });
   }
@@ -343,15 +455,20 @@ function berekenBelastingadvies_(ss) {
   }
 
   // ── 8a. FOR — Fiscale OudedagsReserve ────────────────────────────────
+  // FOR is per 1 januari 2023 AFGESCHAFT — geen nieuwe dotaties meer mogelijk.
+  // Bestaande saldi op 31-12-2022 mogen blijven staan en kunnen worden
+  // afgewikkeld bij staking of via lijfrente-aankoop.
+  // Bron: belastingdienst.nl/.../fiscale-oudedagsreserve-afgeschaft
   if (isZzp && winst > 0) {
-    const forBedrag = Math.min(rondBedrag_(winst * BELASTING.FOR_PCT), BELASTING.FOR_MAX);
     adviezen.push({
-      type: 'VOORDEEL',
-      titel: '💰 FOR – Fiscale OudedagsReserve: ' + formatBedrag_(forBedrag),
-      tekst: `U kunt 9,44% van uw winst (max €10.786) toevoegen aan de FOR: ${formatBedrag_(forBedrag)}. ` +
-             `Dit verlaagt uw belastbare winst nu. Let op: de FOR valt bij staken vrij en is dan belast. ` +
-             `Overweeg alternatief een lijfrentepolis. Bespreek met uw accountant.`,
-      besparing: rondBedrag_(forBedrag * BELASTING.IB_SCHIJF_1_PCT),
+      type: 'INFO',
+      titel: 'ℹ️ FOR is afgeschaft (sinds 2023)',
+      tekst: `Sinds 1 januari 2023 kan er géén nieuwe dotatie aan de Fiscale Oudedagsreserve worden gedaan. ` +
+             `Heeft u nog een FOR-saldo van vóór 2023? Dat mag op uw balans blijven staan en kunt u afwikkelen ` +
+             `via aanschaf van een lijfrente bij staking. Voor pensioenopbouw nu: gebruik de jaarruimte voor ` +
+             `een lijfrenteverzekering of bancaire lijfrente (zie advies hieronder). ` +
+             `Bespreek de afwikkeling van een bestaande FOR met uw accountant.`,
+      besparing: null,
     });
   }
 
@@ -477,18 +594,16 @@ function berekenBelastingadvies_(ss) {
   }
 
   // ── 9. Geschatte inkomstenbelasting ──────────────────────────────────
+  // Progressief over alle 3 schijven (was: 2-schijven approximatie waardoor
+  // schijf-2-inkomen €38.441 – €76.817 ten onrechte tegen 35,82% werd belast
+  // i.p.v. 37,48% — onderschatting voor mid-range ZZP'ers).
   let geschatteIB = 0;
   if (isZzp && winst > 0) {
     const belastbaarInkomen = Math.max(0, winst - totaalAftrek);
-    if (belastbaarInkomen <= BELASTING.IB_SCHIJF_1_MAX) {
-      geschatteIB = rondBedrag_(belastbaarInkomen * BELASTING.IB_SCHIJF_1_PCT);
-    } else {
-      geschatteIB = rondBedrag_(
-        BELASTING.IB_SCHIJF_1_MAX * BELASTING.IB_SCHIJF_1_PCT +
-        (belastbaarInkomen - BELASTING.IB_SCHIJF_1_MAX) * BELASTING.IB_SCHIJF_2_PCT
-      );
-    }
-    // Heffingskortingen (vereenvoudigd)
+    geschatteIB = rondBedrag_(berekenIBProgressief_(belastbaarInkomen, BELASTING));
+    // Heffingskortingen (vereenvoudigd) — let op: heffingskorting wordt
+    // afgebouwd boven hoge inkomens; deze schatting overschat het voordeel
+    // voor topverdieners. Voor exacte berekening: officiële Belastingdienst-tools.
     geschatteIB = Math.max(0, rondBedrag_(geschatteIB - BELASTING.HEFFINGSKORTING_MAX));
   }
 
