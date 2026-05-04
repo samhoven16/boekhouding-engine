@@ -112,15 +112,15 @@ function onOpen() {
     )
 
     // ── Hulp & advies ─────────────────────────
-    .addItem('Hulp & Assistent', 'openAssistent')
-    .addItem('Belastingtips & besparingen', 'genereerBelastingadvies')
-    .addItem('💡 Wat-als simulator (impact extra omzet/investering)', 'toonWatAlsSimulator')
-    .addItem('📋 Persoonlijk fiscaal profiel invullen', 'toonFiscaalProfielWizard')
-    .addItem('🚗 Reiskosten registreren (km × €0,23)', 'toonReiskostenTracker')
-    .addItem('🚗 Reiskosten week-overzicht (bulk)', 'toonReiskostenWeek')
-    .addItem('🏦 Lijfrente-jaarruimte berekenen', 'toonLijfrenteJaarruimte')
-    .addItem('💰 BTW-spaarpot status (hoeveel reserveren?)', 'toonBtwSpaarpot')
-    .addItem('💼 Voorlopige aanslag-tip (per kwartaal reserveren)', 'toonVoorlopigeAanslagTip')
+    .addItem('Hulp & uitleg', 'openAssistent')
+    .addItem('Fiscaal advies & belastingbesparing', 'genereerBelastingadvies')
+    .addItem('💡 Wat-als-rekenmachine (extra omzet of investering)', 'toonWatAlsSimulator')
+    .addItem('📋 Vul je profiel in voor persoonlijk advies', 'toonFiscaalProfielWizard')
+    .addItem('🚗 Zakelijke kilometers registreren', 'toonReiskostenTracker')
+    .addItem('🚗 Hele week kilometers tegelijk', 'toonReiskostenWeek')
+    .addItem('🏦 Lijfrente: hoeveel mag ik storten?', 'toonLijfrenteJaarruimte')
+    .addItem('💰 BTW-spaarpot: heb ik genoeg apart staan?', 'toonBtwSpaarpot')
+    .addItem('💼 Voorlopige belasting: hoeveel reserveren per maand?', 'toonVoorlopigeAanslagTip')
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────

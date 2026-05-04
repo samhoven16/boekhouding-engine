@@ -78,7 +78,9 @@ function vernieuwDashboard() {
   const burnRate = kpi.kosten > 0 && kpi.omzet > 0
     ? rondBedrag_(Math.max(0, kpi.kosten - kpi.omzet) / 12)
     : 0;
-  const runway = burnRate > 0 && kpi.banksaldo > 0
+  // runway null als burnRate ≈ 0 (bv. winst > kosten) — voorkomt Infinity.
+  // 0,01 cent als drempel is veiliger dan strict > 0 voor floating-point.
+  const runway = (burnRate > 0.01 && kpi.banksaldo > 0 && isFinite(kpi.banksaldo / burnRate))
     ? Math.floor(kpi.banksaldo / burnRate)
     : null;
 
@@ -255,6 +257,11 @@ function vernieuwDashboard() {
     }
   } catch (e) { Logger.log('Mijlpaal-detectie mislukt: ' + e.message); }
 
+  // heeftData — bepaalt of klant al boekhouding heeft (kpi-tegels die "—"
+  // tonen voor lege accounts). Vooraf berekenen want wordt al gebruikt
+  // in de belastingadvies-widget logica daaronder.
+  const heeftData = (kpi.omzet > 0 || kpi.kosten > 0 || kpi.banksaldo > 0);
+
   // ── BELASTINGVOORDEEL-WIDGET + SEIZOENS-TIP ──────────────────────────
   // Toont in één oogopslag wat het systeem dit jaar voor de klant aan
   // belasting bespaart + welke regelingen nog niet benut zijn + actieve
@@ -412,7 +419,8 @@ function vernieuwDashboard() {
     .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
   rij++;
 
-  const heeftData = (kpi.omzet > 0 || kpi.kosten > 0 || kpi.banksaldo > 0);
+  // heeftData is al hierboven berekend (vóór de belastingadvies-widget) zodat
+  // beide secties dezelfde flag gebruiken.
   const kengetallen = [
     {
       naam: 'Winstmarge',
@@ -1138,7 +1146,7 @@ function schrijfBelastingvoordeelWidget_(sheet, ss, startRij) {
 
   // Hoofdtitel
   sheet.getRange(rij, 1, 1, 8).merge()
-    .setValue('💰 BELASTINGVOORDEEL — wat Boekhoudbaar voor u doet')
+    .setValue('💰 Wat Boekhoudbaar dit jaar voor je heeft bespaard')
     .setBackground('#0D1B4E').setFontColor('#FFFFFF')
     .setFontWeight('bold').setFontSize(13).setHorizontalAlignment('center');
   sheet.setRowHeight(rij, 32);
@@ -1147,9 +1155,11 @@ function schrijfBelastingvoordeelWidget_(sheet, ss, startRij) {
   // Voordeel-cijfers (3 kolommen)
   if (voordeel) {
     const cells = [
-      ['Bespaard dit jaar', formatBedrag_(voordeel.bespaardYTD), '#E6F7F4', '#0D1B4E'],
-      ['Mogelijk extra', formatBedrag_(voordeel.mogelijkExtra), voordeel.mogelijkExtra > 0 ? '#FFF8E1' : '#F7F9FC', '#5A3F00'],
-      ['Totaal potentieel', formatBedrag_(voordeel.totaalPotentieel), '#E3F2FD', '#0D47A1'],
+      ['Al bespaard',         formatBedrag_(voordeel.bespaardYTD),       '#E6F7F4',
+        '#0D1B4E'],
+      ['Nog te benutten',     formatBedrag_(voordeel.mogelijkExtra),
+        voordeel.mogelijkExtra > 0 ? '#FFF8E1' : '#F7F9FC', '#5A3F00'],
+      ['Maximale besparing',  formatBedrag_(voordeel.totaalPotentieel),  '#E3F2FD', '#0D47A1'],
     ];
     cells.forEach(function(c, idx) {
       const kol = idx * 3 + 1;  // span 2 kolommen per cel + 1 spacer
@@ -1168,7 +1178,7 @@ function schrijfBelastingvoordeelWidget_(sheet, ss, startRij) {
     if (voordeel.gemisteKansen && voordeel.gemisteKansen.length > 0) {
       rij++;
       sheet.getRange(rij, 1, 1, 8).merge()
-        .setValue('🎯 Top kansen — geld dat u laat liggen')
+        .setValue('🎯 Tips — hier valt nog geld op te halen')
         .setBackground('#FFF8E1').setFontWeight('bold').setFontSize(11);
       rij++;
       voordeel.gemisteKansen.slice(0, 3).forEach(function(k) {

@@ -493,15 +493,15 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
 
     const onderwerp = `Factuur ${factuurNummer} · ${formatBedrag_(bedragIncl)} · ${bedrijf}`;
     const tekst =
-      `Beste ${klantnaam},\n\n` +
-      `Bijgaand ontvangt u factuur ${factuurNummer}.\n\n` +
-      `Bedrag te betalen: ${formatBedrag_(bedragIncl)}\n` +
-      `Vervaldatum: ${formatDatum_(vervaldatum)}\n\n` +
-      `Gelieve het bedrag over te maken naar:\n` +
+      `Hoi ${klantnaam},\n\n` +
+      `Hierbij factuur ${factuurNummer}.\n\n` +
+      `Te betalen: ${formatBedrag_(bedragIncl)}\n` +
+      `Voor: ${formatDatum_(vervaldatum)}\n\n` +
+      `Graag overmaken naar:\n` +
       `IBAN: ${iban}\n` +
       `t.n.v.: ${bedrijf}\n` +
       `o.v.v.: ${factuurNummer}\n\n` +
-      `Met vriendelijke groet,\n${bedrijf}`;
+      `Bedankt!\n${bedrijf}`;
 
     const htmlBody =
       '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;max-width:540px;margin:0;padding:0 0 24px;color:#1A1A1A">' +

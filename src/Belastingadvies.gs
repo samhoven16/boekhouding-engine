@@ -486,6 +486,8 @@ function berekenBelastingadvies_(ss) {
     // Strict 4-cijferig jaartal validatie — voorheen accepteerde parseInt
     // strings als "2025xyz" of "2025-2026" (geeft 2025) wat tot foute startersaftrek-claim
     // kan leiden. Nu alleen pure jaartallen tussen 1990 en huidigJaar.
+    // Strict 4-cijferig jaartal — extra trim voor zekerheid (instelling kan
+    // " 2025 " met spaties bevatten als gebruiker copy-paste gebruikte).
     const startjaarRaw = String(getInstelling_('Startjaar onderneming') || '').trim();
     const startjaar = /^\d{4}$/.test(startjaarRaw) ? parseInt(startjaarRaw, 10) : 0;
     // startjaar > 0:        ingevuld (anders default 0)
@@ -817,8 +819,12 @@ function berekenBelastingadvies_(ss) {
 
   // ── 8c. Thuiswerkaftrek ────────────────────────────────────────────────
   // Defensieve parse — voorkomt NaN-bugs door non-numeric input zoals '250 dagen'
+  // Defensieve clamp: 0-365 dagen. Voorheen kon "1000 dagen" door en
+  // gaf €2.400 onrealistische thuiswerkaftrek.
   const thuiswerkDagenRaw = parseInt(getInstelling_('Thuiswerk dagen per jaar') || '0', 10);
-  const thuiswerkDagen = (isFinite(thuiswerkDagenRaw) && thuiswerkDagenRaw > 0) ? thuiswerkDagenRaw : 0;
+  const thuiswerkDagen = (isFinite(thuiswerkDagenRaw) && thuiswerkDagenRaw > 0)
+    ? Math.min(365, thuiswerkDagenRaw)
+    : 0;
   if (thuiswerkDagen > 0) {
     const thuiswerkAftrek = rondBedrag_(thuiswerkDagen * BELASTING.THUISWERK_PER_DAG);
     aftrekken.push({ naam: `Thuiswerkvergoeding (${thuiswerkDagen} dagen × €${BELASTING.THUISWERK_PER_DAG})`, bedrag: thuiswerkAftrek, voorwaarde: 'Werkdagen vanuit huis', code: '7350' });
