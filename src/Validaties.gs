@@ -109,9 +109,9 @@ function valideerEmail_(email) {
   email = String(email || '').trim();
   if (!email) return { geldig: false, fout: 'E-mailadres is leeg.' };
 
-  const schoon = email.toLowerCase();
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(schoon)) {
+  // Centrale strikte RFC-validatie (Utils.gs:isGeldigEmail_) — voorkomt
+  // 'a@b.c' / 'test@.co' false-positives die later GmailApp-crash geven.
+  if (!isGeldigEmail_(email)) {
     return {
       geldig: false,
       fout: `"${email}" is geen geldig e-mailadres.\n` +
@@ -192,10 +192,16 @@ function valideerEnMeldInstellingen() {
   if (!bedrijf) fouten.push('❌ Bedrijfsnaam is niet ingevuld (tabblad Instellingen, rij 2)');
 
   // BTW-nummer valideren (alleen als niet KOR en zakelijk)
+  // KOR-actief: ondernemer factureert geen BTW, dus BTW-nr niet verplicht.
+  const korActiefRaw = String(getInstelling_('KOR regeling actief') || '').toLowerCase().trim();
+  const korActief = korActiefRaw === 'ja' || korActiefRaw === 'true' || korActiefRaw === 'yes';
   if (mode !== 'Privé' && btwNr) {
     const r = valideerBtwNummer_(btwNr);
     if (!r.geldig) fouten.push(`❌ BTW-nummer: ${r.fout}`);
     else waarschuwingen.push('✅ BTW-nummer: geldig formaat');
+  } else if (mode !== 'Privé' && !btwNr && !korActief) {
+    // Zakelijke ondernemer zonder KOR: BTW-nummer wettelijk verplicht op facturen.
+    waarschuwingen.push('⚠️ BTW-nummer ontbreekt (verplicht op facturen tenzij KOR actief)');
   }
 
   // KvK valideren

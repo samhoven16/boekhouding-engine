@@ -14,22 +14,32 @@ const BUSINESS_TYPES = {
 };
 
 // ─── VALIDATIEREGELS ──────────────────────────
+// Datum-validatie: accepteert ISO (YYYY-MM-DD) én NL (DD-MM-YYYY of DD/MM/YYYY) —
+// dialog stuurt ISO, maar handmatige flow kan NL formaat geven. parseDatum_
+// (Utils.gs) parses beide; we valideren hier via dezelfde helper voor consistency.
+const _datumGeldig_ = function (s) {
+  if (!s) return false;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return true;
+  if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{4}$/.test(s)) return true;
+  return false;
+};
+
 const VALIDATIE = {
   factuur: [
     { v: 'klant',  fn: s => String(s||'').trim().length >= 2,  msg: 'Klantnaam is verplicht (min. 2 tekens).' },
-    { v: 'datum',  fn: s => /^\d{4}-\d{2}-\d{2}$/.test(s),    msg: 'Voer een geldige datum in (dd-mm-jjjj).' },
+    { v: 'datum',  fn: _datumGeldig_,                          msg: 'Voer een geldige datum in (dd-mm-jjjj of jjjj-mm-dd).' },
     { v: 'r1prijs',fn: n => parseFloat(n||0) > 0,              msg: 'Voer een bedrag in voor regel 1 (groter dan € 0).' },
     { v: 'r1omschr',fn:s => String(s||'').trim().length >= 2,  msg: 'Omschrijving voor regel 1 is verplicht.' },
   ],
   kosten: [
     { v: 'leverancier', fn: s => String(s||'').trim().length >= 2, msg: 'Leveranciernaam is verplicht (min. 2 tekens).' },
-    { v: 'datum',       fn: s => /^\d{4}-\d{2}-\d{2}$/.test(s),   msg: 'Voer een geldige datum in.' },
+    { v: 'datum',       fn: _datumGeldig_,                         msg: 'Voer een geldige datum in (dd-mm-jjjj of jjjj-mm-dd).' },
     { v: 'omschr',      fn: s => String(s||'').trim().length >= 3,  msg: 'Omschrijving is verplicht (min. 3 tekens).' },
     { v: 'bedragIncl',  fn: n => parseFloat(n||0) > 0,             msg: 'Voer een bedrag in (groter dan € 0).' },
   ],
   declaratie: [
     { v: 'omschr', fn: s => String(s||'').trim().length >= 3, msg: 'Omschrijving is verplicht (min. 3 tekens).' },
-    { v: 'datum',  fn: s => /^\d{4}-\d{2}-\d{2}$/.test(s),   msg: 'Voer een geldige datum in.' },
+    { v: 'datum',  fn: _datumGeldig_,                         msg: 'Voer een geldige datum in (dd-mm-jjjj of jjjj-mm-dd).' },
     { v: 'bedrag', fn: n => parseFloat(n||0) > 0,             msg: 'Voer een bedrag in (groter dan € 0).' },
   ],
 };

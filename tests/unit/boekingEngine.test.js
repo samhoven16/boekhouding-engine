@@ -44,12 +44,22 @@ describe('valideerBoeking', () => {
     test('ongeldige datum geeft fout', () => {
       const result = ctx.valideerBoeking('factuur', {
         klant:    'ACME BV',
-        datum:    '15-01-2024',  // NL formaat — verwacht ISO
+        datum:    'gisteren',  // noch ISO noch NL formaat
         r1prijs:  '100',
         r1omschr: 'Advies',
       });
       expect(result.ok).toBe(false);
       expect(result.fouten.some(f => f.veld === 'datum')).toBe(true);
+    });
+
+    test('NL datumformaat (DD-MM-YYYY) wordt geaccepteerd', () => {
+      const result = ctx.valideerBoeking('factuur', {
+        klant:    'ACME BV',
+        datum:    '15-01-2024',  // NL formaat — geaccepteerd; parseDatum_ regelt parsing
+        r1prijs:  '100',
+        r1omschr: 'Advies',
+      });
+      expect(result.ok).toBe(true);
     });
 
     test('prijs nul geeft fout', () => {

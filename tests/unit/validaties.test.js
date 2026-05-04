@@ -19,7 +19,8 @@ describe('Validaties.gs', () => {
   let ctx;
 
   beforeAll(() => {
-    ctx = createGasRuntime(['Validaties.gs']);
+    // Utils.gs eerst — bevat isGeldigEmail_ dat valideerEmail_ delegeert.
+    ctx = createGasRuntime(['Utils.gs', 'Validaties.gs']);
   });
 
   // ── BTW-nummer ─────────────────────────────────────────────────────

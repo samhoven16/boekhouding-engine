@@ -177,7 +177,9 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   const klantnaam  = data['Klantnaam'] || '';
   const klantEmail = String(data['Klant e-mailadres'] || '').trim();
   const klantAdres = data['Factuuradres klant'] || '';
-  const datum      = data['Factuurdatum'] ? new Date(data['Factuurdatum']) : new Date();
+  // parseDatum_ verwerkt DD-MM-YYYY, ISO én Date-objecten — voorkomt dat een
+  // factuur met handgetypte NL-locale datum stilletjes 'today' krijgt.
+  const datum      = parseDatum_(data['Factuurdatum']) || new Date();
   const termijn    = parseInt(data['Betalingstermijn (dagen)'] || '30') || 30;
   const vervaldatum = new Date(datum.getTime() + termijn * 86400000);
   const directMailen = String(data['Factuur direct e-mailen naar klant?'] || '').includes('Ja');
@@ -375,7 +377,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 // ─────────────────────────────────────────────
 function verwerkUitgavenUitHoofdformulier_(ss, data) {
   const leverancier = String(data['Leveranciernaam'] || '').trim();
-  const datum       = data['Factuurdatum uitgave'] ? new Date(data['Factuurdatum uitgave']) : new Date();
+  const datum       = parseDatum_(data['Factuurdatum uitgave']) || new Date();
   const bedragExcl  = parseBedrag_(data['Bedrag excl. BTW'] || '0');
   // Validatie EERST — voorkom gap in inkoopnummer-reeks
   if (!leverancier) {
@@ -498,11 +500,17 @@ function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
     'Open uw spreadsheet om de boeking te bekijken of te wijzigen.\n\n' +
     'U kunt de drempel aanpassen op het tabblad Instellingen → "Melding hoge uitgave".';
 
+  if (!isGeldigEmail_(ontvanger)) {
+    Logger.log('Hoge-uitgave alert overgeslagen: ongeldig e-mailadres "' + ontvanger + '"');
+    try { schrijfAuditLog_('Hoge uitgave alert OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger); } catch (_) {}
+    return;
+  }
   try {
     GmailApp.sendEmail(ontvanger, onderwerp, body);
     schrijfAuditLog_('Hoge uitgave alert', `${leverancier} ${formatBedrag_(bedrag)} → ${ontvanger}`);
   } catch (e) {
     Logger.log('Hoge-uitgave alert niet verzonden: ' + e.message);
+    try { schrijfAuditLog_('Hoge uitgave alert MISLUKT', e.message); } catch (_) {}
   }
 }
 
@@ -510,7 +518,7 @@ function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
 //  DECLARATIE (privé voorgeschoten)
 // ─────────────────────────────────────────────
 function verwerkDeclaratieUitHoofdformulier_(ss, data) {
-  const datum      = data['Datum declaratie'] ? new Date(data['Datum declaratie']) : new Date();
+  const datum      = parseDatum_(data['Datum declaratie']) || new Date();
   const bedragExcl = parseBedrag_(data['Bedrag excl. BTW declaratie'] || '0');
   // Validatie EERST — voorkom gap in inkoopnummer-reeks bij lege submit
   if (bedragExcl <= 0) {
@@ -622,7 +630,7 @@ function verwerkVerkoopfactuurFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const datum = data['Factuurdatum'] ? new Date(data['Factuurdatum']) : new Date();
+    const datum = parseDatum_(data['Factuurdatum']) || new Date();
     const termijn = parseInt(data['Betalingstermijn (dagen)'] || '30');
     const vervaldatum = new Date(datum.getTime() + termijn * 24 * 60 * 60 * 1000);
 
@@ -725,7 +733,8 @@ function verwerkVerkoopfactuurFormulier(e) {
     if (pdfUrl) {
       const rijen = vfSheet.getDataRange().getValues();
       for (let i = 1; i < rijen.length; i++) {
-        if (rijen[i][0] == factuurNr) {
+        // Strict numeric compare — voorkomt cross-type match (bv. '100' == 100)
+        if (parseInt(rijen[i][0], 10) === factuurNr) {
           vfSheet.getRange(i + 1, 20).setValue(pdfUrl);
           break;
         }
@@ -757,7 +766,7 @@ function verwerkInkoopfactuurFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const datum = data['Factuurdatum'] ? new Date(data['Factuurdatum']) : new Date();
+    const datum = parseDatum_(data['Factuurdatum']) || new Date();
     const leverancier = String(data['Leveranciernaam'] || '').trim();
     const bedragExcl = parseBedrag_(data['Bedrag excl. BTW'] || '0');
     // Validatie EERST — voorkom gap in inkoopnummer-reeks bij lege submit
@@ -853,7 +862,7 @@ function verwerkBanktransactieFormulier(e) {
 
     const ss = getSpreadsheet_();
     const transactieId = volgendTransactieId_();
-    const datum = data['Transactiedatum'] ? new Date(data['Transactiedatum']) : new Date();
+    const datum = parseDatum_(data['Transactiedatum']) || new Date();
     const type = data['Type transactie'] || 'Betaling (af)';
     const bedrag = parseBedrag_(data['Bedrag'] || '0');
     const isOntvangst = type.includes('Ontvangst');
@@ -964,7 +973,7 @@ function verwerkJournaalpostFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const datum = data['Boekingsdatum'] ? new Date(data['Boekingsdatum']) : new Date();
+    const datum = parseDatum_(data['Boekingsdatum']) || new Date();
     const bedrag = parseBedrag_(data['Bedrag (excl. BTW)'] || '0');
     const btwKeuze = data['BTW tarief'] || 'Geen BTW';
     const btwTarief = btwKeuze === 'Geen BTW' ? null : parseBtwTarief_(btwKeuze);
@@ -1112,9 +1121,9 @@ function stuurWeeklySamenvatting_() {
     if (ifSheet && ifSheet.getLastRow() > 1) {
       const data = ifSheet.getRange(2, 1, ifSheet.getLastRow() - 1, ifSheet.getLastColumn()).getValues();
       data.forEach(function(r) {
-        const datum = r[3] ? new Date(r[3]) : null;
+        const datum = r[3] ? parseDatum_(r[3]) : null;
         const bedragIncl = Number(r[11]) || 0;
-        if (datum && datum >= weekGeleden && datum <= nu) {
+        if (datum && !isNaN(datum.getTime()) && datum >= weekGeleden && datum <= nu) {
           kostenWeek += bedragIncl;
           aantalKosten++;
         }
@@ -1125,15 +1134,21 @@ function stuurWeeklySamenvatting_() {
     let btwInfo = '';
     try {
       const kStr = getKwartaal_(nu); // 'Q1' .. 'Q4'
-      const kNum = parseInt(kStr.replace('Q', ''), 10);
-      const eindKwartaal = new Date(nu.getFullYear(), kNum * 3, 0);
-      const deadline = new Date(eindKwartaal);
-      deadline.setMonth(deadline.getMonth() + 1);
-      const dagenTot = Math.ceil((deadline - nu) / (24 * 60 * 60 * 1000));
-      if (dagenTot >= 0 && dagenTot <= 30) {
-        btwInfo = `\n⏰ BTW-deadline ${kStr}: nog ${dagenTot} dagen (uiterlijk ${formatDatum_(deadline)})\n`;
+      const kNum = parseInt(String(kStr || '').replace('Q', ''), 10);
+      // Guard: corrupte getKwartaal_ output zou anders Invalid Date geven
+      // en de hele weekly summary kapot maken bij een bug in kwartaal-helper.
+      if (!isNaN(kNum) && kNum >= 1 && kNum <= 4) {
+        const eindKwartaal = new Date(nu.getFullYear(), kNum * 3, 0);
+        const deadline = new Date(eindKwartaal);
+        deadline.setMonth(deadline.getMonth() + 1);
+        const dagenTot = Math.ceil((deadline - nu) / (24 * 60 * 60 * 1000));
+        if (dagenTot >= 0 && dagenTot <= 30) {
+          btwInfo = `\n⏰ BTW-deadline ${kStr}: nog ${dagenTot} dagen (uiterlijk ${formatDatum_(deadline)})\n`;
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      Logger.log('BTW deadline berekening in weekly summary: ' + e.message);
+    }
 
     const onderwerp = `📊 Weekoverzicht ${formatDatum_(weekGeleden)} – ${formatDatum_(nu)}`;
     const body =
@@ -1154,6 +1169,11 @@ function stuurWeeklySamenvatting_() {
       `\nOpen uw spreadsheet voor het volledige dashboard.\n\n` +
       `— Boekhoudbaar`;
 
+    if (!isGeldigEmail_(ontvanger)) {
+      Logger.log('Weekly summary overgeslagen: ongeldig e-mailadres "' + ontvanger + '"');
+      try { schrijfAuditLog_('Weekly summary OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger); } catch (_) {}
+      return;
+    }
     GmailApp.sendEmail(ontvanger, onderwerp, body);
     schrijfAuditLog_('Weekly summary verzonden', `naar ${ontvanger} – omzet ${formatBedrag_(omzetWeek)}`);
   } catch (e) {
@@ -1195,7 +1215,7 @@ function controleerSheetGrootte_(ss) {
     'Overweeg om een nieuw boekjaar te starten via Boekhouding → Instellingen → Nieuw boekjaar.';
 
   try { schrijfAuditLog_('Sheet-grootte waarschuwing', bericht); } catch (_) {}
-  if (eigenEmail) {
+  if (eigenEmail && isGeldigEmail_(eigenEmail)) {
     try {
       GmailApp.sendEmail(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
         bericht + '\n\n— Boekhoudbaar' + (bedrijf ? ' (' + bedrijf + ')' : ''));
@@ -1264,6 +1284,11 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       `\n\nGelieve dit bedrag over te maken naar ${getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || ''}` +
       ` o.v.v. ${factuurnummer}.\n\nMet vriendelijke groet,\n${bedrijf}`;
 
+    if (!isGeldigEmail_(klantEmail)) {
+      Logger.log(`Herinnering ${factuurnummer} overgeslagen: ongeldig e-mailadres "${klantEmail}"`);
+      try { schrijfAuditLog_('Herinnering OVERGESLAGEN', factuurnummer + ' – ongeldig e-mailadres: ' + klantEmail); } catch (_) {}
+      continue;
+    }
     try {
       const opties = { name: bedrijf };
       if (pdfUrl) {
@@ -1276,6 +1301,7 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       Logger.log(`Herinnering stap ${volgendeStap}/3 verstuurd voor ${factuurnummer} naar ${klantEmail}`);
     } catch (err) {
       Logger.log(`Herinnering fout voor ${factuurnummer}: ${err.message}`);
+      try { schrijfAuditLog_('Herinnering MISLUKT', factuurnummer + ' – ' + err.message); } catch (_) {}
     }
   }
 }
@@ -1395,18 +1421,29 @@ function controleerBtwDeadlines_() {
     { kw: 4, datum: new Date(jaar, 0, 31), suffix: ' (' + (jaar - 1) + ')' },
   ];
   const email = getInstelling_('Email rapporten naar');
-  if (!email) return;
+  if (!email || !isGeldigEmail_(email)) {
+    if (email) {
+      Logger.log('BTW-deadline check: ongeldig e-mailadres "' + email + '"');
+      try { schrijfAuditLog_('BTW deadline check OVERGESLAGEN', 'Ongeldig e-mailadres: ' + email); } catch (_) {}
+    }
+    return;
+  }
 
   for (const d of deadlines) {
     const dagenTot = Math.floor((d.datum - vandaag) / 86400000);
     if (dagenTot > 0 && dagenTot <= 14) {
       const kwLabel = 'Q' + d.kw + (d.suffix || '');
-      GmailApp.sendEmail(email,
-        `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
-        `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
-        `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
-        `Met vriendelijke groet,\nUw boekhoudprogramma`
-      );
+      try {
+        GmailApp.sendEmail(email,
+          `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
+          `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
+          `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
+          `Met vriendelijke groet,\nUw boekhoudprogramma`
+        );
+      } catch (err) {
+        Logger.log('BTW deadline reminder mislukt: ' + err.message);
+        try { schrijfAuditLog_('BTW reminder MISLUKT', kwLabel + ' – ' + err.message); } catch (_) {}
+      }
     }
   }
 }
@@ -1414,7 +1451,7 @@ function controleerBtwDeadlines_() {
 function stuurFoutEmail_(context, err) {
   try {
     const email = getInstelling_('Email rapporten naar');
-    if (email) {
+    if (email && isGeldigEmail_(email)) {
       GmailApp.sendEmail(email,
         `Fout in boekhoudprogramma: ${context}`,
         `Er is een fout opgetreden bij het verwerken van: ${context}\n\nFoutmelding: ${err.message}\n\nStack: ${err.stack}`
@@ -1485,12 +1522,22 @@ function stuurBetalingsherinneringen() {
       'Openstaand: ' + bedragStr + '\nVervaldatum: ' + vervalStr + '\nIBAN: ' + iban +
       '\nKenmerk: ' + fnr + '\n\nMet vriendelijke groet,\n' + bedrijf;
 
-    GmailApp.sendEmail(klantEmail,
-      `Herinnering factuur ${fnr} · ${bedragStr}`,
-      tekst,
-      { htmlBody: htmlBody, name: bedrijf }
-    );
-    aantalVerstuurd++;
+    if (!isGeldigEmail_(klantEmail)) {
+      Logger.log('Herinnering ' + fnr + ' overgeslagen: ongeldig e-mailadres "' + klantEmail + '"');
+      try { schrijfAuditLog_('Herinnering OVERGESLAGEN', fnr + ' – ongeldig e-mailadres: ' + klantEmail); } catch (_) {}
+      continue;
+    }
+    try {
+      GmailApp.sendEmail(klantEmail,
+        `Herinnering factuur ${fnr} · ${bedragStr}`,
+        tekst,
+        { htmlBody: htmlBody, name: bedrijf }
+      );
+      aantalVerstuurd++;
+    } catch (err) {
+      Logger.log('Herinnering ' + fnr + ' mislukt: ' + err.message);
+      try { schrijfAuditLog_('Herinnering MISLUKT', fnr + ' – ' + err.message); } catch (_) {}
+    }
   }
 
   SpreadsheetApp.getUi().alert(`${aantalVerstuurd} herinneringen verstuurd.`);
@@ -1499,8 +1546,9 @@ function stuurBetalingsherinneringen() {
 function haalRelatieEmail_(ss, relatieId) {
   const sheet = ss.getSheetByName(SHEETS.RELATIES);
   const data = sheet.getDataRange().getValues();
+  const idStr = String(relatieId);
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] == relatieId) return data[i][10]; // E-mailadres kolom
+    if (String(data[i][0]) === idStr) return data[i][10]; // E-mailadres kolom
   }
   return null;
 }
