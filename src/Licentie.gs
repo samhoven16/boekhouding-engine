@@ -31,6 +31,130 @@ function getLicentieServerUrl_() {
 }
 
 // ─────────────────────────────────────────────
+//  OWNER / DEV BYPASS
+// ─────────────────────────────────────────────
+//
+// Als de licentieserver niet is geconfigureerd (bv. self-hosted, dev-omgeving,
+// of de eigenaar werkt in zijn eigen master-sjabloon), kan de eigenaar geen
+// klant-OTP-flow doorlopen — er is immers geen server. Daarom is er een
+// expliciete owner-bypass.
+//
+// Activatie: open Apps Script editor → run de functie `activeerEigenaarLicentie`
+// éénmalig (Bestand → Ververs → Editor → Run). Daarna is licentiecheck altijd
+// OK voor de eigenaar zonder server.
+
+const OWNER_BYPASS_KEY = 'LICENTIE_OWNER_BYPASS';
+
+// Hard-coded admin/eigenaar-emails — altijd bypass, geen handmatige actie nodig.
+// Voeg hier emails toe van mensen die het master-sjabloon mogen gebruiken
+// (developers, mede-eigenaars). Voor klanten geldt nog steeds de normale
+// licentie-flow zodra zij hun eigen kopie hebben (andere SS-ID).
+const ADMIN_EMAILS = [
+  'samhoven16@gmail.com',
+];
+
+/**
+ * Detecteert of de licentie-check moet worden overgeslagen.
+ * VEEL ROUTES, allemaal automatisch (geen handmatige actie nodig):
+ *   1. Huidige user staat in ADMIN_EMAILS lijst → altijd bypass
+ *   2. Expliciete ScriptProperty LICENTIE_OWNER_BYPASS=true
+ *   3. Geen LICENTIE_SERVER_URL geconfigureerd (dev/owner default mode)
+ *   4. Huidige user is de bestand-eigenaar (ss.getOwner)
+ *
+ * Ratio: voor de eigenaar/dev moet alles gewoon werken. Pas zodra een echte
+ * licentieserver is geconfigureerd EN huidige user is geen admin/eigenaar,
+ * gaat de normale klant-OTP-flow draaien.
+ */
+function isEigenaarBypass_() {
+  try {
+    // Route 1: hard-coded admin-email (altijd bypass)
+    try {
+      const userEmail = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+      if (userEmail && ADMIN_EMAILS.indexOf(userEmail) !== -1) return true;
+    } catch (_) {}
+
+    const props = PropertiesService.getScriptProperties();
+    // Route 2: expliciete bypass-flag
+    if (props.getProperty(OWNER_BYPASS_KEY) === 'true') return true;
+
+    // Route 3: geen server geconfigureerd → default dev/owner mode
+    const serverUrl = getLicentieServerUrl_();
+    if (!serverUrl) return true;
+
+    // Route 4: file-owner check (voor het geval admin-email niet matcht
+    // door verschillende Google-accounts — getOwner werkt vaak ook)
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const ownerEmail = ss.getOwner() ? ss.getOwner().getEmail() : null;
+      const userEmail2 = Session.getActiveUser().getEmail();
+      if (ownerEmail && userEmail2 && ownerEmail === userEmail2) return true;
+    } catch (_) {}
+  } catch (_) {}
+  return false;
+}
+
+/**
+ * EIGENAAR-FUNCTIE — run éénmalig vanuit Apps Script editor.
+ * Activeert permanente owner-bypass zodat licentie-flow nooit blokkeert.
+ *
+ * Hoe te gebruiken:
+ *   1. Open Apps Script editor (Extensies → Apps Script)
+ *   2. Selecteer bovenin functie "activeerEigenaarLicentie"
+ *   3. Klik op "Run" (Uitvoeren)
+ *   4. Geef toestemming als gevraagd
+ *   5. Sluit editor en herlaad spreadsheet
+ */
+function activeerEigenaarLicentie() {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty(OWNER_BYPASS_KEY, 'true');
+
+  // Bind ook de huidige spreadsheet-ID zodat kopie-detectie geen issue meer is
+  try {
+    const huidigSsId = SpreadsheetApp.getActiveSpreadsheet().getId();
+    props.setProperty(LICENTIE_SS_ID_KEY, huidigSsId);
+    props.setProperty(LICENTIE_PROP_KEY, 'OWNER-BYPASS-' + huidigSsId.slice(0, 8));
+    props.setProperty(LICENTIE_KLANT_KEY, 'Eigenaar (bypass)');
+    props.setProperty(LICENTIE_VERSIE_KEY, '1.0');
+    // Cache 10 jaar geldig — bypass hoeft nooit te valideren tegen server
+    props.setProperty(LICENTIE_CACHE_KEY, String(Date.now() + 10 * 365 * 24 * 3600 * 1000));
+  } catch (e) {
+    Logger.log('activeerEigenaarLicentie: kon SS-ID niet binden: ' + e.message);
+  }
+
+  try { schrijfAuditLog_('Eigenaar-bypass geactiveerd', Session.getActiveUser().getEmail() || 'onbekend'); } catch (_) {}
+
+  try {
+    SpreadsheetApp.getUi().alert(
+      '✅ Eigenaar-bypass actief',
+      'De licentiecheck is uitgeschakeld voor deze spreadsheet. ' +
+      'Herlaad het tabblad en je kunt direct werken.\n\n' +
+      'Run "deactiveerEigenaarLicentie" om de bypass weer uit te zetten ' +
+      '(bijv. om te testen hoe een normale klant de activatie ervaart).',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  } catch (_) {
+    Logger.log('Eigenaar-bypass actief — herlaad de spreadsheet om te beginnen.');
+  }
+}
+
+/**
+ * EIGENAAR-FUNCTIE — schakelt owner-bypass weer uit (bv. om klantflow te testen).
+ */
+function deactiveerEigenaarLicentie() {
+  const props = PropertiesService.getScriptProperties();
+  props.deleteProperty(OWNER_BYPASS_KEY);
+  // Licentie-token + binding NIET wissen — dat zou klant-data raken
+  try { schrijfAuditLog_('Eigenaar-bypass uitgeschakeld', ''); } catch (_) {}
+  try {
+    SpreadsheetApp.getUi().alert(
+      'Bypass uit',
+      'Owner-bypass is uitgezet. Bij volgend openen volgt normale licentie-flow.',
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+  } catch (_) {}
+}
+
+// ─────────────────────────────────────────────
 //  ONOPEN-CHECK: LICENTIE EN KOPIE
 // ─────────────────────────────────────────────
 /**
@@ -38,6 +162,11 @@ function getLicentieServerUrl_() {
  * Bij kopie: vergrendelt en retourneert false. Bij niet-geactiveerd: toont dialoog.
  */
 function controleerLicentieEnKopie_() {
+  // Eigenaar/dev-bypass — als bestand-eigenaar of expliciet ingeschakeld:
+  // sla alle checks over. Voorkomt dat eigenaar zijn eigen sjabloon niet kan
+  // openen wanneer geen licentieserver is geconfigureerd.
+  if (isEigenaarBypass_()) return true;
+
   const props      = PropertiesService.getScriptProperties();
   const sleutel    = props.getProperty(LICENTIE_PROP_KEY);
   const regSsId    = props.getProperty(LICENTIE_SS_ID_KEY);
@@ -132,6 +261,33 @@ function vergrendelKopie_() {
 //  ACTIVATIEDIALOOG (OTP — 2 stappen)
 // ─────────────────────────────────────────────
 function toonActivatieDialog_() {
+  // Detecteer of dit waarschijnlijk de bestand-eigenaar is — dan tonen we een
+  // extra "ontwikkel-modus" knop in de dialoog. Voorkomt dat eigenaar vastloopt
+  // als er geen licentieserver is geconfigureerd.
+  let isOwner = false;
+  let serverGeconfigureerd = false;
+  try {
+    serverGeconfigureerd = !!getLicentieServerUrl_();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ownerEmail = ss.getOwner() ? ss.getOwner().getEmail() : null;
+    const userEmail = Session.getActiveUser().getEmail();
+    isOwner = !!(ownerEmail && userEmail && ownerEmail === userEmail);
+  } catch (_) {}
+
+  const ownerBlock = isOwner ? `
+    <div style="margin-top:18px;padding:12px 14px;background:#FFF8E1;border-radius:8px;border:1px solid #FFE082">
+      <div style="font-weight:700;color:#5A3F00;margin-bottom:4px">👤 Bent u de eigenaar?</div>
+      <div style="font-size:12px;color:#5A3F00;line-height:1.5">
+        ${serverGeconfigureerd
+          ? 'U bent de eigenaar van dit bestand. U kunt de normale activatie volgen, of de eigenaar-bypass activeren.'
+          : 'Geen licentieserver geconfigureerd. Voor de eigenaar van het bestand: open Apps Script editor (Extensies → Apps Script) en run de functie <b>activeerEigenaarLicentie</b> éénmalig.'}
+      </div>
+      <button onclick="bypass()" style="margin-top:8px;background:#5A3F00;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">
+        Activeer eigenaar-bypass nu
+      </button>
+    </div>
+  ` : '';
+
   const html = HtmlService.createHtmlOutput(`
     <!DOCTYPE html><html lang="nl"><head>
     <meta charset="UTF-8">
@@ -184,6 +340,7 @@ function toonActivatieDialog_() {
         <div class="fout" id="fout1"></div>
         <button class="btn" id="btn1" onclick="stuurCode()">Stuur activeringscode</button>
         <p class="hint">Geen mail ontvangen? Check je spam-map of mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.</p>
+        ${ownerBlock}
       </div>
 
       <!-- Stap 2: OTP -->
@@ -282,6 +439,18 @@ function toonActivatieDialog_() {
       document.getElementById('fout1').style.display = 'none';
     }
 
+    function bypass() {
+      google.script.run
+        .withSuccessHandler(function(){
+          alert('Eigenaar-bypass actief — herlaad de spreadsheet.');
+          google.script.host.close();
+        })
+        .withFailureHandler(function(err){
+          alert('Bypass-fout: ' + err.message);
+        })
+        .activeerEigenaarLicentie();
+    }
+
     function schakelNaar(id) {
       ['stap1','stap2','stap3'].forEach(function(s) {
         document.getElementById(s).classList.remove('actief');
@@ -370,6 +539,9 @@ function initialiseerNaActivatie() {
 //  LICENTIE VALIDEREN (gecacht)
 // ─────────────────────────────────────────────
 function isLicentieGeldig_() {
+  // Eigenaar/dev-bypass kort-circuiteert — geen server-call nodig
+  if (isEigenaarBypass_()) return true;
+
   const props   = PropertiesService.getScriptProperties();
   const sleutel = props.getProperty(LICENTIE_PROP_KEY);
   if (!sleutel) return false;

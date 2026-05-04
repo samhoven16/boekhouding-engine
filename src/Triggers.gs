@@ -343,6 +343,15 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   // UBL genereren
   const ublUrl = genereerUBL_(factuurNr, klantnaam, klantAdres, regels, totalExcl, totalBtw, totalIncl, datum, vervaldatum, btwTarief);
 
+  // BTW-spaarpot auto-reservering (opt-in via instelling 'BTW automatisch reserveren')
+  // Voorkomt dat klant per ongeluk BTW besteedt — bij elke factuur wordt BTW-deel
+  // direct van 1200 naar 1205 (BTW-spaarpot) geboekt zodat het apart staat.
+  try {
+    if (typeof reserveerBtwOpSpaarpot_ === 'function') {
+      reserveerBtwOpSpaarpot_(ss, factuurNummerOpgemaakt, totalBtw, datum);
+    }
+  } catch (_) { /* spaarpot is best-effort */ }
+
   // PDF URL opslaan; log expliciet als PDF ontbreekt
   if (pdfUrl) {
     vfSheet.getRange(nieuweRij, 20).setValue(pdfUrl);
@@ -1128,6 +1137,15 @@ function stuurWeeklySamenvatting_() {
   try {
     const ss = getSpreadsheet_();
     if (!ss) return;
+    // OPT-IN check: niet iedereen wil tips/samenvatting per email.
+    // Default = Nee. Klant zet 'Ja' via Instellingen om abonnement aan te
+    // zetten. Voorkomt ongewenste mail die als spam aanvoelt.
+    const opt = String(getInstelling_('Email tips wekelijks') || '').toLowerCase().trim();
+    const optActief = opt === 'ja' || opt === 'true' || opt === 'yes';
+    if (!optActief) {
+      Logger.log('Wekelijkse samenvatting overgeslagen: opt-in niet actief (Email tips wekelijks=Nee)');
+      return;
+    }
     const ontvanger = getInstelling_('Email rapporten naar') || getInstelling_('Email');
     if (!ontvanger || !isGeldigEmail_(ontvanger)) {
       Logger.log('Wekelijkse samenvatting overgeslagen: geen geldig ontvanger-emailadres');

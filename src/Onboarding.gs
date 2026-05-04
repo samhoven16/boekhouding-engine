@@ -491,12 +491,16 @@ function toonPostSetupWelkomModal_() {
         <span class="n">1</span>
         <span class="t"><strong>Bedrijfsgegevens invullen</strong><span>Naam, BTW-nummer, IBAN — nodig voor facturen</span></span>
       </button>
-      <button class="actie" onclick="kies('boeking')">
+      <button class="actie" onclick="kies('profiel')">
         <span class="n">2</span>
+        <span class="t"><strong>Fiscaal profiel invullen (60 sec)</strong><span>Voor persoonlijk advies over KIA, AOV, WBSO &amp; AOW-leeftijd</span></span>
+      </button>
+      <button class="actie" onclick="kies('boeking')">
+        <span class="n">3</span>
         <span class="t"><strong>Eerste factuur of kostenpost boeken</strong><span>Nieuwe boeking dialoog openen</span></span>
       </button>
       <button class="actie" onclick="kies('dashboard')">
-        <span class="n">3</span>
+        <span class="n">4</span>
         <span class="t"><strong>Dashboard bekijken</strong><span>KPI's en openstaande facturen in één oogopslag</span></span>
       </button>
     </div>
@@ -528,6 +532,14 @@ function markeerWelkomGezienEnNavigeer_(actie) {
       if (s) ss.setActiveSheet(s);
     } else if (actie === 'boeking') {
       if (typeof openNieuweBoeking === 'function') openNieuweBoeking();
+    } else if (actie === 'profiel') {
+      // Auto-trigger fiscaal profiel — voorheen alleen via menu te bereiken,
+      // nu prominent als stap 2 in welkomstmodal zodat klant direct
+      // persoonlijk advies krijgt zonder zelf te zoeken.
+      if (typeof toonFiscaalProfielWizard === 'function') {
+        Utilities.sleep(300);  // wacht tot welkom-modal sluit
+        toonFiscaalProfielWizard();
+      }
     }
   } catch (e) { Logger.log('Welkom-navigatie fout: ' + e.message); }
 }

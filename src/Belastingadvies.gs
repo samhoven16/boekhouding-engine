@@ -970,6 +970,85 @@ function genereerBelastingadvies() {
 
   let rij = 4;
 
+  // ── BELASTINGVOORDEEL-TOP-BANNER ───────────────────────────────────
+  // Klant ziet meteen "wat heeft het systeem opgeleverd" + actuele tip.
+  // Is consistent met de dashboard-widget; hier in detail-context.
+  let voordeel = null;
+  let seizoen = null;
+  try {
+    const B = getBelasting_();
+    voordeel = berekenBelastingvoordeel_(advies, B);
+    seizoen = (typeof getSeizoensTipRender_ === 'function') ? getSeizoensTipRender_() : null;
+  } catch (_) {}
+
+  if (voordeel) {
+    sheet.getRange(rij, 1, 1, 3).merge()
+      .setValue('💰 WAT BOEKHOUDBAAR DIT JAAR VOOR U DOET')
+      .setBackground('#0D1B4E').setFontColor('#FFFFFF')
+      .setFontWeight('bold').setFontSize(12).setHorizontalAlignment('center');
+    sheet.setRowHeight(rij, 28);
+    rij++;
+    sheet.getRange(rij, 1).setValue('Bespaard dit jaar (benutte aftrekken)')
+      .setFontWeight('bold').setBackground('#E6F7F4');
+    sheet.getRange(rij, 2, 1, 2).merge()
+      .setValue(formatBedrag_(voordeel.bespaardYTD))
+      .setFontWeight('bold').setFontSize(14).setFontColor('#0D1B4E')
+      .setBackground('#E6F7F4').setHorizontalAlignment('right');
+    rij++;
+    sheet.getRange(rij, 1).setValue('Mogelijk extra (gemiste kansen)')
+      .setFontWeight('bold').setBackground(voordeel.mogelijkExtra > 0 ? '#FFF8E1' : '#F7F9FC');
+    sheet.getRange(rij, 2, 1, 2).merge()
+      .setValue(formatBedrag_(voordeel.mogelijkExtra))
+      .setFontWeight('bold').setFontSize(14).setFontColor('#5A3F00')
+      .setBackground(voordeel.mogelijkExtra > 0 ? '#FFF8E1' : '#F7F9FC').setHorizontalAlignment('right');
+    rij++;
+    sheet.getRange(rij, 1).setValue('Totaal potentieel')
+      .setFontWeight('bold').setBackground('#E3F2FD');
+    sheet.getRange(rij, 2, 1, 2).merge()
+      .setValue(formatBedrag_(voordeel.totaalPotentieel))
+      .setFontWeight('bold').setFontSize(14).setFontColor('#0D47A1')
+      .setBackground('#E3F2FD').setHorizontalAlignment('right');
+    rij += 2;
+  }
+
+  // ── PROFIEL-STATUS BANNER ──────────────────────────────────────────
+  // Toon CTA als fiscaal profiel niet ingevuld is — dan kan systeem
+  // niet alle gepersonaliseerde adviezen geven.
+  const profielVelden = ['Geboortedatum', 'Startjaar onderneming', 'Bedrijfsactiviteit'];
+  const ontbrekend = profielVelden.filter(function(v) {
+    const w = getInstelling_(v);
+    return !w || String(w).trim() === '';
+  });
+  if (ontbrekend.length > 0) {
+    sheet.getRange(rij, 1, 1, 3).merge()
+      .setValue('📋 Vul uw fiscaal profiel in voor persoonlijk advies (60 sec) — ' +
+                ontbrekend.length + ' velden ontbreken: ' + ontbrekend.join(', '))
+      .setBackground('#FFF8E1').setFontColor('#5A3F00')
+      .setFontWeight('bold').setFontSize(11).setWrap(true);
+    sheet.setRowHeight(rij, 36);
+    rij++;
+    sheet.getRange(rij, 1, 1, 3).merge()
+      .setValue('→ Open via menu: Boekhouding → Persoonlijk fiscaal profiel invullen')
+      .setBackground('#FFF8E1').setFontColor('#5A3F00')
+      .setFontSize(10).setHorizontalAlignment('center');
+    rij += 2;
+  }
+
+  // ── SEIZOENS-TIP ───────────────────────────────────────────────────
+  if (seizoen) {
+    sheet.getRange(rij, 1, 1, 3).merge()
+      .setValue(seizoen.titel).setBackground(seizoen.bgKleur).setFontColor(seizoen.fontKleur)
+      .setFontWeight('bold').setFontSize(12);
+    sheet.setRowHeight(rij, 28);
+    rij++;
+    sheet.getRange(rij, 1, 1, 3).merge()
+      .setValue(seizoen.tekst + (seizoen.deadline ? '\n⏰ Deadline: ' + seizoen.deadline : ''))
+      .setBackground(seizoen.bgKleur).setFontColor(seizoen.fontKleur)
+      .setWrap(true).setFontSize(10).setVerticalAlignment('top');
+    sheet.setRowHeight(rij, Math.min(140, 30 + (seizoen.tekst.length / 70) * 14));
+    rij += 2;
+  }
+
   // Samenvatting
   sheet.getRange(rij, 1, 1, 3).merge()
     .setValue('SAMENVATTING').setBackground(KLEUREN.SECTIE_BG).setFontWeight('bold');
