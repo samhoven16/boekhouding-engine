@@ -125,7 +125,28 @@ function berekenBelastingadvies_(ss) {
   // niet pas na een script-reload worden opgepikt. Module-scope BELASTING is
   // bevroren bij script-load; we lezen hier vers.
   const BELASTING = getBelasting_();
-  const kg = berekenKengetallen_(ss);
+  // Defensief: berekenKengetallen_ kan crashen als GROOTBOEKSCHEMA mist of
+  // corrupt is. Liever een leeg advies dan een uitvalbeurt — gebruiker
+  // ziet dan dat er iets mis is via het audit-log.
+  let kg;
+  try {
+    kg = berekenKengetallen_(ss);
+  } catch (e) {
+    Logger.log('berekenBelastingadvies_ kon kengetallen niet berekenen: ' + e.message);
+    try { schrijfAuditLog_('Belastingadvies FOUT', 'Kengetallen niet beschikbaar: ' + e.message); } catch (_) {}
+    return {
+      adviezen: [{
+        type: 'WAARSCHUWING',
+        titel: '⚠️ Belastingadvies kon niet worden berekend',
+        tekst: 'Er ging iets mis bij het ophalen van uw boekhoudgegevens. ' +
+               'Controleer of het tabblad Grootboekschema bestaat. Foutmelding: ' + e.message,
+        besparing: 0,
+      }],
+      aftrekken: [],
+      totaalAftrek: 0,
+      geschatteIB: 0,
+    };
+  }
   const omzet = kg.omzet;
   const winst = kg.nettowinst;
   const rechtsvorm = getInstelling_('Rechtsvorm') || 'Eenmanszaak';
@@ -148,8 +169,10 @@ function berekenBelastingadvies_(ss) {
   }
 
   // ── 1. KOR regeling ───────────────────────────────────────────────────
+  // Case-insensitive — 'JA' / 'ja' / 'true' werken nu allemaal
+  const korActiefRaw = String(getInstelling_('KOR regeling actief') || '').toLowerCase().trim();
+  const korActief = korActiefRaw === 'ja' || korActiefRaw === 'true' || korActiefRaw === 'yes';
   if (omzet > 0 && omzet < BELASTING.KOR_GRENS) {
-    const korActief = getInstelling_('KOR regeling actief') === 'Ja';
     if (!korActief) {
       adviezen.push({
         type: 'VOORDEEL',
@@ -161,7 +184,6 @@ function berekenBelastingadvies_(ss) {
       });
     }
   } else if (omzet >= BELASTING.KOR_GRENS) {
-    const korActief = getInstelling_('KOR regeling actief') === 'Ja';
     if (korActief) {
       adviezen.push({
         type: 'WAARSCHUWING',
@@ -171,6 +193,17 @@ function berekenBelastingadvies_(ss) {
         besparing: null,
       });
     }
+  } else if (omzet === 0 && korActief) {
+    // Edge case: KOR aangevraagd maar nog geen omzet — voorkomt dat nieuwe
+    // gebruiker geen feedback krijgt als hij de KOR-checkbox ten onrechte aanvinkt.
+    adviezen.push({
+      type: 'TIP',
+      titel: '💡 KOR is actief maar er is nog geen omzet geboekt',
+      tekst: 'U heeft de KOR aangevinkt maar er staan nog geen verkoopfacturen geregistreerd. ' +
+             'Controleer of dit klopt: KOR betekent dat u géén BTW factureert. ' +
+             'Bij twijfel: raadpleeg een accountant.',
+      besparing: null,
+    });
   }
 
   // ── 2. Zelfstandigenaftrek (ZZP/eenmanszaak) ─────────────────────────
@@ -194,11 +227,15 @@ function berekenBelastingadvies_(ss) {
 
   // ── 3. Startersaftrek (eerste 3 jaar) ────────────────────────────────
   if (isZzp && winst > 0) {
-    const startjaar = parseInt(getInstelling_('Startjaar onderneming') || '0');
+    // Strict 4-cijferig jaartal validatie — voorheen accepteerde parseInt
+    // strings als "2025xyz" of "2025-2026" (geeft 2025) wat tot foute startersaftrek-claim
+    // kan leiden. Nu alleen pure jaartallen tussen 1990 en huidigJaar.
+    const startjaarRaw = String(getInstelling_('Startjaar onderneming') || '').trim();
+    const startjaar = /^\d{4}$/.test(startjaarRaw) ? parseInt(startjaarRaw, 10) : 0;
     // startjaar > 0:        ingevuld (anders default 0)
     // startjaar <= jaar:    voorkomt foutieve toekomst-datum
     // (jaar - startjaar) < 3: eerste 3 jaren
-    if (startjaar > 0 && startjaar <= jaar && (jaar - startjaar) < 3) {
+    if (startjaar >= 1990 && startjaar <= jaar && (jaar - startjaar) < 3) {
       const aftrek = BELASTING.STARTERSAFTREK;
       aftrekken.push({
         naam: 'Startersaftrek',
@@ -347,7 +384,9 @@ function berekenBelastingadvies_(ss) {
   }
 
   // ── 8c. Thuiswerkaftrek ────────────────────────────────────────────────
-  const thuiswerkDagen = parseInt(getInstelling_('Thuiswerk dagen per jaar') || '0');
+  // Defensieve parse — voorkomt NaN-bugs door non-numeric input zoals '250 dagen'
+  const thuiswerkDagenRaw = parseInt(getInstelling_('Thuiswerk dagen per jaar') || '0', 10);
+  const thuiswerkDagen = (isFinite(thuiswerkDagenRaw) && thuiswerkDagenRaw > 0) ? thuiswerkDagenRaw : 0;
   if (thuiswerkDagen > 0) {
     const thuiswerkAftrek = rondBedrag_(thuiswerkDagen * BELASTING.THUISWERK_PER_DAG);
     aftrekken.push({ naam: `Thuiswerkvergoeding (${thuiswerkDagen} dagen × €${BELASTING.THUISWERK_PER_DAG})`, bedrag: thuiswerkAftrek, voorwaarde: 'Werkdagen vanuit huis', code: '7350' });
@@ -371,7 +410,8 @@ function berekenBelastingadvies_(ss) {
 
   // ── 8d. Urencriterium voortgang ───────────────────────────────────────
   if (isZzp) {
-    const uren = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0');
+    const urenRaw = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0', 10);
+    const uren = (isFinite(urenRaw) && urenRaw > 0) ? urenRaw : 0;
     if (uren > 0) {
       const pct = Math.min(100, Math.round((uren / BELASTING.URENCRITERIUM) * 100));
       const resterend = Math.max(0, BELASTING.URENCRITERIUM - uren);
@@ -616,15 +656,19 @@ function scanAfschrijvingskandidaten_(ss) {
   if (!sheet) return [];
   const data = sheet.getDataRange().getValues();
   const kandidaten = [];
-  const huidigJaar = new Date().getFullYear();
+  // Boekjaar (niet kalenderjaar) — voorkomt dat investeringen in januari
+  // van een afwijkend boekjaar buiten de scan vallen.
+  const boekjaar = getBoekjaar_();
   const activeerGrens = getBelasting_().ACTIVEER_GRENS;
 
   data.slice(1).forEach(r => {
     const bedrag = parseFloat(r[8]) || 0;           // [8] = bedrag excl. BTW
     const kostenRek = String(r[15] || '');           // [15] = kostenrekening
-    const datum = r[3] instanceof Date ? r[3] : new Date(r[3]);
+    // parseDatum_ verwerkt DD-MM-YYYY, ISO én Date — voorkomt silent miss
+    // bij locale-gestuurde datumstrings.
+    const datum = r[3] instanceof Date ? r[3] : (parseDatum_(r[3]) || new Date(NaN));
     if (bedrag < activeerGrens) return;
-    if (isNaN(datum.getTime()) || datum.getFullYear() < huidigJaar) return;
+    if (isNaN(datum.getTime()) || datum.getFullYear() < boekjaar) return;
     if (kostenRek.startsWith('0')) return;           // al geactiveerd
     kandidaten.push({
       bedrag,

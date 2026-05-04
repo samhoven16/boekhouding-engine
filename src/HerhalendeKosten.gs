@@ -198,7 +198,7 @@ function opslaanHerhalendeKost(data) {
     parseFloat(data.bedrag) || 0,
     data.btw || '21% (hoog)',
     data.freq || 'Maandelijks',
-    data.datum ? new Date(data.datum) : new Date(),
+    parseDatum_(data.datum) || new Date(),
     data.rekening || '7000 Overige kosten',
     'Actief',
     data.auto || 'Nee',
@@ -243,9 +243,15 @@ function verwerkHerhalendeKosten_() {
       const status = String(data[i][8] || '');
       if (status !== 'Actief') continue;
 
-      let volgende = data[i][6] ? new Date(data[i][6]) : null;
+      // NB: hier expres new Date() ipv parseDatum_ — parseDatum_ valt terug op
+      // 'today' bij ongeldige string, wat hier silent verkeerd zou zijn.
+      // Dit veld is een sheet-Date-kolom; non-Date input is een fout om te flaggen.
+      let volgende = data[i][6]
+        ? (data[i][6] instanceof Date ? data[i][6] : new Date(data[i][6]))
+        : null;
       if (!volgende || isNaN(volgende.getTime())) {
         Logger.log('Herhalende kosten rij ' + (i + 1) + ': ongeldige datum, overgeslagen.');
+        try { schrijfAuditLog_('Herhalende kost OVERGESLAGEN', 'Rij ' + (i + 1) + ' – ongeldige volgende datum'); } catch (_) {}
         continue;
       }
 

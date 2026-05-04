@@ -70,10 +70,12 @@ function controleerBtwDeadline_() {
   const periodeKey = kw.kw + '_' + kw.jaar;
   if (verstuurd === periodeKey) return;
 
-  // E-mailadres ophalen + valideren — voorkomt GmailApp-crash op invalid input.
+  // E-mailadres ophalen + valideren via centrale isGeldigEmail_ (Utils.gs)
+  // — voorkomt GmailApp-crash op invalid input + consistente RFC-validatie.
   const email = getInstelling_('E-mailadres') || Session.getActiveUser().getEmail();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email))) {
+  if (!email || !isGeldigEmail_(email)) {
     Logger.log('BTW reminder overgeslagen: geen of ongeldig e-mailadres (' + email + ')');
+    try { schrijfAuditLog_('BTW reminder OVERGESLAGEN', 'Ongeldig e-mailadres: ' + email); } catch (_) {}
     return;
   }
 
