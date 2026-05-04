@@ -95,6 +95,7 @@ function onOpen() {
     .addItem('Hulp & Assistent', 'openAssistent')
     .addItem('Belastingtips & besparingen', 'genereerBelastingadvies')
     .addItem('💡 Wat-als simulator (impact extra omzet/investering)', 'toonWatAlsSimulator')
+    .addItem('📋 Persoonlijk fiscaal profiel invullen', 'toonFiscaalProfielWizard')
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────

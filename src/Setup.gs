@@ -1119,6 +1119,30 @@ function getInstelling_(sleutel) {
     : null;
 }
 
+/**
+ * Schrijft een instelling weg naar het Instellingen-tabblad.
+ * Voegt nieuwe rij toe als sleutel niet bestaat. Invalideert cache.
+ *
+ * @param {string} sleutel Sleutel-naam (bv. 'Geboortedatum').
+ * @param {string|number} waarde Waarde om weg te schrijven.
+ */
+function setInstelling_(sleutel, waarde) {
+  const ss = getSpreadsheet_();
+  const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
+  if (!sheet) throw new Error('Tabblad Instellingen niet gevonden');
+  const data = sheet.getDataRange().getValues();
+  for (let i = 0; i < data.length; i++) {
+    if (String(data[i][0] || '') === String(sleutel)) {
+      sheet.getRange(i + 1, 2).setValue(waarde);
+      _instellingenCache = null; // Invalideren — volgende getInstelling_ leest vers
+      return;
+    }
+  }
+  // Niet gevonden → append onderaan
+  sheet.appendRow([sleutel, waarde]);
+  _instellingenCache = null;
+}
+
 // ─────────────────────────────────────────────
 //  SETUP OPNIEUW UITVOEREN (FORMS RESETTEN)
 // ─────────────────────────────────────────────
