@@ -96,6 +96,9 @@ function onOpen() {
     .addItem('Belastingtips & besparingen', 'genereerBelastingadvies')
     .addItem('💡 Wat-als simulator (impact extra omzet/investering)', 'toonWatAlsSimulator')
     .addItem('📋 Persoonlijk fiscaal profiel invullen', 'toonFiscaalProfielWizard')
+    .addItem('🚗 Reiskosten registreren (km × €0,23)', 'toonReiskostenTracker')
+    .addItem('🏦 Lijfrente-jaarruimte berekenen', 'toonLijfrenteJaarruimte')
+    .addItem('💰 BTW-spaarpot status (hoeveel reserveren?)', 'toonBtwSpaarpot')
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────

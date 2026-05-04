@@ -394,6 +394,296 @@ function runWatAlsSimulator(mutatie) {
 }
 
 // ─────────────────────────────────────────────
+//  REISKOSTEN-TRACKER (compact, 30-sec invoer)
+// ─────────────────────────────────────────────
+//
+// €0,23/km is aftrekbaar voor zakelijke kilometers met privéauto.
+// Vele ZZP'ers vergeten dit en missen €500-€1.500/jaar.
+// Deze dialog maakt invoer trivial: omschrijving + km → automatisch
+// geboekt op rekening 7350 (reiskosten) als kostenpost.
+
+function toonReiskostenTracker() {
+  if (typeof controleerSetupGedaan_ === 'function' && !controleerSetupGedaan_()) return;
+  const today = new Date().toISOString().slice(0, 10);
+  let kmYTD = 0;
+  let bedragYTD = 0;
+  try {
+    const ss = getSpreadsheet_();
+    const jpSheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+    if (jpSheet) {
+      const data = jpSheet.getDataRange().getValues();
+      const jaar = (typeof getBoekjaar_ === 'function') ? getBoekjaar_() : new Date().getFullYear();
+      for (let i = 1; i < data.length; i++) {
+        const datum = data[i][1] ? parseDatum_(data[i][1]) : null;
+        if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
+        const debet = String(data[i][4] || '');
+        const omschr = String(data[i][2] || '').toLowerCase();
+        if (debet === '7350' || /reiskosten|kilometer/i.test(omschr)) {
+          bedragYTD += parseFloat(data[i][8]) || 0;
+          // Probeer km te extraheren uit omschrijving "X km × €0,23"
+          const m = omschr.match(/(\d+)\s*km/);
+          if (m) kmYTD += parseInt(m[1], 10);
+        }
+      }
+    }
+  } catch (_) {}
+
+  const html = HtmlService.createHtmlOutput(`
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+     padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;margin:0}
+h2{color:#0D1B4E;margin:0 0 4px;font-size:18px;font-weight:800}
+.sub{color:#5F6B7A;font-size:12px;margin-bottom:14px}
+.ytd{background:#E6F7F4;border-radius:8px;padding:12px;margin-bottom:14px;text-align:center}
+.ytd .lbl{color:#5F6B7A;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+.ytd .v{font-weight:700;color:#0D1B4E;font-size:18px}
+label{display:block;font-weight:600;font-size:12px;color:#0D1B4E;margin-bottom:4px;margin-top:10px}
+input{width:100%;padding:9px 12px;border:1px solid #E5EAF2;border-radius:6px;font-size:14px;font-family:inherit;background:#fff}
+input:focus{outline:none;border-color:#2EC4B6}
+.preview{background:#FFF8E1;border-radius:6px;padding:10px;margin-top:12px;font-size:13px;color:#5A3F00}
+.preview b{color:#0D1B4E;font-size:15px}
+.btn{background:#2EC4B6;color:white;border:none;padding:11px 22px;border-radius:8px;
+     cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;width:100%;margin-top:14px}
+.btn:hover{background:#28B0A4}
+.status{padding:10px;border-radius:6px;margin-top:10px;font-size:12px;display:none}
+.status.s{background:#E8F5E9;color:#1B5E20}
+.status.e{background:#FFEBEE;color:#B71C1C}
+</style></head>
+<body>
+<h2>🚗 Reiskosten registreren</h2>
+<div class="sub">€0,23/km is aftrekbaar voor zakelijke ritten met privéauto. ZZP'ers missen vaak €500-€1.500/jaar.</div>
+
+<div class="ytd">
+  <div class="lbl">Geboekt dit jaar</div>
+  <div class="v">${bedragYTD > 0 ? formatBedrag_(bedragYTD) + ' (~' + Math.round(bedragYTD / 0.23) + ' km)' : 'Nog niets'}</div>
+</div>
+
+<label>Datum</label>
+<input id="datum" type="date" value="${today}">
+
+<label>Omschrijving (vanwaar naar waar)</label>
+<input id="omschr" type="text" placeholder="bijv. Klantbezoek Amsterdam">
+
+<label>Aantal km (heen + terug)</label>
+<input id="km" type="number" min="1" step="1" oninput="upd()">
+
+<div id="preview" class="preview" style="display:none">
+  Aftrek: <b id="aftrek">€ 0,00</b> (× €0,23/km)<br>
+  <span style="font-size:11px;color:#888">Wordt geboekt op rekening 7350 (Reiskosten openbaar vervoer / privéauto)</span>
+</div>
+
+<button class="btn" onclick="boek()">Reiskosten boeken</button>
+<div id="status" class="status"></div>
+
+<script>
+function upd(){
+  var km=parseFloat(document.getElementById('km').value)||0;
+  var b=km*0.23;
+  document.getElementById('preview').style.display=km>0?'block':'none';
+  document.getElementById('aftrek').textContent='€ '+b.toFixed(2).replace('.',',');
+}
+function boek(){
+  var data={
+    datum: document.getElementById('datum').value,
+    omschr: document.getElementById('omschr').value,
+    km: parseFloat(document.getElementById('km').value)||0,
+  };
+  if(!data.km||data.km<=0){alert('Vul aantal km in');return;}
+  if(!data.omschr){alert('Vul omschrijving in');return;}
+  var s=document.getElementById('status');
+  s.style.display='block';s.className='status';s.textContent='Bezig...';
+  google.script.run
+    .withSuccessHandler(function(r){
+      s.className='status s';
+      s.textContent='✓ '+data.km+' km × €0,23 = '+r.bedrag+' geboekt op rekening 7350.';
+      document.getElementById('km').value='';
+      document.getElementById('omschr').value='';
+      document.getElementById('preview').style.display='none';
+      setTimeout(function(){google.script.host.close();},1800);
+    })
+    .withFailureHandler(function(e){s.className='status e';s.textContent='Fout: '+e.message;})
+    .boekReiskosten(data);
+}
+</script>
+</body></html>
+  `).setWidth(440).setHeight(560);
+  SpreadsheetApp.getUi().showModalDialog(html, '🚗 Reiskosten registreren');
+}
+
+/**
+ * Server-side handler: boek reiskosten via journaalpost.
+ * Debet 7350 (Reiskosten privé-auto), Credit 2400 (Privé-onttrekkingen).
+ * Reden: bij privéauto is er geen bankuitgave — het is een eigen-vervoer-aftrek.
+ */
+function boekReiskosten(data) {
+  const ss = getSpreadsheet_();
+  const km = parseFloat(data.km) || 0;
+  if (km <= 0) throw new Error('Aantal km moet groter dan 0 zijn');
+  const datum = parseDatum_(data.datum) || new Date();
+  const bedrag = rondBedrag_(km * 0.23);
+  const omschr = (data.omschr || 'Reiskosten') + ' (' + km + ' km × €0,23)';
+  maakJournaalpost_(ss, {
+    datum: datum,
+    omschr: omschr,
+    dagboek: 'Memoriaal',
+    debet: '7350', credit: '2400',
+    bedrag: bedrag,
+    type: BOEKING_TYPE.MEMORIAAL,
+  });
+  try { schrijfAuditLog_('Reiskosten geboekt', km + ' km = ' + formatBedrag_(bedrag)); } catch (_) {}
+  try { invalideerKpiSnapshot_(); } catch (_) {}
+  return { bedrag: formatBedrag_(bedrag), km: km };
+}
+
+// ─────────────────────────────────────────────
+//  LIJFRENTE-JAARRUIMTE CALCULATOR
+// ─────────────────────────────────────────────
+//
+// Jaarruimte = 13,3% × premiegrondslag − pensioen-aanspraken-toevoeging.
+// Premiegrondslag = winst − AOW-franchise.
+// Als klant pensioen mist (geen werkgever-pensioen), kan tot ~€18.000
+// per jaar gestort worden in lijfrente — aftrekbaar in box 1.
+// Vele ZZP'ers laten dit liggen omdat ze de berekening niet snappen.
+
+function toonLijfrenteJaarruimte() {
+  if (typeof controleerSetupGedaan_ === 'function' && !controleerSetupGedaan_()) return;
+  const ss = getSpreadsheet_();
+  let advies;
+  try { advies = berekenBelastingadvies_(ss); }
+  catch (e) {
+    SpreadsheetApp.getUi().alert('Lijfrente-calculator', 'Kon huidige situatie niet bepalen: ' + e.message, SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  const B = getBelasting_();
+  const winstHuidig = advies.winstVoorAftrek || 0;
+  const aowFranchise = B.AOW_FRANCHISE || 14110;
+  const lijfrenteMax = B.LIJFRENTE_MAX || 35987;
+
+  const html = HtmlService.createHtmlOutput(`
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+     padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;margin:0}
+h2{color:#0D1B4E;margin:0 0 4px;font-size:18px;font-weight:800}
+.sub{color:#5F6B7A;font-size:12px;margin-bottom:14px}
+label{display:block;font-weight:600;font-size:12px;color:#0D1B4E;margin-bottom:4px;margin-top:10px}
+input{width:100%;padding:9px 12px;border:1px solid #E5EAF2;border-radius:6px;font-size:14px;font-family:inherit;background:#fff}
+input:focus{outline:none;border-color:#2EC4B6}
+.help{color:#5F6B7A;font-size:11px;margin-top:3px}
+.uitkomst{background:#0D1B4E;color:white;border-radius:8px;padding:16px;margin-top:18px;text-align:center}
+.uitkomst .lbl{font-size:11px;letter-spacing:.4px;text-transform:uppercase;opacity:.8}
+.uitkomst .v{font-size:24px;font-weight:800;margin-top:4px}
+.uitkomst .extra{font-size:12px;margin-top:8px;opacity:.9}
+.tip{background:#FFF8E1;border-radius:8px;padding:11px 13px;font-size:11px;color:#5A3F00;margin-top:12px;line-height:1.5}
+</style></head>
+<body>
+<h2>🏦 Lijfrente-jaarruimte calculator</h2>
+<div class="sub">Hoeveel mag u dit jaar storten in een lijfrente, fiscaal aftrekbaar in box 1?</div>
+
+<label>Winst dit jaar (uit boekhouding)</label>
+<input id="winst" type="number" value="${Math.round(winstHuidig)}" step="500" oninput="bereken()">
+<div class="help">Premiegrondslag = winst − AOW-franchise (€${aowFranchise.toLocaleString('nl-NL')}).</div>
+
+<label>Reeds opgebouwd pensioen dit jaar (werkgever / oude jaren)</label>
+<input id="pensioen" type="number" value="0" step="100" oninput="bereken()">
+<div class="help">Bij geen werkgever-pensioen: 0 invullen.</div>
+
+<div class="uitkomst">
+  <div class="lbl">Jaarruimte ${new Date().getFullYear()}</div>
+  <div class="v" id="ruimte">€ 0,00</div>
+  <div class="extra" id="info"></div>
+</div>
+
+<div class="tip">
+  <b>💡 Tip:</b> stort vóór 31 december voor aftrek dit jaar.
+  Niet-benutte jaarruimte uit afgelopen 7 jaar mag worden ingehaald (reserveringsruimte).
+  Voor een nauwkeurige berekening (incl. reserveringsruimte): gebruik de tool op
+  belastingdienst.nl/aftrek-en-kortingen → "lijfrentepremie".
+</div>
+
+<script>
+var FRANCHISE=${aowFranchise}, PCT=0.133, MAX=${lijfrenteMax};
+function bereken(){
+  var w=parseFloat(document.getElementById('winst').value)||0;
+  var p=parseFloat(document.getElementById('pensioen').value)||0;
+  var grondslag=Math.max(0,w-FRANCHISE);
+  var ruwe=Math.max(0,grondslag*PCT - 6.27*p);
+  var jaarruimte=Math.min(ruwe,MAX);
+  document.getElementById('ruimte').textContent='€ '+jaarruimte.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g,'.').replace('.',',').replace(/,(\\d\\d)$/,',$1');
+  // Schat besparing tegen marginaal tarief 37% (gemiddeld)
+  var besp=jaarruimte*0.37;
+  document.getElementById('info').textContent='~ '+(Math.round(besp))+' € minder belasting bij storting';
+}
+bereken();
+</script>
+</body></html>
+  `).setWidth(460).setHeight(560);
+  SpreadsheetApp.getUi().showModalDialog(html, '🏦 Lijfrente-jaarruimte');
+}
+
+// ─────────────────────────────────────────────
+//  BTW-SPAARPOT REMINDER
+// ─────────────────────────────────────────────
+//
+// Veel ZZP'ers besteden BTW per ongeluk omdat het op de lopende
+// rekening staat. Tip: zet 21%/9% direct apart op een spaarrekening.
+// Deze functie berekent live hoeveel apart zou moeten staan.
+
+function toonBtwSpaarpot() {
+  if (typeof controleerSetupGedaan_ === 'function' && !controleerSetupGedaan_()) return;
+  const ss = getSpreadsheet_();
+  // Bepaal huidig kwartaal-window
+  const nu = new Date();
+  const kwartaal = Math.floor(nu.getMonth() / 3);
+  const kwStart = new Date(nu.getFullYear(), kwartaal * 3, 1);
+  const kwEinde = new Date(nu.getFullYear(), kwartaal * 3 + 3, 0, 23, 59, 59, 999);
+
+  let aangifte;
+  try { aangifte = berekenBtwAangifte_(ss, kwStart, kwEinde); }
+  catch (e) {
+    SpreadsheetApp.getUi().alert('BTW-spaarpot', 'Kon BTW niet berekenen: ' + e.message, SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+
+  const bankSaldoSpaar = (function() {
+    try {
+      const sheet = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
+      if (!sheet) return 0;
+      const data = sheet.getDataRange().getValues();
+      // Standaard rekening voor BTW-spaarpot: 1205 of 1220 (spaarrekening zakelijk)
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === '1205' || String(data[i][0]) === '1220') {
+          return parseFloat(data[i][5]) || 0;
+        }
+      }
+    } catch (_) {}
+    return 0;
+  })();
+
+  const teReserveren = Math.max(0, aangifte.saldo);
+  const tekort = Math.max(0, teReserveren - bankSaldoSpaar);
+
+  const kwLabel = 'Q' + (kwartaal + 1);
+  const ui = SpreadsheetApp.getUi();
+  let bericht = `Huidige situatie ${kwLabel} ${nu.getFullYear()}:\n\n`;
+  bericht += `BTW te betalen tot nu toe: ${formatBedrag_(teReserveren)}\n`;
+  bericht += `Op spaarrekening (1205/1220): ${formatBedrag_(bankSaldoSpaar)}\n`;
+  bericht += `Tekort op BTW-spaarpot: ${formatBedrag_(tekort)}\n\n`;
+  if (tekort > 0) {
+    bericht += `⚠️ Reserveer ${formatBedrag_(tekort)} extra op uw spaarrekening om verrassingen ` +
+               `bij de aangifte (uiterlijk volgend kwartaal) te voorkomen.\n\n` +
+               `Tip: maak het automatisch — zet bij elke binnenkomende factuur 21% direct ` +
+               `apart via een vaste opdracht in uw bank-app.`;
+  } else {
+    bericht += `✓ U heeft genoeg gereserveerd voor uw BTW-aangifte ${kwLabel}!`;
+  }
+  ui.alert('💰 BTW-spaarpot status', bericht, ui.ButtonSet.OK);
+}
+
+// ─────────────────────────────────────────────
 //  SLIMME BOEKING-TIPS — proactief bij inkoop
 // ─────────────────────────────────────────────
 /**
