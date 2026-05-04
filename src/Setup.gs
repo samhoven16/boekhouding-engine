@@ -1081,7 +1081,12 @@ function zetHeaderRij_(sheet, headers) {
   rij.setFontWeight('bold');
   rij.setFontSize(10);
   sheet.setFrozenRows(1);
-  sheet.setFrozenColumns(1);
+  // setFrozenColumns(1) BEWUST WEGGELATEN — veroorzaakt fout
+  // "Je kunt vastgezette kolommen niet samenvoegen met niet-vastgezette
+  // kolommen" zodra een latere helper een merge over kolom 1+2 doet
+  // (bv. titel-row banner). Sheets die kolom-freeze écht nodig hebben
+  // (Cashflow met maand-rijen) zetten dat expliciet zelf via
+  // sheet.setFrozenColumns(N) NA alle merges.
 
   // Autofit kolommen
   for (let i = 1; i <= headers.length; i++) {
