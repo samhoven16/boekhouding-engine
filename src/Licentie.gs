@@ -45,30 +45,50 @@ function getLicentieServerUrl_() {
 
 const OWNER_BYPASS_KEY = 'LICENTIE_OWNER_BYPASS';
 
+// Hard-coded admin/eigenaar-emails — altijd bypass, geen handmatige actie nodig.
+// Voeg hier emails toe van mensen die het master-sjabloon mogen gebruiken
+// (developers, mede-eigenaars). Voor klanten geldt nog steeds de normale
+// licentie-flow zodra zij hun eigen kopie hebben (andere SS-ID).
+const ADMIN_EMAILS = [
+  'samhoven16@gmail.com',
+];
+
 /**
- * Detecteert of de owner-bypass actief is. Auto-true als:
- *   1. Expliciete bypass via ScriptProperty LICENTIE_OWNER_BYPASS=true, OR
- *   2. Geen server-URL is geconfigureerd EN huidige user is bestand-eigenaar
- * Het tweede geval voorkomt dat een eigenaar wordt geblokkeerd in zijn eigen
- * master-sjabloon zonder ooit van de bypass te hebben gehoord.
+ * Detecteert of de licentie-check moet worden overgeslagen.
+ * VEEL ROUTES, allemaal automatisch (geen handmatige actie nodig):
+ *   1. Huidige user staat in ADMIN_EMAILS lijst → altijd bypass
+ *   2. Expliciete ScriptProperty LICENTIE_OWNER_BYPASS=true
+ *   3. Geen LICENTIE_SERVER_URL geconfigureerd (dev/owner default mode)
+ *   4. Huidige user is de bestand-eigenaar (ss.getOwner)
+ *
+ * Ratio: voor de eigenaar/dev moet alles gewoon werken. Pas zodra een echte
+ * licentieserver is geconfigureerd EN huidige user is geen admin/eigenaar,
+ * gaat de normale klant-OTP-flow draaien.
  */
 function isEigenaarBypass_() {
   try {
+    // Route 1: hard-coded admin-email (altijd bypass)
+    try {
+      const userEmail = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+      if (userEmail && ADMIN_EMAILS.indexOf(userEmail) !== -1) return true;
+    } catch (_) {}
+
     const props = PropertiesService.getScriptProperties();
+    // Route 2: expliciete bypass-flag
     if (props.getProperty(OWNER_BYPASS_KEY) === 'true') return true;
 
-    // Auto-bypass als geen server is geconfigureerd én user is bestand-eigenaar
+    // Route 3: geen server geconfigureerd → default dev/owner mode
     const serverUrl = getLicentieServerUrl_();
-    if (!serverUrl) {
-      try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const ownerEmail = ss.getOwner() ? ss.getOwner().getEmail() : null;
-        const userEmail = Session.getActiveUser().getEmail();
-        if (ownerEmail && userEmail && ownerEmail === userEmail) {
-          return true;
-        }
-      } catch (_) { /* getOwner kan falen voor shared drives — fail open */ }
-    }
+    if (!serverUrl) return true;
+
+    // Route 4: file-owner check (voor het geval admin-email niet matcht
+    // door verschillende Google-accounts — getOwner werkt vaak ook)
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const ownerEmail = ss.getOwner() ? ss.getOwner().getEmail() : null;
+      const userEmail2 = Session.getActiveUser().getEmail();
+      if (ownerEmail && userEmail2 && ownerEmail === userEmail2) return true;
+    } catch (_) {}
   } catch (_) {}
   return false;
 }
