@@ -176,6 +176,55 @@ function isGeldigBTWNummer_(btwNr) {
   return /^NL\d{9}B\d{2}$/.test(btwNr.replace(/\s/g, '').toUpperCase());
 }
 
+/**
+ * Strikte EU BTW-nummer-formaat-check (alle EU-landen).
+ * Werkt op de meeste EU-formaten — voor NL is dat strikter via isGeldigBTWNummer_.
+ * Voorkomt dat BTW-nummer-veld leeg blijft of vol staat met onzin
+ * (essentieel bij verleggingsregeling waar BTW-nr klant verplicht is).
+ *
+ * @param {string} btwNr Te valideren BTW-nummer.
+ * @return {boolean} true als formaat een EU-BTW-nummer is.
+ */
+function isGeldigEuBTWNummer_(btwNr) {
+  if (!btwNr) return false;
+  const schoon = String(btwNr).replace(/\s/g, '').toUpperCase();
+  // EU-formaten per land — niet uitputtend voor cijfers (geen MOD-checksum)
+  // maar voldoende voor formaat-validatie. Bron: Europese Commissie VIES.
+  const patronen = {
+    AT: /^ATU\d{8}$/,            // Oostenrijk
+    BE: /^BE0\d{9}$/,            // België
+    BG: /^BG\d{9,10}$/,          // Bulgarije
+    CY: /^CY\d{8}[A-Z]$/,        // Cyprus
+    CZ: /^CZ\d{8,10}$/,          // Tsjechië
+    DE: /^DE\d{9}$/,             // Duitsland
+    DK: /^DK\d{8}$/,             // Denemarken
+    EE: /^EE\d{9}$/,             // Estland
+    EL: /^EL\d{9}$/,             // Griekenland (kan ook GR)
+    GR: /^GR\d{9}$/,
+    ES: /^ES[A-Z\d]\d{7}[A-Z\d]$/, // Spanje
+    FI: /^FI\d{8}$/,             // Finland
+    FR: /^FR[A-Z\d]{2}\d{9}$/,   // Frankrijk
+    HR: /^HR\d{11}$/,            // Kroatië
+    HU: /^HU\d{8}$/,             // Hongarije
+    IE: /^IE[\d]{7}[A-Z]{1,2}$|^IE\d[A-Z]\d{5}[A-Z]$/, // Ierland (2 formaten)
+    IT: /^IT\d{11}$/,            // Italië
+    LT: /^LT(\d{9}|\d{12})$/,    // Litouwen
+    LU: /^LU\d{8}$/,             // Luxemburg
+    LV: /^LV\d{11}$/,            // Letland
+    MT: /^MT\d{8}$/,             // Malta
+    NL: /^NL\d{9}B\d{2}$/,       // Nederland (zelfde als isGeldigBTWNummer_)
+    PL: /^PL\d{10}$/,            // Polen
+    PT: /^PT\d{9}$/,             // Portugal
+    RO: /^RO\d{2,10}$/,          // Roemenië
+    SE: /^SE\d{12}$/,            // Zweden
+    SI: /^SI\d{8}$/,             // Slovenië
+    SK: /^SK\d{10}$/,            // Slowakije
+  };
+  const land = schoon.slice(0, 2);
+  const regex = patronen[land];
+  return regex ? regex.test(schoon) : false;
+}
+
 function isGeldigKvKNummer_(kvk) {
   kvk = String(kvk || '');
   if (!kvk) return false;

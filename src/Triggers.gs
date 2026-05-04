@@ -180,6 +180,19 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   // parseDatum_ verwerkt DD-MM-YYYY, ISO én Date-objecten — voorkomt dat een
   // factuur met handgetypte NL-locale datum stilletjes 'today' krijgt.
   const datum      = parseDatum_(data['Factuurdatum']) || new Date();
+  // Datum-range validatie:
+  //   * niet > 90 dagen toekomst (anti-fraude / typo)
+  //   * niet > 7 jaar in verleden (bewaarplicht-grens AWR art. 52 = 7 jaar)
+  // Beide cases zijn geldig in zeer specifieke gevallen, dus we waarschuwen
+  // i.p.v. blokkeren — schrijven naar audit-log voor compliance-trail.
+  const _nu = new Date();
+  const _maxToekomst = new Date(_nu.getTime() + 90 * 86400000);
+  const _maxVerleden = new Date(_nu.getFullYear() - 7, _nu.getMonth(), _nu.getDate());
+  if (datum > _maxToekomst) {
+    try { schrijfAuditLog_('Factuur datum-waarschuwing', 'datum > 90 dagen toekomst: ' + formatDatum_(datum)); } catch (_) {}
+  } else if (datum < _maxVerleden) {
+    try { schrijfAuditLog_('Factuur datum-waarschuwing', 'datum > 7 jaar verleden (bewaarplicht): ' + formatDatum_(datum)); } catch (_) {}
+  }
   const termijn    = parseInt(data['Betalingstermijn (dagen)'] || '30') || 30;
   const vervaldatum = new Date(datum.getTime() + termijn * 86400000);
   const directMailen = String(data['Factuur direct e-mailen naar klant?'] || '').includes('Ja');
@@ -201,8 +214,31 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     throw new Error('Geen geldige factuurregels gevonden. Vul minimaal één omschrijving en bedrag in.');
   }
 
+  // Klant-BTW-nr formaat-check (niet-blokkerend) — bij verleggingsregeling
+  // is een geldig EU-BTW-nr verplicht (Wet OB art. 12 lid 3). We waarschuwen
+  // alleen via audit-log, blokkeren niet (B2C-facturen hebben geen BTW-nr).
+  const klantBtwNr = String(data['BTW-nummer klant'] || '').trim();
+  if (klantBtwNr && !isGeldigEuBTWNummer_(klantBtwNr)) {
+    try { schrijfAuditLog_('Factuur klant-BTW-waarschuwing', 'Onbekend BTW-nr-formaat: ' + klantBtwNr); } catch (_) {}
+  }
+
   // Pas NA validatie nummer claimen — voorkomt gap in factuurreeks
   const factuurNr  = volgendFactuurnummer_();
+  // Factuurnummer-gap-check: vergelijk met laatste in sheet. Een gat > 1
+  // (overgeslagen nummers) is een audit-flag voor de Belastingdienst.
+  // We loggen alleen — herstellen vergt manuele actie.
+  try {
+    const _vfSheetCheck = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+    if (_vfSheetCheck && _vfSheetCheck.getLastRow() > 1) {
+      const _lastCol = _vfSheetCheck.getRange(_vfSheetCheck.getLastRow(), 1).getValue();
+      const _laatsteNr = parseInt(_lastCol, 10);
+      if (_laatsteNr > 0 && factuurNr - _laatsteNr > 1) {
+        schrijfAuditLog_('Factuurnummer GAP gedetecteerd',
+          'Vorig: ' + _laatsteNr + ' Nieuw: ' + factuurNr +
+          ' (gap=' + (factuurNr - _laatsteNr - 1) + ' nummers). Audit-flag.');
+      }
+    }
+  } catch (_) { /* gap-check is best-effort */ }
 
   const korting    = parseBedrag_(data['Korting (in €)'] || '0') || 0;
   const btwTarief  = parseBtwTarief_(data['BTW tarief'] || '21% (hoog)');
