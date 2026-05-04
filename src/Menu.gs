@@ -112,6 +112,7 @@ function onOpen() {
     )
 
     // ── Hulp & advies ─────────────────────────
+    .addItem('🔔 Wat moet ik nu doen? (notificaties)', 'toonNotificaties')
     .addItem('Hulp & uitleg', 'openAssistent')
     .addItem('Fiscaal advies & belastingbesparing', 'genereerBelastingadvies')
     .addItem('💡 Wat-als-rekenmachine (extra omzet of investering)', 'toonWatAlsSimulator')
