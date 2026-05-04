@@ -16,7 +16,11 @@
     "impact": "node scripts/impact.js",
     "prepare": "husky",
     "push:gas": "node scripts/clasp-push.js",
-    "deploy": "npm test && npm run push:gas"
+    "push:licence": "cd licence-server && NODE_TLS_REJECT_UNAUTHORIZED=0 npx clasp push --force",
+    "deploy": "npm test && npm run push:gas",
+    "deploy:licence": "npm run push:licence",
+    "deploy:all": "npm test && npm run push:gas && npm run push:licence",
+    "deploy:check": "node scripts/deploy-check.js"
   },
   "lint-staged": {
     "src/**/*.gs": "eslint"
