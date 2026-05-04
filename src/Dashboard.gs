@@ -165,6 +165,16 @@ function vernieuwDashboard() {
   let rij = 7;
   rij = schrijfWaarschuwingen_(sheet, ss, kpi, rij, herhalendeResult.komend);
 
+  // ── BELASTINGVOORDEEL-WIDGET + SEIZOENS-TIP ──────────────────────────
+  // Toont in één oogopslag wat het systeem dit jaar voor de klant aan
+  // belasting bespaart + welke regelingen nog niet benut zijn + actieve
+  // tip voor de huidige maand. Klant hoeft niet zelf na te denken.
+  try {
+    rij = schrijfBelastingvoordeelWidget_(sheet, ss, rij);
+  } catch (e) {
+    Logger.log('Belastingvoordeel-widget mislukt: ' + e.message);
+  }
+
   // ── ANOMALIE-DETECTIE (AI-feel zonder AI) ───────────────────────────
   // Scant recente boekingen op afwijkingen die aandacht verdienen.
   try {
@@ -1008,6 +1018,107 @@ function berekenBtwIndicatie_(ss) {
 // ─────────────────────────────────────────────
 //  KPI DATA BEREKENEN
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  BELASTINGVOORDEEL-WIDGET
+// ─────────────────────────────────────────────
+/**
+ * Schrijft een prominente "Wat heeft Boekhoudbaar u dit jaar bespaard?"-block.
+ * Toont:
+ *   1. Totaal bespaard via benutte aftrekken (€ groot getal)
+ *   2. Mogelijk extra besparing (gemiste kansen) met klikbare actie
+ *   3. Seizoens-tip voor huidige maand met deadline
+ *
+ * Returnt nieuwe startrij voor volgende sectie.
+ */
+function schrijfBelastingvoordeelWidget_(sheet, ss, startRij) {
+  let rij = startRij + 1;
+
+  // Bereken belastingadvies + voordeel-overzicht
+  let voordeel = null;
+  let seizoen = null;
+  try {
+    const advies = berekenBelastingadvies_(ss);
+    const B = (typeof getBelasting_ === 'function') ? getBelasting_() : null;
+    if (advies && B) voordeel = berekenBelastingvoordeel_(advies, B);
+    seizoen = getSeizoensTipRender_();
+  } catch (e) {
+    Logger.log('Belastingvoordeel berekenen: ' + e.message);
+    return rij;
+  }
+
+  // Hoofdtitel
+  sheet.getRange(rij, 1, 1, 8).merge()
+    .setValue('💰 BELASTINGVOORDEEL — wat Boekhoudbaar voor u doet')
+    .setBackground('#0D1B4E').setFontColor('#FFFFFF')
+    .setFontWeight('bold').setFontSize(13).setHorizontalAlignment('center');
+  sheet.setRowHeight(rij, 32);
+  rij++;
+
+  // Voordeel-cijfers (3 kolommen)
+  if (voordeel) {
+    const cells = [
+      ['Bespaard dit jaar', formatBedrag_(voordeel.bespaardYTD), '#E6F7F4', '#0D1B4E'],
+      ['Mogelijk extra', formatBedrag_(voordeel.mogelijkExtra), voordeel.mogelijkExtra > 0 ? '#FFF8E1' : '#F7F9FC', '#5A3F00'],
+      ['Totaal potentieel', formatBedrag_(voordeel.totaalPotentieel), '#E3F2FD', '#0D47A1'],
+    ];
+    cells.forEach(function(c, idx) {
+      const kol = idx * 3 + 1;  // span 2 kolommen per cel + 1 spacer
+      sheet.getRange(rij, kol, 1, 2).merge()
+        .setValue(c[0]).setBackground(c[2]).setFontColor(c[3])
+        .setFontWeight('bold').setFontSize(10).setHorizontalAlignment('center');
+      sheet.getRange(rij + 1, kol, 1, 2).merge()
+        .setValue(c[1]).setBackground(c[2]).setFontColor(c[3])
+        .setFontWeight('bold').setFontSize(16).setHorizontalAlignment('center');
+    });
+    sheet.setRowHeight(rij, 22);
+    sheet.setRowHeight(rij + 1, 36);
+    rij += 2;
+
+    // Top 3 gemiste kansen — direct actionable
+    if (voordeel.gemisteKansen && voordeel.gemisteKansen.length > 0) {
+      rij++;
+      sheet.getRange(rij, 1, 1, 8).merge()
+        .setValue('🎯 Top kansen — geld dat u laat liggen')
+        .setBackground('#FFF8E1').setFontWeight('bold').setFontSize(11);
+      rij++;
+      voordeel.gemisteKansen.slice(0, 3).forEach(function(k) {
+        sheet.getRange(rij, 1, 1, 5).merge().setValue('• ' + k.naam).setFontSize(10);
+        sheet.getRange(rij, 6, 1, 3).merge()
+          .setValue('+ ' + formatBedrag_(k.besparing))
+          .setFontWeight('bold').setFontColor('#1B5E20').setFontSize(11)
+          .setHorizontalAlignment('right');
+        rij++;
+      });
+    }
+  }
+
+  // Seizoens-tip
+  if (seizoen) {
+    rij++;
+    sheet.getRange(rij, 1, 1, 8).merge()
+      .setValue(seizoen.titel)
+      .setBackground(seizoen.bgKleur).setFontColor(seizoen.fontKleur)
+      .setFontWeight('bold').setFontSize(12);
+    sheet.setRowHeight(rij, 28);
+    rij++;
+    sheet.getRange(rij, 1, 1, 8).merge()
+      .setValue(seizoen.tekst)
+      .setBackground(seizoen.bgKleur).setFontColor(seizoen.fontKleur)
+      .setWrap(true).setFontSize(10).setVerticalAlignment('top');
+    sheet.setRowHeight(rij, Math.min(120, 24 + (seizoen.tekst.length / 80) * 14));
+    rij++;
+    if (seizoen.deadline) {
+      sheet.getRange(rij, 1, 1, 8).merge()
+        .setValue('⏰ Deadline: ' + seizoen.deadline)
+        .setBackground(seizoen.bgKleur).setFontColor(seizoen.fontKleur)
+        .setFontWeight('bold').setFontSize(10).setHorizontalAlignment('right');
+      rij++;
+    }
+  }
+
+  return rij + 1;
+}
+
 function berekenKpiData_(ss) {
   const kg = berekenKengetallen_(ss);
   // Boekjaar ipv kalenderjaar — voorkomt KPI-mismatch bij afwijkend boekjaar
