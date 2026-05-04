@@ -37,13 +37,21 @@ function vernieuwDashboard() {
   const btwData = getBtwPerMaand_(ss, btwJaar);
 
   // ── Koptekst ─────────────────────────────────────────────────────────
+  // Persoonlijke greeting — tijd-bewust, naam-bewust. Maakt dashboard
+  // menselijk i.p.v. cold corporate. ZZP'ers zijn één-persoon-bedrijven,
+  // dus persoonlijk gevoel werkt sterk.
+  const u = nu.getHours();
+  const tijdGroet = u < 12 ? 'Goedemorgen' : u < 18 ? 'Goedemiddag' : u < 22 ? 'Goedenavond' : 'Hoi';
+  const aanspreek = bedrijf || 'ondernemer';
+  const greeting = `${tijdGroet}, ${aanspreek}`;
+
   sheet.getRange(1, 1, 1, 8).merge()
-    .setValue(`FINANCIEEL DASHBOARD – ${bedrijf.toUpperCase()}`)
+    .setValue(greeting)
     .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
-    .setFontWeight('bold').setFontSize(14).setHorizontalAlignment('center');
+    .setFontWeight('bold').setFontSize(16).setHorizontalAlignment('center');
 
   sheet.getRange(2, 1, 1, 8).merge()
-    .setValue(`Bijgewerkt op ${formatDatumTijd_(nu)}  |  Boekjaar ${jaar}`)
+    .setValue(`${formatDatumTijd_(nu)}  ·  Boekjaar ${jaar}  ·  Boekhoudbaar`)
     .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#B8C2D1')
     .setFontSize(10).setHorizontalAlignment('center');
 
@@ -91,11 +99,46 @@ function vernieuwDashboard() {
     { label: 'Verwacht (30d)',    waarde: kpi.verwachtIn30d,   format: 'bedrag', kleur: KPI_NEUTRAAL },
   ];
 
-  // Rij 4: KPI titels, Rij 5: KPI waarden
+  // Verzamel maand-data voor sparklines + MoM-vergelijking. Eén keer berekenen
+  // (alle 9 KPI's gebruiken dezelfde dataset). Defensief: bij fout val terug
+  // op lege array zodat dashboard nooit kapot gaat door sparkline-gen.
+  let maandData = null;
+  try { maandData = berekenMaandData_(ss, jaar); } catch (_) { maandData = null; }
+  const huidigeMaand = nu.getMonth(); // 0-indexed
+  const vorigeMaand = huidigeMaand - 1;
+
+  function getMomVergelijking(kpiKey, waardeNu) {
+    if (!maandData || vorigeMaand < 0) return null;
+    const huidigVal = maandData[huidigeMaand] && maandData[huidigeMaand][kpiKey];
+    const vorigVal = maandData[vorigeMaand] && maandData[vorigeMaand][kpiKey];
+    if (typeof vorigVal !== 'number' || vorigVal === 0) return null;
+    const delta = (huidigVal || 0) - vorigVal;
+    if (Math.abs(delta) < 1) return null;
+    const pijl = delta > 0 ? '▲' : '▼';
+    return pijl + ' ' + formatBedrag_(Math.abs(delta)) + ' vs vorige maand';
+  }
+
+  function maakSparklineFormule(kpiKey, kleur) {
+    if (!maandData) return null;
+    const tot = Math.min(huidigeMaand + 1, 12); // tot en met huidige maand
+    if (tot < 2) return null;
+    const reeks = [];
+    for (let i = 0; i < tot; i++) {
+      reeks.push(rondBedrag_((maandData[i] && maandData[i][kpiKey]) || 0));
+    }
+    return '=SPARKLINE({' + reeks.join(';') + '},{"charttype","line";"color","' + kleur + '";"linewidth",2})';
+  }
+
+  // Rij 4: KPI titels, Rij 5: KPI waarden, Rij 6: MoM-vergelijking, Rij 7: Sparkline
+  // De 4 rijen samen geven elk KPI: label → cijfer → trend-tekst → mini-grafiek
+  // Dit is de "data storytelling" pattern uit moderne fintech dashboards.
+  const sparklineKleur = '#0D1B4E';
   kpiItems.forEach((item, i) => {
     const col = i + 1;
     const titelCel = sheet.getRange(4, col);
     const waardeCel = sheet.getRange(5, col);
+    const trendCel = sheet.getRange(6, col);
+    const sparkCel = sheet.getRange(7, col);
 
     titelCel.setValue(item.label.toUpperCase())
       .setBackground(item.kleur)
@@ -114,11 +157,39 @@ function vernieuwDashboard() {
         .setBackground(item.kleur).setHorizontalAlignment('center');
     }
 
+    // MoM-vergelijking — alleen voor bedrag-KPI's met maanddata-koppeling
+    const momMap = { 'Omzet (YTD)': 'omzet', 'Kosten (YTD)': 'kosten' };
+    const momKey = momMap[item.label];
+    if (momKey) {
+      const mom = getMomVergelijking(momKey, item.waarde);
+      if (mom) {
+        const isPositief = mom.indexOf('▲') === 0;
+        // Voor omzet: ▲ = goed (groen). Voor kosten: ▲ = slecht (rood).
+        const isGoed = (item.label === 'Omzet (YTD)') ? isPositief : !isPositief;
+        trendCel.setValue(mom)
+          .setBackground(item.kleur)
+          .setFontSize(8).setFontColor(isGoed ? '#1B5E20' : '#B91C1C')
+          .setHorizontalAlignment('center');
+      } else {
+        trendCel.setValue('').setBackground(item.kleur);
+      }
+      // Sparkline voor omzet/kosten
+      const formule = maakSparklineFormule(momKey, sparklineKleur);
+      if (formule) {
+        sparkCel.setFormula(formule).setBackground(item.kleur).setHorizontalAlignment('center');
+      }
+    } else {
+      trendCel.setValue('').setBackground(item.kleur);
+      sparkCel.setValue('').setBackground(item.kleur);
+    }
+
     sheet.setColumnWidth(col, 128);
   });
 
   sheet.setRowHeight(4, 30);
   sheet.setRowHeight(5, 42);
+  sheet.setRowHeight(6, 18);
+  sheet.setRowHeight(7, 36);
 
   // ── Gezondheidsscore banner (rij 6) ──────────────────────────────────
   // Geeft gebruiker 1-regel-status. Wordt leeg als nog nooit gecheckt.
@@ -164,6 +235,25 @@ function vernieuwDashboard() {
   // ── Waarschuwingen ────────────────────────────────────────────────────
   let rij = 7;
   rij = schrijfWaarschuwingen_(sheet, ss, kpi, rij, herhalendeResult.komend);
+
+  // ── MIJLPAAL-BANNER (eenmalig per drempel per jaar) ──────────────────
+  // Klant ziet "🎉 €10k YTD bereikt!" precies één keer wanneer de drempel
+  // wordt overschreden. Toont alleen als nieuwe mijlpaal is bereikt.
+  try {
+    if (typeof detecteerMijlpaal_ === 'function') {
+      const mijlpaal = detecteerMijlpaal_(kpi.omzet);
+      if (mijlpaal) {
+        rij++;
+        sheet.getRange(rij, 1, 1, 8).merge()
+          .setValue(mijlpaal.tekst)
+          .setBackground('#FFF3C4').setFontColor('#7C5800')
+          .setFontWeight('bold').setFontSize(13).setHorizontalAlignment('center')
+          .setBorder(true, true, true, true, false, false, '#F4B400', SpreadsheetApp.BorderStyle.SOLID);
+        sheet.setRowHeight(rij, 36);
+        rij++;
+      }
+    }
+  } catch (e) { Logger.log('Mijlpaal-detectie mislukt: ' + e.message); }
 
   // ── BELASTINGVOORDEEL-WIDGET + SEIZOENS-TIP ──────────────────────────
   // Toont in één oogopslag wat het systeem dit jaar voor de klant aan

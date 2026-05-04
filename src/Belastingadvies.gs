@@ -115,7 +115,9 @@ const BELASTING_PER_JAAR = {
     HEFFINGSKORTING_NUL_VAN:    78426,
     ARBEIDSKORTING_MAX:     5685,    // 2026: tot inkomen €45.592
     ARBEIDSKORTING_TOP_TOT: 45592,
-    ARBEIDSKORTING_AFBOUW_VAN: 45592,
+    // Off-by-one: afbouw start €1 boven topgrens (€45.593 i.p.v. €45.592)
+    // anders krijgt inkomen €45.592 = max → €45.593 = direct in afbouwzone
+    ARBEIDSKORTING_AFBOUW_VAN: 45593,
     ARBEIDSKORTING_AFBOUW_PCT: 0.0651,
     ZVW_PCT:                0.0485,
     ZVW_MAX_INKOMEN:        79409,
@@ -319,7 +321,10 @@ function berekenHeffingskorting_(belastbaarInkomen, B) {
   if (inkomen <= 0 || max === 0) return 0;
   const afbouwVan = B.HEFFINGSKORTING_AFBOUW_VAN || 0;
   const afbouwPct = B.HEFFINGSKORTING_AFBOUW_PCT || 0;
-  const nulVan = B.HEFFINGSKORTING_NUL_VAN || (afbouwVan + max / Math.max(afbouwPct, 0.0001));
+  // Fallback: bereken nul-van uit max + afbouw-pct als config 't niet expliciet definieert.
+  // Wiskundig: max € korting bij afbouwVan, lineair afgebouwd → 0 bij afbouwVan + max/pct.
+  const nulVan = B.HEFFINGSKORTING_NUL_VAN ||
+    Math.round(afbouwVan + (max / Math.max(afbouwPct, 0.0001)));
   if (inkomen <= afbouwVan) return rondBedrag_(max);
   if (inkomen >= nulVan) return 0;
   const verlaging = (inkomen - afbouwVan) * afbouwPct;
@@ -979,7 +984,11 @@ function genereerBelastingadvies() {
     const B = getBelasting_();
     voordeel = berekenBelastingvoordeel_(advies, B);
     seizoen = (typeof getSeizoensTipRender_ === 'function') ? getSeizoensTipRender_() : null;
-  } catch (_) {}
+  } catch (e) {
+    // Voorheen silent — klant zag dan geen voordeel-banner zonder te weten waarom
+    Logger.log('Belastingvoordeel-banner berekening: ' + e.message);
+    try { schrijfAuditLog_('Belastingvoordeel banner FOUT', e.message); } catch (_) {}
+  }
 
   if (voordeel) {
     sheet.getRange(rij, 1, 1, 3).merge()

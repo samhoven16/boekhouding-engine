@@ -233,6 +233,37 @@ function getSeizoensTip_() {
 }
 
 /**
+ * Detecteert een omzet-mijlpaal die net is bereikt — vandaag voor het eerst.
+ * Verzamelt feeling van vooruitgang ("je bent nu bij €10k YTD!").
+ * Returnt {bereikt, mijlpaal, tekst} of null als geen nieuwe mijlpaal.
+ *
+ * Stalt mijlpalen in UserProperties zodat zelfde mijlpaal niet 2× toont.
+ */
+function detecteerMijlpaal_(omzetYTD) {
+  const drempels = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+  const omzet = parseFloat(omzetYTD) || 0;
+  if (omzet <= 0) return null;
+  const huidig = drempels.filter(function(d) { return omzet >= d; }).pop();
+  if (!huidig) return null;
+  try {
+    const userProps = PropertiesService.getUserProperties();
+    const jaar = new Date().getFullYear();
+    const key = 'mijlpaal_omzet_' + huidig + '_' + jaar;
+    if (userProps.getProperty(key) === 'getoond') return null;
+    userProps.setProperty(key, 'getoond');
+    const fmt = function(n) { return '€' + n.toLocaleString('nl-NL'); };
+    return {
+      mijlpaal: huidig,
+      tekst: '🎉 Mijlpaal bereikt: ' + fmt(huidig) + ' omzet dit jaar! ' +
+             (huidig >= 100000 ? 'Indrukwekkend werk.' :
+              huidig >= 25000 ? 'Topprestatie — blijf zo doorgaan.' :
+              huidig >= 5000 ? 'Mooie voortgang!' :
+              'Goed bezig!'),
+    };
+  } catch (_) { return null; }
+}
+
+/**
  * Renderable HTML/sheet-vriendelijke versie van de seizoens-tip.
  * Geeft platte tekst + flag of het urgent is voor kleurcodering.
  */
@@ -387,10 +418,21 @@ function simuleer(){
  * met huidige fiscale situatie als basis.
  */
 function runWatAlsSimulator(mutatie) {
+  // Strict input-validatie — defensief tegen UI-bugs of geknoeide
+  // google.script.run-aanroepen. Negatieve bedragen worden geblokkeerd
+  // via Math.max(0, ...) zodat simulatie nooit met -€500 omzet werkt.
+  if (mutatie && typeof mutatie !== 'object') {
+    throw new Error('Ongeldige simulatiedata.');
+  }
+  const veilig = {
+    extraOmzet:       Math.max(0, parseFloat((mutatie || {}).extraOmzet)       || 0),
+    extraInvestering: Math.max(0, parseFloat((mutatie || {}).extraInvestering) || 0),
+    extraLijfrente:   Math.max(0, parseFloat((mutatie || {}).extraLijfrente)   || 0),
+  };
   const ss = getSpreadsheet_();
   const basis = berekenBelastingadvies_(ss);
   const B = getBelasting_();
-  return simuleerWatAls_(basis, B, mutatie || {});
+  return simuleerWatAls_(basis, B, veilig);
 }
 
 // ─────────────────────────────────────────────
@@ -518,23 +560,44 @@ function boek(){
  * Reden: bij privéauto is er geen bankuitgave — het is een eigen-vervoer-aftrek.
  */
 function boekReiskosten(data) {
-  const ss = getSpreadsheet_();
-  const km = parseFloat(data.km) || 0;
+  // Strict input — voorkomt negatieve km via geknoeide UI of JS-injectie.
+  // (HTML min="0" attribuut is alleen client-side hint, niet server-binding.)
+  const km = parseFloat(data && data.km) || 0;
   if (km <= 0) throw new Error('Aantal km moet groter dan 0 zijn');
-  const datum = parseDatum_(data.datum) || new Date();
-  const bedrag = rondBedrag_(km * 0.23);
-  const omschr = (data.omschr || 'Reiskosten') + ' (' + km + ' km × €0,23)';
-  maakJournaalpost_(ss, {
-    datum: datum,
-    omschr: omschr,
-    dagboek: 'Memoriaal',
-    debet: '7350', credit: '2400',
-    bedrag: bedrag,
-    type: BOEKING_TYPE.MEMORIAAL,
-  });
-  try { schrijfAuditLog_('Reiskosten geboekt', km + ' km = ' + formatBedrag_(bedrag)); } catch (_) {}
-  try { invalideerKpiSnapshot_(); } catch (_) {}
-  return { bedrag: formatBedrag_(bedrag), km: km };
+  if (km > 10000) throw new Error('Aantal km lijkt onrealistisch (>10.000) — controleer invoer');
+
+  // LockService — voorkomt dubbele journaalpost bij snelle dubbel-klik op
+  // "Boeken" knop. Idempotency-check via referentie-string (km+omschr+datum)
+  // is overkill voor dit volume; lock+throw is voldoende.
+  const lock = LockService.getScriptLock();
+  let lockHeld = false;
+  try {
+    lock.waitLock(5000);
+    lockHeld = true;
+  } catch (e) {
+    throw new Error('Even geduld — een andere boeking is bezig. Probeer over 5 seconden opnieuw.');
+  }
+
+  try {
+    const ss = getSpreadsheet_();
+    const datum = parseDatum_(data && data.datum) || new Date();
+    const bedrag = rondBedrag_(km * 0.23);
+    const omschr = (String((data && data.omschr) || '').trim() || 'Reiskosten') +
+                   ' (' + km + ' km × €0,23)';
+    maakJournaalpost_(ss, {
+      datum: datum,
+      omschr: omschr,
+      dagboek: 'Memoriaal',
+      debet: '7350', credit: '2400',
+      bedrag: bedrag,
+      type: BOEKING_TYPE.MEMORIAAL,
+    });
+    try { schrijfAuditLog_('Reiskosten geboekt', km + ' km = ' + formatBedrag_(bedrag)); } catch (_) {}
+    try { invalideerKpiSnapshot_(); } catch (_) {}
+    return { bedrag: formatBedrag_(bedrag), km: km };
+  } finally {
+    if (lockHeld) { try { lock.releaseLock(); } catch (_) {} }
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -550,7 +613,12 @@ function toonReiskostenWeek() {
   const nu = new Date();
   // Maandag van de huidige week (of vorige week als 't zondag is)
   const huidigeDag = nu.getDay() === 0 ? 7 : nu.getDay();
-  const maandag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - (huidigeDag - 1));
+  // Veilige maand-grens-aanpak: kopie + setDate ipv directe arithmetiek.
+  // Voorbeeld bug: zo 5 jan 2025 → maandag = new Date(2025, 0, -1) = 30 dec 2024.
+  // setDate met negatieve waarde rolt terug naar correcte vorige-maand-datum.
+  const maandag = new Date(nu);
+  maandag.setHours(0, 0, 0, 0);
+  maandag.setDate(maandag.getDate() - (huidigeDag - 1));
   const dagen = [];
   const dagNamen = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
   for (let i = 0; i < 7; i++) {
@@ -645,6 +713,13 @@ function boek(){
  */
 function boekReiskostenWeek(rijen) {
   if (!Array.isArray(rijen) || rijen.length === 0) throw new Error('Geen reiskosten ingevoerd');
+  // Server-side validatie — UI-min="0" attribuut beschermt niet tegen
+  // geknoeide google.script.run-aanroepen of dev-tools inspectie.
+  rijen.forEach(function(r, idx) {
+    const km = parseFloat(r && r.km) || 0;
+    if (km < 0) throw new Error('Negatieve km in rij ' + (idx + 1) + ' niet toegestaan');
+    if (km > 10000) throw new Error('Onrealistisch aantal km (>10.000) in rij ' + (idx + 1));
+  });
   let aantal = 0;
   let totaalKm = 0;
   let totaalBedrag = 0;
@@ -713,12 +788,16 @@ function berekenVoorlopigeAanslag_(ss) {
   const B = getBelasting_();
   const winstYTD = advies.winstVoorAftrek || 0;
 
-  // Bepaal hoeveel maanden van het boekjaar verstreken zijn
+  // Bepaal hoeveel maanden van het boekjaar verstreken zijn.
+  // Defensieve guards: nu kan vóór startBoekjaar liggen (mocht klant boekjaar
+  // op toekomstig jaar zetten) → minimaal 1 maand om delen-door-0 te voorkomen.
   const nu = new Date();
   const boekjaar = (typeof getBoekjaar_ === 'function') ? getBoekjaar_() : nu.getFullYear();
   const startBoekjaar = new Date(boekjaar, 0, 1);
-  const verstrekenMs = nu - startBoekjaar;
-  const maandenVerstreken = Math.max(1, Math.min(12, verstrekenMs / (1000 * 60 * 60 * 24 * 30.44)));
+  const verstrekenMs = Math.max(1, nu - startBoekjaar);
+  let maandenVerstreken = verstrekenMs / (1000 * 60 * 60 * 24 * 30.44);
+  if (!isFinite(maandenVerstreken) || maandenVerstreken <= 0) maandenVerstreken = 1;
+  maandenVerstreken = Math.max(1, Math.min(12, maandenVerstreken));
 
   // Lineaire extrapolatie naar jaartotaal
   const winstJaarSchatting = winstYTD * (12 / maandenVerstreken);
@@ -846,7 +925,11 @@ function bereken(){
   var grondslag=Math.max(0,w-FRANCHISE);
   var ruwe=Math.max(0,grondslag*PCT - 6.27*p);
   var jaarruimte=Math.min(ruwe,MAX);
-  document.getElementById('ruimte').textContent='€ '+jaarruimte.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g,'.').replace('.',',').replace(/,(\\d\\d)$/,',$1');
+  // NL-formaat: punt = duizendsep, komma = decimaal. Eerst splitsen op '.'
+  // (decimal sep van toFixed), daarna duizenden in integer-deel.
+  var nlFmt=jaarruimte.toFixed(2).split('.');
+  nlFmt[0]=nlFmt[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g,'.');
+  document.getElementById('ruimte').textContent='€ '+nlFmt.join(',');
   // Schat besparing tegen marginaal tarief 37% (gemiddeld)
   var besp=jaarruimte*0.37;
   document.getElementById('info').textContent='~ '+(Math.round(besp))+' € minder belasting bij storting';
@@ -1038,9 +1121,11 @@ function simuleerWatAls_(basis, BELASTING, mutatie) {
     nieuw.aftrek += parseFloat(mutatie.extraLijfrente);
   }
 
-  // Recompute IB + Zvw
+  // Recompute IB + Zvw — AOW-status uit instellingen, niet hardcoded false
+  // (voorheen onderschatting van ~20% voor AOW-gerechtigden).
   const belastbaar = Math.max(0, nieuw.winst - nieuw.aftrek);
-  const ibBruto = berekenIBProgressief_(belastbaar, BELASTING, false);
+  const aow = isAowGerechtigd_(BELASTING);
+  const ibBruto = berekenIBProgressief_(belastbaar, BELASTING, aow);
   const ahk = berekenHeffingskorting_(belastbaar, BELASTING);
   const ak = berekenArbeidskorting_(nieuw.winst, BELASTING);
   nieuw.ib = Math.max(0, rondBedrag_(ibBruto - ahk - ak));
