@@ -477,11 +477,171 @@ function vernieuwDashboard() {
     if (typeof checkSuggesties_ === 'function') checkSuggesties_();
   } catch (_) { /* suggesties mogen dashboard nooit breken */ }
 
+  // Embedded grafieken — visuele samenvatting van het jaar.
+  // Niet-fataal: charts zijn een aanvulling, niet kritisch.
+  try {
+    maakDashboardGrafieken_(ss, sheet, btwJaar);
+  } catch (e) {
+    Logger.log('Dashboard grafieken FOUT: ' + e.message);
+  }
+
   // Klaar-signaal zodat gebruiker zichtbaar weet dat refresh gelukt is
   try {
     const dur = ((Date.now() - _t0) / 1000).toFixed(1);
     ss.toast('Dashboard bijgewerkt (' + dur + 's)', 'Klaar', 4);
   } catch (_) { /* geen UI — stille trigger-context */ }
+}
+
+// ─────────────────────────────────────────────
+//  DASHBOARD GRAFIEKEN (EMBEDDED CHARTS)
+// ─────────────────────────────────────────────
+/**
+ * Voegt twee embedded charts toe onder het dashboard:
+ *   1. Maandelijks Omzet vs Kosten (kolom-grafiek)
+ *   2. Cashflow trend (lijn-grafiek)
+ *
+ * Idempotent: oude charts op het Dashboard worden eerst verwijderd.
+ *
+ * @param {Spreadsheet} ss
+ * @param {Sheet} sheet  Dashboard sheet
+ * @param {number} jaar  Boekjaar
+ */
+function maakDashboardGrafieken_(ss, sheet, jaar) {
+  // Ruim oude charts op
+  sheet.getCharts().forEach(function(c) {
+    try { sheet.removeChart(c); } catch (_) {}
+  });
+
+  const maanden = berekenMaandData_(ss, jaar);
+  if (!maanden || maanden.length === 0) return;
+
+  // Schrijf data naar verborgen kolommen rechts (kolom T-X) voor chart-bron.
+  // Deze data leeft buiten het zichtbare bereik (rij 1-100 zichtbaar).
+  const dataStartRij = 200;
+  const dataKolom = 20; // T
+
+  const headers = ['Maand', 'Omzet', 'Kosten', 'Cashflow netto'];
+  sheet.getRange(dataStartRij, dataKolom, 1, headers.length).setValues([headers]);
+
+  const rijen = maanden.map(function(m) {
+    return [m.label, m.omzet, m.kosten, m.cashflowNetto];
+  });
+  sheet.getRange(dataStartRij + 1, dataKolom, rijen.length, headers.length).setValues(rijen);
+
+  // ── Chart 1: Omzet vs Kosten per maand ────────────────────────
+  const omzetKostenRange = sheet.getRange(dataStartRij, dataKolom, rijen.length + 1, 3);
+  const chart1 = sheet.newChart()
+    .setChartType(Charts.ChartType.COLUMN)
+    .addRange(omzetKostenRange)
+    .setOption('title', `Omzet vs. Kosten ${jaar}`)
+    .setOption('titleTextStyle', { fontSize: 14, bold: true, color: KLEUREN.HEADER_BG })
+    .setOption('legend', { position: 'top', alignment: 'center' })
+    .setOption('colors', [KLEUREN.ACCENT, '#E74C3C'])
+    .setOption('hAxis', { title: '', textStyle: { fontSize: 10 } })
+    .setOption('vAxis', { title: 'Bedrag (€)', format: '€#,##0', textStyle: { fontSize: 10 } })
+    .setOption('width', 760)
+    .setOption('height', 320)
+    .setOption('chartArea', { left: 70, top: 50, width: '80%', height: '70%' })
+    .setOption('backgroundColor', '#FFFFFF')
+    .setPosition(60, 1, 0, 0)
+    .build();
+  sheet.insertChart(chart1);
+
+  // ── Chart 2: Cashflow trend (lijn) ────────────────────────────
+  const cashflowRange = sheet.getRange(dataStartRij, dataKolom, rijen.length + 1, 1)
+    .offset(0, 0, rijen.length + 1, 1); // maand-kolom
+  // Combineer maand-label kolom + cashflow-kolom (4e kolom)
+  const cashflowDataRange = sheet.getRangeList([
+    `${columnToLetter_(dataKolom)}${dataStartRij}:${columnToLetter_(dataKolom)}${dataStartRij + rijen.length}`,
+    `${columnToLetter_(dataKolom + 3)}${dataStartRij}:${columnToLetter_(dataKolom + 3)}${dataStartRij + rijen.length}`,
+  ]);
+  const chart2 = sheet.newChart()
+    .setChartType(Charts.ChartType.LINE)
+    .addRange(sheet.getRange(`${columnToLetter_(dataKolom)}${dataStartRij}:${columnToLetter_(dataKolom)}${dataStartRij + rijen.length}`))
+    .addRange(sheet.getRange(`${columnToLetter_(dataKolom + 3)}${dataStartRij}:${columnToLetter_(dataKolom + 3)}${dataStartRij + rijen.length}`))
+    .setOption('title', `Cashflow per maand ${jaar}`)
+    .setOption('titleTextStyle', { fontSize: 14, bold: true, color: KLEUREN.HEADER_BG })
+    .setOption('legend', { position: 'none' })
+    .setOption('colors', ['#1565C0'])
+    .setOption('hAxis', { title: '', textStyle: { fontSize: 10 } })
+    .setOption('vAxis', { title: 'Netto cashflow (€)', format: '€#,##0', textStyle: { fontSize: 10 } })
+    .setOption('width', 760)
+    .setOption('height', 280)
+    .setOption('chartArea', { left: 70, top: 50, width: '80%', height: '70%' })
+    .setOption('backgroundColor', '#FFFFFF')
+    .setOption('curveType', 'function')
+    .setOption('pointSize', 5)
+    .setPosition(80, 1, 0, 0)
+    .build();
+  sheet.insertChart(chart2);
+
+  // Suppress unused
+  void cashflowRange;
+  void cashflowDataRange;
+}
+
+/**
+ * Berekent omzet, kosten en cashflow per maand voor het hele jaar.
+ *
+ * @param {Spreadsheet} ss
+ * @param {number} jaar
+ * @return {Array<{label, maand, omzet, kosten, cashflowNetto}>}
+ */
+function berekenMaandData_(ss, jaar) {
+  const maandLabels = ['Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
+  const data = [];
+  for (let m = 0; m < 12; m++) {
+    data.push({ label: maandLabels[m], maand: m + 1, omzet: 0, kosten: 0, cashflowNetto: 0 });
+  }
+
+  // Omzet uit Verkoopfacturen (kolom 2 datum, 12 bedrag incl)
+  const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (vfSheet && vfSheet.getLastRow() > 1) {
+    const rows = vfSheet.getRange(2, 1, vfSheet.getLastRow() - 1, vfSheet.getLastColumn()).getValues();
+    rows.forEach(function(r) {
+      const datum = r[2] ? new Date(r[2]) : null;
+      if (!datum || datum.getFullYear() !== jaar) return;
+      const bedragIncl = Number(r[12]) || 0;
+      const status = String(r[14] || '');
+      if (status === FACTUUR_STATUS.GECREDITEERD) return;
+      data[datum.getMonth()].omzet += bedragIncl;
+    });
+  }
+
+  // Kosten uit Inkoopfacturen (kolom 3 datum factuur, 11 bedrag incl)
+  const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (ifSheet && ifSheet.getLastRow() > 1) {
+    const rows = ifSheet.getRange(2, 1, ifSheet.getLastRow() - 1, ifSheet.getLastColumn()).getValues();
+    rows.forEach(function(r) {
+      const datum = r[3] ? new Date(r[3]) : (r[2] ? new Date(r[2]) : null);
+      if (!datum || datum.getFullYear() !== jaar) return;
+      const bedragIncl = Number(r[11]) || 0;
+      data[datum.getMonth()].kosten += bedragIncl;
+    });
+  }
+
+  // Cashflow netto = omzet - kosten per maand
+  data.forEach(function(m) {
+    m.omzet = Math.round(m.omzet * 100) / 100;
+    m.kosten = Math.round(m.kosten * 100) / 100;
+    m.cashflowNetto = Math.round((m.omzet - m.kosten) * 100) / 100;
+  });
+  return data;
+}
+
+/**
+ * Converteert een 1-based kolomnummer naar letter(s).
+ * 1 → A, 27 → AA, etc.
+ */
+function columnToLetter_(col) {
+  let letter = '';
+  let n = col;
+  while (n > 0) {
+    const rest = (n - 1) % 26;
+    letter = String.fromCharCode(65 + rest) + letter;
+    n = Math.floor((n - 1) / 26);
+  }
+  return letter;
 }
 
 // ─────────────────────────────────────────────

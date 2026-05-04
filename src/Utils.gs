@@ -517,3 +517,69 @@ function controleerSetupGedaan_() {
   } catch (e) { Logger.log('controleerSetupGedaan_: UI niet beschikbaar'); }
   return false;
 }
+
+// ─────────────────────────────────────────────
+//  WISSELKOERS (ECB) — gecached, free, geen auth
+// ─────────────────────────────────────────────
+
+/**
+ * Haalt de wisselkoers van een valuta naar EUR via ECB (gratis XML feed).
+ * 4-uur cache via CacheService. Fallback: 1.0 bij netwerkfout.
+ *
+ * @param {string} valuta  ISO-code zoals "USD", "GBP", "JPY".
+ * @return {number} Aantal valuta dat 1 EUR oplevert (bv. USD = ~1.08).
+ */
+function getWisselkoers_(valuta) {
+  const code = String(valuta || '').toUpperCase().trim();
+  if (!code || code === 'EUR') return 1.0;
+
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'fxrate_' + code;
+  const cached = cache.get(cacheKey);
+  if (cached !== null) {
+    const n = parseFloat(cached);
+    if (isFinite(n) && n > 0) return n;
+  }
+
+  try {
+    const url = 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml';
+    const resp = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      followRedirects: true,
+      validateHttpsCertificates: true,
+    });
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('ECB FX feed niet bereikbaar: ' + resp.getResponseCode());
+      return 1.0;
+    }
+    const xml = resp.getContentText();
+    // Parse de XML: zoek <Cube currency="USD" rate="1.0876"/>
+    const re = new RegExp('currency=[\'"]' + code + '[\'"][^>]*rate=[\'"]([\\d.]+)[\'"]');
+    const match = xml.match(re);
+    if (match && match[1]) {
+      const rate = parseFloat(match[1]);
+      if (isFinite(rate) && rate > 0) {
+        cache.put(cacheKey, String(rate), 14400); // 4 uur
+        return rate;
+      }
+    }
+  } catch (e) {
+    Logger.log('getWisselkoers_ fout: ' + e.message);
+  }
+  return 1.0;
+}
+
+/**
+ * Converteert een bedrag van een vreemde valuta naar EUR.
+ *
+ * @param {number} bedrag Bedrag in vreemde valuta.
+ * @param {string} valuta ISO-code.
+ * @return {number} Bedrag in EUR (afgerond op 2 decimalen).
+ */
+function naarEuro_(bedrag, valuta) {
+  const n = Number(bedrag);
+  if (!isFinite(n)) return 0;
+  const rate = getWisselkoers_(valuta);
+  if (!rate || rate === 1) return Math.round(n * 100) / 100;
+  return Math.round((n / rate) * 100) / 100;
+}

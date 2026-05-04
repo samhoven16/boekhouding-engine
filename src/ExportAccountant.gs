@@ -395,3 +395,242 @@ function exporteerAlsCsv_(ss, sheetNaam) {
     }).join(',')
   ).join('\n');
 }
+
+// ─────────────────────────────────────────────
+//  MAANDRAPPORT — automatisch op de 1e van de maand
+// ─────────────────────────────────────────────
+/**
+ * Wordt elke 1e van de maand om 10:00 aangeroepen via time-trigger.
+ * Genereert een PDF van het Dashboard voor de afgelopen maand en
+ * mailt deze naar de eigenaar + (indien ingesteld) de accountant.
+ *
+ * Niet-fataal: faalt stil bij netwerk- of e-mail-problemen, met audit-log.
+ */
+function mailMaandrapport() {
+  try {
+    if (!controleerSetupGedaan_()) return;
+    const ss = getSpreadsheet_();
+    if (!ss) return;
+
+    const nu = new Date();
+    const vorigeMaand = new Date(nu.getFullYear(), nu.getMonth() - 1, 1);
+    const eindeVorigeMaand = new Date(nu.getFullYear(), nu.getMonth(), 0);
+
+    const eigenaar = getInstelling_('Email rapporten naar') || getInstelling_('Email');
+    const accountantEmail = getInstelling_('Email accountant') || PropertiesService
+      .getScriptProperties().getProperty(PROP.ACCOUNTANT_EMAIL);
+
+    const ontvangers = [];
+    if (eigenaar && isGeldigEmail_(eigenaar)) ontvangers.push(eigenaar);
+    if (accountantEmail && isGeldigEmail_(accountantEmail) && ontvangers.indexOf(accountantEmail) === -1) {
+      ontvangers.push(accountantEmail);
+    }
+    if (ontvangers.length === 0) {
+      Logger.log('Maandrapport overgeslagen: geen geldig ontvanger-emailadres ingesteld');
+      return;
+    }
+
+    const samenvatting = berekenMaandSamenvatting_(ss, vorigeMaand, eindeVorigeMaand);
+    const bedrijf = getInstelling_('Bedrijfsnaam') || 'Mijn Bedrijf';
+    const maandNaam = maandNaam_(vorigeMaand.getMonth() + 1);
+    const jaar = vorigeMaand.getFullYear();
+
+    const onderwerp = `📅 Maandrapport ${maandNaam} ${jaar} – ${bedrijf}`;
+    const body = bouwMaandrapportBody_(bedrijf, maandNaam, jaar, samenvatting);
+
+    // Probeer PDF van het Dashboard te exporteren
+    let bijlagen = [];
+    try {
+      const pdfBlob = exporteerDashboardAlsPdf_(ss, `Maandrapport-${jaar}-${String(vorigeMaand.getMonth() + 1).padStart(2, '0')}.pdf`);
+      if (pdfBlob) bijlagen.push(pdfBlob);
+    } catch (e) {
+      Logger.log('PDF-export mislukt, mail wordt zonder bijlage verstuurd: ' + e.message);
+    }
+
+    const opties = bijlagen.length > 0 ? { attachments: bijlagen, htmlBody: body.html } : { htmlBody: body.html };
+    GmailApp.sendEmail(ontvangers.join(','), onderwerp, body.tekst, opties);
+
+    schrijfAuditLog_('Maandrapport verzonden', `${maandNaam} ${jaar} → ${ontvangers.join(', ')}`);
+    Logger.log('Maandrapport verstuurd naar: ' + ontvangers.join(', '));
+  } catch (e) {
+    Logger.log('mailMaandrapport FOUT: ' + e.message + '\n' + (e.stack || ''));
+    try { schrijfAuditLog_('FOUT maandrapport', e.message); } catch (_) {}
+  }
+}
+
+/**
+ * Verzamelt de cijfers voor een specifieke maand-periode.
+ * @param {Spreadsheet} ss
+ * @param {Date} vanaf
+ * @param {Date} totEnMet
+ * @return {Object} samenvatting {omzet, kosten, netto, btwTeBetalen, openDeb, vervallen, facturen, kosten_rijen}
+ */
+function berekenMaandSamenvatting_(ss, vanaf, totEnMet) {
+  const totEod = new Date(totEnMet.getFullYear(), totEnMet.getMonth(), totEnMet.getDate(), 23, 59, 59, 999);
+
+  let omzetExcl = 0, btwOmzet = 0, omzetIncl = 0, aantalFacturen = 0;
+  let kostenExcl = 0, btwVoorbelasting = 0, kostenIncl = 0, aantalKosten = 0;
+  let openDebSaldo = 0, openDebAantal = 0;
+  let vervallenAantal = 0, vervallenBedrag = 0;
+
+  const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (vfSheet && vfSheet.getLastRow() > 1) {
+    const rows = vfSheet.getRange(2, 1, vfSheet.getLastRow() - 1, vfSheet.getLastColumn()).getValues();
+    rows.forEach(function(r) {
+      const datum = r[2] ? new Date(r[2]) : null;
+      const bedragExcl = Number(r[9]) || 0;
+      const btw = Number(r[11]) || 0;
+      const bedragIncl = Number(r[12]) || 0;
+      const betaald = Number(r[13]) || 0;
+      const status = String(r[14] || '');
+      if (status === FACTUUR_STATUS.GECREDITEERD) return;
+      if (datum && datum >= vanaf && datum <= totEod) {
+        omzetExcl += bedragExcl;
+        btwOmzet += btw;
+        omzetIncl += bedragIncl;
+        aantalFacturen++;
+      }
+      if (status === FACTUUR_STATUS.VERZONDEN || status === FACTUUR_STATUS.DEELS_BETAALD) {
+        openDebSaldo += (bedragIncl - betaald);
+        openDebAantal++;
+      }
+      if (status === FACTUUR_STATUS.VERVALLEN) {
+        vervallenAantal++;
+        vervallenBedrag += (bedragIncl - betaald);
+      }
+    });
+  }
+
+  const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (ifSheet && ifSheet.getLastRow() > 1) {
+    const rows = ifSheet.getRange(2, 1, ifSheet.getLastRow() - 1, ifSheet.getLastColumn()).getValues();
+    rows.forEach(function(r) {
+      const datum = r[3] ? new Date(r[3]) : (r[2] ? new Date(r[2]) : null);
+      const bedragExcl = Number(r[8]) || 0;
+      const btw = Number(r[10]) || 0;
+      const bedragIncl = Number(r[11]) || 0;
+      if (datum && datum >= vanaf && datum <= totEod) {
+        kostenExcl += bedragExcl;
+        btwVoorbelasting += btw;
+        kostenIncl += bedragIncl;
+        aantalKosten++;
+      }
+    });
+  }
+
+  return {
+    omzetExcl: rondBedrag_(omzetExcl),
+    btwOmzet: rondBedrag_(btwOmzet),
+    omzetIncl: rondBedrag_(omzetIncl),
+    aantalFacturen,
+    kostenExcl: rondBedrag_(kostenExcl),
+    btwVoorbelasting: rondBedrag_(btwVoorbelasting),
+    kostenIncl: rondBedrag_(kostenIncl),
+    aantalKosten,
+    netto: rondBedrag_(omzetExcl - kostenExcl),
+    btwSaldo: rondBedrag_(btwOmzet - btwVoorbelasting),
+    openDebSaldo: rondBedrag_(openDebSaldo),
+    openDebAantal,
+    vervallenAantal,
+    vervallenBedrag: rondBedrag_(vervallenBedrag),
+  };
+}
+
+/**
+ * Bouwt de e-mailbody voor het maandrapport — zowel HTML als plain-text.
+ */
+function bouwMaandrapportBody_(bedrijf, maandNaam, jaar, s) {
+  const tekst =
+    `Maandrapport ${maandNaam} ${jaar} – ${bedrijf}\n\n` +
+    `OMZET\n` +
+    `   ${s.aantalFacturen} factu${s.aantalFacturen === 1 ? 'ur' : 'ren'} verstuurd\n` +
+    `   Excl. BTW:  ${formatBedrag_(s.omzetExcl)}\n` +
+    `   BTW:        ${formatBedrag_(s.btwOmzet)}\n` +
+    `   Incl. BTW:  ${formatBedrag_(s.omzetIncl)}\n\n` +
+    `KOSTEN\n` +
+    `   ${s.aantalKosten} uitgave${s.aantalKosten === 1 ? '' : 'n'} geboekt\n` +
+    `   Excl. BTW:  ${formatBedrag_(s.kostenExcl)}\n` +
+    `   BTW:        ${formatBedrag_(s.btwVoorbelasting)}\n` +
+    `   Incl. BTW:  ${formatBedrag_(s.kostenIncl)}\n\n` +
+    `NETTO RESULTAAT\n` +
+    `   ${formatBedrag_(s.netto)}\n\n` +
+    `BTW SALDO\n` +
+    `   ${s.btwSaldo >= 0 ? 'Te betalen' : 'Te ontvangen'}: ${formatBedrag_(Math.abs(s.btwSaldo))}\n\n` +
+    `OPENSTAANDE DEBITEUREN\n` +
+    `   ${s.openDebAantal} factu${s.openDebAantal === 1 ? 'ur' : 'ren'}: ${formatBedrag_(s.openDebSaldo)}\n` +
+    (s.vervallenAantal > 0 ? `   waarvan ${s.vervallenAantal} VERVALLEN: ${formatBedrag_(s.vervallenBedrag)}\n` : '') +
+    `\nDit rapport is automatisch gegenereerd door Boekhoudbaar.\n` +
+    `De PDF in de bijlage bevat het volledige dashboard.\n`;
+
+  const html =
+    `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#0D1B4E">` +
+    `<h2 style="background:#0D1B4E;color:#fff;padding:16px;margin:0 0 16px 0;border-radius:8px 8px 0 0">📅 Maandrapport ${maandNaam} ${jaar}</h2>` +
+    `<h3 style="color:#0D1B4E;margin:24px 0 8px 0">${bedrijf}</h3>` +
+    `<table style="width:100%;border-collapse:collapse;margin:8px 0">` +
+      `<tr><td style="padding:8px;background:#F7F9FC;font-weight:bold">📈 Omzet (${s.aantalFacturen} facturen)</td>` +
+        `<td style="padding:8px;text-align:right;background:#F7F9FC"><strong>${formatBedrag_(s.omzetIncl)}</strong> incl. BTW</td></tr>` +
+      `<tr><td style="padding:8px">Waarvan BTW</td>` +
+        `<td style="padding:8px;text-align:right;color:#666">${formatBedrag_(s.btwOmzet)}</td></tr>` +
+      `<tr><td style="padding:8px;background:#F7F9FC;font-weight:bold">📉 Kosten (${s.aantalKosten} uitgaven)</td>` +
+        `<td style="padding:8px;text-align:right;background:#F7F9FC"><strong>${formatBedrag_(s.kostenIncl)}</strong> incl. BTW</td></tr>` +
+      `<tr><td style="padding:8px">Voorbelasting</td>` +
+        `<td style="padding:8px;text-align:right;color:#666">${formatBedrag_(s.btwVoorbelasting)}</td></tr>` +
+      `<tr><td style="padding:12px;background:#2EC4B6;color:#fff;font-weight:bold;font-size:16px">💰 Netto resultaat</td>` +
+        `<td style="padding:12px;text-align:right;background:#2EC4B6;color:#fff;font-weight:bold;font-size:16px">${formatBedrag_(s.netto)}</td></tr>` +
+      `<tr><td style="padding:8px;background:#F7F9FC">BTW saldo (${s.btwSaldo >= 0 ? 'te betalen' : 'te ontvangen'})</td>` +
+        `<td style="padding:8px;text-align:right;background:#F7F9FC">${formatBedrag_(Math.abs(s.btwSaldo))}</td></tr>` +
+    `</table>` +
+    (s.openDebAantal > 0 ?
+      `<div style="background:#FDF6E3;border-left:4px solid #F5B800;padding:12px;margin:16px 0">` +
+      `📥 <strong>${s.openDebAantal} openstaande factu${s.openDebAantal === 1 ? 'ur' : 'ren'}</strong>: ${formatBedrag_(s.openDebSaldo)}` +
+      (s.vervallenAantal > 0 ? `<br>⚠️ Waarvan <strong>${s.vervallenAantal} vervallen</strong>: ${formatBedrag_(s.vervallenBedrag)}` : '') +
+      `</div>` : '') +
+    `<p style="color:#666;font-size:12px;margin-top:24px">Dit rapport is automatisch gegenereerd door Boekhoudbaar. De PDF-bijlage bevat het volledige dashboard.</p>` +
+    `</div>`;
+
+  return { tekst, html };
+}
+
+/**
+ * Exporteert het Dashboard-tabblad als PDF-blob.
+ *
+ * @param {Spreadsheet} ss
+ * @param {string} bestandsnaam
+ * @return {Blob|null}
+ */
+function exporteerDashboardAlsPdf_(ss, bestandsnaam) {
+  try {
+    const dash = ss.getSheetByName(SHEETS.DASHBOARD);
+    if (!dash) return null;
+
+    const url = 'https://docs.google.com/spreadsheets/d/' + ss.getId() + '/export?' +
+      'format=pdf' +
+      '&gid=' + dash.getSheetId() +
+      '&size=A4' +
+      '&portrait=true' +
+      '&fitw=true' +
+      '&top_margin=0.50' +
+      '&bottom_margin=0.50' +
+      '&left_margin=0.50' +
+      '&right_margin=0.50' +
+      '&sheetnames=false' +
+      '&printtitle=false' +
+      '&pagenumbers=true' +
+      '&gridlines=false' +
+      '&fzr=false';
+
+    const token = ScriptApp.getOAuthToken();
+    const resp = UrlFetchApp.fetch(url, {
+      headers: { Authorization: 'Bearer ' + token },
+      muteHttpExceptions: true,
+    });
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('PDF export niet beschikbaar (HTTP ' + resp.getResponseCode() + ')');
+      return null;
+    }
+    return resp.getBlob().setName(bestandsnaam);
+  } catch (e) {
+    Logger.log('exporteerDashboardAlsPdf_ fout: ' + e.message);
+    return null;
+  }
+}

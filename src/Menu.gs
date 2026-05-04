@@ -85,7 +85,9 @@ function onOpen() {
       .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
       .addItem('Accountantspakket exporteren', 'exporteerAccountantsPakket')
       .addItem('Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
+      .addItem('Maandrapport nu versturen', 'mailMaandrapport')
       .addSeparator()
+      .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
       .addItem('Gesloten periodes beheren', 'beheerGeslotenPeriodes')
     )
 
@@ -154,6 +156,8 @@ function onOpen() {
       .addSeparator()
       .addItem('Privé transactie toevoegen', 'voegPriveTransactieToe')
       .addItem('Vermogensoverzicht beheren', 'beheerVermogensoverzicht')
+      .addSeparator()
+      .addItem('Beleggingen tab (live koersen)', 'voegBeleggingenTabToe')
       .addSeparator()
       .addItem('IB-aangifte schatting (Box 1/2/3)', 'openIbAangifteHelper')
     )

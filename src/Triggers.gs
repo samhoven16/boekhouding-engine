@@ -8,11 +8,22 @@
 //  ON EDIT: BEDRIJFSNAAM DOORVOEREN
 // ─────────────────────────────────────────────
 /**
- * Eenvoudige trigger — wordt automatisch aangeroepen bij elke celbewerking.
- * Detecteert wijziging van "Bedrijfsnaam" in het Instellingen tabblad en
- * past dan de spreadsheet-naam en het Dashboard-hoofd bij.
+ * Trigger — wordt automatisch aangeroepen bij elke celbewerking.
+ * Twee taken:
+ *   1. Audit trail — log elke wijziging op gevoelige tabbladen
+ *   2. Bedrijfsnaam-detectie in Instellingen → spreadsheet hernoemen
+ *
+ * Beide stappen lopen onafhankelijk: één fout blokkeert de andere niet.
  */
 function onEdit(e) {
+  // ── Audit trail: log alle edits op gevoelige sheets ───────────
+  try {
+    schrijfAuditEdit_(e);
+  } catch (err) {
+    Logger.log('onEdit audit fout: ' + err.message);
+  }
+
+  // ── Bedrijfsnaam doorvoeren naar spreadsheet-titel ────────────
   try {
     if (!e || !e.range) return;
     const sheet = e.range.getSheet();
@@ -29,6 +40,68 @@ function onEdit(e) {
     verwerkBedrijfsnaamWijziging_(nieuwNaam);
   } catch (err) {
     Logger.log('onEdit fout: ' + err.message);
+  }
+}
+
+/**
+ * Schrijft een rij naar het Audit Log voor elke edit op een gevoelig tabblad.
+ * Niet-fataal: nooit een gebruikersactie blokkeren als logging faalt.
+ *
+ * Watch-list: VERKOOPFACTUREN, INKOOPFACTUREN, INSTELLINGEN, BANKTRANSACTIES,
+ *             HERHALENDE_KOSTEN, JOURNAALPOSTEN, RELATIES, BELEGGINGEN.
+ */
+function _AUDIT_WATCH_SHEETS_() {
+  // Function used as constant — recomputed lazily so SHEETS is loaded.
+  return [
+    SHEETS.VERKOOPFACTUREN,
+    SHEETS.INKOOPFACTUREN,
+    SHEETS.INSTELLINGEN,
+    SHEETS.BANKTRANSACTIES,
+    SHEETS.HERHALENDE_KOSTEN,
+    SHEETS.JOURNAALPOSTEN,
+    SHEETS.RELATIES,
+    SHEETS.BELEGGINGEN,
+  ];
+}
+
+function schrijfAuditEdit_(e) {
+  if (!e || !e.range || !e.source) return;
+  const sheet = e.range.getSheet();
+  const naam = sheet.getName();
+  const watch = _AUDIT_WATCH_SHEETS_();
+  if (watch.indexOf(naam) === -1) return;
+
+  // Geen wijziging? Skip (formaat-edits, sortering)
+  const oud = e.oldValue !== undefined ? e.oldValue : '';
+  const nieuw = e.value !== undefined ? e.value : '';
+  if (String(oud) === String(nieuw)) return;
+
+  const ss = e.source;
+  const auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  if (!auditSheet) return;
+
+  let user = '';
+  try { user = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || ''; } catch (_) {}
+
+  const rij = [
+    new Date(),
+    user,
+    naam,
+    e.range.getA1Notation(),
+    String(oud).slice(0, 500),
+    String(nieuw).slice(0, 500),
+    'cell-edit',
+  ];
+
+  // Voeg toe aan einde, daarna trim oudste rijen tot max 500 entries
+  auditSheet.appendRow(rij);
+
+  const maxRijen = 500;
+  const totaalRijen = auditSheet.getLastRow();
+  if (totaalRijen > maxRijen + 1) {
+    // Verwijder oudste data-rijen (rij 2 en verder)
+    const teVerwijderen = totaalRijen - maxRijen - 1;
+    auditSheet.deleteRows(2, teVerwijderen);
   }
 }
 
@@ -386,7 +459,51 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
       signaleerAfschrijvingskandidaat_(ss, bedragExcl, leverancier, data['Omschrijving uitgave'] || categorie);
     } catch (_) {}
   }
+
+  // High-expense alert — e-mail eigenaar bij ongebruikelijk hoge uitgave
+  try {
+    waarschuwBijHogeUitgave_(bedragIncl, leverancier, categorie, 'IK' + inkoopNr);
+  } catch (_) {}
+
   return { ok: true, inkoopnummer: 'IK' + inkoopNr, bedragExcl: bedragExcl, bedragIncl: bedragIncl };
+}
+
+/**
+ * Stuurt een e-mailalert wanneer een uitgave boven de drempel uitkomt.
+ * Drempel komt uit Instellingen ("Melding hoge uitgave") of default €500.
+ * Niet-fataal: faalt stil zodat het de boekingsflow niet blokkeert.
+ *
+ * @param {number} bedrag    Bedrag inclusief BTW.
+ * @param {string} leverancier
+ * @param {string} categorie
+ * @param {string} ref       Inkoopnummer / referentie
+ */
+function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
+  const drempelStr = getInstelling_('Melding hoge uitgave');
+  const drempel = drempelStr ? parseBedrag_(drempelStr) : 500;
+  if (!isFinite(drempel) || drempel <= 0) return;
+  if (bedrag < drempel) return;
+
+  const ontvanger = getInstelling_('Email rapporten naar') || getInstelling_('Email');
+  if (!ontvanger || !isGeldigEmail_(ontvanger)) return;
+
+  const onderwerp = `⚠️ Hoge uitgave geregistreerd: ${formatBedrag_(bedrag)} – ${leverancier}`;
+  const body =
+    'Er is zojuist een uitgave geboekt die boven uw alert-drempel uitkomt:\n\n' +
+    `Leverancier:   ${leverancier}\n` +
+    `Categorie:     ${categorie}\n` +
+    `Bedrag (incl): ${formatBedrag_(bedrag)}\n` +
+    `Drempel:       ${formatBedrag_(drempel)}\n` +
+    `Referentie:    ${ref}\n\n` +
+    'Open uw spreadsheet om de boeking te bekijken of te wijzigen.\n\n' +
+    'U kunt de drempel aanpassen op het tabblad Instellingen → "Melding hoge uitgave".';
+
+  try {
+    GmailApp.sendEmail(ontvanger, onderwerp, body);
+    schrijfAuditLog_('Hoge uitgave alert', `${leverancier} ${formatBedrag_(bedrag)} → ${ontvanger}`);
+  } catch (e) {
+    Logger.log('Hoge-uitgave alert niet verzonden: ' + e.message);
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -919,12 +1036,130 @@ function dagelijkseTaken() {
   }
 
   try {
+    vernieuwBeleggingenSnapshot_();
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT beleggingen: ' + e.message);
+  }
+
+  try {
     controleerSheetGrootte_(ss);
   } catch (e) {
     Logger.log('dagelijkse taak FOUT groottecheck: ' + e.message);
   }
 
   Logger.log('Dagelijkse taken uitgevoerd: ' + new Date());
+}
+
+// ─────────────────────────────────────────────
+//  WEKELIJKSE SAMENVATTING (MAANDAG 08:00)
+// ─────────────────────────────────────────────
+/**
+ * Stuurt een wekelijkse samenvatting per e-mail naar de eigenaar.
+ * Bevat: omzet/kosten afgelopen week, openstaande debiteuren,
+ * vervallen facturen, BTW-deadline (indien <30 dagen).
+ *
+ * Trigger: maandag 08:00 — geïnstalleerd via installeelTriggers_().
+ */
+function stuurWeeklySamenvatting_() {
+  try {
+    const ss = getSpreadsheet_();
+    if (!ss) return;
+    const ontvanger = getInstelling_('Email rapporten naar') || getInstelling_('Email');
+    if (!ontvanger || !isGeldigEmail_(ontvanger)) {
+      Logger.log('Wekelijkse samenvatting overgeslagen: geen geldig ontvanger-emailadres');
+      return;
+    }
+
+    const nu = new Date();
+    const weekGeleden = new Date(nu.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Verzameld over de afgelopen 7 dagen
+    let omzetWeek = 0;
+    let aantalFacturen = 0;
+    let kostenWeek = 0;
+    let aantalKosten = 0;
+    let openDebSaldo = 0;
+    let openDebAantal = 0;
+    let vervallenAantal = 0;
+    let vervallenBedrag = 0;
+
+    // Verkoopfacturen
+    const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+    if (vfSheet && vfSheet.getLastRow() > 1) {
+      const data = vfSheet.getRange(2, 1, vfSheet.getLastRow() - 1, vfSheet.getLastColumn()).getValues();
+      data.forEach(function(r) {
+        const datum = r[2] ? new Date(r[2]) : null;
+        const bedragIncl = Number(r[12]) || 0;
+        const status = String(r[14] || '');
+        if (datum && datum >= weekGeleden && datum <= nu) {
+          omzetWeek += bedragIncl;
+          aantalFacturen++;
+        }
+        if (status === FACTUUR_STATUS.VERZONDEN || status === FACTUUR_STATUS.DEELS_BETAALD) {
+          const betaald = Number(r[13]) || 0;
+          openDebSaldo += (bedragIncl - betaald);
+          openDebAantal++;
+        }
+        if (status === FACTUUR_STATUS.VERVALLEN) {
+          vervallenAantal++;
+          vervallenBedrag += bedragIncl - (Number(r[13]) || 0);
+        }
+      });
+    }
+
+    // Inkoopfacturen
+    const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+    if (ifSheet && ifSheet.getLastRow() > 1) {
+      const data = ifSheet.getRange(2, 1, ifSheet.getLastRow() - 1, ifSheet.getLastColumn()).getValues();
+      data.forEach(function(r) {
+        const datum = r[3] ? new Date(r[3]) : null;
+        const bedragIncl = Number(r[11]) || 0;
+        if (datum && datum >= weekGeleden && datum <= nu) {
+          kostenWeek += bedragIncl;
+          aantalKosten++;
+        }
+      });
+    }
+
+    // BTW deadline?
+    let btwInfo = '';
+    try {
+      const kStr = getKwartaal_(nu); // 'Q1' .. 'Q4'
+      const kNum = parseInt(kStr.replace('Q', ''), 10);
+      const eindKwartaal = new Date(nu.getFullYear(), kNum * 3, 0);
+      const deadline = new Date(eindKwartaal);
+      deadline.setMonth(deadline.getMonth() + 1);
+      const dagenTot = Math.ceil((deadline - nu) / (24 * 60 * 60 * 1000));
+      if (dagenTot >= 0 && dagenTot <= 30) {
+        btwInfo = `\n⏰ BTW-deadline ${kStr}: nog ${dagenTot} dagen (uiterlijk ${formatDatum_(deadline)})\n`;
+      }
+    } catch (_) {}
+
+    const onderwerp = `📊 Weekoverzicht ${formatDatum_(weekGeleden)} – ${formatDatum_(nu)}`;
+    const body =
+      `Hallo,\n\n` +
+      `Hier is uw wekelijkse boekhoud-samenvatting:\n\n` +
+      `📈 OMZET DEZE WEEK\n` +
+      `   ${aantalFacturen} factu${aantalFacturen === 1 ? 'ur' : 'ren'} verstuurd  →  ${formatBedrag_(omzetWeek)}\n\n` +
+      `📉 KOSTEN DEZE WEEK\n` +
+      `   ${aantalKosten} uitgave${aantalKosten === 1 ? '' : 'n'} geboekt  →  ${formatBedrag_(kostenWeek)}\n\n` +
+      `💰 NETTO DEZE WEEK\n` +
+      `   ${formatBedrag_(omzetWeek - kostenWeek)}\n\n` +
+      `📥 OPENSTAANDE DEBITEUREN\n` +
+      `   ${openDebAantal} factu${openDebAantal === 1 ? 'ur' : 'ren'}  →  ${formatBedrag_(openDebSaldo)}\n\n` +
+      (vervallenAantal > 0 ?
+        `⚠️ VERVALLEN FACTUREN\n   ${vervallenAantal} factu${vervallenAantal === 1 ? 'ur' : 'ren'}  →  ${formatBedrag_(vervallenBedrag)}\n\n` :
+        '') +
+      btwInfo +
+      `\nOpen uw spreadsheet voor het volledige dashboard.\n\n` +
+      `— Boekhoudbaar`;
+
+    GmailApp.sendEmail(ontvanger, onderwerp, body);
+    schrijfAuditLog_('Weekly summary verzonden', `naar ${ontvanger} – omzet ${formatBedrag_(omzetWeek)}`);
+  } catch (e) {
+    Logger.log('stuurWeeklySamenvatting_ fout: ' + e.message);
+    try { schrijfAuditLog_('FOUT weekly summary', e.message); } catch (_) {}
+  }
 }
 
 /**
@@ -1268,4 +1503,30 @@ function haalRelatieEmail_(ss, relatieId) {
     if (data[i][0] == relatieId) return data[i][10]; // E-mailadres kolom
   }
   return null;
+}
+
+// ─────────────────────────────────────────────
+//  AUDIT LOG TONEN (MENU-ACTIE)
+// ─────────────────────────────────────────────
+/**
+ * Maakt het Audit Log-tabblad zichtbaar en activeert het.
+ * Aanroepbaar vanuit het menu "Controle & Export → Audit Log tonen".
+ */
+function toonAuditLog() {
+  if (!controleerSetupGedaan_()) return;
+  const ss = getSpreadsheet_();
+  let sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  if (!sheet) {
+    setupAuditLogSheet_();
+    sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  }
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Audit Log',
+      'Het Audit Log-tabblad kon niet worden aangemaakt. Voer eerst de setup uit.',
+      SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  try { sheet.showSheet(); } catch (_) {}
+  ss.setActiveSheet(sheet);
+  schrijfAuditLog_('audit_log_geopend', 'gebruiker bekeek het Audit Log');
 }
