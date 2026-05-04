@@ -84,29 +84,64 @@ function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
   const bedragNum = parseFloat(bedrag) || 0;
   if (bedragNum === 0) return; // Geen wijziging nodig
 
-  const sheet = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
-  const data = sheet.getDataRange().getValues();
+  // LockService rond read-modify-write op cel — twee gelijktijdige journaalposten
+  // op dezelfde rekening zouden anders beide hetzelfde huidigSaldo lezen en
+  // de tweede write zou de eerste overschrijven (lost increment).
+  const lock = LockService.getScriptLock();
+  let lockHeld = false;
+  try {
+    lock.waitLock(10000);
+    lockHeld = true;
+  } catch (e) {
+    Logger.log('updateGrootboekSaldo_: kon geen lock krijgen voor ' + rekeningCode + ': ' + e.message);
+    try { schrijfAuditLog_('GROOTBOEK LOCK', 'Lock timeout op ' + rekeningCode); } catch (_) {}
+    return;
+  }
 
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(rekeningCode)) {
-      const type = data[i][2]; // Actief / Passief / Opbrengst / Kosten
-      let huidigSaldo = parseFloat(data[i][5]) || 0;
-
-      // Dubbel boekhouden regels:
-      // Activa: Debet = plus, Credit = min
-      // Passiva: Debet = min, Credit = plus
-      // Opbrengsten: Debet = min, Credit = plus
-      // Kosten: Debet = plus, Credit = min
-      const isDebet = zijde === 'debet';
-
-      if (type === 'Actief' || type === 'Kosten') {
-        huidigSaldo += isDebet ? bedragNum : -bedragNum;
-      } else {
-        huidigSaldo += isDebet ? -bedragNum : bedragNum;
-      }
-
-      sheet.getRange(i + 1, 6).setValue(rondBedrag_(huidigSaldo));
+  try {
+    const sheet = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
+    if (!sheet) {
+      Logger.log('updateGrootboekSaldo_: GROOTBOEKSCHEMA tabblad ontbreekt');
+      try { schrijfAuditLog_('GROOTBOEK SHEET ONTBREEKT', 'updateGrootboekSaldo_ kon ' + rekeningCode + ' niet bijwerken'); } catch (_) {}
       return;
+    }
+    const data = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(rekeningCode)) {
+        const type = data[i][2]; // Actief / Passief / Opbrengst / Kosten
+        let huidigSaldo = parseFloat(data[i][5]) || 0;
+
+        // Dubbel boekhouden regels:
+        // Activa: Debet = plus, Credit = min
+        // Passiva: Debet = min, Credit = plus
+        // Opbrengsten: Debet = min, Credit = plus
+        // Kosten: Debet = plus, Credit = min
+        const isDebet = zijde === 'debet';
+
+        if (type === 'Actief' || type === 'Kosten') {
+          huidigSaldo += isDebet ? bedragNum : -bedragNum;
+        } else {
+          huidigSaldo += isDebet ? -bedragNum : bedragNum;
+        }
+
+        sheet.getRange(i + 1, 6).setValue(rondBedrag_(huidigSaldo));
+        return;
+      }
+    }
+
+    // Onbekende rekening — log + audit-trail zodat self-healing dit kan oppikken.
+    // Voorheen stille no-op → balans liep ongezien scheef.
+    Logger.log('updateGrootboekSaldo_: onbekende rekening ' + rekeningCode + ' (zijde=' + zijde + ', bedrag=' + bedragNum + ')');
+    try {
+      schrijfAuditLog_(
+        'GROOTBOEK ONBEKEND',
+        'Rekening ' + rekeningCode + ' niet gevonden — saldo niet bijgewerkt (' + zijde + ' ' + bedragNum + ')'
+      );
+    } catch (_) {}
+  } finally {
+    if (lockHeld) {
+      try { lock.releaseLock(); } catch (_) {}
     }
   }
 }

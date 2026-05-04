@@ -14,9 +14,20 @@ function genereerBtwAangifteQ4() { genereerBtwAangifte('Q4'); }
 
 function genereerBtwAangifte(kwartaal) {
   if (!controleerSetupGedaan_()) return;
+  // Kwartaal-validatie: voorkom dat 'Quarter 1' of 'q1' silently default naar Q1.
+  const k = String(kwartaal || '').toUpperCase().trim();
+  if (!/^Q[1-4]$/.test(k)) {
+    SpreadsheetApp.getUi().alert(
+      'Ongeldig kwartaal',
+      `"${kwartaal}" is geen geldig kwartaal. Gebruik Q1, Q2, Q3 of Q4.`,
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    return;
+  }
+  kwartaal = k;
   const ss = getSpreadsheet_();
-  const jaar = parseInt(getInstelling_('Boekjaar start') || new Date().getFullYear());
-  const periode = bepaalBtwPeriode_(kwartaal, isNaN(jaar) ? new Date().getFullYear() : jaar);
+  const jaar = getBoekjaar_();
+  const periode = bepaalBtwPeriode_(kwartaal, jaar);
 
   const aangifte = berekenBtwAangifte_(ss, periode.van, periode.tot);
 
@@ -94,8 +105,15 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
 
   // ── Verkoopfacturen analyseren ─────────────
   for (let i = 1; i < vfData.length; i++) {
-    const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
-    if (!datum || datum < vanDatum || datum > totDatum) continue;
+    // parseDatum_ verwerkt DD-MM-YYYY, ISO én Date-objecten — voorkomt dat
+    // facturen met locale-string-datum stilletjes uit de aangifte vallen.
+    const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
+    if (!datum || isNaN(datum.getTime()) || datum < vanDatum || datum > totDatum) continue;
+
+    // Skip GECREDITEERD facturen — de creditnota-rij (negatieve grondslag)
+    // levert al de tegenboeking. Dubbele aftrek voorkomen bij periode-overschrijding.
+    const status = String(vfData[i][14] || '');
+    if (status === FACTUUR_STATUS.GECREDITEERD) continue;
 
     const grondslag = parseFloat(vfData[i][9]) || 0;  // Excl. BTW
     const btwBedrag = parseFloat(vfData[i][11]) || 0;
@@ -119,8 +137,8 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
 
   // ── Inkoopfacturen – voorbelasting ─────────
   for (let i = 1; i < ifData.length; i++) {
-    const datum = ifData[i][3] ? new Date(ifData[i][3]) : null;
-    if (!datum || datum < vanDatum || datum > totDatum) continue;
+    const datum = ifData[i][3] ? parseDatum_(ifData[i][3]) : null;
+    if (!datum || isNaN(datum.getTime()) || datum < vanDatum || datum > totDatum) continue;
 
     const btwBedrag = parseFloat(ifData[i][10]) || 0;
     const btwLabel  = String(ifData[i][9] || '');
@@ -326,9 +344,17 @@ function sluitBtwPeriode() {
   if (kwartaalResp.getSelectedButton() !== ui.Button.OK) return;
 
   const kwartaal = kwartaalResp.getResponseText().toUpperCase().trim();
+  // Strikte validatie — voorkomt dat 'q1', 'Quarter 1' of typo silently Q1 sluit.
+  if (!/^Q[1-4]$/.test(kwartaal)) {
+    ui.alert(
+      'Ongeldig kwartaal',
+      `"${kwartaalResp.getResponseText()}" is geen geldig kwartaal. Gebruik Q1, Q2, Q3 of Q4.`,
+      ui.ButtonSet.OK
+    );
+    return;
+  }
   const ss = getSpreadsheet_();
-  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
-  const jaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
+  const jaar = getBoekjaar_();
   const periode = bepaalBtwPeriode_(kwartaal, jaar);
   const aangifte = berekenBtwAangifte_(ss, periode.van, periode.tot);
   const datum = new Date();
@@ -353,6 +379,46 @@ function sluitBtwPeriode() {
       dagboek: 'Memoriaal',
       debet: '4120', credit: '4100',
       bedrag: aangifte.r1b_btw,
+      ref: `BTW-${kwartaal}-${jaar}`,
+      type: BOEKING_TYPE.MEMORIAAL,
+    });
+  }
+
+  // Overige tarieven (rubriek 1c) — bv. 5,5% of historisch tarief
+  if (aangifte.r1c_btw > 0) {
+    maakJournaalpost_(ss, {
+      datum,
+      omschr: `BTW afdracht ${kwartaal} ${jaar} – overige tarieven`,
+      dagboek: 'Memoriaal',
+      debet: '4100', credit: '4100',
+      bedrag: aangifte.r1c_btw,
+      ref: `BTW-${kwartaal}-${jaar}`,
+      type: BOEKING_TYPE.MEMORIAAL,
+    });
+  }
+
+  // Verlegde BTW (rubriek 1e) — afnemer draagt af; voor administratie boeken
+  // wij dit verplaatst naar 4100 zodat aangifte-totaal klopt.
+  if (aangifte.r1e_btw > 0) {
+    maakJournaalpost_(ss, {
+      datum,
+      omschr: `BTW afdracht ${kwartaal} ${jaar} – verlegd`,
+      dagboek: 'Memoriaal',
+      debet: '4130', credit: '4100',
+      bedrag: aangifte.r1e_btw,
+      ref: `BTW-${kwartaal}-${jaar}`,
+      type: BOEKING_TYPE.MEMORIAAL,
+    });
+  }
+
+  // Inkoop verlegd (rubriek 4a) — heffing verschuldigd door koper
+  if (aangifte.r4a_btw > 0) {
+    maakJournaalpost_(ss, {
+      datum,
+      omschr: `BTW verlegd inkoop ${kwartaal} ${jaar}`,
+      dagboek: 'Memoriaal',
+      debet: '4100', credit: '4140',
+      bedrag: aangifte.r4a_btw,
       ref: `BTW-${kwartaal}-${jaar}`,
       type: BOEKING_TYPE.MEMORIAAL,
     });
@@ -390,21 +456,29 @@ function sluitBtwPeriode() {
 function controleerKor() {
   if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
-  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
-  const jaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
+  const jaar = getBoekjaar_();
   const periode = { van: new Date(jaar, 0, 1), tot: new Date(jaar, 11, 31, 23, 59, 59, 999) };
 
   const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
   let totaalOmzet = 0;
 
   for (let i = 1; i < vfData.length; i++) {
-    const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
-    if (!datum || datum < periode.van || datum > periode.tot) continue;
+    const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
+    if (!datum || isNaN(datum.getTime()) || datum < periode.van || datum > periode.tot) continue;
+    // Skip vrijgestelde leveringen — KOR-grens telt alleen belaste omzet
+    // (incl. nultarief en verlegd) per art. 25 Wet OB 1968.
+    const btwLabel = String(vfData[i][10] || '');
+    if (/Vrijgesteld/i.test(btwLabel)) continue;
+    // Skip gecrediteerde origineel — creditnota-rij compenseert al.
+    const status = String(vfData[i][14] || '');
+    if (status === FACTUUR_STATUS.GECREDITEERD) continue;
     totaalOmzet += parseFloat(vfData[i][9]) || 0;  // Excl. BTW
   }
 
   const korGrens = 20000;
-  const korActief = getInstelling_('KOR regeling actief') === 'Ja';
+  // Case-insensitive — voorkomt dat 'ja'/'JA' niet matcht
+  const korActiefRaw = String(getInstelling_('KOR regeling actief') || '').toLowerCase().trim();
+  const korActief = korActiefRaw === 'ja' || korActiefRaw === 'true' || korActiefRaw === 'yes';
 
   const pct = totaalOmzet > 0 ? Math.round((totaalOmzet / korGrens) * 100) : 0;
   const resterende = Math.max(0, korGrens - totaalOmzet);
@@ -448,8 +522,12 @@ function getBtwPerMaand_(ss, jaar) {
   const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
 
   for (let i = 1; i < vfData.length; i++) {
-    const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
-    if (!datum || datum.getFullYear() !== jaar) continue;
+    const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
+    if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
+    // Skip GECREDITEERD originelen — creditnota-rij levert tegenboeking.
+    const status = String(vfData[i][14] || '');
+    if (status === FACTUUR_STATUS.GECREDITEERD) continue;
+
     const m = datum.getMonth();
     const grondslag = parseFloat(vfData[i][9]) || 0;
     const btwBedrag = parseFloat(vfData[i][11]) || 0;
@@ -466,8 +544,8 @@ function getBtwPerMaand_(ss, jaar) {
   }
 
   for (let i = 1; i < ifData.length; i++) {
-    const datum = ifData[i][3] ? new Date(ifData[i][3]) : null;
-    if (!datum || datum.getFullYear() !== jaar) continue;
+    const datum = ifData[i][3] ? parseDatum_(ifData[i][3]) : null;
+    if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
     const m = datum.getMonth();
     const btwBedrag = parseFloat(ifData[i][10]) || 0;
     if (btwBedrag > 0) resultaat[m].voorbelasting += btwBedrag;
@@ -514,10 +592,23 @@ function bepaalBtwPeriode_(kwartaal, jaar) {
 
 function bepaalBtwDeadline_(kwartaal, jaar) {
   const deadlines = {
-    'Q1': new Date(jaar, 3, 30),   // 30 april
-    'Q2': new Date(jaar, 6, 31),   // 31 juli
-    'Q3': new Date(jaar, 9, 31),   // 31 oktober
+    'Q1': new Date(jaar, 3, 30),     // 30 april
+    'Q2': new Date(jaar, 6, 31),     // 31 juli
+    'Q3': new Date(jaar, 9, 31),     // 31 oktober
     'Q4': new Date(jaar + 1, 0, 31), // 31 januari volgend jaar
   };
-  return formatDatum_(deadlines[kwartaal] || deadlines['Q1']);
+  // Belastingdienst verschuift deadline naar volgende werkdag bij weekend.
+  return formatDatum_(volgendeWerkdag_(deadlines[kwartaal] || deadlines['Q1']));
+}
+
+/**
+ * Verplaats datum naar volgende werkdag (ma-vr) bij weekend.
+ * Houdt geen rekening met Nederlandse feestdagen — alleen weekenden.
+ */
+function volgendeWerkdag_(datum) {
+  const d = new Date(datum.getTime());
+  const dag = d.getDay(); // 0=zo, 6=za
+  if (dag === 6) d.setDate(d.getDate() + 2);      // za → ma
+  else if (dag === 0) d.setDate(d.getDate() + 1); // zo → ma
+  return d;
 }

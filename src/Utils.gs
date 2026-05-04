@@ -183,9 +183,11 @@ function isGeldigKvKNummer_(kvk) {
 }
 
 function isGeldigEmail_(email) {
-  email = String(email || '');
-  if (!email) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  email = String(email || '').trim();
+  if (!email || email.length > 254) return false;
+  // RFC 5322 simplified: lokaal deel + @ + domein met geldige TLD (≥2 letters).
+  // Voorkomt false-positives als 'a@b.c' of 'test@.co' die GmailApp-crash geven.
+  return /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/.test(email);
 }
 
 // ─────────────────────────────────────────────
@@ -295,6 +297,26 @@ function getBoekjaarPeriode_() {
     van: parseDatum_(startStr) || new Date(new Date().getFullYear(), 0, 1),
     tot: parseDatum_(eindeStr) || new Date(new Date().getFullYear(), 11, 31, 23, 59, 59, 999),
   };
+}
+
+/**
+ * Single source of truth voor boekjaar-nummer.
+ * Robust voor formaten: "2025", "2025-01-01", "01-01-2025", "01/01/2025".
+ * Valt terug op huidig kalenderjaar bij ontbrekende of corrupte instelling.
+ */
+function getBoekjaar_() {
+  const raw = getInstelling_('Boekjaar start') || '';
+  const str = String(raw).trim();
+  if (!str) return new Date().getFullYear();
+
+  // Match een 4-cijferig jaartal in de string.
+  const match = str.match(/(\d{4})/);
+  if (match) {
+    const jaar = parseInt(match[1], 10);
+    if (jaar >= 2000 && jaar <= 2100) return jaar;
+  }
+
+  return new Date().getFullYear();
 }
 
 // ─────────────────────────────────────────────
