@@ -506,19 +506,6 @@
     letter-spacing: .1px;
   }
 
-  /* ── SOCIAL PROOF STRIP ── */
-  .proof-strip {
-    background: var(--wit); border-bottom: 1px solid var(--rand);
-    padding: 22px 24px;
-    text-align: center;
-  }
-  .proof-strip p {
-    color: var(--grijs); font-size: 14px;
-    max-width: 1100px; margin: 0 auto;
-    line-height: 1.8;
-  }
-  .proof-strip strong { color: var(--tekst); font-weight: 600; }
-
   /* ── SECTIONS ── */
   section { padding: 96px 24px; }
   .container { max-width: 1100px; margin: 0 auto; }
@@ -683,78 +670,6 @@
     letter-spacing: -0.02em; line-height: 1; margin-bottom: 4px;
   }
   .trust-stat span { font-size: 12.5px; color: var(--grijs); line-height: 1.45; }
-  .trust-meer { margin-top: 24px; }
-  .trust-meer summary {
-    cursor: pointer; font-size: 14px; font-weight: 600; color: var(--blauw);
-    padding: 12px 0; list-style: none; display: inline-flex; align-items: center; gap: 6px;
-    transition: color .15s ease;
-  }
-  .trust-meer summary::-webkit-details-marker { display: none; }
-  .trust-meer summary:hover { color: var(--accent); }
-  .trust-meer[open] summary { color: var(--accent); }
-  .trust-meer-body {
-    padding: 14px 0 0;
-    animation: faqOpen .35s cubic-bezier(.2,.7,.2,1);
-  }
-  .trust-meer-body p { font-size: 14.5px; color: var(--tekst); line-height: 1.65; margin: 0 0 12px; }
-
-  /* ── PRODUCT PREVIEW ── */
-  .preview-sectie { background: var(--wit); padding-top: 64px; padding-bottom: 88px; }
-  .preview-head { max-width: 720px; margin: 0 auto 40px; text-align: center; }
-  .preview-head h2 { margin-bottom: 10px; }
-  .preview-head .sub-tekst { margin: 0 auto; }
-  .preview-bullets {
-    list-style: none; padding: 0; margin: 22px auto 0;
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px;
-    max-width: 780px;
-  }
-  .preview-bullets li {
-    font-size: 14px; color: var(--tekst);
-    display: inline-flex; align-items: center; gap: 8px;
-  }
-  .preview-bullets li::before {
-    content: ""; width: 6px; height: 6px; border-radius: 50%;
-    background: var(--accent); flex-shrink: 0;
-  }
-  .preview-frame {
-    max-width: 980px; margin: 44px auto 0;
-    border: 1px solid rgba(229,234,242,.8);
-    border-radius: 18px;
-    background: var(--wit);
-    box-shadow:
-      0 1px 2px rgba(13,27,78,.04),
-      0 12px 32px rgba(13,27,78,.06),
-      0 32px 80px rgba(13,27,78,.08);
-    overflow: hidden;
-    position: relative;
-    transition: transform .5s cubic-bezier(.2,.7,.2,1), box-shadow .5s ease;
-  }
-  /* Glow op hover — subtle teal aura */
-  .preview-frame::before {
-    content: ""; position: absolute; inset: -2px; z-index: -1;
-    background: radial-gradient(60% 60% at 50% 0%, rgba(46,196,182,.18), transparent 70%);
-    opacity: 0; transition: opacity .5s ease;
-    border-radius: 20px;
-  }
-  .preview-frame:hover {
-    transform: scale(1.012) translateY(-2px);
-    box-shadow:
-      0 2px 4px rgba(13,27,78,.06),
-      0 24px 56px rgba(13,27,78,.10),
-      0 48px 120px rgba(13,27,78,.12);
-  }
-  .preview-frame:hover::before { opacity: 1; }
-  .preview-frame img { display: block; width: 100%; height: auto; }
-  .preview-frame::after {
-    content: ""; position: absolute; inset: 0;
-    pointer-events: none;
-    background: linear-gradient(to bottom, rgba(247,249,252,0) 78%, rgba(247,249,252,.55) 100%);
-  }
-  @media (max-width: 720px) {
-    .preview-sectie { padding-top: 48px; padding-bottom: 64px; }
-    .preview-frame { border-radius: 10px; margin-top: 24px; }
-    .preview-bullets { gap: 8px 16px; font-size: 13px; }
-  }
 
   /* ── EXPLORE — drie routes ── */
   .explore-sectie { padding: 64px 24px 72px; background: var(--bg); }
@@ -1346,30 +1261,11 @@
         </div>
       </div>
     </div>
-    <details class="trust-meer">
-      <summary>Meer technische uitleg →</summary>
-      <div class="trust-meer-body">
-        <p><strong>Hoe werkt de licentie precies?</strong> Bij aankoop maak ik via een aparte Apps Script-server een unieke sleutel die jij koppelt aan jouw spreadsheet. Die server bewaart alleen: je naam, e-mail, sleutel en een transactie-ID. Niets over je boekhouding.</p>
-        <p><strong>Wat als jij stopt?</strong> Je sheet werkt door zoals hij is. Geen activatie-server nodig na de eerste koppeling — de scripts draaien lokaal in jouw Drive. Updates komen er niet meer, maar jouw data en functionaliteit blijven.</p>
-        <p><strong>Wat als Google stopt?</strong> Onwaarschijnlijk (ook Drive en Gmail lopen erop), maar in dat scenario kun je je sheet exporteren naar Excel — alle data blijft leesbaar. De automatisering werkt dan niet meer.</p>
-      </div>
-    </details>
+    <p style="text-align:center;margin-top:18px;font-size:13.5px;color:var(--grijs)">
+      Meer over de techniek? Lees <a href="/transparantie" style="color:var(--blauw);text-decoration:underline;text-underline-offset:3px;">hoe Boekhoudbaar achter de schermen werkt</a>.
+    </p>
   </div>
 </section>
-
-<!-- ── PRODUCT PREVIEW (verdere context) ── -->
-<!-- ── SOCIAL PROOF STRIP ── -->
-<div class="proof-strip" aria-label="Wat er in zit">
-  <p>
-    <strong>Nederlandse BTW</strong>
-    &nbsp;·&nbsp;
-    <strong>KOR &amp; aangifte-assistent</strong>
-    &nbsp;·&nbsp;
-    <strong>Export naar accountant</strong>
-    &nbsp;·&nbsp;
-    <strong>Jaarafsluiting in 1 klik</strong>
-  </p>
-</div>
 
 <!-- ── EXPLORE — drie routes ── -->
 <section class="explore-sectie" aria-labelledby="explore-heading">
