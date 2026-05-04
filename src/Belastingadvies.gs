@@ -43,43 +43,97 @@ const BELASTING_PER_JAAR = {
   2025: {
     ZELFSTANDIGENAFTREK:    2470,
     STARTERSAFTREK:         2123,
+    STAKINGSAFTREK:         3630,    // Eenmalig per leven bij staken onderneming
     MKB_WINSTVRIJSTELLING:  0.1270,
     FOR_MAX:                10786,    // FOR afgeschaft 2023 — alleen oude saldo's
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          35987,
     AOW_FRANCHISE:          14110,
+    AOW_LEEFTIJD:           67,      // 2025/2026/2027 = 67 jaar
     BOX3_GROEN_VRIJSTELLING: 65072,
+    BOX3_HEFFINGSVRIJ:      57684,
+    BOX3_FORFAIT_BELEGGING: 0.0588,
+    BOX3_FORFAIT_SPAAR:     0.0144,
+    BOX3_TARIEF:            0.36,
     // Legacy — gebruikt voor snelle besparing-schatting + backwards compat.
     IB_SCHIJF_1_MAX:        76817,    // = bovengrens schijf 2 (legacy naam)
     IB_SCHIJF_1_PCT:        0.3582,   // = schijf 1 tarief
     IB_SCHIJF_2_PCT:        0.495,    // = schijf 3 tarief (legacy naam)
-    HEFFINGSKORTING_MAX:    3068,
-    ARBEIDSKORTING_MAX:     5625,
+    HEFFINGSKORTING_MAX:    3068,     // 2025 algemene heffingskorting max
+    HEFFINGSKORTING_AFBOUW_VAN: 28406,
+    HEFFINGSKORTING_AFBOUW_PCT: 0.0634,
+    HEFFINGSKORTING_NUL_VAN:    76817,
+    ARBEIDSKORTING_MAX:     5599,
+    ARBEIDSKORTING_TOP_TOT: 43071,    // 2025 inkomen waar max bereikt
+    ARBEIDSKORTING_AFBOUW_VAN: 43071,
+    ARBEIDSKORTING_AFBOUW_PCT: 0.0651,
+    // Zvw inkomensafhankelijke bijdrage ZZP
+    ZVW_PCT:                0.0526,
+    ZVW_MAX_INKOMEN:        75864,
+    // WBSO 2025
+    WBSO_AFTREK:            15738,
+    WBSO_STARTERSBONUS:     7996,
+    // EIA 2025
+    EIA_PCT:                0.40,
+    EIA_MIN:                2500,
+    // Logies-BTW 2025: 9% (laag tarief)
+    LOGIES_BTW_PCT:         0.09,
     // Nieuw — expliciete 3-schijven structuur voor accurate IB-berekening
     IB_SCHIJVEN: [
       { tot: 38441,    pct: 0.3582 },  // schijf 1: 8,17% IB + 27,65% premies = 35,82%
       { tot: 76817,    pct: 0.3748 },  // schijf 2: 37,48%
       { tot: Infinity, pct: 0.495  },  // schijf 3: 49,5%
     ],
+    // Voor AOW-gerechtigden (geen AOW-premie meer in schijf 1)
+    IB_SCHIJVEN_AOW: [
+      { tot: 38441,    pct: 0.1782 },  // schijf 1 zonder AOW-premie ≈ 17,82%
+      { tot: 76817,    pct: 0.3748 },
+      { tot: Infinity, pct: 0.495  },
+    ],
   },
   2026: {
     ZELFSTANDIGENAFTREK:    1200,    // Verlaagd per 2026 (was €2.470 in 2025)
     STARTERSAFTREK:         2123,    // Ongewijzigd
+    STAKINGSAFTREK:         3630,
     MKB_WINSTVRIJSTELLING:  0.1270,  // Ongewijzigd t.o.v. 2025
     FOR_MAX:                10786,   // Geen nieuwe FOR-vorming sinds 2023
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          38000,
     AOW_FRANCHISE:          14540,
+    AOW_LEEFTIJD:           67,
     BOX3_GROEN_VRIJSTELLING: 67000,
+    BOX3_HEFFINGSVRIJ:      59500,    // Indicatief; bevestigen na Prinsjesdag
+    BOX3_FORFAIT_BELEGGING: 0.0778,   // Voorstel kabinet (was 5,88% in 2025)
+    BOX3_FORFAIT_SPAAR:     0.0144,
+    BOX3_TARIEF:            0.36,
     IB_SCHIJF_1_MAX:        79137,   // bovengrens schijf 2
     IB_SCHIJF_1_PCT:        0.357,   // schijf 1: 35,7%
     IB_SCHIJF_2_PCT:        0.495,   // schijf 3: 49,5% (legacy naam)
-    HEFFINGSKORTING_MAX:    3068,
-    ARBEIDSKORTING_MAX:     5599,
+    HEFFINGSKORTING_MAX:    3115,    // 2026: max algemene heffingskorting
+    HEFFINGSKORTING_AFBOUW_VAN: 29739,
+    HEFFINGSKORTING_AFBOUW_PCT: 0.0640,
+    HEFFINGSKORTING_NUL_VAN:    78426,
+    ARBEIDSKORTING_MAX:     5685,    // 2026: tot inkomen €45.592
+    ARBEIDSKORTING_TOP_TOT: 45592,
+    ARBEIDSKORTING_AFBOUW_VAN: 45592,
+    ARBEIDSKORTING_AFBOUW_PCT: 0.0651,
+    ZVW_PCT:                0.0485,
+    ZVW_MAX_INKOMEN:        79409,
+    WBSO_AFTREK:            15979,
+    WBSO_STARTERSBONUS:     7996,
+    EIA_PCT:                0.40,
+    EIA_MIN:                2500,
+    // Logies-BTW 2026: VERHOOGD naar 21% per 1-1-2026 (was 9% in 2025)
+    LOGIES_BTW_PCT:         0.21,
     IB_SCHIJVEN: [
       { tot: 38883,    pct: 0.357  },  // schijf 1
       { tot: 79137,    pct: 0.3756 },  // schijf 2
       { tot: Infinity, pct: 0.495  },  // schijf 3
+    ],
+    IB_SCHIJVEN_AOW: [
+      { tot: 38883,    pct: 0.1770 },  // schijf 1 voor AOW-gerechtigden
+      { tot: 79137,    pct: 0.3756 },
+      { tot: Infinity, pct: 0.495  },
     ],
   },
   // 2027: placeholder — vervang met officiële Miljoenennota-cijfers Prinsjesdag 2026.
@@ -87,19 +141,43 @@ const BELASTING_PER_JAAR = {
   2027: {
     ZELFSTANDIGENAFTREK:    900,     // INDICATIEF — afbouw zet door
     STARTERSAFTREK:         2123,
+    STAKINGSAFTREK:         3630,
     MKB_WINSTVRIJSTELLING:  0.1270,
     FOR_MAX:                10786,
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          39000,
     AOW_FRANCHISE:          14800,
+    AOW_LEEFTIJD:           67,     // 2027 ongewijzigd 67; 2028 → 67j 3m
     BOX3_GROEN_VRIJSTELLING: 68000,
+    BOX3_HEFFINGSVRIJ:      60500,
+    BOX3_FORFAIT_BELEGGING: 0.0780,
+    BOX3_FORFAIT_SPAAR:     0.0150,
+    BOX3_TARIEF:            0.36,
     IB_SCHIJF_1_MAX:        80500,
     IB_SCHIJF_1_PCT:        0.357,
     IB_SCHIJF_2_PCT:        0.495,
-    HEFFINGSKORTING_MAX:    3100,
-    ARBEIDSKORTING_MAX:     5650,
+    HEFFINGSKORTING_MAX:    3150,
+    HEFFINGSKORTING_AFBOUW_VAN: 30200,
+    HEFFINGSKORTING_AFBOUW_PCT: 0.0640,
+    HEFFINGSKORTING_NUL_VAN:    79500,
+    ARBEIDSKORTING_MAX:     5750,
+    ARBEIDSKORTING_TOP_TOT: 46500,
+    ARBEIDSKORTING_AFBOUW_VAN: 46500,
+    ARBEIDSKORTING_AFBOUW_PCT: 0.0651,
+    ZVW_PCT:                0.0490,
+    ZVW_MAX_INKOMEN:        81000,
+    WBSO_AFTREK:            16200,
+    WBSO_STARTERSBONUS:     8100,
+    EIA_PCT:                0.40,
+    EIA_MIN:                2500,
+    LOGIES_BTW_PCT:         0.21,
     IB_SCHIJVEN: [
       { tot: 39500,    pct: 0.357  },
+      { tot: 80500,    pct: 0.3756 },
+      { tot: Infinity, pct: 0.495  },
+    ],
+    IB_SCHIJVEN_AOW: [
+      { tot: 39500,    pct: 0.1770 },
       { tot: 80500,    pct: 0.3756 },
       { tot: Infinity, pct: 0.495  },
     ],
@@ -154,7 +232,7 @@ function getBelasting_() {
 const BELASTING = getBelasting_();
 
 // ─────────────────────────────────────────────
-//  HELPERS — KIA + IB BEREKENING
+//  HELPERS — KIA + IB + ZVW + HEFFINGSKORTING
 // ─────────────────────────────────────────────
 
 /**
@@ -180,22 +258,27 @@ function berekenKiaAftrek_(investering, B) {
  * Progressieve IB-berekening volgens schijven-array.
  * Werkt voor zowel 2- als 3-schijven configs (vooruit-compatibel).
  *
- * @param {number} belastbaarInkomen Belastbaar inkomen Box 1 (na aftrekken).
- * @param {Object} B                 BELASTING-config met IB_SCHIJVEN array.
+ * @param {number}  belastbaarInkomen Belastbaar inkomen Box 1 (na aftrekken).
+ * @param {Object}  B                 BELASTING-config met IB_SCHIJVEN array.
+ * @param {boolean} [isAowGerechtigd] True → gebruik IB_SCHIJVEN_AOW (lager schijf 1).
  * @return {number} Geschatte IB voor heffingskortingen.
  */
-function berekenIBProgressief_(belastbaarInkomen, B) {
+function berekenIBProgressief_(belastbaarInkomen, B, isAowGerechtigd) {
   const inkomen = parseFloat(belastbaarInkomen) || 0;
   if (inkomen <= 0) return 0;
+  // AOW-gerechtigde gebruikt aparte schijven-tabel (geen AOW-premie meer)
+  const schijven = (isAowGerechtigd && Array.isArray(B.IB_SCHIJVEN_AOW))
+    ? B.IB_SCHIJVEN_AOW
+    : B.IB_SCHIJVEN;
   // Fallback voor configs zonder IB_SCHIJVEN array (legacy 2-schijven model)
-  if (!Array.isArray(B.IB_SCHIJVEN)) {
+  if (!Array.isArray(schijven)) {
     if (inkomen <= B.IB_SCHIJF_1_MAX) return inkomen * B.IB_SCHIJF_1_PCT;
     return B.IB_SCHIJF_1_MAX * B.IB_SCHIJF_1_PCT
          + (inkomen - B.IB_SCHIJF_1_MAX) * B.IB_SCHIJF_2_PCT;
   }
   let belasting = 0;
   let onder = 0;
-  for (const schijf of B.IB_SCHIJVEN) {
+  for (const schijf of schijven) {
     const boven = Math.min(inkomen, schijf.tot);
     if (boven <= onder) break;
     belasting += (boven - onder) * schijf.pct;
@@ -203,6 +286,85 @@ function berekenIBProgressief_(belastbaarInkomen, B) {
     if (inkomen <= schijf.tot) break;
   }
   return belasting;
+}
+
+/**
+ * Zvw inkomensafhankelijke bijdrage voor ZZP-ondernemer.
+ * Wordt geheven over winst tot maximum bijdrage-inkomen.
+ * Voorbeeld 2025: 5,26% × min(winst, €75.864) = max €3.991.
+ *
+ * @param {number} winst Winst uit onderneming (na aftrekken niet nodig — Zvw
+ *                       gebruikt eigen grondslag).
+ * @param {Object} B     BELASTING-config (uit getBelasting_()).
+ * @return {number} Geschatte Zvw-bijdrage (afgerond op 2 decimalen).
+ */
+function berekenZvw_(winst, B) {
+  const w = parseFloat(winst) || 0;
+  if (w <= 0) return 0;
+  const grondslag = Math.min(w, B.ZVW_MAX_INKOMEN || 75864);
+  return rondBedrag_(grondslag * (B.ZVW_PCT || 0.0526));
+}
+
+/**
+ * Algemene heffingskorting met inkomensafhankelijke afbouw.
+ * 2026: max €3.115 tot inkomen €29.739; daarboven afbouw 6,40%; €0 vanaf €78.426.
+ *
+ * @param {number} belastbaarInkomen Belastbaar inkomen Box 1.
+ * @param {Object} B                 BELASTING-config.
+ * @return {number} Toepasbare heffingskorting (afgerond).
+ */
+function berekenHeffingskorting_(belastbaarInkomen, B) {
+  const inkomen = parseFloat(belastbaarInkomen) || 0;
+  const max = B.HEFFINGSKORTING_MAX || 0;
+  if (inkomen <= 0 || max === 0) return 0;
+  const afbouwVan = B.HEFFINGSKORTING_AFBOUW_VAN || 0;
+  const afbouwPct = B.HEFFINGSKORTING_AFBOUW_PCT || 0;
+  const nulVan = B.HEFFINGSKORTING_NUL_VAN || (afbouwVan + max / Math.max(afbouwPct, 0.0001));
+  if (inkomen <= afbouwVan) return rondBedrag_(max);
+  if (inkomen >= nulVan) return 0;
+  const verlaging = (inkomen - afbouwVan) * afbouwPct;
+  return rondBedrag_(Math.max(0, max - verlaging));
+}
+
+/**
+ * Arbeidskorting (vereenvoudigd model: opbouw + afbouw bij hoog inkomen).
+ * Voor ondernemers wordt arbeidsinkomen meestal gelijk gesteld aan winst.
+ *
+ * @param {number} arbeidsinkomen Winst uit onderneming (proxy voor arbeidsinkomen).
+ * @param {Object} B              BELASTING-config.
+ * @return {number} Toepasbare arbeidskorting.
+ */
+function berekenArbeidskorting_(arbeidsinkomen, B) {
+  const inkomen = parseFloat(arbeidsinkomen) || 0;
+  const max = B.ARBEIDSKORTING_MAX || 0;
+  if (inkomen <= 0 || max === 0) return 0;
+  const topTot = B.ARBEIDSKORTING_TOP_TOT || 45000;
+  const afbouwVan = B.ARBEIDSKORTING_AFBOUW_VAN || topTot;
+  const afbouwPct = B.ARBEIDSKORTING_AFBOUW_PCT || 0.0651;
+  if (inkomen <= topTot) return rondBedrag_(max);
+  const verlaging = (inkomen - afbouwVan) * afbouwPct;
+  return rondBedrag_(Math.max(0, max - verlaging));
+}
+
+/**
+ * Bepaalt of de gebruiker AOW-gerechtigd is op basis van geboortedatum-instelling.
+ * Werkt fail-safe: bij ontbrekende of corrupte instelling → false (= jonger dan AOW).
+ *
+ * @param {Object} B BELASTING-config (voor AOW_LEEFTIJD).
+ * @return {boolean}
+ */
+function isAowGerechtigd_(B) {
+  try {
+    const raw = getInstelling_('Geboortedatum');
+    if (!raw) return false;
+    const geb = parseDatum_(raw);
+    if (!geb || isNaN(geb.getTime())) return false;
+    const aowLeeftijd = (B && B.AOW_LEEFTIJD) || 67;
+    const aowDatum = new Date(geb.getFullYear() + aowLeeftijd, geb.getMonth(), geb.getDate());
+    return new Date() >= aowDatum;
+  } catch (_) {
+    return false;
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -593,19 +755,27 @@ function berekenBelastingadvies_(ss) {
     });
   }
 
-  // ── 9. Geschatte inkomstenbelasting ──────────────────────────────────
-  // Progressief over alle 3 schijven (was: 2-schijven approximatie waardoor
-  // schijf-2-inkomen €38.441 – €76.817 ten onrechte tegen 35,82% werd belast
-  // i.p.v. 37,48% — onderschatting voor mid-range ZZP'ers).
+  // ── 9. Geschatte fiscale last (IB Box 1 + Zvw, na heffings/arbeidskortingen)
+  // Progressief over 3 IB-schijven met AOW-aware tarief schijf 1, plus
+  // inkomensafhankelijke heffingskorting + arbeidskorting + Zvw-bijdrage.
+  // Voorheen gebruikte het systeem alleen schijf 1 → 2 + vaste max-heffingskorting,
+  // wat schijf 2 te laag belaste én Zvw geheel oversloeg (€3-4k onderschatting).
   let geschatteIB = 0;
+  let zvwBijdrage = 0;
+  let heffingskortingToegepast = 0;
+  let arbeidskortingToegepast = 0;
   if (isZzp && winst > 0) {
     const belastbaarInkomen = Math.max(0, winst - totaalAftrek);
-    geschatteIB = rondBedrag_(berekenIBProgressief_(belastbaarInkomen, BELASTING));
-    // Heffingskortingen (vereenvoudigd) — let op: heffingskorting wordt
-    // afgebouwd boven hoge inkomens; deze schatting overschat het voordeel
-    // voor topverdieners. Voor exacte berekening: officiële Belastingdienst-tools.
-    geschatteIB = Math.max(0, rondBedrag_(geschatteIB - BELASTING.HEFFINGSKORTING_MAX));
+    const aow = isAowGerechtigd_(BELASTING);
+    const ibBruto = berekenIBProgressief_(belastbaarInkomen, BELASTING, aow);
+    heffingskortingToegepast = berekenHeffingskorting_(belastbaarInkomen, BELASTING);
+    // Arbeidsinkomen ≈ winst voor ondernemers (geen loonbestanddeel)
+    arbeidskortingToegepast = berekenArbeidskorting_(winst, BELASTING);
+    geschatteIB = Math.max(0, rondBedrag_(ibBruto - heffingskortingToegepast - arbeidskortingToegepast));
+    // Zvw-bijdrage komt BOVENOP de IB voor ondernemers
+    zvwBijdrage = berekenZvw_(winst, BELASTING);
   }
+  const totaleFiscaleLast = rondBedrag_(geschatteIB + zvwBijdrage);
 
   return {
     adviezen,
@@ -614,6 +784,11 @@ function berekenBelastingadvies_(ss) {
     winstVoorAftrek: winst,
     winstNaAftrek: Math.max(0, rondBedrag_(winst - totaalAftrek)),
     geschatteIB,
+    zvwBijdrage,
+    heffingskortingToegepast,
+    arbeidskortingToegepast,
+    totaleFiscaleLast,
+    isAowGerechtigd: isZzp ? isAowGerechtigd_(BELASTING) : false,
     isZzp,
   };
 }
@@ -656,7 +831,11 @@ function genereerBelastingadvies() {
     ['Winst vóór aftrekken', formatBedrag_(advies.winstVoorAftrek)],
     ['Totaal aftrekposten', formatBedrag_(advies.totaalAftrek)],
     ['Belastbare winst', formatBedrag_(advies.winstNaAftrek)],
-    ['Geschatte inkomstenbelasting*', formatBedrag_(advies.geschatteIB)],
+    ['Heffingskorting toegepast', formatBedrag_(-(advies.heffingskortingToegepast || 0))],
+    ['Arbeidskorting toegepast', formatBedrag_(-(advies.arbeidskortingToegepast || 0))],
+    ['Geschatte inkomstenbelasting (Box 1)*', formatBedrag_(advies.geschatteIB)],
+    ['Zvw inkomensafhankelijke bijdrage*', formatBedrag_(advies.zvwBijdrage || 0)],
+    ['TOTALE FISCALE LAST (IB + Zvw)*', formatBedrag_(advies.totaleFiscaleLast || advies.geschatteIB)],
   ];
   samenvatting.forEach(([label, waarde]) => {
     sheet.getRange(rij, 1).setValue(label).setFontWeight('bold');
@@ -665,7 +844,10 @@ function genereerBelastingadvies() {
   });
   sheet.getRange(rij - 1, 1, 1, 2).setBackground('#FFECB3').setFontWeight('bold');
   sheet.getRange(rij, 1, 1, 2).merge()
-    .setValue('* Schatting o.b.v. huidige winst. Raadpleeg uw accountant voor definitieve aangifte.')
+    .setValue('* Schatting. Zvw is wettelijk verplicht voor ondernemers (max ~€3.851/jaar in 2026). ' +
+              'Heffingskortingen worden afgebouwd bij hoog inkomen. ' +
+              'Voor topverdieners > AOW-leeftijd geldt lager schijf-1-tarief. ' +
+              'Raadpleeg uw accountant voor definitieve aangifte.')
     .setFontSize(9).setFontColor('#888');
   rij += 2;
 
