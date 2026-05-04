@@ -538,6 +538,240 @@ function boekReiskosten(data) {
 }
 
 // ─────────────────────────────────────────────
+//  REISKOSTEN-WEEK-INVOER (bulk)
+// ─────────────────────────────────────────────
+//
+// Per-rit invoer is omslachtig voor klanten met dagelijkse zakelijke ritten.
+// Deze week-tracker laat alle 7 dagen tegelijk invoeren — submit doet
+// 1 boeking per dag waarin km is ingevuld.
+
+function toonReiskostenWeek() {
+  if (typeof controleerSetupGedaan_ === 'function' && !controleerSetupGedaan_()) return;
+  const nu = new Date();
+  // Maandag van de huidige week (of vorige week als 't zondag is)
+  const huidigeDag = nu.getDay() === 0 ? 7 : nu.getDay();
+  const maandag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - (huidigeDag - 1));
+  const dagen = [];
+  const dagNamen = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(maandag.getFullYear(), maandag.getMonth(), maandag.getDate() + i);
+    dagen.push({
+      datum: d.toISOString().slice(0, 10),
+      label: dagNamen[i] + ' ' + d.getDate() + '/' + (d.getMonth() + 1),
+    });
+  }
+
+  const html = HtmlService.createHtmlOutput(`
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+     padding:18px;font-size:13px;color:#1A1A1A;background:#F7F9FC;margin:0}
+h2{color:#0D1B4E;margin:0 0 4px;font-size:18px;font-weight:800}
+.sub{color:#5F6B7A;font-size:12px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #E5EAF2}
+th{background:#F7F9FC;color:#0D1B4E;text-align:left;padding:9px 10px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;border-bottom:1px solid #E5EAF2}
+td{padding:6px 10px;border-bottom:1px solid #F0F3F7}
+td.dag{font-weight:600;color:#0D1B4E;width:36%}
+input{width:100%;padding:6px 8px;border:1px solid #E5EAF2;border-radius:5px;font-size:13px;font-family:inherit;background:#fff}
+input:focus{outline:none;border-color:#2EC4B6}
+input[type=number]{max-width:80px;text-align:right}
+.totaal{background:#E6F7F4;font-weight:700;padding:12px;border-radius:8px;margin-top:14px;text-align:center;color:#0D1B4E}
+.totaal .km{font-size:18px}
+.btn{background:#2EC4B6;color:white;border:none;padding:11px 22px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;width:100%;margin-top:14px}
+.btn:hover{background:#28B0A4}
+.status{padding:10px;border-radius:6px;margin-top:10px;font-size:12px;display:none}
+.status.s{background:#E8F5E9;color:#1B5E20}
+.status.e{background:#FFEBEE;color:#B71C1C}
+</style></head>
+<body>
+<h2>🚗 Week-overzicht reiskosten</h2>
+<div class="sub">Vul per dag aantal km en omschrijving in. Lege rijen worden overgeslagen. Tarief: €0,23/km.</div>
+
+<table>
+  <tr><th>Dag</th><th>Km</th><th style="width:50%">Omschrijving</th></tr>
+${dagen.map((d, i) => `
+  <tr>
+    <td class="dag">${d.label}<br><span style="font-size:10px;font-weight:400;color:#888">${d.datum}</span></td>
+    <td><input type="number" id="km${i}" min="0" step="1" placeholder="0" oninput="upd()"></td>
+    <td><input type="text" id="om${i}" placeholder="bijv. Klantbezoek Utrecht"></td>
+  </tr>`).join('')}
+</table>
+
+<div class="totaal">
+  <div>Totaal week:</div>
+  <div class="km" id="tot">0 km · € 0,00</div>
+</div>
+
+<button class="btn" onclick="boek()">Hele week boeken</button>
+<div id="status" class="status"></div>
+
+<script>
+var DAGEN=${JSON.stringify(dagen)};
+function upd(){
+  var totKm=0;
+  for(var i=0;i<7;i++){totKm+=parseFloat(document.getElementById('km'+i).value)||0;}
+  var bedrag=totKm*0.23;
+  document.getElementById('tot').textContent=totKm+' km · € '+bedrag.toFixed(2).replace('.',',');
+}
+function boek(){
+  var rijen=[];
+  for(var i=0;i<7;i++){
+    var km=parseFloat(document.getElementById('km'+i).value)||0;
+    var om=document.getElementById('om'+i).value.trim();
+    if(km>0){rijen.push({datum:DAGEN[i].datum,km:km,omschr:om||DAGEN[i].label});}
+  }
+  if(rijen.length===0){alert('Vul minimaal 1 dag in');return;}
+  var s=document.getElementById('status');
+  s.style.display='block';s.className='status';s.textContent='Bezig...';
+  google.script.run
+    .withSuccessHandler(function(r){
+      s.className='status s';
+      s.textContent='✓ '+r.aantal+' dagen geboekt, totaal '+r.totaalKm+' km = '+r.totaalBedrag;
+      setTimeout(function(){google.script.host.close();},2000);
+    })
+    .withFailureHandler(function(e){s.className='status e';s.textContent='Fout: '+e.message;})
+    .boekReiskostenWeek(rijen);
+}
+</script>
+</body></html>
+  `).setWidth(540).setHeight(640);
+  SpreadsheetApp.getUi().showModalDialog(html, '🚗 Reiskosten week-overzicht');
+}
+
+/**
+ * Server-side: boek 1-7 reiskostenposten in één call.
+ * Hergebruikt boekReiskosten-logica per rij; foutbestendig.
+ */
+function boekReiskostenWeek(rijen) {
+  if (!Array.isArray(rijen) || rijen.length === 0) throw new Error('Geen reiskosten ingevoerd');
+  let aantal = 0;
+  let totaalKm = 0;
+  let totaalBedrag = 0;
+  rijen.forEach(function(r) {
+    try {
+      const res = boekReiskosten({ datum: r.datum, omschr: r.omschr, km: r.km });
+      aantal++;
+      totaalKm += parseFloat(r.km) || 0;
+      totaalBedrag += (parseFloat(r.km) || 0) * 0.23;
+    } catch (e) {
+      Logger.log('Reiskosten-week rij ' + r.datum + ' overgeslagen: ' + e.message);
+    }
+  });
+  return {
+    aantal: aantal,
+    totaalKm: totaalKm,
+    totaalBedrag: formatBedrag_(rondBedrag_(totaalBedrag)),
+  };
+}
+
+// ─────────────────────────────────────────────
+//  BTW-SPAARPOT AUTO-BOEKING
+// ─────────────────────────────────────────────
+//
+// Als klant kiest voor automatische BTW-reservering: bij elke verkoopfactuur
+// wordt 21%/9% direct apart geboekt op rekening 1205 (BTW-spaarpot).
+// Niet meer "oei, ik heb de BTW al uitgegeven" — systeem doet het automatisch.
+//
+// Wordt aangeroepen vanuit Triggers.verwerkInkomstenUitHoofdformulier_
+// als instelling 'BTW automatisch reserveren' = Ja.
+
+function reserveerBtwOpSpaarpot_(ss, factuurnummer, btwBedrag, datum) {
+  if (!btwBedrag || btwBedrag <= 0) return;
+  const opt = String(getInstelling_('BTW automatisch reserveren') || '').toLowerCase().trim();
+  if (opt !== 'ja' && opt !== 'true' && opt !== 'yes') return;
+
+  try {
+    maakJournaalpost_(ss, {
+      datum: datum || new Date(),
+      omschr: 'BTW-reservering ' + factuurnummer + ' (auto)',
+      dagboek: 'Memoriaal',
+      debet: '1205',  // BTW-spaarpot (zakelijke spaarrekening)
+      credit: '1200', // Bank zakelijk
+      bedrag: rondBedrag_(btwBedrag),
+      ref: factuurnummer,
+      type: BOEKING_TYPE.MEMORIAAL,
+    });
+    schrijfAuditLog_('BTW auto-gereserveerd', factuurnummer + ' → 1205: ' + formatBedrag_(btwBedrag));
+  } catch (e) {
+    Logger.log('BTW-reservering mislukt voor ' + factuurnummer + ': ' + e.message);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  VOORLOPIGE AANSLAG IB-SCHATTER (per kwartaal)
+// ─────────────────────────────────────────────
+//
+// Per kwartaal: extrapoleer YTD-winst naar jaar, schat IB+Zvw, en geef
+// klant een concrete reservering-tip per kwartaal.
+// Vele ZZP'ers krijgen aan einde van jaar een navordering omdat ze niets
+// reserveerden — deze functie voorkomt dat.
+
+function berekenVoorlopigeAanslag_(ss) {
+  if (!ss) ss = getSpreadsheet_();
+  const advies = berekenBelastingadvies_(ss);
+  const B = getBelasting_();
+  const winstYTD = advies.winstVoorAftrek || 0;
+
+  // Bepaal hoeveel maanden van het boekjaar verstreken zijn
+  const nu = new Date();
+  const boekjaar = (typeof getBoekjaar_ === 'function') ? getBoekjaar_() : nu.getFullYear();
+  const startBoekjaar = new Date(boekjaar, 0, 1);
+  const verstrekenMs = nu - startBoekjaar;
+  const maandenVerstreken = Math.max(1, Math.min(12, verstrekenMs / (1000 * 60 * 60 * 24 * 30.44)));
+
+  // Lineaire extrapolatie naar jaartotaal
+  const winstJaarSchatting = winstYTD * (12 / maandenVerstreken);
+
+  // Geschatte fiscale last bij die jaar-winst
+  const aftrek = advies.totaalAftrek || 0;
+  const aftrekJaar = aftrek * (12 / maandenVerstreken);
+  const belastbaar = Math.max(0, winstJaarSchatting - aftrekJaar);
+  const ibBruto = berekenIBProgressief_(belastbaar, B, isAowGerechtigd_(B));
+  const ahk = berekenHeffingskorting_(belastbaar, B);
+  const ak = berekenArbeidskorting_(winstJaarSchatting, B);
+  const ibJaar = Math.max(0, rondBedrag_(ibBruto - ahk - ak));
+  const zvwJaar = berekenZvw_(winstJaarSchatting, B);
+  const totaleLast = rondBedrag_(ibJaar + zvwJaar);
+
+  // Per kwartaal te reserveren
+  const perKwartaal = rondBedrag_(totaleLast / 4);
+
+  return {
+    winstYTD: rondBedrag_(winstYTD),
+    winstJaarSchatting: rondBedrag_(winstJaarSchatting),
+    maandenVerstreken: rondBedrag_(maandenVerstreken),
+    geschatteIB: ibJaar,
+    geschatteZvw: zvwJaar,
+    totaleLast: totaleLast,
+    perKwartaal: perKwartaal,
+  };
+}
+
+function toonVoorlopigeAanslagTip() {
+  if (typeof controleerSetupGedaan_ === 'function' && !controleerSetupGedaan_()) return;
+  let v;
+  try { v = berekenVoorlopigeAanslag_(); }
+  catch (e) {
+    SpreadsheetApp.getUi().alert('Voorlopige aanslag', 'Kon niet berekenen: ' + e.message, SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  const ui = SpreadsheetApp.getUi();
+  let bericht = `Voorlopige aanslag-schatting (op basis van YTD-winst):\n\n`;
+  bericht += `Winst dit jaar tot nu toe: ${formatBedrag_(v.winstYTD)}\n`;
+  bericht += `Geëxtrapoleerd naar heel jaar: ${formatBedrag_(v.winstJaarSchatting)}\n\n`;
+  bericht += `Geschatte IB Box 1: ${formatBedrag_(v.geschatteIB)}\n`;
+  bericht += `Geschatte Zvw-bijdrage: ${formatBedrag_(v.geschatteZvw)}\n`;
+  bericht += `TOTALE FISCALE LAST: ${formatBedrag_(v.totaleLast)}\n\n`;
+  bericht += `📦 Reserveer per kwartaal: ${formatBedrag_(v.perKwartaal)}\n`;
+  bericht += `📦 Reserveer per maand: ${formatBedrag_(rondBedrag_(v.totaleLast / 12))}\n\n`;
+  bericht += `Tip: zet dit bedrag bij elke binnenkomende factuur direct apart op een ` +
+             `spaarrekening. Dan staat aan einde jaar het IB-deel klaar voor de aanslag ` +
+             `(deadline 1 mei volgend jaar).`;
+  ui.alert('💼 Voorlopige aanslag IB+Zvw', bericht, ui.ButtonSet.OK);
+}
+
+// ─────────────────────────────────────────────
 //  LIJFRENTE-JAARRUIMTE CALCULATOR
 // ─────────────────────────────────────────────
 //

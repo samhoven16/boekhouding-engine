@@ -411,6 +411,14 @@ function mailMaandrapport() {
     if (!controleerSetupGedaan_()) return;
     const ss = getSpreadsheet_();
     if (!ss) return;
+    // OPT-IN: niet iedereen wil maandelijks PDF-rapport (dashboard volstaat
+    // voor de meesten). Default Nee. Klant zet 'Ja' via Instellingen.
+    const opt = String(getInstelling_('Email maandrapport') || '').toLowerCase().trim();
+    const optActief = opt === 'ja' || opt === 'true' || opt === 'yes';
+    if (!optActief) {
+      Logger.log('Maandrapport overgeslagen: opt-in niet actief (Email maandrapport=Nee)');
+      return;
+    }
 
     const nu = new Date();
     const vorigeMaand = new Date(nu.getFullYear(), nu.getMonth() - 1, 1);
