@@ -70,6 +70,8 @@ function setup() {
       ['Technische tabs verbergen', function() { verbergTechnischeTabbladen_(ss); }],
       ['Grootboekschema laden',     function() { vulGrootboekschema_(ss); }],
       ['Instellingen initialiseren', function() { zetInstellingen_(ss); }],
+      ['Audit Log aanmaken',        function() { setupAuditLogSheet_(); }],
+      ['Beleggingen-tab aanmaken',  function() { setupBeleggingenSheet_(); }],
       ['Formuliers-tabs aanmaken',  function() { maakFormuliersTabbladen_(ss); }],
       ['Hoofdformulier aanmaken',   function() { maakHoofdFormulier_(ss); }],
       ['Werkruimte ordenen',        function() { herorganiseerWerkruimteSilent_(ss); }],
@@ -977,6 +979,14 @@ function installeelTriggers_() {
       .create()
   );
 
+  // onEdit voor audit trail + bedrijfsnaam-detectie
+  nieuweTriggers.push(
+    ScriptApp.newTrigger('onEdit')
+      .forSpreadsheet(ss)
+      .onEdit()
+      .create()
+  );
+
   const hoofdFormId = props.getProperty(PROP.FORM_HOOFD_ID);
   if (hoofdFormId) {
     try {
@@ -992,11 +1002,30 @@ function installeelTriggers_() {
     }
   }
 
+  // Dagelijkse taken: 08:00
   nieuweTriggers.push(
     ScriptApp.newTrigger('dagelijkseTaken')
       .timeBased()
       .atHour(8)
       .everyDays(1)
+      .create()
+  );
+
+  // Wekelijkse samenvatting: maandag 08:00
+  nieuweTriggers.push(
+    ScriptApp.newTrigger('stuurWeeklySamenvatting_')
+      .timeBased()
+      .onWeekDay(ScriptApp.WeekDay.MONDAY)
+      .atHour(8)
+      .create()
+  );
+
+  // Maandrapport per e-mail: 1e van de maand om 10:00
+  nieuweTriggers.push(
+    ScriptApp.newTrigger('mailMaandrapport')
+      .timeBased()
+      .onMonthDay(1)
+      .atHour(10)
       .create()
   );
 
@@ -1007,6 +1036,38 @@ function installeelTriggers_() {
     .forEach(t => ScriptApp.deleteTrigger(t));
 
   Logger.log('Triggers geïnstalleerd (' + nieuweTriggers.length + ' actief)');
+}
+
+// ─────────────────────────────────────────────
+//  AUDIT LOG TABBLAD
+// ─────────────────────────────────────────────
+/**
+ * Maakt het Audit Log-tabblad aan (verborgen, op de achtergrond).
+ * Bevat alle cell-edits op gevoelige tabbladen + alle script-acties.
+ */
+function setupAuditLogSheet_() {
+  const ss = getSpreadsheet_();
+  if (!ss) return;
+  let sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.AUDIT_LOG);
+    sheet.setTabColor('#616161'); // grijs — administratief
+  }
+  if (sheet.getLastRow() > 0) {
+    // Alleen aanvullen als header ontbreekt; nooit data overschrijven
+    return;
+  }
+  const headers = ['Tijdstip', 'Gebruiker', 'Tabblad', 'Cel', 'Oude waarde', 'Nieuwe waarde', 'Type'];
+  zetHeaderRij_(sheet, headers);
+  sheet.setColumnWidth(1, 160);
+  sheet.setColumnWidth(2, 200);
+  sheet.setColumnWidth(3, 130);
+  sheet.setColumnWidth(4, 80);
+  sheet.setColumnWidth(5, 220);
+  sheet.setColumnWidth(6, 220);
+  sheet.setColumnWidth(7, 120);
+  // Verberg standaard — gebruiker kan via menu "Audit Log tonen" openen
+  try { sheet.hideSheet(); } catch (e) {}
 }
 
 // ─────────────────────────────────────────────
@@ -1056,6 +1117,30 @@ function getInstelling_(sleutel) {
   return Object.prototype.hasOwnProperty.call(_instellingenCache, sleutel)
     ? _instellingenCache[sleutel]
     : null;
+}
+
+/**
+ * Schrijft een instelling weg naar het Instellingen-tabblad.
+ * Voegt nieuwe rij toe als sleutel niet bestaat. Invalideert cache.
+ *
+ * @param {string} sleutel Sleutel-naam (bv. 'Geboortedatum').
+ * @param {string|number} waarde Waarde om weg te schrijven.
+ */
+function setInstelling_(sleutel, waarde) {
+  const ss = getSpreadsheet_();
+  const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
+  if (!sheet) throw new Error('Tabblad Instellingen niet gevonden');
+  const data = sheet.getDataRange().getValues();
+  for (let i = 0; i < data.length; i++) {
+    if (String(data[i][0] || '') === String(sleutel)) {
+      sheet.getRange(i + 1, 2).setValue(waarde);
+      _instellingenCache = null; // Invalideren — volgende getInstelling_ leest vers
+      return;
+    }
+  }
+  // Niet gevonden → append onderaan
+  sheet.appendRow([sleutel, waarde]);
+  _instellingenCache = null;
 }
 
 // ─────────────────────────────────────────────

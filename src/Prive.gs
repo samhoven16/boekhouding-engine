@@ -229,10 +229,13 @@ function vernieuwPriveDashboard_(ss) {
   const perCategorie = {};
 
   for (let i = 1; i < data.length; i++) {
-    const datum  = data[i][0] ? new Date(data[i][0]) : null;
+    // parseDatum_ + isNaN-check — voorheen gaf `new Date('corrupt')` een
+    // Date-object met NaN getime, en `!datum` was false → loop crashte
+    // bij datum.getFullYear().
+    const datum  = data[i][0] ? parseDatum_(data[i][0]) : null;
     const bedrag = parseFloat(data[i][3]) || 0;
     const cat    = String(data[i][2] || 'Overig');
-    if (!datum) continue;
+    if (!datum || isNaN(datum.getTime())) continue;
 
     if (datum.getFullYear() === huidigeJ) {
       if (bedrag > 0) inkomstenJaar  += bedrag;
@@ -324,9 +327,9 @@ function openIbAangifteHelper() {
         <input type="number" id="b3vermogen" placeholder="0" step="1000">
       </div>
       <div class="form-row">
-        <label>Schulden die aftrekbaar zijn in Box 3 (boven €3.400 drempel)</label>
+        <label>Schulden die aftrekbaar zijn in Box 3 (boven €3.700 drempel)</label>
         <input type="number" id="b3schulden" placeholder="0" step="100">
-        <div class="info">Heffingsvrij 2025: €57.000 per persoon (€114.000 fiscaal partners).</div>
+        <div class="info">Heffingsvrij 2025: €57.684 per persoon (€115.368 fiscaal partners). Tarief Box 3: 36%.</div>
       </div>
     </div>
 
@@ -342,32 +345,46 @@ function openIbAangifteHelper() {
         var b3v = parseFloat(document.getElementById('b3vermogen').value) || 0;
         var b3s = parseFloat(document.getElementById('b3schulden').value) || 0;
 
-        // Box 1
+        // Box 1 — 3 schijven 2025 (jonger dan AOW-leeftijd)
+        // Schijf 1: tot €38.441 = 35,82% (8,17% IB + 27,65% premies volksverzekeringen)
+        // Schijf 2: €38.441 – €76.817 = 37,48%
+        // Schijf 3: > €76.817 = 49,5%
         var b1belastbaar = Math.max(0, b1i - b1a);
+        var grensS1 = 38441;
+        var grensS2 = 76817;
         var b1belasting = 0;
-        var grens1 = 76817;
-        if (b1belastbaar <= grens1) {
+        if (b1belastbaar <= grensS1) {
           b1belasting = b1belastbaar * 0.3582;
+        } else if (b1belastbaar <= grensS2) {
+          b1belasting = grensS1 * 0.3582 + (b1belastbaar - grensS1) * 0.3748;
         } else {
-          b1belasting = grens1 * 0.3582 + (b1belastbaar - grens1) * 0.495;
+          b1belasting = grensS1 * 0.3582
+                      + (grensS2 - grensS1) * 0.3748
+                      + (b1belastbaar - grensS2) * 0.495;
         }
-        // Heffingskorting (vereenvoudigd)
+        // Heffingskorting (vereenvoudigd — voor topverdieners wordt deze afgebouwd)
         var heffingskorting = Math.min(3068, b1belasting);
         b1belasting = Math.max(0, b1belasting - heffingskorting);
 
-        // Box 2
+        // Box 2 (aanmerkelijk belang) 2025: schijf €0–€67.000 = 24,5%, daarboven 31%
         var b2belasting = 0;
         if (b2d > 0) {
-          var grens2 = 67000;
-          if (b2d <= grens2) b2belasting = b2d * 0.245;
-          else b2belasting = grens2 * 0.245 + (b2d - grens2) * 0.33;
+          var grensB2 = 67000;
+          if (b2d <= grensB2) b2belasting = b2d * 0.245;
+          else b2belasting = grensB2 * 0.245 + (b2d - grensB2) * 0.31;
         }
 
-        // Box 3 (forfaitair rendement 2025: spaargeld 1,44%, overig 6,04%)
-        var heffingsvrij = 57000;
+        // Box 3 (forfaitair rendement) 2025
+        //   Heffingsvrij vermogen: €57.684 per persoon (€115.368 fiscaal partners)
+        //   Forfait spaargeld: 1,44%   |  Forfait beleggingen: 5,88%
+        //   Tarief: 36% over fictief rendement
+        // Vereenvoudigde benadering: gemengde portefeuille → 5,88% (overschat
+        // bij overwegend spaargeld; voor exact berekening: tegenbewijsregeling
+        // bij Belastingdienst).
+        var heffingsvrij = 57684;
         var b3grondslag = Math.max(0, b3v - b3s - heffingsvrij);
-        var b3rendement = b3grondslag * 0.0644; // Gewogen gemiddelde 2025
-        var b3belasting = b3rendement * 0.36;   // 36% over fictief rendement
+        var b3rendement = b3grondslag * 0.0588; // Forfait beleggingen 2025 (gemengd ~ overig)
+        var b3belasting = b3rendement * 0.36;   // 36% box 3-tarief 2025
 
         var totaal = b1belasting + b2belasting + b3belasting;
 
@@ -442,11 +459,13 @@ function beheerVermogensoverzicht() {
   for (let i = 1; i < data.length; i++) {
     totaal += parseFloat(data[i][2]) || 0;
   }
-  const heffingsvrij = 57000;
+  // Heffingsvrij vermogen Box 3 2025: €57.684 per persoon (was €57.000 in 2024).
+  // Bron: belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2025
+  const heffingsvrij = 57684;
   const grondslag = Math.max(0, totaal - heffingsvrij);
 
   ss.toast(
-    `Totaal vermogen: ${formatBedrag_(totaal)}  |  Box 3 grondslag (na heffingsvrij €57.000): ${formatBedrag_(grondslag)}`,
+    `Totaal vermogen: ${formatBedrag_(totaal)}  |  Box 3 grondslag (na heffingsvrij €57.684): ${formatBedrag_(grondslag)}`,
     '💼 Vermogensoverzicht', 8
   );
 }

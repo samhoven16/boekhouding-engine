@@ -176,6 +176,55 @@ function isGeldigBTWNummer_(btwNr) {
   return /^NL\d{9}B\d{2}$/.test(btwNr.replace(/\s/g, '').toUpperCase());
 }
 
+/**
+ * Strikte EU BTW-nummer-formaat-check (alle EU-landen).
+ * Werkt op de meeste EU-formaten — voor NL is dat strikter via isGeldigBTWNummer_.
+ * Voorkomt dat BTW-nummer-veld leeg blijft of vol staat met onzin
+ * (essentieel bij verleggingsregeling waar BTW-nr klant verplicht is).
+ *
+ * @param {string} btwNr Te valideren BTW-nummer.
+ * @return {boolean} true als formaat een EU-BTW-nummer is.
+ */
+function isGeldigEuBTWNummer_(btwNr) {
+  if (!btwNr) return false;
+  const schoon = String(btwNr).replace(/\s/g, '').toUpperCase();
+  // EU-formaten per land — niet uitputtend voor cijfers (geen MOD-checksum)
+  // maar voldoende voor formaat-validatie. Bron: Europese Commissie VIES.
+  const patronen = {
+    AT: /^ATU\d{8}$/,            // Oostenrijk
+    BE: /^BE0\d{9}$/,            // België
+    BG: /^BG\d{9,10}$/,          // Bulgarije
+    CY: /^CY\d{8}[A-Z]$/,        // Cyprus
+    CZ: /^CZ\d{8,10}$/,          // Tsjechië
+    DE: /^DE\d{9}$/,             // Duitsland
+    DK: /^DK\d{8}$/,             // Denemarken
+    EE: /^EE\d{9}$/,             // Estland
+    EL: /^EL\d{9}$/,             // Griekenland (kan ook GR)
+    GR: /^GR\d{9}$/,
+    ES: /^ES[A-Z\d]\d{7}[A-Z\d]$/, // Spanje
+    FI: /^FI\d{8}$/,             // Finland
+    FR: /^FR[A-Z\d]{2}\d{9}$/,   // Frankrijk
+    HR: /^HR\d{11}$/,            // Kroatië
+    HU: /^HU\d{8}$/,             // Hongarije
+    IE: /^IE[\d]{7}[A-Z]{1,2}$|^IE\d[A-Z]\d{5}[A-Z]$/, // Ierland (2 formaten)
+    IT: /^IT\d{11}$/,            // Italië
+    LT: /^LT(\d{9}|\d{12})$/,    // Litouwen
+    LU: /^LU\d{8}$/,             // Luxemburg
+    LV: /^LV\d{11}$/,            // Letland
+    MT: /^MT\d{8}$/,             // Malta
+    NL: /^NL\d{9}B\d{2}$/,       // Nederland (zelfde als isGeldigBTWNummer_)
+    PL: /^PL\d{10}$/,            // Polen
+    PT: /^PT\d{9}$/,             // Portugal
+    RO: /^RO\d{2,10}$/,          // Roemenië
+    SE: /^SE\d{12}$/,            // Zweden
+    SI: /^SI\d{8}$/,             // Slovenië
+    SK: /^SK\d{10}$/,            // Slowakije
+  };
+  const land = schoon.slice(0, 2);
+  const regex = patronen[land];
+  return regex ? regex.test(schoon) : false;
+}
+
 function isGeldigKvKNummer_(kvk) {
   kvk = String(kvk || '');
   if (!kvk) return false;
@@ -183,9 +232,11 @@ function isGeldigKvKNummer_(kvk) {
 }
 
 function isGeldigEmail_(email) {
-  email = String(email || '');
-  if (!email) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  email = String(email || '').trim();
+  if (!email || email.length > 254) return false;
+  // RFC 5322 simplified: lokaal deel + @ + domein met geldige TLD (≥2 letters).
+  // Voorkomt false-positives als 'a@b.c' of 'test@.co' die GmailApp-crash geven.
+  return /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/.test(email);
 }
 
 // ─────────────────────────────────────────────
@@ -295,6 +346,26 @@ function getBoekjaarPeriode_() {
     van: parseDatum_(startStr) || new Date(new Date().getFullYear(), 0, 1),
     tot: parseDatum_(eindeStr) || new Date(new Date().getFullYear(), 11, 31, 23, 59, 59, 999),
   };
+}
+
+/**
+ * Single source of truth voor boekjaar-nummer.
+ * Robust voor formaten: "2025", "2025-01-01", "01-01-2025", "01/01/2025".
+ * Valt terug op huidig kalenderjaar bij ontbrekende of corrupte instelling.
+ */
+function getBoekjaar_() {
+  const raw = getInstelling_('Boekjaar start') || '';
+  const str = String(raw).trim();
+  if (!str) return new Date().getFullYear();
+
+  // Match een 4-cijferig jaartal in de string.
+  const match = str.match(/(\d{4})/);
+  if (match) {
+    const jaar = parseInt(match[1], 10);
+    if (jaar >= 2000 && jaar <= 2100) return jaar;
+  }
+
+  return new Date().getFullYear();
 }
 
 // ─────────────────────────────────────────────
@@ -516,4 +587,70 @@ function controleerSetupGedaan_() {
     );
   } catch (e) { Logger.log('controleerSetupGedaan_: UI niet beschikbaar'); }
   return false;
+}
+
+// ─────────────────────────────────────────────
+//  WISSELKOERS (ECB) — gecached, free, geen auth
+// ─────────────────────────────────────────────
+
+/**
+ * Haalt de wisselkoers van een valuta naar EUR via ECB (gratis XML feed).
+ * 4-uur cache via CacheService. Fallback: 1.0 bij netwerkfout.
+ *
+ * @param {string} valuta  ISO-code zoals "USD", "GBP", "JPY".
+ * @return {number} Aantal valuta dat 1 EUR oplevert (bv. USD = ~1.08).
+ */
+function getWisselkoers_(valuta) {
+  const code = String(valuta || '').toUpperCase().trim();
+  if (!code || code === 'EUR') return 1.0;
+
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'fxrate_' + code;
+  const cached = cache.get(cacheKey);
+  if (cached !== null) {
+    const n = parseFloat(cached);
+    if (isFinite(n) && n > 0) return n;
+  }
+
+  try {
+    const url = 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml';
+    const resp = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      followRedirects: true,
+      validateHttpsCertificates: true,
+    });
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('ECB FX feed niet bereikbaar: ' + resp.getResponseCode());
+      return 1.0;
+    }
+    const xml = resp.getContentText();
+    // Parse de XML: zoek <Cube currency="USD" rate="1.0876"/>
+    const re = new RegExp('currency=[\'"]' + code + '[\'"][^>]*rate=[\'"]([\\d.]+)[\'"]');
+    const match = xml.match(re);
+    if (match && match[1]) {
+      const rate = parseFloat(match[1]);
+      if (isFinite(rate) && rate > 0) {
+        cache.put(cacheKey, String(rate), 14400); // 4 uur
+        return rate;
+      }
+    }
+  } catch (e) {
+    Logger.log('getWisselkoers_ fout: ' + e.message);
+  }
+  return 1.0;
+}
+
+/**
+ * Converteert een bedrag van een vreemde valuta naar EUR.
+ *
+ * @param {number} bedrag Bedrag in vreemde valuta.
+ * @param {string} valuta ISO-code.
+ * @return {number} Bedrag in EUR (afgerond op 2 decimalen).
+ */
+function naarEuro_(bedrag, valuta) {
+  const n = Number(bedrag);
+  if (!isFinite(n)) return 0;
+  const rate = getWisselkoers_(valuta);
+  if (!rate || rate === 1) return Math.round(n * 100) / 100;
+  return Math.round((n / rate) * 100) / 100;
 }

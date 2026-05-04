@@ -85,13 +85,17 @@ function onOpen() {
       .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
       .addItem('Accountantspakket exporteren', 'exporteerAccountantsPakket')
       .addItem('Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
+      .addItem('Maandrapport nu versturen', 'mailMaandrapport')
       .addSeparator()
+      .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
       .addItem('Gesloten periodes beheren', 'beheerGeslotenPeriodes')
     )
 
     // ── Hulp & advies ─────────────────────────
     .addItem('Hulp & Assistent', 'openAssistent')
     .addItem('Belastingtips & besparingen', 'genereerBelastingadvies')
+    .addItem('💡 Wat-als simulator (impact extra omzet/investering)', 'toonWatAlsSimulator')
+    .addItem('📋 Persoonlijk fiscaal profiel invullen', 'toonFiscaalProfielWizard')
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────
@@ -154,6 +158,8 @@ function onOpen() {
       .addSeparator()
       .addItem('Privé transactie toevoegen', 'voegPriveTransactieToe')
       .addItem('Vermogensoverzicht beheren', 'beheerVermogensoverzicht')
+      .addSeparator()
+      .addItem('Beleggingen tab (live koersen)', 'voegBeleggingenTabToe')
       .addSeparator()
       .addItem('IB-aangifte schatting (Box 1/2/3)', 'openIbAangifteHelper')
     )

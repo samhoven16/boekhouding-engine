@@ -122,6 +122,178 @@ function toonWelkomstWizard() {
 }
 
 // ─────────────────────────────────────────────
+//  FISCAAL PROFIEL WIZARD (POST-SETUP)
+//  ────────────────────────────────────────────
+// Vraagt 6 simpele ja/nee/datum-velden uit en zet ze in Instellingen.
+// Daarna geeft Belastingadvies persoonlijk advies zonder dat klant zelf
+// moet weten wat een KIA, AOV, WBSO of stakingsaftrek is.
+
+function toonFiscaalProfielWizard() {
+  const ss = getSpreadsheet_();
+  // Lees huidige waarden uit Instellingen om als default te tonen
+  const huidig = {
+    geboortedatum: getInstelling_('Geboortedatum') || '',
+    startjaar: getInstelling_('Startjaar onderneming') || '',
+    bedrijfsactiviteit: getInstelling_('Bedrijfsactiviteit') || '',
+    aovActief: getInstelling_('AOV polis actief') || '',
+    wbsoActief: getInstelling_('WBSO actief') || '',
+    stakingsdatum: getInstelling_('Stakingsdatum onderneming') || '',
+  };
+  const today = new Date().toISOString().slice(0, 10);
+  const huidigJaar = new Date().getFullYear();
+
+  const html = HtmlService.createHtmlOutput(`
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+     padding:20px;font-size:13px;color:#1A1A1A;background:#F7F9FC;margin:0}
+h2{color:#0D1B4E;margin:0 0 6px;font-size:20px;font-weight:800;letter-spacing:-0.01em}
+.sub{color:#5F6B7A;font-size:12px;margin-bottom:18px;line-height:1.5}
+.veld{margin-bottom:14px}
+label{display:block;font-weight:600;font-size:12px;color:#0D1B4E;margin-bottom:4px}
+.help{color:#5F6B7A;font-size:11px;margin-top:3px;line-height:1.4}
+input,select{width:100%;padding:9px 12px;border:1px solid #E5EAF2;border-radius:6px;
+             font-size:13px;font-family:inherit;background:#fff}
+input:focus,select:focus{outline:none;border-color:#2EC4B6}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{background:#2EC4B6;color:white;border:none;padding:11px 22px;border-radius:8px;
+     cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;
+     width:100%;margin-top:18px;transition:background 0.15s}
+.btn:hover{background:#28B0A4}
+.btn-skip{background:transparent;color:#5F6B7A;border:none;cursor:pointer;font-size:12px;
+          font-family:inherit;width:100%;margin-top:8px;padding:6px}
+.tip{background:#FFF8E1;border-radius:8px;padding:12px 14px;font-size:11px;
+     color:#5A3F00;margin-top:14px;line-height:1.5}
+.status{padding:10px;border-radius:6px;margin-top:10px;font-size:12px;display:none}
+.status.success{background:#E8F5E9;color:#1B5E20}
+.status.error{background:#FFEBEE;color:#B71C1C}
+</style></head>
+<body>
+<h2>📋 Persoonlijk fiscaal profiel</h2>
+<div class="sub">
+  6 vragen → Boekhoudbaar geeft daarna automatisch persoonlijk belastingadvies
+  voor KIA, AOV, WBSO, AOW-leeftijd en alle aftrekposten waar u recht op heeft.
+</div>
+
+<div class="veld">
+  <label>1. Geboortedatum</label>
+  <input id="geboortedatum" type="date" value="${huidig.geboortedatum || ''}">
+  <div class="help">Voor AOW-leeftijd-check. AOW-gerechtigden krijgen lager schijf-1-tarief (~17,8% i.p.v. 35,7%).</div>
+</div>
+
+<div class="veld">
+  <label>2. Startjaar van uw onderneming</label>
+  <input id="startjaar" type="number" min="1990" max="${huidigJaar}" placeholder="${huidigJaar}" value="${huidig.startjaar || ''}">
+  <div class="help">Voor startersaftrek (€2.123 in eerste 3 jaar) en starterbonus WBSO (€7.996 eerste 5 jaar).</div>
+</div>
+
+<div class="veld">
+  <label>3. Bedrijfsactiviteit (kort)</label>
+  <input id="bedrijfsactiviteit" type="text" placeholder="bijv. Software-ontwikkeling, B&B, Consultancy" value="${escHtml_(huidig.bedrijfsactiviteit || '')}">
+  <div class="help">Voor branche-specifieke tips (bijv. logies-BTW 21% per 2026, R&D-detectie).</div>
+</div>
+
+<div class="row">
+  <div class="veld">
+    <label>4. Heeft u een AOV?</label>
+    <select id="aovActief">
+      <option value="">— niet ingevuld —</option>
+      <option value="Ja" ${huidig.aovActief === 'Ja' ? 'selected' : ''}>Ja, ik betaal AOV-premie</option>
+      <option value="Nee" ${huidig.aovActief === 'Nee' ? 'selected' : ''}>Nee, geen AOV</option>
+    </select>
+    <div class="help">AOV-premie is aftrekbaar in box 1. Verplichte AOV vanaf uiterlijk 2030.</div>
+  </div>
+
+  <div class="veld">
+    <label>5. Doet u R&D / innovatie-werk?</label>
+    <select id="wbsoActief">
+      <option value="">— niet ingevuld —</option>
+      <option value="Ja" ${huidig.wbsoActief === 'Ja' ? 'selected' : ''}>Ja (≥500u/jaar)</option>
+      <option value="Nee" ${huidig.wbsoActief === 'Nee' ? 'selected' : ''}>Nee</option>
+    </select>
+    <div class="help">Bij Ja: WBSO-aftrek mogelijk (€15.979 + starterbonus). Vraagt S&O-verklaring bij RVO.</div>
+  </div>
+</div>
+
+<div class="veld">
+  <label>6. Stopt u dit jaar met uw onderneming? (optioneel)</label>
+  <input id="stakingsdatum" type="date" value="${huidig.stakingsdatum || ''}">
+  <div class="help">Bij staking dit jaar: stakingsaftrek €3.630 (eenmalig per leven) + stakingslijfrente.</div>
+</div>
+
+<div class="tip">
+  💡 Alle antwoorden gaan naar het tabblad "Instellingen" en kunnen later
+  altijd worden aangepast. Vragen die u openlaat blokkeren niets — het systeem
+  geeft dan minder gepersonaliseerd advies.
+</div>
+
+<button class="btn" onclick="opslaan()">Opslaan & persoonlijk advies activeren</button>
+<button class="btn-skip" onclick="google.script.host.close()">Sla over (later doen)</button>
+
+<div id="status" class="status"></div>
+
+<script>
+function opslaan() {
+  var data = {
+    geboortedatum: document.getElementById('geboortedatum').value,
+    startjaar: document.getElementById('startjaar').value,
+    bedrijfsactiviteit: document.getElementById('bedrijfsactiviteit').value,
+    aovActief: document.getElementById('aovActief').value,
+    wbsoActief: document.getElementById('wbsoActief').value,
+    stakingsdatum: document.getElementById('stakingsdatum').value,
+  };
+  var s = document.getElementById('status');
+  s.className = 'status';
+  s.style.display = 'block';
+  s.textContent = 'Bezig met opslaan...';
+  google.script.run
+    .withSuccessHandler(function(){
+      s.className = 'status success';
+      s.textContent = '✓ Profiel opgeslagen — open Boekhouding → Belastingtips voor uw advies.';
+      setTimeout(function(){ google.script.host.close(); }, 1800);
+    })
+    .withFailureHandler(function(e){
+      s.className = 'status error';
+      s.textContent = 'Fout: ' + e.message;
+    })
+    .slaFiscaalProfielOp(data);
+}
+</script>
+</body></html>
+  `).setWidth(560).setHeight(700);
+
+  SpreadsheetApp.getUi().showModalDialog(html, '📋 Fiscaal profiel');
+}
+
+/**
+ * Server-side handler — schrijft profielwaarden naar Instellingen-sheet.
+ * Lege waarden worden overgeslagen (bestaand blijft).
+ */
+function slaFiscaalProfielOp(data) {
+  if (!data) return false;
+  const ss = getSpreadsheet_();
+  const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
+  if (!sheet) throw new Error('Tabblad Instellingen niet gevonden — run setup eerst.');
+  const veldMap = {
+    'Geboortedatum':              data.geboortedatum,
+    'Startjaar onderneming':      data.startjaar,
+    'Bedrijfsactiviteit':         data.bedrijfsactiviteit,
+    'AOV polis actief':           data.aovActief,
+    'WBSO actief':                data.wbsoActief,
+    'Stakingsdatum onderneming':  data.stakingsdatum,
+  };
+  Object.keys(veldMap).forEach(function(naam) {
+    const waarde = veldMap[naam];
+    if (waarde === '' || waarde == null) return;
+    try { setInstelling_(naam, waarde); }
+    catch (e) { Logger.log('Profiel-veld ' + naam + ': ' + e.message); }
+  });
+  try { schrijfAuditLog_('Fiscaal profiel bijgewerkt', Object.keys(veldMap).filter(function(k){return veldMap[k];}).join(', ')); } catch (_) {}
+  return true;
+}
+
+// ─────────────────────────────────────────────
 //  VERSIE-UPDATE NOTIFICATIE
 // ─────────────────────────────────────────────
 

@@ -28,54 +28,159 @@
 // ─────────────────────────────────────────────
 //  BELASTING TARIEVEN EN GRENZEN PER JAAR
 //  Bijwerken elk jaar in jan/feb op basis van Prinsjesdag
+//  Bronnen: belastingdienst.nl + kvk.nl/geldzaken/belastingtarieven-{jaar}
 // ─────────────────────────────────────────────
+//
+// IB Box 1 jonger dan AOW heeft drie schijven:
+//   schijf 1 (laagste tarief, incl. premies)
+//   schijf 2 (middeltarief, incl. premies)
+//   schijf 3 (hoogste tarief, alleen IB — geen premies meer)
+//
+// Voor backwards-compat behouden we IB_SCHIJF_1_PCT/IB_SCHIJF_2_PCT als
+// snelle besparing-benadering (= schijf 1 voor de meeste ZZP'ers).
+// Voor de geschatteIB-berekening gebruiken we nu IB_SCHIJVEN array.
 const BELASTING_PER_JAAR = {
   2025: {
     ZELFSTANDIGENAFTREK:    2470,
     STARTERSAFTREK:         2123,
+    STAKINGSAFTREK:         3630,    // Eenmalig per leven bij staken onderneming
     MKB_WINSTVRIJSTELLING:  0.1270,
-    FOR_MAX:                10786,
+    FOR_MAX:                10786,    // FOR afgeschaft 2023 — alleen oude saldo's
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          35987,
     AOW_FRANCHISE:          14110,
+    AOW_LEEFTIJD:           67,      // 2025/2026/2027 = 67 jaar
     BOX3_GROEN_VRIJSTELLING: 65072,
-    IB_SCHIJF_1_MAX:        76817,
-    IB_SCHIJF_1_PCT:        0.3582,
-    IB_SCHIJF_2_PCT:        0.495,
-    HEFFINGSKORTING_MAX:    3068,
-    ARBEIDSKORTING_MAX:     5625,
+    BOX3_HEFFINGSVRIJ:      57684,
+    BOX3_FORFAIT_BELEGGING: 0.0588,
+    BOX3_FORFAIT_SPAAR:     0.0144,
+    BOX3_TARIEF:            0.36,
+    // Legacy — gebruikt voor snelle besparing-schatting + backwards compat.
+    IB_SCHIJF_1_MAX:        76817,    // = bovengrens schijf 2 (legacy naam)
+    IB_SCHIJF_1_PCT:        0.3582,   // = schijf 1 tarief
+    IB_SCHIJF_2_PCT:        0.495,    // = schijf 3 tarief (legacy naam)
+    HEFFINGSKORTING_MAX:    3068,     // 2025 algemene heffingskorting max
+    HEFFINGSKORTING_AFBOUW_VAN: 28406,
+    HEFFINGSKORTING_AFBOUW_PCT: 0.0634,
+    HEFFINGSKORTING_NUL_VAN:    76817,
+    ARBEIDSKORTING_MAX:     5599,
+    ARBEIDSKORTING_TOP_TOT: 43071,    // 2025 inkomen waar max bereikt
+    ARBEIDSKORTING_AFBOUW_VAN: 43071,
+    ARBEIDSKORTING_AFBOUW_PCT: 0.0651,
+    // Zvw inkomensafhankelijke bijdrage ZZP
+    ZVW_PCT:                0.0526,
+    ZVW_MAX_INKOMEN:        75864,
+    // WBSO 2025
+    WBSO_AFTREK:            15738,
+    WBSO_STARTERSBONUS:     7996,
+    // EIA 2025
+    EIA_PCT:                0.40,
+    EIA_MIN:                2500,
+    // Logies-BTW 2025: 9% (laag tarief)
+    LOGIES_BTW_PCT:         0.09,
+    // Nieuw — expliciete 3-schijven structuur voor accurate IB-berekening
+    IB_SCHIJVEN: [
+      { tot: 38441,    pct: 0.3582 },  // schijf 1: 8,17% IB + 27,65% premies = 35,82%
+      { tot: 76817,    pct: 0.3748 },  // schijf 2: 37,48%
+      { tot: Infinity, pct: 0.495  },  // schijf 3: 49,5%
+    ],
+    // Voor AOW-gerechtigden (geen AOW-premie meer in schijf 1)
+    IB_SCHIJVEN_AOW: [
+      { tot: 38441,    pct: 0.1782 },  // schijf 1 zonder AOW-premie ≈ 17,82%
+      { tot: 76817,    pct: 0.3748 },
+      { tot: Infinity, pct: 0.495  },
+    ],
   },
   2026: {
-    ZELFSTANDIGENAFTREK:    2470,    // Stabiel t.o.v. 2025 (afbouw gestopt)
-    STARTERSAFTREK:         2123,
-    MKB_WINSTVRIJSTELLING:  0.1270,
-    FOR_MAX:                10786,
+    ZELFSTANDIGENAFTREK:    1200,    // Verlaagd per 2026 (was €2.470 in 2025)
+    STARTERSAFTREK:         2123,    // Ongewijzigd
+    STAKINGSAFTREK:         3630,
+    MKB_WINSTVRIJSTELLING:  0.1270,  // Ongewijzigd t.o.v. 2025
+    FOR_MAX:                10786,   // Geen nieuwe FOR-vorming sinds 2023
     THUISWERK_PER_DAG:      2.40,
-    LIJFRENTE_MAX:          38000,   // 2026: indicatief hogere jaarruimte
-    AOW_FRANCHISE:          14540,   // 2026: geïndexeerd
-    BOX3_GROEN_VRIJSTELLING: 67000,  // 2026: indicatief geïndexeerd
-    IB_SCHIJF_1_MAX:        76817,   // 2026: ongewijzigd (wet IB herziening 2026)
-    IB_SCHIJF_1_PCT:        0.3693,  // 2026: 36,93%
-    IB_SCHIJF_2_PCT:        0.495,
-    HEFFINGSKORTING_MAX:    3068,
-    ARBEIDSKORTING_MAX:     5599,    // 2026: lichte daling
+    LIJFRENTE_MAX:          38000,
+    AOW_FRANCHISE:          14540,
+    AOW_LEEFTIJD:           67,
+    BOX3_GROEN_VRIJSTELLING: 67000,
+    BOX3_HEFFINGSVRIJ:      59500,    // Indicatief; bevestigen na Prinsjesdag
+    BOX3_FORFAIT_BELEGGING: 0.0778,   // Voorstel kabinet (was 5,88% in 2025)
+    BOX3_FORFAIT_SPAAR:     0.0144,
+    BOX3_TARIEF:            0.36,
+    IB_SCHIJF_1_MAX:        79137,   // bovengrens schijf 2
+    IB_SCHIJF_1_PCT:        0.357,   // schijf 1: 35,7%
+    IB_SCHIJF_2_PCT:        0.495,   // schijf 3: 49,5% (legacy naam)
+    HEFFINGSKORTING_MAX:    3115,    // 2026: max algemene heffingskorting
+    HEFFINGSKORTING_AFBOUW_VAN: 29739,
+    HEFFINGSKORTING_AFBOUW_PCT: 0.0640,
+    HEFFINGSKORTING_NUL_VAN:    78426,
+    ARBEIDSKORTING_MAX:     5685,    // 2026: tot inkomen €45.592
+    ARBEIDSKORTING_TOP_TOT: 45592,
+    ARBEIDSKORTING_AFBOUW_VAN: 45592,
+    ARBEIDSKORTING_AFBOUW_PCT: 0.0651,
+    ZVW_PCT:                0.0485,
+    ZVW_MAX_INKOMEN:        79409,
+    WBSO_AFTREK:            15979,
+    WBSO_STARTERSBONUS:     7996,
+    EIA_PCT:                0.40,
+    EIA_MIN:                2500,
+    // Logies-BTW 2026: VERHOOGD naar 21% per 1-1-2026 (was 9% in 2025)
+    LOGIES_BTW_PCT:         0.21,
+    IB_SCHIJVEN: [
+      { tot: 38883,    pct: 0.357  },  // schijf 1
+      { tot: 79137,    pct: 0.3756 },  // schijf 2
+      { tot: Infinity, pct: 0.495  },  // schijf 3
+    ],
+    IB_SCHIJVEN_AOW: [
+      { tot: 38883,    pct: 0.1770 },  // schijf 1 voor AOW-gerechtigden
+      { tot: 79137,    pct: 0.3756 },
+      { tot: Infinity, pct: 0.495  },
+    ],
   },
   // 2027: placeholder — vervang met officiële Miljoenennota-cijfers Prinsjesdag 2026.
   // Bij ontbreken valt getBelasting_() terug op 2026-tarieven met waarschuwing.
   2027: {
-    ZELFSTANDIGENAFTREK:    2470,    // INDICATIEF — controleer na Prinsjesdag 2026
+    ZELFSTANDIGENAFTREK:    900,     // INDICATIEF — afbouw zet door
     STARTERSAFTREK:         2123,
+    STAKINGSAFTREK:         3630,
     MKB_WINSTVRIJSTELLING:  0.1270,
     FOR_MAX:                10786,
     THUISWERK_PER_DAG:      2.40,
-    LIJFRENTE_MAX:          39000,   // geïndexeerde schatting
+    LIJFRENTE_MAX:          39000,
     AOW_FRANCHISE:          14800,
+    AOW_LEEFTIJD:           67,     // 2027 ongewijzigd 67; 2028 → 67j 3m
     BOX3_GROEN_VRIJSTELLING: 68000,
-    IB_SCHIJF_1_MAX:        78500,   // geïndexeerde schatting
-    IB_SCHIJF_1_PCT:        0.3693,
+    BOX3_HEFFINGSVRIJ:      60500,
+    BOX3_FORFAIT_BELEGGING: 0.0780,
+    BOX3_FORFAIT_SPAAR:     0.0150,
+    BOX3_TARIEF:            0.36,
+    IB_SCHIJF_1_MAX:        80500,
+    IB_SCHIJF_1_PCT:        0.357,
     IB_SCHIJF_2_PCT:        0.495,
-    HEFFINGSKORTING_MAX:    3100,
-    ARBEIDSKORTING_MAX:     5650,
+    HEFFINGSKORTING_MAX:    3150,
+    HEFFINGSKORTING_AFBOUW_VAN: 30200,
+    HEFFINGSKORTING_AFBOUW_PCT: 0.0640,
+    HEFFINGSKORTING_NUL_VAN:    79500,
+    ARBEIDSKORTING_MAX:     5750,
+    ARBEIDSKORTING_TOP_TOT: 46500,
+    ARBEIDSKORTING_AFBOUW_VAN: 46500,
+    ARBEIDSKORTING_AFBOUW_PCT: 0.0651,
+    ZVW_PCT:                0.0490,
+    ZVW_MAX_INKOMEN:        81000,
+    WBSO_AFTREK:            16200,
+    WBSO_STARTERSBONUS:     8100,
+    EIA_PCT:                0.40,
+    EIA_MIN:                2500,
+    LOGIES_BTW_PCT:         0.21,
+    IB_SCHIJVEN: [
+      { tot: 39500,    pct: 0.357  },
+      { tot: 80500,    pct: 0.3756 },
+      { tot: Infinity, pct: 0.495  },
+    ],
+    IB_SCHIJVEN_AOW: [
+      { tot: 39500,    pct: 0.1770 },
+      { tot: 80500,    pct: 0.3756 },
+      { tot: Infinity, pct: 0.495  },
+    ],
   },
 };
 
@@ -96,9 +201,19 @@ function getBelasting_() {
   const tarieven = serverTarieven || BELASTING_PER_JAAR[jaar] || BELASTING_PER_JAAR[2026];
   return Object.assign({
     KOR_GRENS:              20000,
-    KIA_MIN:                2801,
-    KIA_MAX:                353973,
+    // KIA 2025 (bron: belastingdienst.nl/.../kleinschaligheidsinvesteringsaftrek-2025)
+    //  - investering < €2.901          → geen KIA
+    //  - €2.901  – €69.765             → 28% van investeringsbedrag
+    //  - €69.765 – €130.744            → vast €19.769
+    //  - €130.744 – €392.230           → €19.769 − 7,56% × (investering − €130.744)
+    //  - investering > €392.230        → geen KIA
+    KIA_MIN:                2901,
+    KIA_MAX:                392230,
     KIA_PCT:                0.28,
+    KIA_VAST_VAN:           69765,
+    KIA_VAST_BEDRAG:        19769,
+    KIA_AFBOUW_START:       130744,
+    KIA_AFBOUW_PCT:         0.0756,
     FOR_PCT:                0.0944,
     MIA_PCT:                0.455,
     MIA_MIN:                2500,
@@ -117,6 +232,142 @@ function getBelasting_() {
 const BELASTING = getBelasting_();
 
 // ─────────────────────────────────────────────
+//  HELPERS — KIA + IB + ZVW + HEFFINGSKORTING
+// ─────────────────────────────────────────────
+
+/**
+ * KIA-aftrek volgens 4-zone tabel (zie BELASTING constants).
+ * Returns 0 buiten geldige zone.
+ *
+ * @param {number} investering Som van investeringen in jaar (excl. BTW).
+ * @param {Object} B           BELASTING-config (uit getBelasting_()).
+ * @return {number} KIA-aftrek-bedrag, afgerond op 2 decimalen.
+ */
+function berekenKiaAftrek_(investering, B) {
+  const inv = parseFloat(investering) || 0;
+  if (inv < B.KIA_MIN || inv > B.KIA_MAX) return 0;
+  if (inv <= B.KIA_VAST_VAN)         return rondBedrag_(inv * B.KIA_PCT);
+  if (inv <= B.KIA_AFBOUW_START)     return rondBedrag_(B.KIA_VAST_BEDRAG);
+  // Afbouwzone: vast bedrag − afbouwpct × overschrijding
+  const overschrijding = inv - B.KIA_AFBOUW_START;
+  const aftrek = B.KIA_VAST_BEDRAG - B.KIA_AFBOUW_PCT * overschrijding;
+  return rondBedrag_(Math.max(0, aftrek));
+}
+
+/**
+ * Progressieve IB-berekening volgens schijven-array.
+ * Werkt voor zowel 2- als 3-schijven configs (vooruit-compatibel).
+ *
+ * @param {number}  belastbaarInkomen Belastbaar inkomen Box 1 (na aftrekken).
+ * @param {Object}  B                 BELASTING-config met IB_SCHIJVEN array.
+ * @param {boolean} [isAowGerechtigd] True → gebruik IB_SCHIJVEN_AOW (lager schijf 1).
+ * @return {number} Geschatte IB voor heffingskortingen.
+ */
+function berekenIBProgressief_(belastbaarInkomen, B, isAowGerechtigd) {
+  const inkomen = parseFloat(belastbaarInkomen) || 0;
+  if (inkomen <= 0) return 0;
+  // AOW-gerechtigde gebruikt aparte schijven-tabel (geen AOW-premie meer)
+  const schijven = (isAowGerechtigd && Array.isArray(B.IB_SCHIJVEN_AOW))
+    ? B.IB_SCHIJVEN_AOW
+    : B.IB_SCHIJVEN;
+  // Fallback voor configs zonder IB_SCHIJVEN array (legacy 2-schijven model)
+  if (!Array.isArray(schijven)) {
+    if (inkomen <= B.IB_SCHIJF_1_MAX) return inkomen * B.IB_SCHIJF_1_PCT;
+    return B.IB_SCHIJF_1_MAX * B.IB_SCHIJF_1_PCT
+         + (inkomen - B.IB_SCHIJF_1_MAX) * B.IB_SCHIJF_2_PCT;
+  }
+  let belasting = 0;
+  let onder = 0;
+  for (const schijf of schijven) {
+    const boven = Math.min(inkomen, schijf.tot);
+    if (boven <= onder) break;
+    belasting += (boven - onder) * schijf.pct;
+    onder = boven;
+    if (inkomen <= schijf.tot) break;
+  }
+  return belasting;
+}
+
+/**
+ * Zvw inkomensafhankelijke bijdrage voor ZZP-ondernemer.
+ * Wordt geheven over winst tot maximum bijdrage-inkomen.
+ * Voorbeeld 2025: 5,26% × min(winst, €75.864) = max €3.991.
+ *
+ * @param {number} winst Winst uit onderneming (na aftrekken niet nodig — Zvw
+ *                       gebruikt eigen grondslag).
+ * @param {Object} B     BELASTING-config (uit getBelasting_()).
+ * @return {number} Geschatte Zvw-bijdrage (afgerond op 2 decimalen).
+ */
+function berekenZvw_(winst, B) {
+  const w = parseFloat(winst) || 0;
+  if (w <= 0) return 0;
+  const grondslag = Math.min(w, B.ZVW_MAX_INKOMEN || 75864);
+  return rondBedrag_(grondslag * (B.ZVW_PCT || 0.0526));
+}
+
+/**
+ * Algemene heffingskorting met inkomensafhankelijke afbouw.
+ * 2026: max €3.115 tot inkomen €29.739; daarboven afbouw 6,40%; €0 vanaf €78.426.
+ *
+ * @param {number} belastbaarInkomen Belastbaar inkomen Box 1.
+ * @param {Object} B                 BELASTING-config.
+ * @return {number} Toepasbare heffingskorting (afgerond).
+ */
+function berekenHeffingskorting_(belastbaarInkomen, B) {
+  const inkomen = parseFloat(belastbaarInkomen) || 0;
+  const max = B.HEFFINGSKORTING_MAX || 0;
+  if (inkomen <= 0 || max === 0) return 0;
+  const afbouwVan = B.HEFFINGSKORTING_AFBOUW_VAN || 0;
+  const afbouwPct = B.HEFFINGSKORTING_AFBOUW_PCT || 0;
+  const nulVan = B.HEFFINGSKORTING_NUL_VAN || (afbouwVan + max / Math.max(afbouwPct, 0.0001));
+  if (inkomen <= afbouwVan) return rondBedrag_(max);
+  if (inkomen >= nulVan) return 0;
+  const verlaging = (inkomen - afbouwVan) * afbouwPct;
+  return rondBedrag_(Math.max(0, max - verlaging));
+}
+
+/**
+ * Arbeidskorting (vereenvoudigd model: opbouw + afbouw bij hoog inkomen).
+ * Voor ondernemers wordt arbeidsinkomen meestal gelijk gesteld aan winst.
+ *
+ * @param {number} arbeidsinkomen Winst uit onderneming (proxy voor arbeidsinkomen).
+ * @param {Object} B              BELASTING-config.
+ * @return {number} Toepasbare arbeidskorting.
+ */
+function berekenArbeidskorting_(arbeidsinkomen, B) {
+  const inkomen = parseFloat(arbeidsinkomen) || 0;
+  const max = B.ARBEIDSKORTING_MAX || 0;
+  if (inkomen <= 0 || max === 0) return 0;
+  const topTot = B.ARBEIDSKORTING_TOP_TOT || 45000;
+  const afbouwVan = B.ARBEIDSKORTING_AFBOUW_VAN || topTot;
+  const afbouwPct = B.ARBEIDSKORTING_AFBOUW_PCT || 0.0651;
+  if (inkomen <= topTot) return rondBedrag_(max);
+  const verlaging = (inkomen - afbouwVan) * afbouwPct;
+  return rondBedrag_(Math.max(0, max - verlaging));
+}
+
+/**
+ * Bepaalt of de gebruiker AOW-gerechtigd is op basis van geboortedatum-instelling.
+ * Werkt fail-safe: bij ontbrekende of corrupte instelling → false (= jonger dan AOW).
+ *
+ * @param {Object} B BELASTING-config (voor AOW_LEEFTIJD).
+ * @return {boolean}
+ */
+function isAowGerechtigd_(B) {
+  try {
+    const raw = getInstelling_('Geboortedatum');
+    if (!raw) return false;
+    const geb = parseDatum_(raw);
+    if (!geb || isNaN(geb.getTime())) return false;
+    const aowLeeftijd = (B && B.AOW_LEEFTIJD) || 67;
+    const aowDatum = new Date(geb.getFullYear() + aowLeeftijd, geb.getMonth(), geb.getDate());
+    return new Date() >= aowDatum;
+  } catch (_) {
+    return false;
+  }
+}
+
+// ─────────────────────────────────────────────
 //  VOLLEDIG BELASTINGADVIES BEREKENEN
 // ─────────────────────────────────────────────
 function berekenBelastingadvies_(ss) {
@@ -125,7 +376,28 @@ function berekenBelastingadvies_(ss) {
   // niet pas na een script-reload worden opgepikt. Module-scope BELASTING is
   // bevroren bij script-load; we lezen hier vers.
   const BELASTING = getBelasting_();
-  const kg = berekenKengetallen_(ss);
+  // Defensief: berekenKengetallen_ kan crashen als GROOTBOEKSCHEMA mist of
+  // corrupt is. Liever een leeg advies dan een uitvalbeurt — gebruiker
+  // ziet dan dat er iets mis is via het audit-log.
+  let kg;
+  try {
+    kg = berekenKengetallen_(ss);
+  } catch (e) {
+    Logger.log('berekenBelastingadvies_ kon kengetallen niet berekenen: ' + e.message);
+    try { schrijfAuditLog_('Belastingadvies FOUT', 'Kengetallen niet beschikbaar: ' + e.message); } catch (_) {}
+    return {
+      adviezen: [{
+        type: 'WAARSCHUWING',
+        titel: '⚠️ Belastingadvies kon niet worden berekend',
+        tekst: 'Er ging iets mis bij het ophalen van uw boekhoudgegevens. ' +
+               'Controleer of het tabblad Grootboekschema bestaat. Foutmelding: ' + e.message,
+        besparing: 0,
+      }],
+      aftrekken: [],
+      totaalAftrek: 0,
+      geschatteIB: 0,
+    };
+  }
   const omzet = kg.omzet;
   const winst = kg.nettowinst;
   const rechtsvorm = getInstelling_('Rechtsvorm') || 'Eenmanszaak';
@@ -148,8 +420,10 @@ function berekenBelastingadvies_(ss) {
   }
 
   // ── 1. KOR regeling ───────────────────────────────────────────────────
+  // Case-insensitive — 'JA' / 'ja' / 'true' werken nu allemaal
+  const korActiefRaw = String(getInstelling_('KOR regeling actief') || '').toLowerCase().trim();
+  const korActief = korActiefRaw === 'ja' || korActiefRaw === 'true' || korActiefRaw === 'yes';
   if (omzet > 0 && omzet < BELASTING.KOR_GRENS) {
-    const korActief = getInstelling_('KOR regeling actief') === 'Ja';
     if (!korActief) {
       adviezen.push({
         type: 'VOORDEEL',
@@ -161,7 +435,6 @@ function berekenBelastingadvies_(ss) {
       });
     }
   } else if (omzet >= BELASTING.KOR_GRENS) {
-    const korActief = getInstelling_('KOR regeling actief') === 'Ja';
     if (korActief) {
       adviezen.push({
         type: 'WAARSCHUWING',
@@ -171,6 +444,17 @@ function berekenBelastingadvies_(ss) {
         besparing: null,
       });
     }
+  } else if (omzet === 0 && korActief) {
+    // Edge case: KOR aangevraagd maar nog geen omzet — voorkomt dat nieuwe
+    // gebruiker geen feedback krijgt als hij de KOR-checkbox ten onrechte aanvinkt.
+    adviezen.push({
+      type: 'TIP',
+      titel: '💡 KOR is actief maar er is nog geen omzet geboekt',
+      tekst: 'U heeft de KOR aangevinkt maar er staan nog geen verkoopfacturen geregistreerd. ' +
+             'Controleer of dit klopt: KOR betekent dat u géén BTW factureert. ' +
+             'Bij twijfel: raadpleeg een accountant.',
+      besparing: null,
+    });
   }
 
   // ── 2. Zelfstandigenaftrek (ZZP/eenmanszaak) ─────────────────────────
@@ -194,11 +478,15 @@ function berekenBelastingadvies_(ss) {
 
   // ── 3. Startersaftrek (eerste 3 jaar) ────────────────────────────────
   if (isZzp && winst > 0) {
-    const startjaar = parseInt(getInstelling_('Startjaar onderneming') || '0');
+    // Strict 4-cijferig jaartal validatie — voorheen accepteerde parseInt
+    // strings als "2025xyz" of "2025-2026" (geeft 2025) wat tot foute startersaftrek-claim
+    // kan leiden. Nu alleen pure jaartallen tussen 1990 en huidigJaar.
+    const startjaarRaw = String(getInstelling_('Startjaar onderneming') || '').trim();
+    const startjaar = /^\d{4}$/.test(startjaarRaw) ? parseInt(startjaarRaw, 10) : 0;
     // startjaar > 0:        ingevuld (anders default 0)
     // startjaar <= jaar:    voorkomt foutieve toekomst-datum
     // (jaar - startjaar) < 3: eerste 3 jaren
-    if (startjaar > 0 && startjaar <= jaar && (jaar - startjaar) < 3) {
+    if (startjaar >= 1990 && startjaar <= jaar && (jaar - startjaar) < 3) {
       const aftrek = BELASTING.STARTERSAFTREK;
       aftrekken.push({
         naam: 'Startersaftrek',
@@ -246,10 +534,24 @@ function berekenBelastingadvies_(ss) {
     }
   });
 
-  if (investeringen >= BELASTING.KIA_MIN && investeringen <= BELASTING.KIA_MAX) {
-    const kiaAftrek = rondBedrag_(investeringen * BELASTING.KIA_PCT);
+  // KIA-tabel kent 4 zones (zie BELASTING constants):
+  //  - <€2.901:                        geen KIA
+  //  - €2.901  – €69.765:              28% van investering
+  //  - €69.765 – €130.744:             vast €19.769
+  //  - €130.744 – €392.230:            afbouw: €19.769 − 7,56% × (inv − €130.744)
+  //  - >€392.230:                      geen KIA (max bereikt)
+  const kiaAftrek = berekenKiaAftrek_(investeringen, BELASTING);
+  if (kiaAftrek > 0) {
+    let kiaToelichting;
+    if (investeringen <= BELASTING.KIA_VAST_VAN) {
+      kiaToelichting = `28% van ${formatBedrag_(investeringen)} = ${formatBedrag_(kiaAftrek)}`;
+    } else if (investeringen <= BELASTING.KIA_AFBOUW_START) {
+      kiaToelichting = `vast bedrag ${formatBedrag_(kiaAftrek)} (zone €${BELASTING.KIA_VAST_VAN.toLocaleString('nl-NL')} – €${BELASTING.KIA_AFBOUW_START.toLocaleString('nl-NL')})`;
+    } else {
+      kiaToelichting = `afbouw vanaf €${BELASTING.KIA_AFBOUW_START.toLocaleString('nl-NL')}: ${formatBedrag_(kiaAftrek)}`;
+    }
     aftrekken.push({
-      naam: 'KIA – Kleinschaligheidsinvesteringsaftrek (28%)',
+      naam: 'KIA – Kleinschaligheidsinvesteringsaftrek',
       bedrag: kiaAftrek,
       voorwaarde: `Investeringen tussen €${BELASTING.KIA_MIN.toLocaleString('nl-NL')} en €${BELASTING.KIA_MAX.toLocaleString('nl-NL')}`,
       code: '7990',
@@ -258,7 +560,7 @@ function berekenBelastingadvies_(ss) {
     adviezen.push({
       type: 'AFTREKPOST',
       titel: '✅ KIA Investeringsaftrek: ' + formatBedrag_(kiaAftrek),
-      tekst: `U heeft ${formatBedrag_(investeringen)} geïnvesteerd. De KIA geeft 28% extra aftrek: ${formatBedrag_(kiaAftrek)}. ` +
+      tekst: `U heeft ${formatBedrag_(investeringen)} geïnvesteerd → ${kiaToelichting}. ` +
              `Zorg dat investeringen ≥ €450 zijn en voor bedrijfsmatig gebruik.`,
       besparing: rondBedrag_(kiaAftrek * BELASTING.IB_SCHIJF_1_PCT),
     });
@@ -268,6 +570,163 @@ function berekenBelastingadvies_(ss) {
       titel: '💡 Tip: Extra investering voor KIA',
       tekst: `U heeft ${formatBedrag_(investeringen)} geïnvesteerd. Investeer nog ${formatBedrag_(BELASTING.KIA_MIN - investeringen)} meer ` +
              `dit jaar om in aanmerking te komen voor de KIA (28% extra aftrek = ${formatBedrag_((BELASTING.KIA_MIN) * BELASTING.KIA_PCT)}).`,
+      besparing: null,
+    });
+  } else if (investeringen > BELASTING.KIA_MAX) {
+    // Boven KIA-plafond — geen KIA, maar mogelijk andere regelingen
+    adviezen.push({
+      type: 'INFO',
+      titel: 'ℹ️ Investeringen boven KIA-plafond',
+      tekst: `U heeft ${formatBedrag_(investeringen)} geïnvesteerd, boven het KIA-plafond van ` +
+             `€${BELASTING.KIA_MAX.toLocaleString('nl-NL')}. Geen KIA dit jaar. Bekijk MIA/VAMIL voor milieu-investeringen of EIA voor energie-investeringen.`,
+      besparing: null,
+    });
+  }
+
+  // ── 5b. EIA — Energie-investeringsaftrek ──────────────────────────────
+  // EIA: 40% extra aftrek bovenop afschrijving voor energiebesparende
+  // bedrijfsmiddelen op de RVO Energielijst. Aanmelden vóór 3 maanden na
+  // opdracht. Min. €2.500 per investering.
+  // Detectie via grootboekrekeningen 02xx + keywords energie/zon/warmte.
+  // Bron: rvo.nl/subsidies-financiering/eia + belastingdienst.nl/.../eia-2026
+  let eiaInv = 0;
+  gbData.slice(1).forEach(r => {
+    const code = String(r[0] || '');
+    const naam = String(r[1] || '').toLowerCase();
+    if (code.startsWith('02') && parseFloat(r[5]) > 0) {
+      if (/energie|zonn?epaneel|zonn?epanelen|warmtepomp|isolat|led|elektr.?aut|laadpaal|warmteterugwinning/i.test(naam)) {
+        eiaInv += parseFloat(r[5]);
+      }
+    }
+  });
+  if (eiaInv >= (BELASTING.EIA_MIN || 2500)) {
+    const eiaAftrek = rondBedrag_(eiaInv * (BELASTING.EIA_PCT || 0.40));
+    adviezen.push({
+      type: 'TIP',
+      titel: '💡 EIA Energie-investeringsaftrek mogelijk: ' + formatBedrag_(eiaAftrek),
+      tekst: `U heeft mogelijk ${formatBedrag_(eiaInv)} aan energie-investeringen. EIA geeft ` +
+             `${Math.round((BELASTING.EIA_PCT || 0.40) * 100)}% extra aftrek = ${formatBedrag_(eiaAftrek)}. ` +
+             `Voorwaarde: bedrijfsmiddel staat op RVO Energielijst + aanmelden binnen 3 maanden na opdracht via rvo.nl. ` +
+             `EIA is naast KIA mogelijk (geen dubbel-aftrek-verbod, maar wel anti-cumulatie met MIA).`,
+      besparing: rondBedrag_(eiaAftrek * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  }
+
+  // ── 5c. WBSO — Innovatie-aftrek voor Speur- en Ontwikkelingswerk ──────
+  // WBSO is fiscaal voordeel voor R&D-werk (≥500u/jaar). ZZP-aftrek 2026:
+  // €15.979 + €7.996 starterbonus.
+  // Detectie via grootboek 7790/8050 of categorie 'R&D'/'Onderzoek' of
+  // instelling 'WBSO actief'.
+  const wbsoActiefRaw = String(getInstelling_('WBSO actief') || '').toLowerCase().trim();
+  const wbsoActief = wbsoActiefRaw === 'ja' || wbsoActiefRaw === 'true';
+  const heeftRdGrootboek = gbData.slice(1).some(r =>
+    /onderzoek|r\s*&\s*d|innovatie|s\s*&\s*o|speur/i.test(String(r[1] || ''))
+  );
+  if ((wbsoActief || heeftRdGrootboek) && isZzp && winst > 0) {
+    const startjaarRawW = String(getInstelling_('Startjaar onderneming') || '').trim();
+    const startjaarW = /^\d{4}$/.test(startjaarRawW) ? parseInt(startjaarRawW, 10) : 0;
+    const isStarter = startjaarW >= 1990 && startjaarW <= jaar && (jaar - startjaarW) < 5;
+    const wbsoAftrek = (BELASTING.WBSO_AFTREK || 15979) + (isStarter ? (BELASTING.WBSO_STARTERSBONUS || 7996) : 0);
+    adviezen.push({
+      type: 'VOORDEEL',
+      titel: `💡 WBSO mogelijk: ${formatBedrag_(wbsoAftrek)}/jaar aftrek` + (isStarter ? ' (incl. starterbonus)' : ''),
+      tekst: `Heeft u ≥500 uur per jaar besteed aan R&D/innovatie/software-ontwikkeling? ` +
+             `De WBSO geeft een vaste aftrek van ${formatBedrag_(BELASTING.WBSO_AFTREK || 15979)}` +
+             (isStarter ? ` + ${formatBedrag_(BELASTING.WBSO_STARTERSBONUS || 7996)} starterbonus (eerste 5 jaar)` : '') +
+             `. Vraag de S&O-verklaring aan via rvo.nl (minimaal 1 maand vóór projectstart).`,
+      besparing: rondBedrag_(wbsoAftrek * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  }
+
+  // ── 5d. AOV — Arbeidsongeschiktheidsverzekering ───────────────────────
+  // AOV-premie aftrekbaar in box 1 als "uitgave inkomensvoorziening"
+  // (alleen bij periodieke uitkering, niet lump sum).
+  // Detectie via grootboek 7910 (Verzekeringen) + keyword 'AOV'/'arbeidsongeschikt'
+  // Bron: belastingdienst.nl/.../arbeidsongeschiktheidsverzekering-voor-ondernemers
+  const aovInJp = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  let heeftAov = false;
+  let aovBetaald = 0;
+  if (aovInJp && isZzp) {
+    const jpData = aovInJp.getDataRange().getValues();
+    for (let i = 1; i < jpData.length; i++) {
+      const omschrJp = String(jpData[i][2] || '').toLowerCase();
+      if (/aov|arbeidsongeschikt/i.test(omschrJp)) {
+        heeftAov = true;
+        aovBetaald += parseFloat(jpData[i][8]) || 0;
+      }
+    }
+  }
+  if (heeftAov && aovBetaald > 0) {
+    adviezen.push({
+      type: 'TIP',
+      titel: '💡 AOV-premie aftrekbaar in box 1: ' + formatBedrag_(aovBetaald),
+      tekst: `U heeft AOV-premies betaald (${formatBedrag_(aovBetaald)} dit jaar). ` +
+             `Deze premie is NIET aftrekbaar als bedrijfskost, maar WEL in box 1 ` +
+             `als "uitgaven voor inkomensvoorzieningen" — mits uw AOV een periodieke ` +
+             `uitkering biedt (geen lump sum). Aangeven bij IB-aangifte. Netto ` +
+             `voordeel: 35-49,5% afhankelijk van uw schijf.`,
+      besparing: rondBedrag_(aovBetaald * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  } else if (isZzp && winst > 5000 && !heeftAov) {
+    adviezen.push({
+      type: 'TIP',
+      titel: '💡 Heeft u een AOV?',
+      tekst: `Geen AOV-premie betaling gedetecteerd. Voor ondernemers is een ` +
+             `arbeidsongeschiktheidsverzekering geen luxe — bij ziekte/letsel valt ` +
+             `inkomen weg. Premie is aftrekbaar in box 1 (35-49,5% terug). ` +
+             `Verplichte AOV is uitgesteld tot uiterlijk 2030. Bespreek met assurantieadviseur.`,
+      besparing: null,
+    });
+  }
+
+  // ── 5e. Stakingsaftrek (bij detectie staken/beëindigen) ───────────────
+  // Eenmalig per leven €3.630 bij staken. Plus stakingslijfrente.
+  // Detectie via instelling 'Stakingsdatum' of journaalpost 'staking'/'beëindiging'.
+  const stakingsdatumRaw = String(getInstelling_('Stakingsdatum onderneming') || '').trim();
+  const stakingsdatum = stakingsdatumRaw ? parseDatum_(stakingsdatumRaw) : null;
+  const isStaakjaar = stakingsdatum && !isNaN(stakingsdatum.getTime()) && stakingsdatum.getFullYear() === jaar;
+  if (isStaakjaar && isZzp) {
+    const stakingsaftrek = BELASTING.STAKINGSAFTREK || 3630;
+    aftrekken.push({
+      naam: 'Stakingsaftrek',
+      bedrag: stakingsaftrek,
+      voorwaarde: 'Eenmalig per leven bij staken onderneming',
+      code: '7990',
+    });
+    totaalAftrek += stakingsaftrek;
+    adviezen.push({
+      type: 'AFTREKPOST',
+      titel: '✅ Stakingsaftrek: ' + formatBedrag_(stakingsaftrek),
+      tekst: `Stakingsdatum ${formatDatum_(stakingsdatum)} is in dit boekjaar. ` +
+             `U heeft recht op de stakingsaftrek van €${stakingsaftrek.toLocaleString('nl-NL')} ` +
+             `(eenmalig per leven). Daarnaast: stakingslijfrente — extra premieaftrek voor ` +
+             `pensioenopbouw bij staking. Bespreek met uw accountant.`,
+      besparing: rondBedrag_(stakingsaftrek * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  }
+
+  // ── 5f. Logies-BTW-overgang 2025 → 2026 ───────────────────────────────
+  // Per 1 januari 2026 stijgt BTW-tarief logies van 9% naar 21%.
+  // Bron: belastingdienst.nl/wps/wcm/connect/.../btw-logies (officieel)
+  const bedrijfsActiviteit = String(getInstelling_('Bedrijfsactiviteit') || '').toLowerCase();
+  const isLogiesBedrijf = /logies|hotel|b\s*&\s*b|vakantie|airbnb|kamerverhuur|gastenverblijf/i.test(bedrijfsActiviteit);
+  if (isLogiesBedrijf && jaar >= 2026) {
+    adviezen.push({
+      type: 'WAARSCHUWING',
+      titel: '⚠️ BTW-tarief logies verhoogd naar 21% per 1-1-2026',
+      tekst: `Het verlaagde BTW-tarief van 9% voor logies (hotelovernachtingen, ` +
+             `vakantiewoningen, B&B's) is per 1 januari 2026 vervallen. Vanaf nu ` +
+             `factureert u 21%. LET OP: betalingen ontvangen in 2025 voor verblijven ` +
+             `in 2026 vallen ook al onder 21%. Update uw factuur-template.`,
+      besparing: null,
+    });
+  } else if (isLogiesBedrijf && jaar === 2025) {
+    adviezen.push({
+      type: 'INFO',
+      titel: 'ℹ️ BTW-wijziging logies per 2026',
+      tekst: `Vanaf 1 januari 2026 stijgt het BTW-tarief op logies van 9% naar 21%. ` +
+             `Voorbereiden: prijscommunicatie naar gasten, factuur-template updaten. ` +
+             `Vooruitbetalingen voor 2026-verblijven vallen al onder 21%.`,
       besparing: null,
     });
   }
@@ -306,15 +765,20 @@ function berekenBelastingadvies_(ss) {
   }
 
   // ── 8a. FOR — Fiscale OudedagsReserve ────────────────────────────────
+  // FOR is per 1 januari 2023 AFGESCHAFT — geen nieuwe dotaties meer mogelijk.
+  // Bestaande saldi op 31-12-2022 mogen blijven staan en kunnen worden
+  // afgewikkeld bij staking of via lijfrente-aankoop.
+  // Bron: belastingdienst.nl/.../fiscale-oudedagsreserve-afgeschaft
   if (isZzp && winst > 0) {
-    const forBedrag = Math.min(rondBedrag_(winst * BELASTING.FOR_PCT), BELASTING.FOR_MAX);
     adviezen.push({
-      type: 'VOORDEEL',
-      titel: '💰 FOR – Fiscale OudedagsReserve: ' + formatBedrag_(forBedrag),
-      tekst: `U kunt 9,44% van uw winst (max €10.786) toevoegen aan de FOR: ${formatBedrag_(forBedrag)}. ` +
-             `Dit verlaagt uw belastbare winst nu. Let op: de FOR valt bij staken vrij en is dan belast. ` +
-             `Overweeg alternatief een lijfrentepolis. Bespreek met uw accountant.`,
-      besparing: rondBedrag_(forBedrag * BELASTING.IB_SCHIJF_1_PCT),
+      type: 'INFO',
+      titel: 'ℹ️ FOR is afgeschaft (sinds 2023)',
+      tekst: `Sinds 1 januari 2023 kan er géén nieuwe dotatie aan de Fiscale Oudedagsreserve worden gedaan. ` +
+             `Heeft u nog een FOR-saldo van vóór 2023? Dat mag op uw balans blijven staan en kunt u afwikkelen ` +
+             `via aanschaf van een lijfrente bij staking. Voor pensioenopbouw nu: gebruik de jaarruimte voor ` +
+             `een lijfrenteverzekering of bancaire lijfrente (zie advies hieronder). ` +
+             `Bespreek de afwikkeling van een bestaande FOR met uw accountant.`,
+      besparing: null,
     });
   }
 
@@ -347,7 +811,9 @@ function berekenBelastingadvies_(ss) {
   }
 
   // ── 8c. Thuiswerkaftrek ────────────────────────────────────────────────
-  const thuiswerkDagen = parseInt(getInstelling_('Thuiswerk dagen per jaar') || '0');
+  // Defensieve parse — voorkomt NaN-bugs door non-numeric input zoals '250 dagen'
+  const thuiswerkDagenRaw = parseInt(getInstelling_('Thuiswerk dagen per jaar') || '0', 10);
+  const thuiswerkDagen = (isFinite(thuiswerkDagenRaw) && thuiswerkDagenRaw > 0) ? thuiswerkDagenRaw : 0;
   if (thuiswerkDagen > 0) {
     const thuiswerkAftrek = rondBedrag_(thuiswerkDagen * BELASTING.THUISWERK_PER_DAG);
     aftrekken.push({ naam: `Thuiswerkvergoeding (${thuiswerkDagen} dagen × €${BELASTING.THUISWERK_PER_DAG})`, bedrag: thuiswerkAftrek, voorwaarde: 'Werkdagen vanuit huis', code: '7350' });
@@ -371,7 +837,8 @@ function berekenBelastingadvies_(ss) {
 
   // ── 8d. Urencriterium voortgang ───────────────────────────────────────
   if (isZzp) {
-    const uren = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0');
+    const urenRaw = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0', 10);
+    const uren = (isFinite(urenRaw) && urenRaw > 0) ? urenRaw : 0;
     if (uren > 0) {
       const pct = Math.min(100, Math.round((uren / BELASTING.URENCRITERIUM) * 100));
       const resterend = Math.max(0, BELASTING.URENCRITERIUM - uren);
@@ -436,21 +903,27 @@ function berekenBelastingadvies_(ss) {
     });
   }
 
-  // ── 9. Geschatte inkomstenbelasting ──────────────────────────────────
+  // ── 9. Geschatte fiscale last (IB Box 1 + Zvw, na heffings/arbeidskortingen)
+  // Progressief over 3 IB-schijven met AOW-aware tarief schijf 1, plus
+  // inkomensafhankelijke heffingskorting + arbeidskorting + Zvw-bijdrage.
+  // Voorheen gebruikte het systeem alleen schijf 1 → 2 + vaste max-heffingskorting,
+  // wat schijf 2 te laag belaste én Zvw geheel oversloeg (€3-4k onderschatting).
   let geschatteIB = 0;
+  let zvwBijdrage = 0;
+  let heffingskortingToegepast = 0;
+  let arbeidskortingToegepast = 0;
   if (isZzp && winst > 0) {
     const belastbaarInkomen = Math.max(0, winst - totaalAftrek);
-    if (belastbaarInkomen <= BELASTING.IB_SCHIJF_1_MAX) {
-      geschatteIB = rondBedrag_(belastbaarInkomen * BELASTING.IB_SCHIJF_1_PCT);
-    } else {
-      geschatteIB = rondBedrag_(
-        BELASTING.IB_SCHIJF_1_MAX * BELASTING.IB_SCHIJF_1_PCT +
-        (belastbaarInkomen - BELASTING.IB_SCHIJF_1_MAX) * BELASTING.IB_SCHIJF_2_PCT
-      );
-    }
-    // Heffingskortingen (vereenvoudigd)
-    geschatteIB = Math.max(0, rondBedrag_(geschatteIB - BELASTING.HEFFINGSKORTING_MAX));
+    const aow = isAowGerechtigd_(BELASTING);
+    const ibBruto = berekenIBProgressief_(belastbaarInkomen, BELASTING, aow);
+    heffingskortingToegepast = berekenHeffingskorting_(belastbaarInkomen, BELASTING);
+    // Arbeidsinkomen ≈ winst voor ondernemers (geen loonbestanddeel)
+    arbeidskortingToegepast = berekenArbeidskorting_(winst, BELASTING);
+    geschatteIB = Math.max(0, rondBedrag_(ibBruto - heffingskortingToegepast - arbeidskortingToegepast));
+    // Zvw-bijdrage komt BOVENOP de IB voor ondernemers
+    zvwBijdrage = berekenZvw_(winst, BELASTING);
   }
+  const totaleFiscaleLast = rondBedrag_(geschatteIB + zvwBijdrage);
 
   return {
     adviezen,
@@ -459,6 +932,11 @@ function berekenBelastingadvies_(ss) {
     winstVoorAftrek: winst,
     winstNaAftrek: Math.max(0, rondBedrag_(winst - totaalAftrek)),
     geschatteIB,
+    zvwBijdrage,
+    heffingskortingToegepast,
+    arbeidskortingToegepast,
+    totaleFiscaleLast,
+    isAowGerechtigd: isZzp ? isAowGerechtigd_(BELASTING) : false,
     isZzp,
   };
 }
@@ -501,7 +979,11 @@ function genereerBelastingadvies() {
     ['Winst vóór aftrekken', formatBedrag_(advies.winstVoorAftrek)],
     ['Totaal aftrekposten', formatBedrag_(advies.totaalAftrek)],
     ['Belastbare winst', formatBedrag_(advies.winstNaAftrek)],
-    ['Geschatte inkomstenbelasting*', formatBedrag_(advies.geschatteIB)],
+    ['Heffingskorting toegepast', formatBedrag_(-(advies.heffingskortingToegepast || 0))],
+    ['Arbeidskorting toegepast', formatBedrag_(-(advies.arbeidskortingToegepast || 0))],
+    ['Geschatte inkomstenbelasting (Box 1)*', formatBedrag_(advies.geschatteIB)],
+    ['Zvw inkomensafhankelijke bijdrage*', formatBedrag_(advies.zvwBijdrage || 0)],
+    ['TOTALE FISCALE LAST (IB + Zvw)*', formatBedrag_(advies.totaleFiscaleLast || advies.geschatteIB)],
   ];
   samenvatting.forEach(([label, waarde]) => {
     sheet.getRange(rij, 1).setValue(label).setFontWeight('bold');
@@ -510,7 +992,10 @@ function genereerBelastingadvies() {
   });
   sheet.getRange(rij - 1, 1, 1, 2).setBackground('#FFECB3').setFontWeight('bold');
   sheet.getRange(rij, 1, 1, 2).merge()
-    .setValue('* Schatting o.b.v. huidige winst. Raadpleeg uw accountant voor definitieve aangifte.')
+    .setValue('* Schatting. Zvw is wettelijk verplicht voor ondernemers (max ~€3.851/jaar in 2026). ' +
+              'Heffingskortingen worden afgebouwd bij hoog inkomen. ' +
+              'Voor topverdieners > AOW-leeftijd geldt lager schijf-1-tarief. ' +
+              'Raadpleeg uw accountant voor definitieve aangifte.')
     .setFontSize(9).setFontColor('#888');
   rij += 2;
 
@@ -616,15 +1101,19 @@ function scanAfschrijvingskandidaten_(ss) {
   if (!sheet) return [];
   const data = sheet.getDataRange().getValues();
   const kandidaten = [];
-  const huidigJaar = new Date().getFullYear();
+  // Boekjaar (niet kalenderjaar) — voorkomt dat investeringen in januari
+  // van een afwijkend boekjaar buiten de scan vallen.
+  const boekjaar = getBoekjaar_();
   const activeerGrens = getBelasting_().ACTIVEER_GRENS;
 
   data.slice(1).forEach(r => {
     const bedrag = parseFloat(r[8]) || 0;           // [8] = bedrag excl. BTW
     const kostenRek = String(r[15] || '');           // [15] = kostenrekening
-    const datum = r[3] instanceof Date ? r[3] : new Date(r[3]);
+    // parseDatum_ verwerkt DD-MM-YYYY, ISO én Date — voorkomt silent miss
+    // bij locale-gestuurde datumstrings.
+    const datum = r[3] instanceof Date ? r[3] : (parseDatum_(r[3]) || new Date(NaN));
     if (bedrag < activeerGrens) return;
-    if (isNaN(datum.getTime()) || datum.getFullYear() < huidigJaar) return;
+    if (isNaN(datum.getTime()) || datum.getFullYear() < boekjaar) return;
     if (kostenRek.startsWith('0')) return;           // al geactiveerd
     kandidaten.push({
       bedrag,

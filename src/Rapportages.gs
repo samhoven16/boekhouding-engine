@@ -135,8 +135,7 @@ function genereerWvRekening() {
   sheet.clearFormats();
 
   const bedrijf = getInstelling_('Bedrijfsnaam') || '';
-  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
-  const jaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
+  const jaar = getBoekjaar_();
 
   zetRapportKoptekst_(sheet, 'WINST- EN VERLIESREKENING', bedrijf, `Boekjaar ${jaar}`, 3);
 
@@ -260,8 +259,7 @@ function genereerCashflow() {
   sheet.clearFormats();
 
   const bedrijf = getInstelling_('Bedrijfsnaam') || '';
-  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
-  const jaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
+  const jaar = getBoekjaar_();
 
   zetRapportKoptekst_(sheet, 'CASHFLOW OVERZICHT', bedrijf, `Boekjaar ${jaar}`, 3);
 
@@ -279,8 +277,8 @@ function genereerCashflow() {
   const betalingenPerMaand = new Array(12).fill(0);
 
   for (let i = 1; i < btData.length; i++) {
-    const datum = btData[i][1] ? new Date(btData[i][1]) : null;
-    if (!datum || datum.getFullYear() !== jaar) continue;
+    const datum = btData[i][1] ? parseDatum_(btData[i][1]) : null;
+    if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
     const m = datum.getMonth();
     const bedrag = parseFloat(btData[i][3]) || 0;
     if (bedrag > 0) ontvangstenPerMaand[m] += bedrag;
@@ -338,7 +336,9 @@ function genereerJaarrekening() {
   const plaats = getInstelling_('Plaats') || '';
   const kvk = getInstelling_('KvK-nummer') || '';
   const rechtsvorm = getInstelling_('Rechtsvorm') || '';
-  const jaar = new Date().getFullYear();
+  // Gebruik boekjaar-instelling ipv kalenderjaar — voorkomt mismatch met
+  // de onderliggende balans/W&V die wel boekjaar respecteren.
+  const jaar = getBoekjaar_();
 
   // Titelblad
   sheet.getRange(1, 1, 1, 4).merge()

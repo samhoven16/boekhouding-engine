@@ -245,7 +245,7 @@ function controleerBewaartermijn_(documentDatum, documentType) {
   const type       = (documentType === 'onroerend_goed') ? 'onroerend_goed' : 'standaard';
   const termijnJaar = getTaxRegistryValue_('TAX-ADM-001', 'bewaartermijn.' + type + '.jaren') || 7;
 
-  const datum      = (documentDatum instanceof Date) ? documentDatum : new Date(documentDatum);
+  const datum      = (documentDatum instanceof Date) ? documentDatum : (parseDatum_(documentDatum) || new Date(documentDatum));
   const nu         = new Date();
   const leeftijdJaar = (nu - datum) / (1000 * 60 * 60 * 24 * 365.25);
   const binnentermijn = leeftijdJaar < termijnJaar;

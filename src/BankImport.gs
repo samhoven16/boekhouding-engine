@@ -29,6 +29,9 @@ function openBankImportDialoog() {
  */
 function parseBankCsv_(csv) {
   if (!csv || typeof csv !== 'string') return [];
+  // Strip UTF-8 BOM (Rabobank en KNAB exporteren vaak met BOM).
+  // Zonder strip kreeg de eerste header een prefix-byte → kolom-detectie faalde.
+  csv = csv.replace(/^\uFEFF/, '');
   const regels = csv.replace(/\r\n?/g, '\n').split('\n').filter(function(r) { return r.trim() !== ''; });
   if (regels.length < 2) return [];
 
@@ -106,10 +109,20 @@ function parseBankDatum_(s) {
   const str = String(s || '').trim().replace(/^"|"$/g, '');
   if (!str) return null;
   // ING: "20240115" of "2024-01-15", Bunq: "2024-01-15", anders dd-mm-yyyy of dd/mm/yyyy
+  // NB: validate maand 1-12 en dag 1-31 om silent rollover te voorkomen
+  // (bv. "20241301" → JS Date(2024, 12, 1) = jan 2025 zonder check).
+  function _maakDatumGevalideerd_(jaar, maand, dag) {
+    if (maand < 1 || maand > 12 || dag < 1 || dag > 31) return null;
+    const d = new Date(jaar, maand - 1, dag);
+    if (isNaN(d.getTime())) return null;
+    // Roll-over check (31 feb → 3 mrt) — bewaar oorspronkelijke dag/maand
+    if (d.getMonth() !== maand - 1 || d.getDate() !== dag) return null;
+    return d;
+  }
   let m;
-  if ((m = str.match(/^(\d{4})(\d{2})(\d{2})$/))) return new Date(m[1], parseInt(m[2]) - 1, parseInt(m[3]));
-  if ((m = str.match(/^(\d{4})-(\d{2})-(\d{2})/))) return new Date(m[1], parseInt(m[2]) - 1, parseInt(m[3]));
-  if ((m = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/))) return new Date(m[3], parseInt(m[2]) - 1, parseInt(m[1]));
+  if ((m = str.match(/^(\d{4})(\d{2})(\d{2})$/)))      return _maakDatumGevalideerd_(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]));
+  if ((m = str.match(/^(\d{4})-(\d{2})-(\d{2})/)))     return _maakDatumGevalideerd_(parseInt(m[1]), parseInt(m[2]), parseInt(m[3]));
+  if ((m = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/))) return _maakDatumGevalideerd_(parseInt(m[3]), parseInt(m[2]), parseInt(m[1]));
   const d = new Date(str);
   return isNaN(d.getTime()) ? null : d;
 }

@@ -8,11 +8,22 @@
 //  ON EDIT: BEDRIJFSNAAM DOORVOEREN
 // ─────────────────────────────────────────────
 /**
- * Eenvoudige trigger — wordt automatisch aangeroepen bij elke celbewerking.
- * Detecteert wijziging van "Bedrijfsnaam" in het Instellingen tabblad en
- * past dan de spreadsheet-naam en het Dashboard-hoofd bij.
+ * Trigger — wordt automatisch aangeroepen bij elke celbewerking.
+ * Twee taken:
+ *   1. Audit trail — log elke wijziging op gevoelige tabbladen
+ *   2. Bedrijfsnaam-detectie in Instellingen → spreadsheet hernoemen
+ *
+ * Beide stappen lopen onafhankelijk: één fout blokkeert de andere niet.
  */
 function onEdit(e) {
+  // ── Audit trail: log alle edits op gevoelige sheets ───────────
+  try {
+    schrijfAuditEdit_(e);
+  } catch (err) {
+    Logger.log('onEdit audit fout: ' + err.message);
+  }
+
+  // ── Bedrijfsnaam doorvoeren naar spreadsheet-titel ────────────
   try {
     if (!e || !e.range) return;
     const sheet = e.range.getSheet();
@@ -29,6 +40,68 @@ function onEdit(e) {
     verwerkBedrijfsnaamWijziging_(nieuwNaam);
   } catch (err) {
     Logger.log('onEdit fout: ' + err.message);
+  }
+}
+
+/**
+ * Schrijft een rij naar het Audit Log voor elke edit op een gevoelig tabblad.
+ * Niet-fataal: nooit een gebruikersactie blokkeren als logging faalt.
+ *
+ * Watch-list: VERKOOPFACTUREN, INKOOPFACTUREN, INSTELLINGEN, BANKTRANSACTIES,
+ *             HERHALENDE_KOSTEN, JOURNAALPOSTEN, RELATIES, BELEGGINGEN.
+ */
+function _AUDIT_WATCH_SHEETS_() {
+  // Function used as constant — recomputed lazily so SHEETS is loaded.
+  return [
+    SHEETS.VERKOOPFACTUREN,
+    SHEETS.INKOOPFACTUREN,
+    SHEETS.INSTELLINGEN,
+    SHEETS.BANKTRANSACTIES,
+    SHEETS.HERHALENDE_KOSTEN,
+    SHEETS.JOURNAALPOSTEN,
+    SHEETS.RELATIES,
+    SHEETS.BELEGGINGEN,
+  ];
+}
+
+function schrijfAuditEdit_(e) {
+  if (!e || !e.range || !e.source) return;
+  const sheet = e.range.getSheet();
+  const naam = sheet.getName();
+  const watch = _AUDIT_WATCH_SHEETS_();
+  if (watch.indexOf(naam) === -1) return;
+
+  // Geen wijziging? Skip (formaat-edits, sortering)
+  const oud = e.oldValue !== undefined ? e.oldValue : '';
+  const nieuw = e.value !== undefined ? e.value : '';
+  if (String(oud) === String(nieuw)) return;
+
+  const ss = e.source;
+  const auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  if (!auditSheet) return;
+
+  let user = '';
+  try { user = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || ''; } catch (_) {}
+
+  const rij = [
+    new Date(),
+    user,
+    naam,
+    e.range.getA1Notation(),
+    String(oud).slice(0, 500),
+    String(nieuw).slice(0, 500),
+    'cell-edit',
+  ];
+
+  // Voeg toe aan einde, daarna trim oudste rijen tot max 500 entries
+  auditSheet.appendRow(rij);
+
+  const maxRijen = 500;
+  const totaalRijen = auditSheet.getLastRow();
+  if (totaalRijen > maxRijen + 1) {
+    // Verwijder oudste data-rijen (rij 2 en verder)
+    const teVerwijderen = totaalRijen - maxRijen - 1;
+    auditSheet.deleteRows(2, teVerwijderen);
   }
 }
 
@@ -104,7 +177,22 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   const klantnaam  = data['Klantnaam'] || '';
   const klantEmail = String(data['Klant e-mailadres'] || '').trim();
   const klantAdres = data['Factuuradres klant'] || '';
-  const datum      = data['Factuurdatum'] ? new Date(data['Factuurdatum']) : new Date();
+  // parseDatum_ verwerkt DD-MM-YYYY, ISO én Date-objecten — voorkomt dat een
+  // factuur met handgetypte NL-locale datum stilletjes 'today' krijgt.
+  const datum      = parseDatum_(data['Factuurdatum']) || new Date();
+  // Datum-range validatie:
+  //   * niet > 90 dagen toekomst (anti-fraude / typo)
+  //   * niet > 7 jaar in verleden (bewaarplicht-grens AWR art. 52 = 7 jaar)
+  // Beide cases zijn geldig in zeer specifieke gevallen, dus we waarschuwen
+  // i.p.v. blokkeren — schrijven naar audit-log voor compliance-trail.
+  const _nu = new Date();
+  const _maxToekomst = new Date(_nu.getTime() + 90 * 86400000);
+  const _maxVerleden = new Date(_nu.getFullYear() - 7, _nu.getMonth(), _nu.getDate());
+  if (datum > _maxToekomst) {
+    try { schrijfAuditLog_('Factuur datum-waarschuwing', 'datum > 90 dagen toekomst: ' + formatDatum_(datum)); } catch (_) {}
+  } else if (datum < _maxVerleden) {
+    try { schrijfAuditLog_('Factuur datum-waarschuwing', 'datum > 7 jaar verleden (bewaarplicht): ' + formatDatum_(datum)); } catch (_) {}
+  }
   const termijn    = parseInt(data['Betalingstermijn (dagen)'] || '30') || 30;
   const vervaldatum = new Date(datum.getTime() + termijn * 86400000);
   const directMailen = String(data['Factuur direct e-mailen naar klant?'] || '').includes('Ja');
@@ -126,8 +214,31 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     throw new Error('Geen geldige factuurregels gevonden. Vul minimaal één omschrijving en bedrag in.');
   }
 
+  // Klant-BTW-nr formaat-check (niet-blokkerend) — bij verleggingsregeling
+  // is een geldig EU-BTW-nr verplicht (Wet OB art. 12 lid 3). We waarschuwen
+  // alleen via audit-log, blokkeren niet (B2C-facturen hebben geen BTW-nr).
+  const klantBtwNr = String(data['BTW-nummer klant'] || '').trim();
+  if (klantBtwNr && !isGeldigEuBTWNummer_(klantBtwNr)) {
+    try { schrijfAuditLog_('Factuur klant-BTW-waarschuwing', 'Onbekend BTW-nr-formaat: ' + klantBtwNr); } catch (_) {}
+  }
+
   // Pas NA validatie nummer claimen — voorkomt gap in factuurreeks
   const factuurNr  = volgendFactuurnummer_();
+  // Factuurnummer-gap-check: vergelijk met laatste in sheet. Een gat > 1
+  // (overgeslagen nummers) is een audit-flag voor de Belastingdienst.
+  // We loggen alleen — herstellen vergt manuele actie.
+  try {
+    const _vfSheetCheck = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+    if (_vfSheetCheck && _vfSheetCheck.getLastRow() > 1) {
+      const _lastCol = _vfSheetCheck.getRange(_vfSheetCheck.getLastRow(), 1).getValue();
+      const _laatsteNr = parseInt(_lastCol, 10);
+      if (_laatsteNr > 0 && factuurNr - _laatsteNr > 1) {
+        schrijfAuditLog_('Factuurnummer GAP gedetecteerd',
+          'Vorig: ' + _laatsteNr + ' Nieuw: ' + factuurNr +
+          ' (gap=' + (factuurNr - _laatsteNr - 1) + ' nummers). Audit-flag.');
+      }
+    }
+  } catch (_) { /* gap-check is best-effort */ }
 
   const korting    = parseBedrag_(data['Korting (in €)'] || '0') || 0;
   const btwTarief  = parseBtwTarief_(data['BTW tarief'] || '21% (hoog)');
@@ -302,7 +413,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 // ─────────────────────────────────────────────
 function verwerkUitgavenUitHoofdformulier_(ss, data) {
   const leverancier = String(data['Leveranciernaam'] || '').trim();
-  const datum       = data['Factuurdatum uitgave'] ? new Date(data['Factuurdatum uitgave']) : new Date();
+  const datum       = parseDatum_(data['Factuurdatum uitgave']) || new Date();
   const bedragExcl  = parseBedrag_(data['Bedrag excl. BTW'] || '0');
   // Validatie EERST — voorkom gap in inkoopnummer-reeks
   if (!leverancier) {
@@ -386,14 +497,83 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
       signaleerAfschrijvingskandidaat_(ss, bedragExcl, leverancier, data['Omschrijving uitgave'] || categorie);
     } catch (_) {}
   }
+
+  // Slimme fiscale tips: detecteer AOV/EIA/KIA-grens/reiskosten/thuiswerk
+  // Klant ziet meteen of er extra fiscaal voordeel mogelijk is.
+  try {
+    const slimmeTips = genereerSlimmeBoekingTips_({
+      leverancier: leverancier,
+      omschr: data['Omschrijving uitgave'] || '',
+      bedrag: bedragExcl,
+      categorie: categorie,
+      kostenRek: kostenRek,
+    });
+    if (slimmeTips && slimmeTips.length > 0) {
+      slimmeTips.forEach(function(t) {
+        schrijfAuditLog_('Slimme tip uitgave', 'IK' + inkoopNr + ': ' + t.slice(0, 200));
+      });
+    }
+  } catch (e) {
+    Logger.log('Slimme boeking-tips: ' + e.message);
+  }
+
+  // High-expense alert — e-mail eigenaar bij ongebruikelijk hoge uitgave
+  try {
+    waarschuwBijHogeUitgave_(bedragIncl, leverancier, categorie, 'IK' + inkoopNr);
+  } catch (_) {}
+
   return { ok: true, inkoopnummer: 'IK' + inkoopNr, bedragExcl: bedragExcl, bedragIncl: bedragIncl };
+}
+
+/**
+ * Stuurt een e-mailalert wanneer een uitgave boven de drempel uitkomt.
+ * Drempel komt uit Instellingen ("Melding hoge uitgave") of default €500.
+ * Niet-fataal: faalt stil zodat het de boekingsflow niet blokkeert.
+ *
+ * @param {number} bedrag    Bedrag inclusief BTW.
+ * @param {string} leverancier
+ * @param {string} categorie
+ * @param {string} ref       Inkoopnummer / referentie
+ */
+function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
+  const drempelStr = getInstelling_('Melding hoge uitgave');
+  const drempel = drempelStr ? parseBedrag_(drempelStr) : 500;
+  if (!isFinite(drempel) || drempel <= 0) return;
+  if (bedrag < drempel) return;
+
+  const ontvanger = getInstelling_('Email rapporten naar') || getInstelling_('Email');
+  if (!ontvanger || !isGeldigEmail_(ontvanger)) return;
+
+  const onderwerp = `⚠️ Hoge uitgave geregistreerd: ${formatBedrag_(bedrag)} – ${leverancier}`;
+  const body =
+    'Er is zojuist een uitgave geboekt die boven uw alert-drempel uitkomt:\n\n' +
+    `Leverancier:   ${leverancier}\n` +
+    `Categorie:     ${categorie}\n` +
+    `Bedrag (incl): ${formatBedrag_(bedrag)}\n` +
+    `Drempel:       ${formatBedrag_(drempel)}\n` +
+    `Referentie:    ${ref}\n\n` +
+    'Open uw spreadsheet om de boeking te bekijken of te wijzigen.\n\n' +
+    'U kunt de drempel aanpassen op het tabblad Instellingen → "Melding hoge uitgave".';
+
+  if (!isGeldigEmail_(ontvanger)) {
+    Logger.log('Hoge-uitgave alert overgeslagen: ongeldig e-mailadres "' + ontvanger + '"');
+    try { schrijfAuditLog_('Hoge uitgave alert OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger); } catch (_) {}
+    return;
+  }
+  try {
+    GmailApp.sendEmail(ontvanger, onderwerp, body);
+    schrijfAuditLog_('Hoge uitgave alert', `${leverancier} ${formatBedrag_(bedrag)} → ${ontvanger}`);
+  } catch (e) {
+    Logger.log('Hoge-uitgave alert niet verzonden: ' + e.message);
+    try { schrijfAuditLog_('Hoge uitgave alert MISLUKT', e.message); } catch (_) {}
+  }
 }
 
 // ─────────────────────────────────────────────
 //  DECLARATIE (privé voorgeschoten)
 // ─────────────────────────────────────────────
 function verwerkDeclaratieUitHoofdformulier_(ss, data) {
-  const datum      = data['Datum declaratie'] ? new Date(data['Datum declaratie']) : new Date();
+  const datum      = parseDatum_(data['Datum declaratie']) || new Date();
   const bedragExcl = parseBedrag_(data['Bedrag excl. BTW declaratie'] || '0');
   // Validatie EERST — voorkom gap in inkoopnummer-reeks bij lege submit
   if (bedragExcl <= 0) {
@@ -505,7 +685,7 @@ function verwerkVerkoopfactuurFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const datum = data['Factuurdatum'] ? new Date(data['Factuurdatum']) : new Date();
+    const datum = parseDatum_(data['Factuurdatum']) || new Date();
     const termijn = parseInt(data['Betalingstermijn (dagen)'] || '30');
     const vervaldatum = new Date(datum.getTime() + termijn * 24 * 60 * 60 * 1000);
 
@@ -608,7 +788,8 @@ function verwerkVerkoopfactuurFormulier(e) {
     if (pdfUrl) {
       const rijen = vfSheet.getDataRange().getValues();
       for (let i = 1; i < rijen.length; i++) {
-        if (rijen[i][0] == factuurNr) {
+        // Strict numeric compare — voorkomt cross-type match (bv. '100' == 100)
+        if (parseInt(rijen[i][0], 10) === factuurNr) {
           vfSheet.getRange(i + 1, 20).setValue(pdfUrl);
           break;
         }
@@ -640,7 +821,7 @@ function verwerkInkoopfactuurFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const datum = data['Factuurdatum'] ? new Date(data['Factuurdatum']) : new Date();
+    const datum = parseDatum_(data['Factuurdatum']) || new Date();
     const leverancier = String(data['Leveranciernaam'] || '').trim();
     const bedragExcl = parseBedrag_(data['Bedrag excl. BTW'] || '0');
     // Validatie EERST — voorkom gap in inkoopnummer-reeks bij lege submit
@@ -736,7 +917,7 @@ function verwerkBanktransactieFormulier(e) {
 
     const ss = getSpreadsheet_();
     const transactieId = volgendTransactieId_();
-    const datum = data['Transactiedatum'] ? new Date(data['Transactiedatum']) : new Date();
+    const datum = parseDatum_(data['Transactiedatum']) || new Date();
     const type = data['Type transactie'] || 'Betaling (af)';
     const bedrag = parseBedrag_(data['Bedrag'] || '0');
     const isOntvangst = type.includes('Ontvangst');
@@ -847,7 +1028,7 @@ function verwerkJournaalpostFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const datum = data['Boekingsdatum'] ? new Date(data['Boekingsdatum']) : new Date();
+    const datum = parseDatum_(data['Boekingsdatum']) || new Date();
     const bedrag = parseBedrag_(data['Bedrag (excl. BTW)'] || '0');
     const btwKeuze = data['BTW tarief'] || 'Geen BTW';
     const btwTarief = btwKeuze === 'Geen BTW' ? null : parseBtwTarief_(btwKeuze);
@@ -919,12 +1100,141 @@ function dagelijkseTaken() {
   }
 
   try {
+    vernieuwBeleggingenSnapshot_();
+  } catch (e) {
+    Logger.log('dagelijkse taak FOUT beleggingen: ' + e.message);
+  }
+
+  try {
     controleerSheetGrootte_(ss);
   } catch (e) {
     Logger.log('dagelijkse taak FOUT groottecheck: ' + e.message);
   }
 
   Logger.log('Dagelijkse taken uitgevoerd: ' + new Date());
+}
+
+// ─────────────────────────────────────────────
+//  WEKELIJKSE SAMENVATTING (MAANDAG 08:00)
+// ─────────────────────────────────────────────
+/**
+ * Stuurt een wekelijkse samenvatting per e-mail naar de eigenaar.
+ * Bevat: omzet/kosten afgelopen week, openstaande debiteuren,
+ * vervallen facturen, BTW-deadline (indien <30 dagen).
+ *
+ * Trigger: maandag 08:00 — geïnstalleerd via installeelTriggers_().
+ */
+function stuurWeeklySamenvatting_() {
+  try {
+    const ss = getSpreadsheet_();
+    if (!ss) return;
+    const ontvanger = getInstelling_('Email rapporten naar') || getInstelling_('Email');
+    if (!ontvanger || !isGeldigEmail_(ontvanger)) {
+      Logger.log('Wekelijkse samenvatting overgeslagen: geen geldig ontvanger-emailadres');
+      return;
+    }
+
+    const nu = new Date();
+    const weekGeleden = new Date(nu.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Verzameld over de afgelopen 7 dagen
+    let omzetWeek = 0;
+    let aantalFacturen = 0;
+    let kostenWeek = 0;
+    let aantalKosten = 0;
+    let openDebSaldo = 0;
+    let openDebAantal = 0;
+    let vervallenAantal = 0;
+    let vervallenBedrag = 0;
+
+    // Verkoopfacturen
+    const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+    if (vfSheet && vfSheet.getLastRow() > 1) {
+      const data = vfSheet.getRange(2, 1, vfSheet.getLastRow() - 1, vfSheet.getLastColumn()).getValues();
+      data.forEach(function(r) {
+        const datum = r[2] ? new Date(r[2]) : null;
+        const bedragIncl = Number(r[12]) || 0;
+        const status = String(r[14] || '');
+        if (datum && datum >= weekGeleden && datum <= nu) {
+          omzetWeek += bedragIncl;
+          aantalFacturen++;
+        }
+        if (status === FACTUUR_STATUS.VERZONDEN || status === FACTUUR_STATUS.DEELS_BETAALD) {
+          const betaald = Number(r[13]) || 0;
+          openDebSaldo += (bedragIncl - betaald);
+          openDebAantal++;
+        }
+        if (status === FACTUUR_STATUS.VERVALLEN) {
+          vervallenAantal++;
+          vervallenBedrag += bedragIncl - (Number(r[13]) || 0);
+        }
+      });
+    }
+
+    // Inkoopfacturen
+    const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+    if (ifSheet && ifSheet.getLastRow() > 1) {
+      const data = ifSheet.getRange(2, 1, ifSheet.getLastRow() - 1, ifSheet.getLastColumn()).getValues();
+      data.forEach(function(r) {
+        const datum = r[3] ? parseDatum_(r[3]) : null;
+        const bedragIncl = Number(r[11]) || 0;
+        if (datum && !isNaN(datum.getTime()) && datum >= weekGeleden && datum <= nu) {
+          kostenWeek += bedragIncl;
+          aantalKosten++;
+        }
+      });
+    }
+
+    // BTW deadline?
+    let btwInfo = '';
+    try {
+      const kStr = getKwartaal_(nu); // 'Q1' .. 'Q4'
+      const kNum = parseInt(String(kStr || '').replace('Q', ''), 10);
+      // Guard: corrupte getKwartaal_ output zou anders Invalid Date geven
+      // en de hele weekly summary kapot maken bij een bug in kwartaal-helper.
+      if (!isNaN(kNum) && kNum >= 1 && kNum <= 4) {
+        const eindKwartaal = new Date(nu.getFullYear(), kNum * 3, 0);
+        const deadline = new Date(eindKwartaal);
+        deadline.setMonth(deadline.getMonth() + 1);
+        const dagenTot = Math.ceil((deadline - nu) / (24 * 60 * 60 * 1000));
+        if (dagenTot >= 0 && dagenTot <= 30) {
+          btwInfo = `\n⏰ BTW-deadline ${kStr}: nog ${dagenTot} dagen (uiterlijk ${formatDatum_(deadline)})\n`;
+        }
+      }
+    } catch (e) {
+      Logger.log('BTW deadline berekening in weekly summary: ' + e.message);
+    }
+
+    const onderwerp = `📊 Weekoverzicht ${formatDatum_(weekGeleden)} – ${formatDatum_(nu)}`;
+    const body =
+      `Hallo,\n\n` +
+      `Hier is uw wekelijkse boekhoud-samenvatting:\n\n` +
+      `📈 OMZET DEZE WEEK\n` +
+      `   ${aantalFacturen} factu${aantalFacturen === 1 ? 'ur' : 'ren'} verstuurd  →  ${formatBedrag_(omzetWeek)}\n\n` +
+      `📉 KOSTEN DEZE WEEK\n` +
+      `   ${aantalKosten} uitgave${aantalKosten === 1 ? '' : 'n'} geboekt  →  ${formatBedrag_(kostenWeek)}\n\n` +
+      `💰 NETTO DEZE WEEK\n` +
+      `   ${formatBedrag_(omzetWeek - kostenWeek)}\n\n` +
+      `📥 OPENSTAANDE DEBITEUREN\n` +
+      `   ${openDebAantal} factu${openDebAantal === 1 ? 'ur' : 'ren'}  →  ${formatBedrag_(openDebSaldo)}\n\n` +
+      (vervallenAantal > 0 ?
+        `⚠️ VERVALLEN FACTUREN\n   ${vervallenAantal} factu${vervallenAantal === 1 ? 'ur' : 'ren'}  →  ${formatBedrag_(vervallenBedrag)}\n\n` :
+        '') +
+      btwInfo +
+      `\nOpen uw spreadsheet voor het volledige dashboard.\n\n` +
+      `— Boekhoudbaar`;
+
+    if (!isGeldigEmail_(ontvanger)) {
+      Logger.log('Weekly summary overgeslagen: ongeldig e-mailadres "' + ontvanger + '"');
+      try { schrijfAuditLog_('Weekly summary OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger); } catch (_) {}
+      return;
+    }
+    GmailApp.sendEmail(ontvanger, onderwerp, body);
+    schrijfAuditLog_('Weekly summary verzonden', `naar ${ontvanger} – omzet ${formatBedrag_(omzetWeek)}`);
+  } catch (e) {
+    Logger.log('stuurWeeklySamenvatting_ fout: ' + e.message);
+    try { schrijfAuditLog_('FOUT weekly summary', e.message); } catch (_) {}
+  }
 }
 
 /**
@@ -960,7 +1270,7 @@ function controleerSheetGrootte_(ss) {
     'Overweeg om een nieuw boekjaar te starten via Boekhouding → Instellingen → Nieuw boekjaar.';
 
   try { schrijfAuditLog_('Sheet-grootte waarschuwing', bericht); } catch (_) {}
-  if (eigenEmail) {
+  if (eigenEmail && isGeldigEmail_(eigenEmail)) {
     try {
       GmailApp.sendEmail(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
         bericht + '\n\n— Boekhoudbaar' + (bedrijf ? ' (' + bedrijf + ')' : ''));
@@ -1029,6 +1339,11 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       `\n\nGelieve dit bedrag over te maken naar ${getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || ''}` +
       ` o.v.v. ${factuurnummer}.\n\nMet vriendelijke groet,\n${bedrijf}`;
 
+    if (!isGeldigEmail_(klantEmail)) {
+      Logger.log(`Herinnering ${factuurnummer} overgeslagen: ongeldig e-mailadres "${klantEmail}"`);
+      try { schrijfAuditLog_('Herinnering OVERGESLAGEN', factuurnummer + ' – ongeldig e-mailadres: ' + klantEmail); } catch (_) {}
+      continue;
+    }
     try {
       const opties = { name: bedrijf };
       if (pdfUrl) {
@@ -1041,6 +1356,7 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       Logger.log(`Herinnering stap ${volgendeStap}/3 verstuurd voor ${factuurnummer} naar ${klantEmail}`);
     } catch (err) {
       Logger.log(`Herinnering fout voor ${factuurnummer}: ${err.message}`);
+      try { schrijfAuditLog_('Herinnering MISLUKT', factuurnummer + ' – ' + err.message); } catch (_) {}
     }
   }
 }
@@ -1160,18 +1476,29 @@ function controleerBtwDeadlines_() {
     { kw: 4, datum: new Date(jaar, 0, 31), suffix: ' (' + (jaar - 1) + ')' },
   ];
   const email = getInstelling_('Email rapporten naar');
-  if (!email) return;
+  if (!email || !isGeldigEmail_(email)) {
+    if (email) {
+      Logger.log('BTW-deadline check: ongeldig e-mailadres "' + email + '"');
+      try { schrijfAuditLog_('BTW deadline check OVERGESLAGEN', 'Ongeldig e-mailadres: ' + email); } catch (_) {}
+    }
+    return;
+  }
 
   for (const d of deadlines) {
     const dagenTot = Math.floor((d.datum - vandaag) / 86400000);
     if (dagenTot > 0 && dagenTot <= 14) {
       const kwLabel = 'Q' + d.kw + (d.suffix || '');
-      GmailApp.sendEmail(email,
-        `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
-        `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
-        `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
-        `Met vriendelijke groet,\nUw boekhoudprogramma`
-      );
+      try {
+        GmailApp.sendEmail(email,
+          `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
+          `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
+          `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
+          `Met vriendelijke groet,\nUw boekhoudprogramma`
+        );
+      } catch (err) {
+        Logger.log('BTW deadline reminder mislukt: ' + err.message);
+        try { schrijfAuditLog_('BTW reminder MISLUKT', kwLabel + ' – ' + err.message); } catch (_) {}
+      }
     }
   }
 }
@@ -1179,7 +1506,7 @@ function controleerBtwDeadlines_() {
 function stuurFoutEmail_(context, err) {
   try {
     const email = getInstelling_('Email rapporten naar');
-    if (email) {
+    if (email && isGeldigEmail_(email)) {
       GmailApp.sendEmail(email,
         `Fout in boekhoudprogramma: ${context}`,
         `Er is een fout opgetreden bij het verwerken van: ${context}\n\nFoutmelding: ${err.message}\n\nStack: ${err.stack}`
@@ -1250,12 +1577,22 @@ function stuurBetalingsherinneringen() {
       'Openstaand: ' + bedragStr + '\nVervaldatum: ' + vervalStr + '\nIBAN: ' + iban +
       '\nKenmerk: ' + fnr + '\n\nMet vriendelijke groet,\n' + bedrijf;
 
-    GmailApp.sendEmail(klantEmail,
-      `Herinnering factuur ${fnr} · ${bedragStr}`,
-      tekst,
-      { htmlBody: htmlBody, name: bedrijf }
-    );
-    aantalVerstuurd++;
+    if (!isGeldigEmail_(klantEmail)) {
+      Logger.log('Herinnering ' + fnr + ' overgeslagen: ongeldig e-mailadres "' + klantEmail + '"');
+      try { schrijfAuditLog_('Herinnering OVERGESLAGEN', fnr + ' – ongeldig e-mailadres: ' + klantEmail); } catch (_) {}
+      continue;
+    }
+    try {
+      GmailApp.sendEmail(klantEmail,
+        `Herinnering factuur ${fnr} · ${bedragStr}`,
+        tekst,
+        { htmlBody: htmlBody, name: bedrijf }
+      );
+      aantalVerstuurd++;
+    } catch (err) {
+      Logger.log('Herinnering ' + fnr + ' mislukt: ' + err.message);
+      try { schrijfAuditLog_('Herinnering MISLUKT', fnr + ' – ' + err.message); } catch (_) {}
+    }
   }
 
   SpreadsheetApp.getUi().alert(`${aantalVerstuurd} herinneringen verstuurd.`);
@@ -1264,8 +1601,35 @@ function stuurBetalingsherinneringen() {
 function haalRelatieEmail_(ss, relatieId) {
   const sheet = ss.getSheetByName(SHEETS.RELATIES);
   const data = sheet.getDataRange().getValues();
+  const idStr = String(relatieId);
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] == relatieId) return data[i][10]; // E-mailadres kolom
+    if (String(data[i][0]) === idStr) return data[i][10]; // E-mailadres kolom
   }
   return null;
+}
+
+// ─────────────────────────────────────────────
+//  AUDIT LOG TONEN (MENU-ACTIE)
+// ─────────────────────────────────────────────
+/**
+ * Maakt het Audit Log-tabblad zichtbaar en activeert het.
+ * Aanroepbaar vanuit het menu "Controle & Export → Audit Log tonen".
+ */
+function toonAuditLog() {
+  if (!controleerSetupGedaan_()) return;
+  const ss = getSpreadsheet_();
+  let sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  if (!sheet) {
+    setupAuditLogSheet_();
+    sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  }
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Audit Log',
+      'Het Audit Log-tabblad kon niet worden aangemaakt. Voer eerst de setup uit.',
+      SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  try { sheet.showSheet(); } catch (_) {}
+  ss.setActiveSheet(sheet);
+  schrijfAuditLog_('audit_log_geopend', 'gebruiker bekeek het Audit Log');
 }

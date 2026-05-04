@@ -21,15 +21,23 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     const iban = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '';
     const factuurprefix = getInstelling_('Factuurprefix') || 'F';
     const voettekst = getInstelling_('Factuur voettekst') || '';
-    const korActief = getInstelling_('KOR regeling actief') === 'Ja';
+    // Case-insensitive: 'Ja' / 'JA' / 'ja' / 'true' werken allemaal
+    const korActiefRaw = String(getInstelling_('KOR regeling actief') || '').toLowerCase().trim();
+    const korActief = korActiefRaw === 'ja' || korActiefRaw === 'true' || korActiefRaw === 'yes';
 
     const factuurnummer = formatFactuurnummer_(factuurNr, factuurprefix, 6);
     const sepaQr = haalSepaQrBase64_(iban, bedrijf, totalIncl, factuurnummer);
 
     // KOR-verklaring — wettelijk verplicht op facturen als ondernemer
-    // onder de kleineondernemersregeling valt. Laat aan klant zien waarom
-    // er géén BTW is berekend (voorkomt "waarom staat hier geen BTW?" vraag).
-    const korVerklaring = korActief
+    // onder de kleineondernemersregeling valt. Voorwaarden:
+    //   1. KOR-instelling staat aan
+    //   2. Deze factuur is NIET vrijgesteld (KOR ≠ vrijgesteld; verschillende rechtsgronden)
+    //   3. Geen BTW op deze factuur (KOR-ondernemer mag geen BTW factureren)
+    // Anders is de KOR-tekst misleidend → klantverwarring + audit-risico.
+    const btwTariefStr = String(formData['BTW tarief'] || '');
+    const isVrijgesteld = /Vrijgesteld/i.test(btwTariefStr);
+    const heeftBtw = parseFloat(totalBtw) > 0.005;
+    const korVerklaring = (korActief && !isVrijgesteld && !heeftBtw)
       ? `<div style="background:#FFF8E1;border:1px solid #F9A825;border-radius:4px;padding:10px 14px;margin-bottom:16px;font-size:10pt;color:#5A3F00">
            <strong>Kleineondernemersregeling (KOR)</strong> — Er is geen btw in rekening gebracht, op basis van artikel 25 Wet OB.
          </div>`
@@ -457,8 +465,9 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
     Logger.log('stuurFactuurEmailNaarKlant_: klantEmail of pdfUrl ontbreekt, mail overgeslagen.');
     return false;
   }
-  // Format-validatie — voorkomt GmailApp.sendEmail crash op invalid input
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(klantEmail)) {
+  // Strikte format-validatie via central isGeldigEmail_ (Utils.gs).
+  // Voorkomt GmailApp.sendEmail crash + audit-trail van geweigerde mails.
+  if (!isGeldigEmail_(klantEmail)) {
     Logger.log('stuurFactuurEmailNaarKlant_: e-mail niet geldig formaat: ' + klantEmail);
     try { schrijfAuditLog_('Factuur-mail geweigerd', 'Ongeldig e-mailformaat: ' + klantEmail); } catch (_) {}
     return false;
