@@ -583,6 +583,154 @@ function berekenBelastingadvies_(ss) {
     });
   }
 
+  // ── 5b. EIA — Energie-investeringsaftrek ──────────────────────────────
+  // EIA: 40% extra aftrek bovenop afschrijving voor energiebesparende
+  // bedrijfsmiddelen op de RVO Energielijst. Aanmelden vóór 3 maanden na
+  // opdracht. Min. €2.500 per investering.
+  // Detectie via grootboekrekeningen 02xx + keywords energie/zon/warmte.
+  // Bron: rvo.nl/subsidies-financiering/eia + belastingdienst.nl/.../eia-2026
+  let eiaInv = 0;
+  gbData.slice(1).forEach(r => {
+    const code = String(r[0] || '');
+    const naam = String(r[1] || '').toLowerCase();
+    if (code.startsWith('02') && parseFloat(r[5]) > 0) {
+      if (/energie|zonn?epaneel|zonn?epanelen|warmtepomp|isolat|led|elektr.?aut|laadpaal|warmteterugwinning/i.test(naam)) {
+        eiaInv += parseFloat(r[5]);
+      }
+    }
+  });
+  if (eiaInv >= (BELASTING.EIA_MIN || 2500)) {
+    const eiaAftrek = rondBedrag_(eiaInv * (BELASTING.EIA_PCT || 0.40));
+    adviezen.push({
+      type: 'TIP',
+      titel: '💡 EIA Energie-investeringsaftrek mogelijk: ' + formatBedrag_(eiaAftrek),
+      tekst: `U heeft mogelijk ${formatBedrag_(eiaInv)} aan energie-investeringen. EIA geeft ` +
+             `${Math.round((BELASTING.EIA_PCT || 0.40) * 100)}% extra aftrek = ${formatBedrag_(eiaAftrek)}. ` +
+             `Voorwaarde: bedrijfsmiddel staat op RVO Energielijst + aanmelden binnen 3 maanden na opdracht via rvo.nl. ` +
+             `EIA is naast KIA mogelijk (geen dubbel-aftrek-verbod, maar wel anti-cumulatie met MIA).`,
+      besparing: rondBedrag_(eiaAftrek * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  }
+
+  // ── 5c. WBSO — Innovatie-aftrek voor Speur- en Ontwikkelingswerk ──────
+  // WBSO is fiscaal voordeel voor R&D-werk (≥500u/jaar). ZZP-aftrek 2026:
+  // €15.979 + €7.996 starterbonus.
+  // Detectie via grootboek 7790/8050 of categorie 'R&D'/'Onderzoek' of
+  // instelling 'WBSO actief'.
+  const wbsoActiefRaw = String(getInstelling_('WBSO actief') || '').toLowerCase().trim();
+  const wbsoActief = wbsoActiefRaw === 'ja' || wbsoActiefRaw === 'true';
+  const heeftRdGrootboek = gbData.slice(1).some(r =>
+    /onderzoek|r\s*&\s*d|innovatie|s\s*&\s*o|speur/i.test(String(r[1] || ''))
+  );
+  if ((wbsoActief || heeftRdGrootboek) && isZzp && winst > 0) {
+    const startjaarRawW = String(getInstelling_('Startjaar onderneming') || '').trim();
+    const startjaarW = /^\d{4}$/.test(startjaarRawW) ? parseInt(startjaarRawW, 10) : 0;
+    const isStarter = startjaarW >= 1990 && startjaarW <= jaar && (jaar - startjaarW) < 5;
+    const wbsoAftrek = (BELASTING.WBSO_AFTREK || 15979) + (isStarter ? (BELASTING.WBSO_STARTERSBONUS || 7996) : 0);
+    adviezen.push({
+      type: 'VOORDEEL',
+      titel: `💡 WBSO mogelijk: ${formatBedrag_(wbsoAftrek)}/jaar aftrek` + (isStarter ? ' (incl. starterbonus)' : ''),
+      tekst: `Heeft u ≥500 uur per jaar besteed aan R&D/innovatie/software-ontwikkeling? ` +
+             `De WBSO geeft een vaste aftrek van ${formatBedrag_(BELASTING.WBSO_AFTREK || 15979)}` +
+             (isStarter ? ` + ${formatBedrag_(BELASTING.WBSO_STARTERSBONUS || 7996)} starterbonus (eerste 5 jaar)` : '') +
+             `. Vraag de S&O-verklaring aan via rvo.nl (minimaal 1 maand vóór projectstart).`,
+      besparing: rondBedrag_(wbsoAftrek * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  }
+
+  // ── 5d. AOV — Arbeidsongeschiktheidsverzekering ───────────────────────
+  // AOV-premie aftrekbaar in box 1 als "uitgave inkomensvoorziening"
+  // (alleen bij periodieke uitkering, niet lump sum).
+  // Detectie via grootboek 7910 (Verzekeringen) + keyword 'AOV'/'arbeidsongeschikt'
+  // Bron: belastingdienst.nl/.../arbeidsongeschiktheidsverzekering-voor-ondernemers
+  const aovInJp = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  let heeftAov = false;
+  let aovBetaald = 0;
+  if (aovInJp && isZzp) {
+    const jpData = aovInJp.getDataRange().getValues();
+    for (let i = 1; i < jpData.length; i++) {
+      const omschrJp = String(jpData[i][2] || '').toLowerCase();
+      if (/aov|arbeidsongeschikt/i.test(omschrJp)) {
+        heeftAov = true;
+        aovBetaald += parseFloat(jpData[i][8]) || 0;
+      }
+    }
+  }
+  if (heeftAov && aovBetaald > 0) {
+    adviezen.push({
+      type: 'TIP',
+      titel: '💡 AOV-premie aftrekbaar in box 1: ' + formatBedrag_(aovBetaald),
+      tekst: `U heeft AOV-premies betaald (${formatBedrag_(aovBetaald)} dit jaar). ` +
+             `Deze premie is NIET aftrekbaar als bedrijfskost, maar WEL in box 1 ` +
+             `als "uitgaven voor inkomensvoorzieningen" — mits uw AOV een periodieke ` +
+             `uitkering biedt (geen lump sum). Aangeven bij IB-aangifte. Netto ` +
+             `voordeel: 35-49,5% afhankelijk van uw schijf.`,
+      besparing: rondBedrag_(aovBetaald * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  } else if (isZzp && winst > 5000 && !heeftAov) {
+    adviezen.push({
+      type: 'TIP',
+      titel: '💡 Heeft u een AOV?',
+      tekst: `Geen AOV-premie betaling gedetecteerd. Voor ondernemers is een ` +
+             `arbeidsongeschiktheidsverzekering geen luxe — bij ziekte/letsel valt ` +
+             `inkomen weg. Premie is aftrekbaar in box 1 (35-49,5% terug). ` +
+             `Verplichte AOV is uitgesteld tot uiterlijk 2030. Bespreek met assurantieadviseur.`,
+      besparing: null,
+    });
+  }
+
+  // ── 5e. Stakingsaftrek (bij detectie staken/beëindigen) ───────────────
+  // Eenmalig per leven €3.630 bij staken. Plus stakingslijfrente.
+  // Detectie via instelling 'Stakingsdatum' of journaalpost 'staking'/'beëindiging'.
+  const stakingsdatumRaw = String(getInstelling_('Stakingsdatum onderneming') || '').trim();
+  const stakingsdatum = stakingsdatumRaw ? parseDatum_(stakingsdatumRaw) : null;
+  const isStaakjaar = stakingsdatum && !isNaN(stakingsdatum.getTime()) && stakingsdatum.getFullYear() === jaar;
+  if (isStaakjaar && isZzp) {
+    const stakingsaftrek = BELASTING.STAKINGSAFTREK || 3630;
+    aftrekken.push({
+      naam: 'Stakingsaftrek',
+      bedrag: stakingsaftrek,
+      voorwaarde: 'Eenmalig per leven bij staken onderneming',
+      code: '7990',
+    });
+    totaalAftrek += stakingsaftrek;
+    adviezen.push({
+      type: 'AFTREKPOST',
+      titel: '✅ Stakingsaftrek: ' + formatBedrag_(stakingsaftrek),
+      tekst: `Stakingsdatum ${formatDatum_(stakingsdatum)} is in dit boekjaar. ` +
+             `U heeft recht op de stakingsaftrek van €${stakingsaftrek.toLocaleString('nl-NL')} ` +
+             `(eenmalig per leven). Daarnaast: stakingslijfrente — extra premieaftrek voor ` +
+             `pensioenopbouw bij staking. Bespreek met uw accountant.`,
+      besparing: rondBedrag_(stakingsaftrek * BELASTING.IB_SCHIJF_1_PCT),
+    });
+  }
+
+  // ── 5f. Logies-BTW-overgang 2025 → 2026 ───────────────────────────────
+  // Per 1 januari 2026 stijgt BTW-tarief logies van 9% naar 21%.
+  // Bron: belastingdienst.nl/wps/wcm/connect/.../btw-logies (officieel)
+  const bedrijfsActiviteit = String(getInstelling_('Bedrijfsactiviteit') || '').toLowerCase();
+  const isLogiesBedrijf = /logies|hotel|b\s*&\s*b|vakantie|airbnb|kamerverhuur|gastenverblijf/i.test(bedrijfsActiviteit);
+  if (isLogiesBedrijf && jaar >= 2026) {
+    adviezen.push({
+      type: 'WAARSCHUWING',
+      titel: '⚠️ BTW-tarief logies verhoogd naar 21% per 1-1-2026',
+      tekst: `Het verlaagde BTW-tarief van 9% voor logies (hotelovernachtingen, ` +
+             `vakantiewoningen, B&B's) is per 1 januari 2026 vervallen. Vanaf nu ` +
+             `factureert u 21%. LET OP: betalingen ontvangen in 2025 voor verblijven ` +
+             `in 2026 vallen ook al onder 21%. Update uw factuur-template.`,
+      besparing: null,
+    });
+  } else if (isLogiesBedrijf && jaar === 2025) {
+    adviezen.push({
+      type: 'INFO',
+      titel: 'ℹ️ BTW-wijziging logies per 2026',
+      tekst: `Vanaf 1 januari 2026 stijgt het BTW-tarief op logies van 9% naar 21%. ` +
+             `Voorbereiden: prijscommunicatie naar gasten, factuur-template updaten. ` +
+             `Vooruitbetalingen voor 2026-verblijven vallen al onder 21%.`,
+      besparing: null,
+    });
+  }
+
   // ── 6. Reiskosten analyse ─────────────────────────────────────────────
   // Alleen tonen als er ÜBERHAUPT al boekhouding is — anders confronteer je
   // een nieuwe gebruiker met advies over iets wat hij nog niet eens
