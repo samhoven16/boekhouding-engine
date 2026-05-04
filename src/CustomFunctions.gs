@@ -91,13 +91,19 @@ function SCHULD_SCHIJF(belastbaarInkomen) {
 }
 
 /**
- * Berekent het geschatte netto jaarinkomen voor een ZZP'er.
- * Past zelfstandigenaftrek (€ 2.470 in 2025), startersaftrek optioneel,
- * en MKB-winstvrijstelling (12,7%) toe vóór schijven.
+ * Berekent het geschatte netto jaarinkomen voor een ZZP'er onder AOW-leeftijd.
+ * Past in volgorde toe:
+ *   1. Zelfstandigenaftrek (€2.470 in 2025; €1.200 in 2026)
+ *   2. Startersaftrek (€2.123) — optioneel
+ *   3. MKB-winstvrijstelling (12,7%)
+ *   4. IB Box 1 schijven 2025
+ *   5. Algemene heffingskorting (afgebouwd bij hoog inkomen)
+ *   6. Arbeidskorting (afgebouwd bij hoog inkomen)
+ *   7. Zvw inkomensafhankelijke bijdrage (5,26% over winst max €75.864)
  *
- * @param {number} winst         Winst uit onderneming (vóór aftrek).
- * @param {boolean} starter      Optioneel: true voor startersaftrek (€ 2.123).
- * @return {number} Geschatte netto winst na IB.
+ * @param {number}  winst    Winst uit onderneming (vóór aftrek).
+ * @param {boolean} starter  Optioneel: true voor startersaftrek.
+ * @return {number} Geschatte netto winst na IB + Zvw.
  * @customfunction
  */
 function ZZP_NETTO(winst, starter) {
@@ -109,11 +115,31 @@ function ZZP_NETTO(winst, starter) {
   var mkbVrijstelling = naAftrek * 0.127;
   var belastbaar = Math.max(0, naAftrek - mkbVrijstelling);
   var ib = SCHULD_SCHIJF(belastbaar);
-  // Heffingskorting (vereenvoudigd): grofweg € 3.068 algemene korting + € 5.599 arbeidskorting bij ZZP
-  // We schatten conservatief op € 4.500 totaal (zeer afhankelijk van inkomen).
-  var heffingskorting = Math.min(ib, 4500);
-  var nettoIB = Math.max(0, ib - heffingskorting);
-  return Math.round((w - nettoIB) * 100) / 100;
+
+  // Algemene heffingskorting (2025): €3.068 max, afbouw 6,34% vanaf €28.406, €0 vanaf €76.817
+  var ahkMax = 3068;
+  var ahkAfbouwVan = 28406;
+  var ahkAfbouwPct = 0.0634;
+  var ahkNulVan = 76817;
+  var ahk;
+  if (belastbaar <= ahkAfbouwVan) ahk = ahkMax;
+  else if (belastbaar >= ahkNulVan) ahk = 0;
+  else ahk = Math.max(0, ahkMax - (belastbaar - ahkAfbouwVan) * ahkAfbouwPct);
+
+  // Arbeidskorting (2025): €5.599 max tot inkomen €43.071, afbouw 6,51% daarboven
+  var akMax = 5599;
+  var akTopTot = 43071;
+  var akAfbouwPct = 0.0651;
+  var ak;
+  if (w <= akTopTot) ak = akMax;
+  else ak = Math.max(0, akMax - (w - akTopTot) * akAfbouwPct);
+
+  var nettoIB = Math.max(0, ib - ahk - ak);
+
+  // Zvw inkomensafhankelijke bijdrage (2025): 5,26% over min(winst, €75.864)
+  var zvw = Math.min(w, 75864) * 0.0526;
+
+  return Math.round((w - nettoIB - zvw) * 100) / 100;
 }
 
 /**
