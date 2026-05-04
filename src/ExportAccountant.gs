@@ -43,9 +43,10 @@ function exporteerAccountantsPakket() {
 
   const ss     = getSpreadsheet_();
   const bedrijf = getInstelling_('Bedrijfsnaam') || 'MijnBedrijf';
-  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
-  const jaar    = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
-  const mapNaam = `Accountantspakket ${bedrijf} ${jaar}`;
+  const jaar    = getBoekjaar_();
+  // Sanitize bedrijf voor filesystem-safety; voorkomt path-traversal of vreemde tekens.
+  const bedrijfSafe = String(bedrijf).replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'MijnBedrijf';
+  const mapNaam = `Accountantspakket ${bedrijfSafe} ${jaar}`;
 
   // Maak Drive map aan
   let folder;
@@ -180,8 +181,7 @@ function verstuurSamenvattingAccountant(emailAccountant, persoonlijkBericht) {
   }
   const ss      = getSpreadsheet_();
   const bedrijf = getInstelling_('Bedrijfsnaam') || 'Mijn Bedrijf';
-  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
-  const jaar    = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
+  const jaar    = getBoekjaar_();
   const kg      = berekenKengetallen_(ss);
 
   GmailApp.sendEmail(emailAccountant, `Financieel overzicht ${bedrijf} — ${jaar}`, '', {

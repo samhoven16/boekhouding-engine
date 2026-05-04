@@ -33,8 +33,7 @@ function vernieuwDashboard() {
   // Bereken KPI's — authoritative recompute; result is written to snapshot for fast-path reads
   const kpi = berekenKpiData_(ss);
   schrijfKpiSnapshot_(kpi);
-  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
-  const btwJaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
+  const btwJaar = getBoekjaar_();
   const btwData = getBtwPerMaand_(ss, btwJaar);
 
   // ── Koptekst ─────────────────────────────────────────────────────────
@@ -653,8 +652,7 @@ function berekenRoiData_(ss, kpi) {
   const _jrS = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
   const vfData = _vfS ? _vfS.getDataRange().getValues() : [[]];
   const jrData = _jrS ? _jrS.getDataRange().getValues() : [[]];
-  const jaarStr = getInstelling_('Boekjaar start') || new Date().getFullYear().toString();
-  const boekjaar = parseInt(jaarStr.slice(-4)) || new Date().getFullYear();
+  const boekjaar = getBoekjaar_();
 
   const aantalFacturen = Math.max(0, vfData.length - 1);
 

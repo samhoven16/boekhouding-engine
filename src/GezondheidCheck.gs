@@ -186,14 +186,14 @@ function controleerJournaalposten_(ss) {
       const debet  = String(data[i][4] || '');
       const credit = String(data[i][6] || '');
       const bedrag = parseFloat(data[i][8]) || 0;
-      const datum  = data[i][1] ? new Date(data[i][1]) : null;
+      const datum  = data[i][1] ? parseDatum_(data[i][1]) : null;
 
       // Zelfde rekening op debet én credit = fout
       if (debet && credit && debet === credit) zelfboekingen++;
       // Nulbedrag = verdacht
       if (bedrag === 0) nulBedragen++;
       // Toekomstige datum = verdacht
-      if (datum && datum > vandaag) toekomstDatums++;
+      if (datum && !isNaN(datum.getTime()) && datum > vandaag) toekomstDatums++;
     }
 
     resultaten.push({
@@ -256,7 +256,7 @@ function controleerVerkoopfacturen_(ss) {
       const klant   = String(data[i][5] || '').trim();
       const bedrag  = parseFloat(data[i][12]) || 0;
       const status  = String(data[i][14] || '');
-      const vervalD = data[i][3] ? new Date(data[i][3]) : null;
+      const vervalD = data[i][3] ? parseDatum_(data[i][3]) : null;
 
       if (nr) {
         if (nummers[nr]) duplicaten++;
