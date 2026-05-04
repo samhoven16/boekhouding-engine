@@ -198,7 +198,7 @@ describe('setup() idempotency guard (Setup.gs)', () => {
 
     expect(mockAlert).toHaveBeenCalledTimes(1);
     // alertOfLog_(ui, titel, bericht) — bericht staat op index 2
-    expect(mockAlert.mock.calls[0][2]).toMatch(/al geconfigureerd/);
+    expect(mockAlert.mock.calls[0][2]).toMatch(/draait al/);
     expect(ctx.maakTabbladen_).not.toHaveBeenCalled();
     expect(ctx.maakHoofdFormulier_).not.toHaveBeenCalled();
     expect(ctx.zetInstellingen_).not.toHaveBeenCalled();

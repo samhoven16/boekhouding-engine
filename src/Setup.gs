@@ -15,9 +15,10 @@ function setup() {
 
   // ── Idempotency guard ──────────────────────────────────────────────────
   if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) === 'true') {
-    alertOfLog_(ui, 'Setup al uitgevoerd',
-      'Het systeem is al geconfigureerd.\n\n' +
-      'Gebruik "Boekhouding → Beheer → Herstel / Herinstalleer" als u opzettelijk opnieuw wilt instellen.');
+    alertOfLog_(ui, 'Setup is al klaar',
+      'Je boekhouding draait al — niks meer te doen hier.\n\n' +
+      'Wil je toch helemaal opnieuw beginnen? Ga naar:\n' +
+      'Boekhouding → Instellingen → Setup opnieuw uitvoeren (reset)');
     return;
   }
   // ──────────────────────────────────────────────────────────────────────
@@ -1154,8 +1155,9 @@ function setInstelling_(sleutel, waarde) {
 function resetSetup() {
   const ui = SpreadsheetApp.getUi();
   const bevestiging = ui.alert(
-    'Waarschuwing',
-    'Dit verwijdert alle triggers en form-koppelingen (NIET de data).\nDoorgaan?',
+    'Setup opnieuw uitvoeren?',
+    'Dit wist alle formulieren en automatisering — je boekhoud-data blijft veilig staan.\n\n' +
+    'Daarna kun je setup opnieuw doorlopen.\n\nDoorgaan?',
     ui.ButtonSet.YES_NO
   );
   if (bevestiging !== ui.Button.YES) return;
@@ -1168,5 +1170,8 @@ function resetSetup() {
 
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
 
-  ui.alert('Reset geslaagd. Voer nu opnieuw "Setup uitvoeren" uit.');
+  ui.alert('Klaar! ✓',
+    'Reset gelukt. Run nu opnieuw setup via:\n' +
+    'Boekhouding → Instellingen → Eerste keer instellen (setup)',
+    ui.ButtonSet.OK);
 }
