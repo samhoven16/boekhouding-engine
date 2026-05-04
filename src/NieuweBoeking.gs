@@ -439,26 +439,51 @@ var BON_B64 = null;
 var BON_MIME = null;
 var HERKENNER = null;
 
+/* ── GLOBAL ERROR HANDLER ──
+   Vangt elke onverwachte JS-fout en toont 'm onder de tabs i.p.v.
+   stille dialog die niets doet. Cruciaal voor debugging in productie
+   want gebruikers zien anders een dialog waar niks op klikt werkt. */
+window.addEventListener('error', function(ev) {
+  try {
+    var fs = document.getElementById('footer-status');
+    if (fs) {
+      fs.style.color = '#c62828';
+      fs.textContent = '⚠️ Technische fout: ' + (ev.message || 'onbekend') +
+                       ' (open Help → kopieer in chat support)';
+    }
+    if (typeof console !== 'undefined') console.error('[NieuweBoeking] error:', ev);
+  } catch (_) {}
+});
+
 /* ── INIT ── */
 (function init(){
-  // Datums instellen op vandaag
-  var vandaag = '${ctx.vandaag}';
-  ['f-datum','k-datum','d-datum','u-datum'].forEach(function(id){
-    var el = document.getElementById(id);
-    if(el) el.value = vandaag;
-  });
-  // Pre-valideer datum velden zodat ze direct groen tonen
-  [['f-datum','factuur'],['k-datum','kosten'],['d-datum','declaratie']].forEach(function(pair){
-    var el = document.getElementById(pair[0]);
-    if(el && el.value) valideerVeld(pair[1], 'datum', el);
-  });
-  // BTW standaard
-  var btwStd = '${ctx.btwStandaard}';
-  setSelect('f-btw', btwStd);
-  setSelect('k-btw', btwStd);
-  setSelect('d-btw', btwStd);
-  setSelect('u-btw', btwStd);
-  herbereken();
+  try {
+    // Datums instellen op vandaag — defensief: ctx.vandaag kan undefined zijn
+    var vandaag = '${ctx.vandaag}' || new Date().toISOString().slice(0, 10);
+    ['f-datum','k-datum','d-datum','u-datum'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.value = vandaag;
+    });
+    // Pre-valideer datum velden zodat ze direct groen tonen
+    [['f-datum','factuur'],['k-datum','kosten'],['d-datum','declaratie']].forEach(function(pair){
+      var el = document.getElementById(pair[0]);
+      if(el && el.value) valideerVeld(pair[1], 'datum', el);
+    });
+    // BTW standaard
+    var btwStd = '${ctx.btwStandaard}' || '21% (hoog)';
+    setSelect('f-btw', btwStd);
+    setSelect('k-btw', btwStd);
+    setSelect('d-btw', btwStd);
+    setSelect('u-btw', btwStd);
+    herbereken();
+  } catch (e) {
+    if (typeof console !== 'undefined') console.error('[NieuweBoeking] init:', e);
+    var fs = document.getElementById('footer-status');
+    if (fs) {
+      fs.style.color = '#c62828';
+      fs.textContent = '⚠️ Init fout: ' + e.message;
+    }
+  }
 })();
 
 function setSelect(id, waarde) {
@@ -471,15 +496,23 @@ function setSelect(id, waarde) {
   }
 }
 
-/* ── TAB NAVIGATIE ── */
+/* ── TAB NAVIGATIE — defensief wrap zodat één error niet alle tabs breekt ── */
 function wisselTab(type) {
-  ACTIEF_TAB = type;
-  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('actief'); });
-  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('actief'); });
-  document.getElementById('tab-' + type).classList.add('actief');
-  document.getElementById('panel-' + type).classList.add('actief');
-  document.getElementById('btn-bevestig').textContent = type === 'upload' ? '✅ Bon opslaan' : '✅ Opslaan';
-  document.getElementById('footer-status').textContent = '';
+  try {
+    ACTIEF_TAB = type;
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('actief'); });
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('actief'); });
+    var tabEl = document.getElementById('tab-' + type);
+    var panelEl = document.getElementById('panel-' + type);
+    if (tabEl) tabEl.classList.add('actief');
+    if (panelEl) panelEl.classList.add('actief');
+    var btn = document.getElementById('btn-bevestig');
+    if (btn) btn.textContent = type === 'upload' ? '✅ Bon opslaan' : '✅ Opslaan';
+    var fs = document.getElementById('footer-status');
+    if (fs) fs.textContent = '';
+  } catch (e) {
+    if (typeof console !== 'undefined') console.error('[wisselTab]', e);
+  }
 }
 
 /* ── FACTUUR: REGELS ── */
@@ -509,34 +542,48 @@ function verwijderRegel(n) {
 /* ── BTW BEREKENING FACTUUR ── */
 function fmt(n){ return '\u20ac\u00a0' + parseFloat(n||0).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function btwPct(sel){
-  var v = document.getElementById(sel).value;
-  // Strikte detectie: gebruik '21%' / '9%' niet kale cijfers — anders matcht
-   // '212' of een hypothetisch toekomst-tarief als '29%' fout naar 9%.
-  if (v.indexOf('21%') !== -1 || /\\bhoog\\b/i.test(v)) return 0.21;
-  if (v.indexOf('9%') !== -1 || /\\blaag\\b/i.test(v)) return 0.09;
+  var el = document.getElementById(sel);
+  if (!el) return 0;
+  var v = String(el.value || '').toLowerCase();
+  // Geen regex nodig (en dus geen \\b-escape-issues in template-literals).
+  // Volgorde: eerst 21% want '21%' bevat geen '9%'; daarna 9% strikt
+  // (.indexOf('9%') voorkomt fout-match op '29%' want dat heeft geen '9%' subset).
+  if (v.indexOf('21%') !== -1 || v.indexOf('hoog') !== -1) return 0.21;
+  if (v.indexOf('9%') !== -1  || v.indexOf('laag') !== -1) return 0.09;
   return 0;
 }
 
 function herbereken() {
-  var excl = 0;
-  for(var i=1;i<=REGEL_TELLER;i++){
-    var omEl = document.getElementById('f-r'+i+'omschr');
-    if(!omEl) continue;
-    var a = parseFloat((document.getElementById('f-r'+i+'aantal')||{}).value||0);
-    var p = parseFloat((document.getElementById('f-r'+i+'prijs')||{}).value||0);
-    var tot = Math.round(a*p*100)/100;
-    var totEl = document.getElementById('f-r'+i+'tot');
-    if(totEl) totEl.value = tot>0 ? fmt(tot) : '';
-    excl += tot;
+  try {
+    var excl = 0;
+    for(var i=1;i<=REGEL_TELLER;i++){
+      var omEl = document.getElementById('f-r'+i+'omschr');
+      if(!omEl) continue;
+      var a = parseFloat((document.getElementById('f-r'+i+'aantal')||{}).value||0);
+      var p = parseFloat((document.getElementById('f-r'+i+'prijs')||{}).value||0);
+      if (!isFinite(a) || a < 0) a = 0;
+      if (!isFinite(p) || p < 0) p = 0;
+      var tot = Math.round(a*p*100)/100;
+      var totEl = document.getElementById('f-r'+i+'tot');
+      if(totEl) totEl.value = tot>0 ? fmt(tot) : '';
+      excl += tot;
+    }
+    var pct = btwPct('f-btw');
+    var btw = Math.round(excl*pct*100)/100;
+    var incl = Math.round((excl+btw)*100)/100;
+    var totExclEl = document.getElementById('tot-excl');
+    var totBtwEl  = document.getElementById('tot-btw');
+    var totInclEl = document.getElementById('tot-incl');
+    if (totExclEl) totExclEl.textContent = fmt(excl);
+    if (totBtwEl)  totBtwEl.textContent  = fmt(btw);
+    if (totInclEl) totInclEl.textContent = fmt(incl);
+    var btwSelEl = document.getElementById('f-btw');
+    var btwLabelMatch = btwSelEl ? String(btwSelEl.value || '').match(/\d+%/) : null;
+    var totBtwLabel = document.getElementById('tot-btw-label');
+    if (totBtwLabel) totBtwLabel.textContent = 'BTW (' + (btwLabelMatch ? btwLabelMatch[0] : '0%') + ')';
+  } catch (e) {
+    if (typeof console !== 'undefined') console.error('[herbereken]', e);
   }
-  var pct = btwPct('f-btw');
-  var btw = Math.round(excl*pct*100)/100;
-  var incl = Math.round((excl+btw)*100)/100;
-  document.getElementById('tot-excl').textContent = fmt(excl);
-  document.getElementById('tot-btw').textContent  = fmt(btw);
-  document.getElementById('tot-incl').textContent = fmt(incl);
-  var btwLabel = document.getElementById('f-btw').value.match(/\d+%/);
-  document.getElementById('tot-btw-label').textContent = 'BTW (' + (btwLabel ? btwLabel[0] : '0%') + ')';
 }
 
 /* ── BTW BEREKENING KOSTEN ── */
@@ -889,7 +936,13 @@ function vulUploadVelden(s) {
 </body></html>`;
 
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(720).setHeight(640),
+    HtmlService.createHtmlOutput(html)
+      .setWidth(720).setHeight(640)
+      // IFRAME-sandbox is default in moderne GAS maar expliciet maken:
+      // garandeert dat inline onclick/oninput-handlers en google.script.run
+      // correct werken. Zonder expliciete mode kan een GAS-update CSP-strict
+      // worden en stillekens alle interactiviteit breken.
+      .setSandboxMode(HtmlService.SandboxMode.IFRAME),
     '+ Nieuwe boeking'
   );
 }
