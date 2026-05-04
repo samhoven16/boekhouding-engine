@@ -229,10 +229,13 @@ function vernieuwPriveDashboard_(ss) {
   const perCategorie = {};
 
   for (let i = 1; i < data.length; i++) {
-    const datum  = data[i][0] ? new Date(data[i][0]) : null;
+    // parseDatum_ + isNaN-check — voorheen gaf `new Date('corrupt')` een
+    // Date-object met NaN getime, en `!datum` was false → loop crashte
+    // bij datum.getFullYear().
+    const datum  = data[i][0] ? parseDatum_(data[i][0]) : null;
     const bedrag = parseFloat(data[i][3]) || 0;
     const cat    = String(data[i][2] || 'Overig');
-    if (!datum) continue;
+    if (!datum || isNaN(datum.getTime())) continue;
 
     if (datum.getFullYear() === huidigeJ) {
       if (bedrag > 0) inkomstenJaar  += bedrag;

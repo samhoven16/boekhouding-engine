@@ -255,9 +255,13 @@ function slaansFuzzyKoppelTransacties_() {
 
   // Niet meer matchen als al BETAALD/GECREDITEERD; DEELS_BETAALD kan
   // wel resterend bedrag krijgen.
-  const skipStatusVoorMatch = {};
-  skipStatusVoorMatch[FACTUUR_STATUS.BETAALD] = true;
-  skipStatusVoorMatch[FACTUUR_STATUS.GECREDITEERD] = true;
+  // Helper voor genormaliseerde status-lookup — voorkomt dat 'Betaald '
+  // (trailing spatie) of 'BETAALD' (uppercase) door de skip valt.
+  const skipStatussen = [FACTUUR_STATUS.BETAALD, FACTUUR_STATUS.GECREDITEERD]
+    .map(function(s) { return String(s || '').toLowerCase().trim(); });
+  function moetSkippen_(status) {
+    return skipStatussen.indexOf(String(status || '').toLowerCase().trim()) !== -1;
+  }
 
   // Bouw factuur-index op: factuurnummer (genormaliseerd) → rij-index.
   // Strikte match-helper voorkomt false-positives ('F100' ⊂ 'F1000').
@@ -298,7 +302,7 @@ function slaansFuzzyKoppelTransacties_() {
       for (let j = 1; j < vfData.length; j++) {
         const vfBedrag = parseFloat(vfData[j][12]) || 0;
         const status   = vfData[j][14];
-        if (skipStatusVoorMatch[status]) continue;
+        if (moetSkippen_(status)) continue;
         if (Math.abs(vfBedrag - bedrag) < 0.005) {
           const klantnaam = String(vfData[j][5] || '').toLowerCase();
           const klantW = klantnaam.split(' ')[0];
@@ -318,7 +322,7 @@ function slaansFuzzyKoppelTransacties_() {
       for (let j = 1; j < vfData.length; j++) {
         const vfBedrag = parseFloat(vfData[j][12]) || 0;
         const status   = vfData[j][14];
-        if (skipStatusVoorMatch[status]) continue;
+        if (moetSkippen_(status)) continue;
         if (Math.abs(vfBedrag - bedrag) < 0.005 && btDatum) {
           const vfDatum = vfData[j][2] ? new Date(vfData[j][2]) : null;
           if (vfDatum) {
@@ -421,8 +425,12 @@ function zoekGeleerdeCategorie_(tegenpartij) {
   // Exact match
   if (regels[sleutel]) return { ...regels[sleutel], zekerheid: 95, bron: 'geleerd' };
 
-  // Gedeeltelijke match
+  // Gedeeltelijke match — minimum 4 tekens om te voorkomen dat 'AD' (geleerd
+  // voor één leverancier) ook matcht op 'QUAD', 'BRADFORD', etc. via substring.
+  // Voorheen kon een korte sleutel cross-leveranciers vervuilen.
+  const MIN_GED_LEN = 4;
   for (const [k, v] of Object.entries(regels)) {
+    if (k.length < MIN_GED_LEN || sleutel.length < MIN_GED_LEN) continue;
     if (sleutel.includes(k) || k.includes(sleutel)) {
       return { ...v, zekerheid: 80, bron: 'geleerd (gedeeltelijk)' };
     }

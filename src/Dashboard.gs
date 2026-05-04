@@ -599,8 +599,8 @@ function berekenMaandData_(ss, jaar) {
   if (vfSheet && vfSheet.getLastRow() > 1) {
     const rows = vfSheet.getRange(2, 1, vfSheet.getLastRow() - 1, vfSheet.getLastColumn()).getValues();
     rows.forEach(function(r) {
-      const datum = r[2] ? new Date(r[2]) : null;
-      if (!datum || datum.getFullYear() !== jaar) return;
+      const datum = r[2] ? parseDatum_(r[2]) : null;
+      if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) return;
       const bedragIncl = Number(r[12]) || 0;
       const status = String(r[14] || '');
       if (status === FACTUUR_STATUS.GECREDITEERD) return;
@@ -613,8 +613,8 @@ function berekenMaandData_(ss, jaar) {
   if (ifSheet && ifSheet.getLastRow() > 1) {
     const rows = ifSheet.getRange(2, 1, ifSheet.getLastRow() - 1, ifSheet.getLastColumn()).getValues();
     rows.forEach(function(r) {
-      const datum = r[3] ? new Date(r[3]) : (r[2] ? new Date(r[2]) : null);
-      if (!datum || datum.getFullYear() !== jaar) return;
+      const datum = r[3] ? parseDatum_(r[3]) : (r[2] ? parseDatum_(r[2]) : null);
+      if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) return;
       const bedragIncl = Number(r[11]) || 0;
       data[datum.getMonth()].kosten += bedragIncl;
     });
@@ -662,16 +662,16 @@ function berekenRoiData_(ss, kpi) {
   let omzetGeind = 0;
   for (let i = 1; i < vfData.length; i++) {
     if (vfData[i][14] !== FACTUUR_STATUS.BETAALD) continue;
-    const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
-    if (datum && datum.getFullYear() !== boekjaar) continue;
+    const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
+    if (datum && !isNaN(datum.getTime()) && datum.getFullYear() !== boekjaar) continue;
     omzetGeind += parseFloat(vfData[i][12]) || 0; // incl. BTW bedrag
   }
 
   // BTW correct verwerkt = som van BTW-bedragen op facturen in boekjaar
   let btwVerwerkt = 0;
   for (let i = 1; i < vfData.length; i++) {
-    const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
-    if (datum && datum.getFullYear() !== boekjaar) continue;
+    const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
+    if (datum && !isNaN(datum.getTime()) && datum.getFullYear() !== boekjaar) continue;
     const incl = parseFloat(vfData[i][12]) || 0;
     const excl = parseFloat(vfData[i][9]) || 0;
     btwVerwerkt += rondBedrag_(incl - excl);
@@ -680,8 +680,8 @@ function berekenRoiData_(ss, kpi) {
   // Boekingen gefilterd op boekjaar
   let aantalBoekingen = 0;
   for (let i = 1; i < jrData.length; i++) {
-    const datum = jrData[i][1] ? new Date(jrData[i][1]) : null;
-    if (!datum || datum.getFullYear() !== boekjaar) continue;
+    const datum = jrData[i][1] ? parseDatum_(jrData[i][1]) : null;
+    if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== boekjaar) continue;
     aantalBoekingen++;
   }
 
@@ -917,8 +917,8 @@ function detecteerAfwijkingen_(ss) {
       let aantal21 = 0, aantal0 = 0;
       const nul21Refs = [];
       for (let i = 1; i < data.length; i++) {
-        const datum = data[i][2] ? new Date(data[i][2]) : null;
-        if (!datum || datum < dertigDagen) continue;
+        const datum = data[i][2] ? parseDatum_(data[i][2]) : null;
+        if (!datum || isNaN(datum.getTime()) || datum < dertigDagen) continue;
         const tarief = String(data[i][10] || '');
         if (tarief.indexOf('21%') !== -1 || /\bhoog\b/i.test(tarief)) aantal21++;
         else if (tarief.indexOf('0%') !== -1 || tarief.indexOf('0 ') === 0) {
@@ -1012,7 +1012,8 @@ function berekenBtwIndicatie_(ss) {
 // ─────────────────────────────────────────────
 function berekenKpiData_(ss) {
   const kg = berekenKengetallen_(ss);
-  const jaar = new Date().getFullYear();
+  // Boekjaar ipv kalenderjaar — voorkomt KPI-mismatch bij afwijkend boekjaar
+  const jaar = getBoekjaar_();
 
   // Open debiteuren — null-guard: tabblad kan ontbreken bij gedeeltelijke setup.
   const _vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
@@ -1035,10 +1036,10 @@ function berekenKpiData_(ss) {
     debiteurenOpen += open;
     aantalOpenFacturen++;
     if (status === FACTUUR_STATUS.VERVALLEN) aantalVervallenFacturen++;
-    const datum = vfData[i][2] ? new Date(vfData[i][2]) : vandaag;
+    const datum = vfData[i][2] ? (parseDatum_(vfData[i][2]) || vandaag) : vandaag;
     totaalDagenOpen += Math.floor((vandaag - datum) / (1000 * 60 * 60 * 24));
     // Verwacht binnen 30 dagen: vervaldatum (col 3) valt op of vóór 30d grens
-    const verval = vfData[i][3] ? new Date(vfData[i][3]) : null;
+    const verval = vfData[i][3] ? parseDatum_(vfData[i][3]) : null;
     if (verval && !isNaN(verval.getTime()) && verval <= over30d) verwachtIn30d += open;
   }
 
@@ -1047,7 +1048,10 @@ function berekenKpiData_(ss) {
   const ifData = _ifSheet ? _ifSheet.getDataRange().getValues() : [[]];
   let crediteurenOpen = 0;
   for (let i = 1; i < ifData.length; i++) {
-    if (ifData[i][12] === FACTUUR_STATUS.BETAALD) continue;
+    const ifStatus = ifData[i][12];
+    // Skip BETAALD én GECREDITEERD — voorheen werden gecrediteerde inkopen
+    // ten onrechte als open crediteuren geteld.
+    if (ifStatus === FACTUUR_STATUS.BETAALD || ifStatus === FACTUUR_STATUS.GECREDITEERD) continue;
     crediteurenOpen += parseFloat(ifData[i][11]) || 0;
   }
 
@@ -1122,9 +1126,10 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
   let vervallenCrediteuren = 0;
   const vandaag30 = nu;
   for (let i = 1; i < ifData.length; i++) {
-    if (ifData[i][12] === FACTUUR_STATUS.BETAALD) continue;
-    const factDatum = ifData[i][3] ? new Date(ifData[i][3]) : null;
-    if (!factDatum) continue;
+    const ifSt = ifData[i][12];
+    if (ifSt === FACTUUR_STATUS.BETAALD || ifSt === FACTUUR_STATUS.GECREDITEERD) continue;
+    const factDatum = ifData[i][3] ? parseDatum_(ifData[i][3]) : null;
+    if (!factDatum || isNaN(factDatum.getTime())) continue;
     const vervaldatum = new Date(factDatum.getTime() + 30 * 24 * 60 * 60 * 1000);
     if (vandaag30 > vervaldatum) vervallenCrediteuren++;
   }
@@ -1246,9 +1251,9 @@ function getDashboardData() {
     if (vfSheet) {
       const vfData = vfSheet.getDataRange().getValues();
       for (let i = 1; i < vfData.length; i++) {
-        const datum = vfData[i][2] ? new Date(vfData[i][2]) : null;
+        const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
         const status = String(vfData[i][14] || '');
-        if (datum && !isNaN(datum) && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
+        if (datum && !isNaN(datum.getTime()) && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
           omzetMaand += parseFloat(vfData[i][12]) || 0;
         }
         if (status === FACTUUR_STATUS.VERVALLEN) {
@@ -1270,8 +1275,8 @@ function getDashboardData() {
     if (ifSheet) {
       const ifData = ifSheet.getDataRange().getValues();
       for (let i = 1; i < ifData.length; i++) {
-        const datum = ifData[i][3] ? new Date(ifData[i][3]) : null;
-        if (datum && !isNaN(datum) && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
+        const datum = ifData[i][3] ? parseDatum_(ifData[i][3]) : null;
+        if (datum && !isNaN(datum.getTime()) && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
           kostenMaand += parseFloat(ifData[i][11]) || 0;
         }
       }

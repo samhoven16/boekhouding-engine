@@ -66,9 +66,10 @@ function bankAfstemming() {
 // ─────────────────────────────────────────────
 function maakHandmatigeBankTransactie_(ss, opt) {
   const transactieId = volgendTransactieId_();
+  const datum = (opt.datum instanceof Date) ? opt.datum : (parseDatum_(opt.datum) || new Date());
   const rij = [
     transactieId,
-    opt.datum || new Date(),
+    datum,
     opt.omschr || '',
     opt.bedrag || 0,
     opt.type || 'Betaling (af)',
@@ -98,7 +99,7 @@ function getMutaties_(ss, rekeningCode, vanDatum, totDatum) {
     const rekening = String(data[i][5] || '');
     if (rekening !== String(rekeningCode)) continue;
 
-    const datum = data[i][1] ? new Date(data[i][1]) : null;
+    const datum = data[i][1] ? parseDatum_(data[i][1]) : null;
     if (datum && vanDatum && datum < vanDatum) continue;
     if (datum && totDatum && datum > totDatum) continue;
 
