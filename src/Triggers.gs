@@ -498,6 +498,25 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
     } catch (_) {}
   }
 
+  // Slimme fiscale tips: detecteer AOV/EIA/KIA-grens/reiskosten/thuiswerk
+  // Klant ziet meteen of er extra fiscaal voordeel mogelijk is.
+  try {
+    const slimmeTips = genereerSlimmeBoekingTips_({
+      leverancier: leverancier,
+      omschr: data['Omschrijving uitgave'] || '',
+      bedrag: bedragExcl,
+      categorie: categorie,
+      kostenRek: kostenRek,
+    });
+    if (slimmeTips && slimmeTips.length > 0) {
+      slimmeTips.forEach(function(t) {
+        schrijfAuditLog_('Slimme tip uitgave', 'IK' + inkoopNr + ': ' + t.slice(0, 200));
+      });
+    }
+  } catch (e) {
+    Logger.log('Slimme boeking-tips: ' + e.message);
+  }
+
   // High-expense alert — e-mail eigenaar bij ongebruikelijk hoge uitgave
   try {
     waarschuwBijHogeUitgave_(bedragIncl, leverancier, categorie, 'IK' + inkoopNr);

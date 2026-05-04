@@ -394,6 +394,85 @@ function runWatAlsSimulator(mutatie) {
 }
 
 // ─────────────────────────────────────────────
+//  SLIMME BOEKING-TIPS — proactief bij inkoop
+// ─────────────────────────────────────────────
+/**
+ * Genereert tips bij een net-geboekte uitgave/inkoop.
+ * Klant ziet direct of er fiscaal voordeel mogelijk is dat hij/zij anders
+ * over het hoofd zou zien. Resultaat: array van tip-strings (max 3, kort).
+ *
+ * @param {Object} data Geboekte data: { leverancier, omschr, bedrag, categorie, kostenRek }
+ * @return {string[]} Lijst tip-strings (kan leeg).
+ */
+function genereerSlimmeBoekingTips_(data) {
+  const tips = [];
+  if (!data) return tips;
+  const bedrag = parseFloat(data.bedrag) || 0;
+  const omschr = String(data.omschr || '').toLowerCase();
+  const lev = String(data.leverancier || '').toLowerCase();
+  const cat = String(data.categorie || '').toLowerCase();
+  const kostenRek = String(data.kostenRek || '');
+
+  // Tip 1: Bedrag ≥ activeerGrens en NIET op 02xx-rekening → mogelijke investering
+  let B = null;
+  try { B = getBelasting_(); } catch (_) {}
+  const activeerGrens = (B && B.ACTIVEER_GRENS) || 450;
+  if (bedrag >= activeerGrens && kostenRek && !kostenRek.startsWith('0')) {
+    tips.push(
+      '💡 Bedrag ≥ €' + activeerGrens + ' — overweeg of dit een investering is ' +
+      '(boeken op 02xx-rekening, jaarlijks afschrijven). ' +
+      'Dat geeft mogelijk recht op KIA (28% extra aftrek).'
+    );
+  }
+
+  // Tip 2: AOV-detectie
+  if (/aov|arbeidsongeschikt/i.test(omschr) || /aov|arbeidsongeschikt/i.test(lev)) {
+    tips.push(
+      '💡 AOV-premie: dit is GEEN bedrijfskost maar AFTREKBAAR in box 1 ' +
+      'als "uitgaven inkomensvoorzieningen". 35-49,5% terug bij IB-aangifte.'
+    );
+  }
+
+  // Tip 3: EIA-trigger (energie/zonne/warmtepomp)
+  if (bedrag >= 2500 && /energie|zonn?epaneel|zonn?epanelen|warmtepomp|isolat|led|elektr.?aut|laadpaal/i.test(omschr + ' ' + lev)) {
+    tips.push(
+      '💡 Mogelijk EIA-aftrek (40%) op deze energie-investering. ' +
+      'Boek op 02xx-rekening + meld aan bij RVO binnen 3 maanden via rvo.nl/eia.'
+    );
+  }
+
+  // Tip 4: KIA-grens net bereikt — moedig nog meer aan dit jaar
+  if (bedrag >= ((B && B.KIA_MIN) || 2901) - 500 && bedrag < ((B && B.KIA_MIN) || 2901)) {
+    const tekort = ((B && B.KIA_MIN) || 2901) - bedrag;
+    tips.push(
+      '💡 Nog ' + formatBedrag_(tekort) + ' extra investering nodig dit jaar voor KIA-aftrek (28%).'
+    );
+  }
+
+  // Tip 5: Reiskosten-categorie zonder km-administratie
+  if (/reis|kilometer|km|brandstof|tankstation|shell|bp|esso|texaco/i.test(omschr + ' ' + lev) &&
+      !/km|kilometer/i.test(omschr) && bedrag > 30) {
+    tips.push(
+      '💡 Reisuitgave gedetecteerd — vergeet niet uw km bij te houden. ' +
+      'Met privéauto: €0,23/km is aftrekbaar (gebruik =KM_VERGOEDING in een nieuwe rij).'
+    );
+  }
+
+  // Tip 6: Thuiswerk-relevante kosten (internet/telefoon)
+  if (/internet|kpn|t-mobile|vodafone|ziggo|odido|mobiel/i.test(omschr + ' ' + lev) && bedrag > 0) {
+    const thuiswerkInst = String(getInstelling_('Thuiswerk dagen per jaar') || '').trim();
+    if (!thuiswerkInst || parseInt(thuiswerkInst, 10) === 0) {
+      tips.push(
+        '💡 Telecomkosten geboekt — vul "Thuiswerk dagen per jaar" in via Instellingen. ' +
+        'Bij thuiswerk is €2,40/dag aftrekbaar (€624 bij 260 werkdagen).'
+      );
+    }
+  }
+
+  return tips.slice(0, 3); // Max 3 tips per boeking — niet overweldigen
+}
+
+// ─────────────────────────────────────────────
 //  WAT-ALS SIMULATOR (CORE BEREKENING)
 // ─────────────────────────────────────────────
 
