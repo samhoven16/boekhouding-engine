@@ -572,13 +572,19 @@ function markeerWelkomGezienEnNavigeer(actie) {
       const s = ss.getSheetByName(SHEETS.DASHBOARD);
       if (s) ss.setActiveSheet(s);
     } else if (actie === 'boeking') {
-      if (typeof openNieuweBoeking === 'function') openNieuweBoeking();
+      // Apps Script kan maar 1 modal tegelijk tonen — wacht 1500ms zodat de
+      // client-side host.close() van welkom-modal echt afgerond is.
+      if (typeof openNieuweBoeking === 'function') {
+        Utilities.sleep(1500);
+        openNieuweBoeking();
+      }
     } else if (actie === 'profiel') {
       // Auto-trigger fiscaal profiel — voorheen alleen via menu te bereiken,
       // nu prominent als stap 2 in welkomstmodal zodat klant direct
       // persoonlijk advies krijgt zonder zelf te zoeken.
+      // 1500ms i.p.v. 300ms — Apps Script kan geen 2 modals stacken.
       if (typeof toonFiscaalProfielWizard === 'function') {
-        Utilities.sleep(300);  // wacht tot welkom-modal sluit
+        Utilities.sleep(1500);
         toonFiscaalProfielWizard();
       }
     }

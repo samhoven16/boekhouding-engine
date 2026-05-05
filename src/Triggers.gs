@@ -193,6 +193,14 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     try { schrijfAuditLog_('Factuur datum-waarschuwing', 'datum > 7 jaar verleden (bewaarplicht): ' + formatDatum_(datum)); } catch (_) {}
   }
   const termijn    = parseInt(data['Betalingstermijn (dagen)'] || '30') || 30;
+  if (termijn <= 0) {
+    throw new Error('Betalingstermijn moet groter dan 0 dagen zijn (gevonden: ' + termijn + ').');
+  }
+  if (termijn > 365) {
+    // Belastingdienst-stelling: betalingstermijnen > 12 maanden zijn ongebruikelijk
+    // en kunnen op een typo wijzen (3650 i.p.v. 365). Niet blokkeren — wel loggen.
+    try { schrijfAuditLog_('Factuur termijn-waarschuwing', 'termijn > 1 jaar: ' + termijn); } catch (_) {}
+  }
   const vervaldatum = new Date(datum.getTime() + termijn * 86400000);
   const directMailen = String(data['Factuur direct e-mailen naar klant?'] || '').includes('Ja');
 
@@ -253,7 +261,15 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 
   const korting    = parseBedrag_(data['Korting (in €)'] || '0') || 0;
   const btwTarief  = parseBtwTarief_(data['BTW tarief'] || '21% (hoog)');
-  const totalExcl    = rondBedrag_(regels.reduce((s, r) => s + r.totaal, 0) - korting);
+  const _subtotaal = regels.reduce((s, r) => s + r.totaal, 0);
+  if (korting < 0) {
+    throw new Error('Korting moet ≥ €0 zijn (gevonden: ' + formatBedrag_(korting) + ').');
+  }
+  if (korting > _subtotaal) {
+    throw new Error('Korting (' + formatBedrag_(korting) + ') is groter dan totaal regels (' +
+      formatBedrag_(_subtotaal) + '). Een factuur mag niet negatief zijn — gebruik een creditnota i.p.v. negatieve factuur.');
+  }
+  const totalExcl    = rondBedrag_(_subtotaal - korting);
   const totalBtw   = btwTarief !== null ? rondBedrag_(totalExcl * btwTarief) : 0;
   const totalIncl  = rondBedrag_(totalExcl + totalBtw);
 
@@ -1469,15 +1485,25 @@ function koppelBankTransactieAanFactuur_(ss, transactieId, ref, bedrag, isOntvan
 
 function markeerVervallenFacturen_(ss) {
   const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (!sheet) return;
   const data = sheet.getDataRange().getValues();
+  // Day-only vergelijking: een factuur die VANDAAG vervalt is nog niet vervallen
+  // (gebruiker mag tot eind van de dag betalen). Eerst tijd op 00:00 zetten.
   const vandaag = new Date();
+  vandaag.setHours(0, 0, 0, 0);
   // Markeer als VERVALLEN: status is VERZONDEN of DEELS_BETAALD én vervaldatum is voorbij.
   // Concepts skippen we (nog niet officieel verstuurd), BETAALD/GECREDITEERD is final.
   const teMarkeren = [FACTUUR_STATUS.VERZONDEN, FACTUUR_STATUS.DEELS_BETAALD];
   for (let i = 1; i < data.length; i++) {
     const status = data[i][14];
-    const vervaldatum = data[i][3];
-    if (teMarkeren.indexOf(status) !== -1 && vervaldatum && new Date(vervaldatum) < vandaag) {
+    if (teMarkeren.indexOf(status) === -1) continue;
+    // Vervaldatum kan in cell als Date-object OF als string staan (na CSV-import).
+    // parseDatum_ accepteert beide. Native new Date(stringNL) zou NaN geven.
+    const ruwVerval = data[i][3];
+    if (!ruwVerval) continue;
+    const verval = (ruwVerval instanceof Date) ? ruwVerval : parseDatum_(ruwVerval);
+    if (!verval || isNaN(verval.getTime())) continue;
+    if (verval < vandaag) {
       sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.VERVALLEN);
       sheet.getRange(i + 1, 15).setBackground('#FFCDD2');
     }
