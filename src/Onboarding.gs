@@ -504,20 +504,76 @@ function toonPostSetupWelkomModal_() {
         <span class="t"><strong>Dashboard bekijken</strong><span>KPI's en openstaande facturen in één oogopslag</span></span>
       </button>
     </div>
-    <div class="later"><button onclick="kies('later')">Later — sluit dit venster</button></div>
+    <div class="later"><button id="btn-later" type="button">Later — sluit dit venster</button></div>
+    <div id="welkom-status" style="margin-top:10px;padding:8px;border-radius:6px;display:none;font-size:12px"></div>
     <script>
       function kies(actie) {
-        // Apps Script-conventie: functies met trailing _ zijn privaat en
-        // NIET aanroepbaar via google.script.run. Daarom verwijst dit naar
-        // de PUBLIEKE wrapper markeerWelkomGezienEnNavigeer (geen underscore).
-        google.script.run
-          .withSuccessHandler(function(){ google.script.host.close(); })
-          .withFailureHandler(function(e){
-            try { console.error('Welkom-actie:', e); } catch(_) {}
-            google.script.host.close();
-          })
-          .markeerWelkomGezienEnNavigeer(actie);
+        // Defensieve aanpak: ALTIJD het venster sluiten + actie loggen,
+        // zelfs als google.script.run faalt. Voorheen bleef dialog hangen
+        // bij privacy-fouten of CSP-blokkades zonder feedback.
+        var status = document.getElementById('welkom-status');
+        function meldOK() {
+          if (status) {
+            status.style.display = 'block';
+            status.style.background = '#E6F7F4';
+            status.style.color = '#1B5E20';
+            status.textContent = '✓ Bezig...';
+          }
+          setTimeout(function(){
+            try { google.script.host.close(); } catch(_) {}
+          }, 350);
+        }
+        function meldFout(msg) {
+          if (status) {
+            status.style.display = 'block';
+            status.style.background = '#FFEBEE';
+            status.style.color = '#B71C1C';
+            status.textContent = '⚠ ' + (msg || 'Kon actie niet uitvoeren — venster sluit toch');
+          }
+          // Force-sluit na 2 sec zodat klant niet vastzit
+          setTimeout(function(){ try { google.script.host.close(); } catch(_) {} }, 2000);
+        }
+        try {
+          google.script.run
+            .withSuccessHandler(meldOK)
+            .withFailureHandler(function(e){ meldFout(e && e.message ? e.message : 'Onbekende fout'); })
+            .markeerWelkomGezienEnNavigeer(actie);
+        } catch (err) {
+          meldFout('Geen verbinding met script — venster sluit');
+        }
       }
+      // Bind via addEventListener als safety-net (inline onclick kan in
+      // sommige Apps Script CSP-modes worden geblokkeerd).
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('button.actie').forEach(function(btn, i) {
+          var actie = btn.getAttribute('onclick') || '';
+          var match = actie.match(/kies\('(\w+)'\)/);
+          if (match && match[1]) {
+            btn.removeAttribute('onclick');
+            btn.addEventListener('click', function(e){ e.preventDefault(); kies(match[1]); });
+          }
+        });
+        var laterBtn = document.getElementById('btn-later');
+        if (laterBtn) laterBtn.addEventListener('click', function(){ kies('later'); });
+      });
+      // Ook direct binden voor het geval DOMContentLoaded al gepasseerd is
+      (function bindNow() {
+        document.querySelectorAll('button.actie').forEach(function(btn) {
+          if (btn._bound) return;
+          var actie = btn.getAttribute('onclick') || '';
+          var match = actie.match(/kies\('(\w+)'\)/);
+          if (match && match[1]) {
+            btn._bound = true;
+            btn.removeAttribute('onclick');
+            btn.addEventListener('click', function(e){ e.preventDefault(); kies(match[1]); });
+          }
+        });
+        var laterBtn = document.getElementById('btn-later');
+        if (laterBtn && !laterBtn._bound) {
+          laterBtn._bound = true;
+          laterBtn.addEventListener('click', function(){ kies('later'); });
+        }
+      })();
     </script>
   `).setWidth(460).setHeight(440);
 
