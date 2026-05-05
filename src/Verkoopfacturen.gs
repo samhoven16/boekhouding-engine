@@ -381,8 +381,8 @@ function importeerBankafschrift() {
     </p>
     <textarea id="csv" placeholder="Datum;Omschrijving;Bedrag&#10;2024-01-15;Betaling klant;1250.00&#10;2024-01-16;Huur;-1500.00"></textarea>
     <br>
-    <button class="btn" onclick="importeer_()">Importeren</button>
-    <button class="btn-sec" onclick="google.script.host.close()">Annuleren</button>
+    <button class="btn" id="btnImporteer">Importeren</button>
+    <button class="btn-sec" id="btnAnnuleerCsv">Annuleren</button>
     <div id="result" style="margin-top:8px;color:green"></div>
     <script>
       function importeer_() {
@@ -403,6 +403,12 @@ function importeerBankafschrift() {
           })
           .verwerkBankCsvImport(csv, sep, cols);
       }
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('btnImporteer');
+        if (b) b.addEventListener('click', function(e){ e.preventDefault(); importeer_(); });
+        var a = document.getElementById('btnAnnuleerCsv');
+        if (a) a.addEventListener('click', function(){ try { google.script.host.close(); } catch (_) {} });
+      });
     </script>
   `).setWidth(700).setHeight(450).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Bankafschrift importeren');
@@ -874,12 +880,12 @@ function _bouwFactuurlijstHtml_() {
     '.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0D1B4E;color:white;padding:10px 22px;border-radius:8px;font-size:12px;display:none;z-index:99;box-shadow:0 6px 20px rgba(13,27,78,.22)}' +
     '::selection{background:rgba(46,196,182,.28);color:#0D1B4E}' +
     '</style></head><body>' +
-    '<div class="hdr"><h1>Verkoopfacturen</h1><button class="btn-ref" onclick="laad()">\u21bb Vernieuwen</button></div>' +
+    '<div class="hdr"><h1>Verkoopfacturen</h1><button class="btn-ref" data-actie="laad">\u21bb Vernieuwen</button></div>' +
     '<div class="tabs" id="tabs">' +
-    '  <div class="tab actief" data-tab="alle" onclick="wissel(\'alle\')">Alle<span class="cnt" id="cnt-alle">0</span></div>' +
-    '  <div class="tab" data-tab="open" onclick="wissel(\'open\')">Openstaand<span class="cnt" id="cnt-open">0</span></div>' +
-    '  <div class="tab vervallen" data-tab="vervallen" onclick="wissel(\'vervallen\')">Vervallen<span class="cnt" id="cnt-vervallen">0</span></div>' +
-    '  <div class="tab" data-tab="betaald" onclick="wissel(\'betaald\')">Betaald<span class="cnt" id="cnt-betaald">0</span></div>' +
+    '  <div class="tab actief" data-tab="alle" data-actie="wissel">Alle<span class="cnt" id="cnt-alle">0</span></div>' +
+    '  <div class="tab" data-tab="open" data-actie="wissel">Openstaand<span class="cnt" id="cnt-open">0</span></div>' +
+    '  <div class="tab vervallen" data-tab="vervallen" data-actie="wissel">Vervallen<span class="cnt" id="cnt-vervallen">0</span></div>' +
+    '  <div class="tab" data-tab="betaald" data-actie="wissel">Betaald<span class="cnt" id="cnt-betaald">0</span></div>' +
     '</div>' +
     '<div class="body" id="body"><div class="loading"><div class="spin"></div><br>Even laden\u2026</div></div>' +
     '<div class="toast" id="toast"></div>' +
@@ -932,11 +938,13 @@ function _bouwFactuurlijstHtml_() {
     '    h+=\'<td class="\'+( urgent?"urgent":"" )+\'">\'+esc(f.vervaldatum)+\'</td>\';' +
     '    h+=\'<td><span class="badge \'+badgeKls(f.status)+\'">\'+esc(f.status)+\'</span></td>\';' +
     '    h+=\'<td style="white-space:nowrap">\';' +
+    // data-actie + dataset-attributen ipv inline onclick (CSP-veilig + voorkomt
+    // quote-escape-hell met factuurnummers die quotes/specials kunnen bevatten).
     '    if(kanVersturen){' +
-    '      h+=\'<button class="btn-verstuur" id="vs-\'+esc(f.nr)+\'" onclick="verstuur(\\\'\'+esc(f.nr)+\'\\\',\\\'\'+esc(f.klantEmail||"")+\'\\\')">\u2709 Verstuur</button>\';' +
+    '      h+=\'<button class="btn-verstuur" id="vs-\'+esc(f.nr)+\'" data-actie="verstuur" data-nr="\'+esc(f.nr)+\'" data-email="\'+esc(f.klantEmail||"")+\'">\u2709 Verstuur</button>\';' +
     '    }' +
     '    if(kanBetalen){' +
-    '      h+=\'<button class="btn-betaald" id="btn-\'+esc(f.nr)+\'" onclick="betaal(\\\'\'+esc(f.nr)+\'\\\')">Betaald</button>\';' +
+    '      h+=\'<button class="btn-betaald" id="btn-\'+esc(f.nr)+\'" data-actie="betaal" data-nr="\'+esc(f.nr)+\'">Betaald</button>\';' +
     '    }' +
     '    h+=\'</td></tr>\';' +
     '  });' +
@@ -989,6 +997,17 @@ function _bouwFactuurlijstHtml_() {
     '  t.textContent=tekst;t.style.display="block";' +
     '  setTimeout(function(){t.style.display="none";},3000);' +
     '}' +
+    // Event-delegation op de body: één listener vangt alle klikken op
+    // dynamisch gegenereerde knoppen + tabs (innerHTML-rerender wist listeners).
+    'document.body.addEventListener("click",function(e){' +
+    '  var a=e.target.closest("[data-actie]");' +
+    '  if(!a) return;' +
+    '  var actie=a.getAttribute("data-actie");' +
+    '  if(actie==="verstuur"){verstuur(a.getAttribute("data-nr"),a.getAttribute("data-email")||"");}' +
+    '  else if(actie==="betaal"){betaal(a.getAttribute("data-nr"));}' +
+    '  else if(actie==="wissel"){wissel(a.getAttribute("data-tab"));}' +
+    '  else if(actie==="laad"){laad();}' +
+    '});' +
     'laad();' +
     '<\/script></body></html>';
 }
