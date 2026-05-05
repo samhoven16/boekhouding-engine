@@ -131,7 +131,7 @@ function toonOpenInkoopfacturen() {
   html += `</table><br><button onclick="google.script.host.close()">Sluiten</button>`;
 
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(650).setHeight(400),
+    HtmlService.createHtmlOutput(html).setWidth(650).setHeight(400).setSandboxMode(HtmlService.SandboxMode.IFRAME),
     'Open inkoopfacturen'
   );
 }

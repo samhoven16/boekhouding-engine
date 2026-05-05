@@ -352,7 +352,7 @@ function boekAfschrijvingen() {
         }).verwerkAfschrijvingen(data);
       }
     </script>
-  `).setWidth(600).setHeight(450);
+  `).setWidth(600).setHeight(450).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   ui.showModalDialog(html, 'Afschrijvingen');
 }

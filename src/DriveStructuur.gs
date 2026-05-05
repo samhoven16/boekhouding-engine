@@ -167,7 +167,7 @@ function toonDriveStructuur() {
   html += '<button class="btn-sec" onclick="google.script.host.close()">Sluiten</button>';
 
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(500).setHeight(350),
+    HtmlService.createHtmlOutput(html).setWidth(500).setHeight(350).setSandboxMode(HtmlService.SandboxMode.IFRAME),
     'Google Drive Structuur'
   );
 }

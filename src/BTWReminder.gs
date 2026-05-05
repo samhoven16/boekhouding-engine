@@ -280,7 +280,7 @@ function exporteerAangifte() {
 </html>`;
 
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(720).setHeight(580),
+    HtmlService.createHtmlOutput(html).setWidth(720).setHeight(580).setSandboxMode(HtmlService.SandboxMode.IFRAME),
     'BTW Aangifte Assistent — ' + kw.naam
   );
 }

@@ -156,7 +156,7 @@ function beheerHerhalendeKosten() {
           .opslaanHerhalendeKost({ naam, leveranc, bedrag, btw, freq, datum, rekening, auto, notities, splitPct });
       }
     </script>
-  `).setWidth(500).setHeight(620);
+  `).setWidth(500).setHeight(620).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   ui.showModalDialog(html, 'Herhalende kost toevoegen');
 }

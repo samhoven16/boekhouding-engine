@@ -168,7 +168,7 @@ function boekPriveCorrectie() {
           .verwerkPriveCorrectie(data);
       }
     </script>
-  `).setWidth(400).setHeight(320);
+  `).setWidth(400).setHeight(320).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   ui.showModalDialog(html, 'Privé correctie');
 }
 

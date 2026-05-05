@@ -365,7 +365,7 @@ function toonZapierInstructies() {
     <p style="font-size:11px;color:#888;margin-top:16px">
       <b>Zapier / Make / n8n?</b> Werkt ook — gebruik Webhooks → POST met dezelfde JSON-structuur.
     </p>
-  `).setWidth(680).setHeight(620);
+  `).setWidth(680).setHeight(620).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   ui.showModalDialog(html, 'Website koppelen aan uw boekhouding');
 }
 

@@ -198,19 +198,31 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 
   // Factuurregels (5 regels) — VALIDEREN VOORDAT factuurnummer-counter wordt bumped.
   // Belastingdienst eist sequentiële factuurnummers; gat door early-return = audit-flag.
+  // Skip-regel: omschrijving leeg OF aantal<=0 OF prijs<=0. Voorkomt €0-regels en
+  // negatieve regels (refund-risk). Negatieve aantal/prijs wordt bovendien gelogd.
   const regels = [];
+  const overgeslagenRegels = [];
   for (let i = 1; i <= 5; i++) {
-    const omschr = data[`Regel ${i} – Omschrijving`];
+    const omschr = String(data[`Regel ${i} – Omschrijving`] || '').trim();
     const aantal = parseBedrag_(data[`Regel ${i} – Aantal`] || '0');
     const prijs  = parseBedrag_(data[`Regel ${i} – Prijs per eenheid (excl. BTW)`] || '0');
-    if (!omschr || aantal === 0) continue;
+    if (!omschr && aantal === 0 && prijs === 0) continue;   // volledig leeg → stille skip
+    if (!omschr) { overgeslagenRegels.push(`Regel ${i}: omschrijving leeg`); continue; }
+    if (aantal <= 0) { overgeslagenRegels.push(`Regel ${i} (${omschr}): aantal moet > 0 zijn`); continue; }
+    if (prijs <= 0) { overgeslagenRegels.push(`Regel ${i} (${omschr}): prijs moet > €0 zijn`); continue; }
     const totaal = rondBedrag_(aantal * prijs);
     regels.push({ omschr, aantal, prijs, totaal });
   }
 
   if (regels.length === 0) {
-    schrijfAuditLog_('Factuur MISLUKT', 'Geen geldige factuurregels — geen nummer geclaimd');
-    throw new Error('Geen geldige factuurregels gevonden. Vul minimaal één omschrijving en bedrag in.');
+    const detail = overgeslagenRegels.length
+      ? '\n\nOvergeslagen regels:\n• ' + overgeslagenRegels.join('\n• ')
+      : '';
+    schrijfAuditLog_('Factuur MISLUKT', 'Geen geldige factuurregels — geen nummer geclaimd' + (detail ? ' | ' + overgeslagenRegels.join(' | ') : ''));
+    throw new Error('Geen geldige factuurregels gevonden. Vul minimaal één regel met omschrijving, aantal > 0 en prijs > €0.' + detail);
+  }
+  if (overgeslagenRegels.length) {
+    try { schrijfAuditLog_('Factuur regels overgeslagen', overgeslagenRegels.join(' | ')); } catch (_) {}
   }
 
   // Klant-BTW-nr formaat-check (niet-blokkerend) — bij verleggingsregeling

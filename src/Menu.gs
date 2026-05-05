@@ -232,7 +232,7 @@ function openHoofdFormulier() {
     <a class="btn" href="${url}" target="_blank">Formulier openen</a>
     <p class="url">${url}</p>
     <div class="tip"><b>Tip —</b> stuur deze link naar jezelf (WhatsApp, e-mail) zodat je ook vanaf je telefoon kunt invoeren.</div>
-  `).setWidth(500).setHeight(300);
+  `).setWidth(500).setHeight(300).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Formulier openen');
 }
 
@@ -359,7 +359,7 @@ function openBonUpload() {
         el.textContent = tekst;
       }
     </script>
-  `).setWidth(500).setHeight(560);
+  `).setWidth(500).setHeight(560).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Bon of factuur uploaden');
 }
 
@@ -407,7 +407,7 @@ function openJournaalpostFormulier() {
   const url = FormApp.openById(formId).getPublishedUrl();
   const html = HtmlService.createHtmlOutput(
     `<p><a href="${url}" target="_blank">📋 Handmatige boeking openen</a></p>`
-  ).setWidth(450).setHeight(100);
+  ).setWidth(450).setHeight(100).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Handmatige boeking');
 }
 
@@ -440,7 +440,7 @@ function toonFormulierLinks() {
     <p class="hint">Sla deze link op als bladwijzer op je telefoon voor snelle invoer onderweg.</p>
   `;
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(500).setHeight(250),
+    HtmlService.createHtmlOutput(html).setWidth(500).setHeight(250).setSandboxMode(HtmlService.SandboxMode.IFRAME),
     'Formulierlink'
   );
 }
@@ -498,6 +498,6 @@ function openBeginbalansDialoog() {
     <p>Tegenrekening: <b>2000 – Ondernemingsvermogen</b></p>
     <p><button class="btn" onclick="google.script.run.openJournaalpostFormulier()">Openingssaldi invoeren</button></p>
     <button class="btn-sec" onclick="google.script.host.close()">Sluiten</button>
-  `).setWidth(450).setHeight(280);
+  `).setWidth(450).setHeight(280).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Openingssaldi');
 }

@@ -362,7 +362,7 @@ input[type=number]:focus{outline:none;border-color:#2EC4B6}
   </div>
   <div>
     <label>&nbsp;</label>
-    <button class="btn" onclick="simuleer()">Bereken impact</button>
+    <button class="btn" id="btn-simuleer" data-actie="simuleer">Bereken impact</button>
   </div>
 </div>
 
@@ -406,9 +406,14 @@ function simuleer(){
     .withFailureHandler(function(e){alert('Fout: '+e.message);})
     .runWatAlsSimulator(data);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('btn-simuleer');
+  if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); simuleer(); });
+});
 </script>
 </body></html>
-  `).setWidth(540).setHeight(620);
+  `).setWidth(540).setHeight(620).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   SpreadsheetApp.getUi().showModalDialog(html, '💡 Wat-als simulator');
 }
@@ -509,14 +514,14 @@ input:focus{outline:none;border-color:#2EC4B6}
 <input id="omschr" type="text" placeholder="bijv. Klantbezoek Amsterdam">
 
 <label>Aantal km (heen + terug)</label>
-<input id="km" type="number" min="1" step="1" oninput="upd()">
+<input id="km" type="number" min="1" step="1">
 
 <div id="preview" class="preview" style="display:none">
   Aftrek: <b id="aftrek">€ 0,00</b> (× €0,23/km)<br>
   <span style="font-size:11px;color:#888">Wordt geboekt op rekening 7350 (Reiskosten openbaar vervoer / privéauto)</span>
 </div>
 
-<button class="btn" onclick="boek()">Reiskosten boeken</button>
+<button class="btn" id="btnBoek" data-actie="boek">Reiskosten boeken</button>
 <div id="status" class="status"></div>
 
 <script>
@@ -548,9 +553,16 @@ function boek(){
     .withFailureHandler(function(e){s.className='status e';s.textContent='Fout: '+e.message;})
     .boekReiskosten(data);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  var kmEl = document.getElementById('km');
+  if (kmEl) kmEl.addEventListener('input', upd);
+  var btn = document.getElementById('btnBoek');
+  if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); boek(); });
+});
 </script>
 </body></html>
-  `).setWidth(440).setHeight(560);
+  `).setWidth(440).setHeight(560).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, '🚗 Reiskosten registreren');
 }
 
@@ -661,7 +673,7 @@ input[type=number]{max-width:80px;text-align:right}
 ${dagen.map((d, i) => `
   <tr>
     <td class="dag">${d.label}<br><span style="font-size:10px;font-weight:400;color:#888">${d.datum}</span></td>
-    <td><input type="number" id="km${i}" min="0" step="1" placeholder="0" oninput="upd()"></td>
+    <td><input type="number" id="km${i}" min="0" step="1" placeholder="0" class="km-input"></td>
     <td><input type="text" id="om${i}" placeholder="bijv. Klantbezoek Utrecht"></td>
   </tr>`).join('')}
 </table>
@@ -671,7 +683,7 @@ ${dagen.map((d, i) => `
   <div class="km" id="tot">0 km · € 0,00</div>
 </div>
 
-<button class="btn" onclick="boek()">Hele week boeken</button>
+<button class="btn" id="btnBoekWeek" data-actie="boek">Hele week boeken</button>
 <div id="status" class="status"></div>
 
 <script>
@@ -701,9 +713,15 @@ function boek(){
     .withFailureHandler(function(e){s.className='status e';s.textContent='Fout: '+e.message;})
     .boekReiskostenWeek(rijen);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.km-input').forEach(function(el) { el.addEventListener('input', upd); });
+  var btn = document.getElementById('btnBoekWeek');
+  if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); boek(); });
+});
 </script>
 </body></html>
-  `).setWidth(540).setHeight(640);
+  `).setWidth(540).setHeight(640).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, '🚗 Reiskosten week-overzicht');
 }
 
@@ -897,11 +915,11 @@ input:focus{outline:none;border-color:#2EC4B6}
 <div class="sub">Hoeveel mag u dit jaar storten in een lijfrente, fiscaal aftrekbaar in box 1?</div>
 
 <label>Winst dit jaar (uit boekhouding)</label>
-<input id="winst" type="number" value="${Math.round(winstHuidig)}" step="500" oninput="bereken()">
+<input id="winst" type="number" value="${Math.round(winstHuidig)}" step="500">
 <div class="help">Premiegrondslag = winst − AOW-franchise (€${aowFranchise.toLocaleString('nl-NL')}).</div>
 
 <label>Reeds opgebouwd pensioen dit jaar (werkgever / oude jaren)</label>
-<input id="pensioen" type="number" value="0" step="100" oninput="bereken()">
+<input id="pensioen" type="number" value="0" step="100">
 <div class="help">Bij geen werkgever-pensioen: 0 invullen.</div>
 
 <div class="uitkomst">
@@ -934,10 +952,17 @@ function bereken(){
   var besp=jaarruimte*0.37;
   document.getElementById('info').textContent='~ '+(Math.round(besp))+' € minder belasting bij storting';
 }
-bereken();
+
+document.addEventListener('DOMContentLoaded', function() {
+  ['winst','pensioen'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', bereken);
+  });
+  bereken();
+});
 </script>
 </body></html>
-  `).setWidth(460).setHeight(560);
+  `).setWidth(460).setHeight(560).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, '🏦 Lijfrente-jaarruimte');
 }
 

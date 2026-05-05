@@ -172,7 +172,7 @@ function voegPriveTransactieToe() {
           .opslaanPriveTransactie(d);
       }
     </script>
-  `).setWidth(460).setHeight(460);
+  `).setWidth(460).setHeight(460).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Privé transactie');
 }
 
@@ -409,7 +409,7 @@ function openIbAangifteHelper() {
         el.innerHTML = html;
       }
     </script>
-  `).setWidth(520).setHeight(640);
+  `).setWidth(520).setHeight(640).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'IB aangifte-schatting');
 }
 

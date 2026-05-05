@@ -1418,7 +1418,7 @@ function diagnoseDashboard() {
 function openDashboard() {
   const html = HtmlService.createHtmlOutput(_bouwDashboardHtml_())
     .setWidth(880)
-    .setHeight(560);
+    .setHeight(560).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Dashboard');
 }
 

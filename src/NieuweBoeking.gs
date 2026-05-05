@@ -736,9 +736,27 @@ function bevestig() {
       notities: val('f-notities'),
       klantAdres: val('f-klantadres'), kvkKlant: val('f-kvk'), btwNrKlant: val('f-btwnr'),
     };
+    var ongeldigeExtraRegels = [];
     for(var i=1;i<=REGEL_TELLER;i++){
       var o=val('f-r'+i+'omschr'), p=val('f-r'+i+'prijs'), a=val('f-r'+i+'aantal');
-      if(o){ data['r'+i+'omschr']=o; data['r'+i+'prijs']=parseFloat(p)||0; data['r'+i+'aantal']=parseFloat(a)||1; }
+      var oTrim=(o||'').trim(), pNum=parseFloat(p)||0, aNum=parseFloat(a)||0;
+      if(!oTrim && pNum===0 && aNum===0) continue;
+      if(!oTrim){ ongeldigeExtraRegels.push('Regel '+i+': omschrijving ontbreekt'); continue; }
+      if(aNum<=0){ ongeldigeExtraRegels.push('Regel '+i+' ('+oTrim+'): aantal moet > 0'); continue; }
+      if(pNum<=0){ ongeldigeExtraRegels.push('Regel '+i+' ('+oTrim+'): prijs moet > €0'); continue; }
+      data['r'+i+'omschr']=oTrim;
+      data['r'+i+'prijs']=pNum;
+      data['r'+i+'aantal']=aNum;
+    }
+    if(ongeldigeExtraRegels.length){
+      toonStatus('⚠️ ' + ongeldigeExtraRegels.join(' — '), '#c62828');
+      btn.disabled=false; btn.textContent='✅ Opslaan';
+      return;
+    }
+    if(!data['r1omschr']){
+      toonStatus('⚠️ Vul minimaal regel 1 in (omschrijving + prijs).', '#c62828');
+      btn.disabled=false; btn.textContent='✅ Opslaan';
+      return;
     }
 
   } else if (type === 'kosten') {

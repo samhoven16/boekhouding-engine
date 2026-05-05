@@ -404,7 +404,7 @@ function importeerBankafschrift() {
           .verwerkBankCsvImport(csv, sep, cols);
       }
     </script>
-  `).setWidth(700).setHeight(450);
+  `).setWidth(700).setHeight(450).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Bankafschrift importeren');
 }
 
@@ -702,7 +702,7 @@ function extractFileId_(url) {
 function openFactuurlijst() {
   const html = HtmlService.createHtmlOutput(_bouwFactuurlijstHtml_())
     .setWidth(880)
-    .setHeight(580);
+    .setHeight(580).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Factuurlijst');
 }
 

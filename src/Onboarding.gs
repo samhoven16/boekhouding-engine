@@ -228,8 +228,8 @@ input:focus,select:focus{outline:none;border-color:#2EC4B6}
   geeft dan minder gepersonaliseerd advies.
 </div>
 
-<button class="btn" onclick="opslaan()">Opslaan & persoonlijk advies activeren</button>
-<button class="btn-skip" onclick="google.script.host.close()">Sla over (later doen)</button>
+<button class="btn" id="btnOpslaan" data-actie="opslaan">Opslaan & persoonlijk advies activeren</button>
+<button class="btn-skip" id="btnSluiten" data-actie="sluiten">Sla over (later doen)</button>
 
 <div id="status" class="status"></div>
 
@@ -259,9 +259,23 @@ function opslaan() {
     })
     .slaFiscaalProfielOp(data);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  var ACTIES = {
+    opslaan: opslaan,
+    sluiten: function() { try { google.script.host.close(); } catch (_) {} },
+  };
+  document.querySelectorAll('[data-actie]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      var fn = ACTIES[el.getAttribute('data-actie')];
+      if (typeof fn === 'function') fn();
+    });
+  });
+});
 </script>
 </body></html>
-  `).setWidth(560).setHeight(700);
+  `).setWidth(560).setHeight(700).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   SpreadsheetApp.getUi().showModalDialog(html, '📋 Fiscaal profiel');
 }
@@ -426,7 +440,7 @@ function toonWatIsErNieuw() {
 
     <p class="foot">Vragen of problemen? <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a></p>
     <button class="btn-sec" onclick="google.script.host.close()">Sluiten</button>
-  `).setWidth(520).setHeight(500);
+  `).setWidth(520).setHeight(500).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   SpreadsheetApp.getUi().showModalDialog(html, 'Wat is er nieuw?');
 }
@@ -530,7 +544,7 @@ function toonPostSetupWelkomModal_() {
       // Plus DOMContentLoaded als extra zekerheid
       document.addEventListener('DOMContentLoaded', bindAlleKnoppen);
     </script>
-  `).setWidth(460).setHeight(440);
+  `).setWidth(460).setHeight(440).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   ui.showModalDialog(html, 'Welkom bij Boekhoudbaar');
 }

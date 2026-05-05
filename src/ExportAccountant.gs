@@ -168,7 +168,7 @@ function emailNaarAccountant() {
           .verstuurSamenvattingAccountant(email, bericht);
       }
     </script>
-  `).setWidth(480).setHeight(340);
+  `).setWidth(480).setHeight(340).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   ui.showModalDialog(html, 'E-mail naar accountant');
 }
 

@@ -223,20 +223,20 @@ function openBrandingInstellingen() {
 <p class="sub">Uw logo en kleur worden automatisch op alle facturen geplaatst.</p>
 
 <div class="sectie">Bedrijfslogo</div>
-<div class="logo-area" id="logoArea" onclick="document.getElementById('logoInput').click()">
+<div class="logo-area" id="logoArea">
   <div id="logoInhoud">
     <div style="font-size:28px;margin-bottom:6px">🏢</div>
     <div>Klik hier om een logo te uploaden</div>
     <div style="font-size:11px;color:#888;margin-top:4px">PNG, JPG, SVG — max 200 KB</div>
   </div>
 </div>
-<input type="file" id="logoInput" accept="image/*" style="display:none" onchange="logoGekozen(this)">
+<input type="file" id="logoInput" accept="image/*" style="display:none">
 <div class="status" id="logoStatus">Laden...</div>
 
 <div class="sectie">Primaire kleur</div>
 <div class="kleur-rij">
-  <input type="color" id="kleurPicker" value="#0D1B4E" oninput="kleurGewijzigd(this.value)">
-  <input type="text" id="kleurHex" value="#0D1B4E" onchange="kleurHexGewijzigd()" maxlength="7" placeholder="#0D1B4E">
+  <input type="color" id="kleurPicker" value="#0D1B4E">
+  <input type="text" id="kleurHex" value="#0D1B4E" maxlength="7" placeholder="#0D1B4E">
 </div>
 <div class="kleuren-presets" id="presets"></div>
 
@@ -262,9 +262,9 @@ function openBrandingInstellingen() {
 <div class="tip">💡 <b>Tip:</b> Gebruik uw bedrijfskleur voor een herkenbare, professionele uitstraling op alle facturen.</div>
 
 <div style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap">
-  <button class="btn btn-pri" onclick="opslaan()">✅ Opslaan</button>
-  <button class="btn btn-danger" id="verwijderBtn" onclick="verwijderLogo()" style="display:none">🗑 Logo verwijderen</button>
-  <button class="btn btn-sec" onclick="google.script.host.close()">Sluiten</button>
+  <button class="btn btn-pri" id="btnOpslaan" data-actie="opslaan">✅ Opslaan</button>
+  <button class="btn btn-danger" id="verwijderBtn" data-actie="verwijderLogo" style="display:none">🗑 Logo verwijderen</button>
+  <button class="btn btn-sec" id="btnSluiten" data-actie="sluiten">Sluiten</button>
 </div>
 <div class="status" id="opslaanStatus"></div>
 
@@ -391,9 +391,36 @@ function verwijderLogo() {
     .withFailureHandler(function(e) { alert('Fout: ' + e.message); })
     .verwijderLogo();
 }
+
+// Defense-in-depth: bind alle handlers via addEventListener.
+document.addEventListener('DOMContentLoaded', function() {
+  var ACTIES = {
+    opslaan: opslaan,
+    verwijderLogo: verwijderLogo,
+    sluiten: function() { try { google.script.host.close(); } catch (_) {} },
+  };
+  document.querySelectorAll('[data-actie]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      var fn = ACTIES[el.getAttribute('data-actie')];
+      if (typeof fn === 'function') fn();
+    });
+  });
+  var area = document.getElementById('logoArea');
+  if (area) area.addEventListener('click', function() {
+    var input = document.getElementById('logoInput');
+    if (input) input.click();
+  });
+  var logoInput = document.getElementById('logoInput');
+  if (logoInput) logoInput.addEventListener('change', function() { logoGekozen(this); });
+  var picker = document.getElementById('kleurPicker');
+  if (picker) picker.addEventListener('input', function() { kleurGewijzigd(this.value); });
+  var hex = document.getElementById('kleurHex');
+  if (hex) hex.addEventListener('change', kleurHexGewijzigd);
+});
 </script>
 </body>
-</html>`).setWidth(560).setHeight(600);
+</html>`).setWidth(560).setHeight(600).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   SpreadsheetApp.getUi().showModalDialog(html, '🎨 Bedrijfsstijl instellen');
 }

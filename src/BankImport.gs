@@ -15,7 +15,7 @@
 function openBankImportDialoog() {
   if (!controleerSetupGedaan_()) return;
   const html = HtmlService.createHtmlOutput(_bouwBankImportHtml_())
-    .setWidth(720).setHeight(560);
+    .setWidth(720).setHeight(560).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Bankafschrift importeren');
 }
 
