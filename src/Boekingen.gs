@@ -427,7 +427,11 @@ function vernieuwDebiteurenOverzicht() {
     const openBedrag = rondBedrag_(incl - betaald);
     if (openBedrag <= 0) continue;
 
-    const vervaldatum = vfData[i][3] ? new Date(vfData[i][3]) : null;
+    // Sheet-cell kan Date OF DD-MM-YYYY string zijn (na CSV-import). Native
+    // new Date('01-04-2026') geeft NaN; parseDatum_ handelt beide formaten af.
+    const vervaldatum = vfData[i][3]
+      ? (vfData[i][3] instanceof Date ? vfData[i][3] : parseDatum_(vfData[i][3]))
+      : null;
     const dagenOver = vervaldatum && !isNaN(vervaldatum.getTime())
       ? Math.floor((vandaag - vervaldatum) / (1000 * 60 * 60 * 24))
       : 0;

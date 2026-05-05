@@ -476,46 +476,55 @@ function toonPostSetupWelkomModal_() {
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
-           color:#1A1A1A;background:#F7F9FC;padding:26px 28px}
-      .label{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2EC4B6;margin-bottom:8px}
-      h1{color:#0D1B4E;font-size:22px;font-weight:800;letter-spacing:-0.01em;margin-bottom:10px;line-height:1.25}
-      p.sub{color:#5F6B7A;font-size:14px;line-height:1.55;margin-bottom:20px}
-      .acties{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+           color:#1A1A1A;background:linear-gradient(135deg,#F7F9FC 0%,#EAF4F2 100%);padding:30px 32px;-webkit-font-smoothing:antialiased}
+      .label{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#2EC4B6;margin-bottom:10px}
+      h1{color:#0D1B4E;font-size:24px;font-weight:800;letter-spacing:-0.015em;margin-bottom:8px;line-height:1.2}
+      p.sub{color:#5F6B7A;font-size:14px;line-height:1.6;margin-bottom:22px}
+      .acties{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
       .actie{
         display:flex;align-items:center;gap:14px;padding:14px 16px;
-        background:#fff;border:1px solid #E5EAF2;border-radius:10px;
-        cursor:pointer;transition:border-color .15s ease,transform .15s ease,box-shadow .15s ease;
+        background:#fff;border:1px solid #E5EAF2;border-radius:12px;
+        cursor:pointer;transition:all .18s ease;
         font-family:inherit;font-size:14px;text-align:left;color:#1A1A1A;width:100%;
+        box-shadow:0 1px 2px rgba(13,27,78,.04);
       }
-      .actie:hover{border-color:rgba(46,196,182,.45);transform:translateY(-1px);box-shadow:0 2px 10px rgba(13,27,78,.06)}
-      .actie .n{width:28px;height:28px;border-radius:50%;background:rgba(46,196,182,.12);color:#0D1B4E;
-                font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
-      .actie .t{flex:1}
-      .actie .t strong{display:block;color:#0D1B4E;font-weight:700;font-size:14px;margin-bottom:2px}
-      .actie .t span{color:#5F6B7A;font-size:12px}
-      .later{text-align:center;margin-top:6px}
-      .later button{background:none;border:none;color:#5F6B7A;font-size:13px;cursor:pointer;font-family:inherit;padding:8px 12px}
-      .later button:hover{color:#0D1B4E}
+      .actie:hover{border-color:#2EC4B6;transform:translateY(-2px);box-shadow:0 6px 18px rgba(13,27,78,.10);background:#FFFFFF}
+      .actie:active{transform:translateY(0);box-shadow:0 2px 6px rgba(13,27,78,.08)}
+      .actie .n{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2EC4B6 0%,#1FA89C 100%);color:#fff;
+                font-size:14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+                box-shadow:0 2px 6px rgba(46,196,182,.3)}
+      .actie .t{flex:1;min-width:0}
+      .actie .t strong{display:block;color:#0D1B4E;font-weight:700;font-size:14px;margin-bottom:3px;letter-spacing:-0.01em}
+      .actie .t span{color:#5F6B7A;font-size:12px;line-height:1.45;display:block}
+      .actie .arrow{color:#9CA3B0;font-size:18px;flex-shrink:0;transition:color .15s,transform .15s}
+      .actie:hover .arrow{color:#2EC4B6;transform:translateX(2px)}
+      .later{text-align:center;margin-top:8px}
+      .later button{background:none;border:none;color:#5F6B7A;font-size:13px;cursor:pointer;font-family:inherit;padding:8px 12px;border-radius:6px;transition:all .15s}
+      .later button:hover{color:#0D1B4E;background:rgba(13,27,78,.04)}
     </style>
-    <div class="label">Setup voltooid</div>
+    <div class="label">✨ Setup voltooid</div>
     <h1>${begroeting}</h1>
-    <p class="sub">Je boekhouding staat klaar. Drie acties die je nu kunt doen — of later via het Boekhouding-menu.</p>
+    <p class="sub">Je boekhouding staat klaar. Kies hieronder waar je wil beginnen — of later via het Boekhouding-menu.</p>
     <div class="acties">
       <button class="actie" type="button" data-actie="instellingen">
         <span class="n">1</span>
         <span class="t"><strong>Bedrijfsgegevens invullen</strong><span>Naam, BTW-nummer, IBAN — nodig voor facturen</span></span>
+        <span class="arrow">›</span>
       </button>
       <button class="actie" type="button" data-actie="profiel">
         <span class="n">2</span>
         <span class="t"><strong>Fiscaal profiel invullen (60 sec)</strong><span>Voor persoonlijk advies over KIA, AOV, WBSO &amp; AOW-leeftijd</span></span>
+        <span class="arrow">›</span>
       </button>
       <button class="actie" type="button" data-actie="boeking">
         <span class="n">3</span>
         <span class="t"><strong>Eerste factuur of kostenpost boeken</strong><span>Nieuwe boeking dialoog openen</span></span>
+        <span class="arrow">›</span>
       </button>
       <button class="actie" type="button" data-actie="dashboard">
         <span class="n">4</span>
         <span class="t"><strong>Dashboard bekijken</strong><span>KPI's en openstaande facturen in één oogopslag</span></span>
+        <span class="arrow">›</span>
       </button>
     </div>
     <div class="later"><button id="btn-later" type="button" data-actie="later">Later — sluit dit venster</button></div>

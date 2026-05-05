@@ -485,7 +485,7 @@ function berekenMaandSamenvatting_(ss, vanaf, totEnMet) {
   if (vfSheet && vfSheet.getLastRow() > 1) {
     const rows = vfSheet.getRange(2, 1, vfSheet.getLastRow() - 1, vfSheet.getLastColumn()).getValues();
     rows.forEach(function(r) {
-      const datum = r[2] ? new Date(r[2]) : null;
+      const datum = r[2] ? (r[2] instanceof Date ? r[2] : parseDatum_(r[2])) : null;
       const bedragExcl = Number(r[9]) || 0;
       const btw = Number(r[11]) || 0;
       const bedragIncl = Number(r[12]) || 0;
@@ -513,7 +513,9 @@ function berekenMaandSamenvatting_(ss, vanaf, totEnMet) {
   if (ifSheet && ifSheet.getLastRow() > 1) {
     const rows = ifSheet.getRange(2, 1, ifSheet.getLastRow() - 1, ifSheet.getLastColumn()).getValues();
     rows.forEach(function(r) {
-      const datum = r[3] ? new Date(r[3]) : (r[2] ? new Date(r[2]) : null);
+      const datum = r[3]
+        ? (r[3] instanceof Date ? r[3] : parseDatum_(r[3]))
+        : (r[2] ? (r[2] instanceof Date ? r[2] : parseDatum_(r[2])) : null);
       const bedragExcl = Number(r[8]) || 0;
       const btw = Number(r[10]) || 0;
       const bedragIncl = Number(r[11]) || 0;

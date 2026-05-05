@@ -181,7 +181,7 @@ function matchTransactiesMetFacturen_(ss, transacties) {
       if (open <= 0) continue;
       openFacturen.push({
         rij: i + 1, nr: String(vfData[i][1] || ''),
-        datum: vfData[i][2] ? new Date(vfData[i][2]) : null,
+        datum: vfData[i][2] ? (vfData[i][2] instanceof Date ? vfData[i][2] : parseDatum_(vfData[i][2])) : null,
         klant: String(vfData[i][5] || ''), openBedrag: open,
       });
     }
