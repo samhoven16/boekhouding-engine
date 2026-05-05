@@ -476,6 +476,50 @@ window.addEventListener('error', function(ev) {
     setSelect('d-btw', btwStd);
     setSelect('u-btw', btwStd);
     herbereken();
+
+    // Bind extra event-listeners als safety-net — als inline oninput-handlers
+    // door CSP/browser-issues niet triggeren, deze wel via addEventListener.
+    // Bovendien: input/change/blur events op alle factuurregel-inputs.
+    var bindRegelEvents = function() {
+      for (var i = 1; i <= MAX_REGELS; i++) {
+        ['omschr','aantal','prijs'].forEach(function(veld) {
+          var el = document.getElementById('f-r' + i + veld);
+          if (el && !el._bhBound) {
+            el._bhBound = true;  // voorkom dubbele bind
+            el.addEventListener('input', herbereken);
+            el.addEventListener('change', herbereken);
+            el.addEventListener('keyup', herbereken);
+            el.addEventListener('blur', herbereken);
+          }
+        });
+      }
+      var btwSel = document.getElementById('f-btw');
+      if (btwSel && !btwSel._bhBound) {
+        btwSel._bhBound = true;
+        btwSel.addEventListener('change', herbereken);
+      }
+      var kostenIncl = document.getElementById('k-incl');
+      if (kostenIncl && !kostenIncl._bhBound) {
+        kostenIncl._bhBound = true;
+        kostenIncl.addEventListener('input', berekenKosten);
+        kostenIncl.addEventListener('change', berekenKosten);
+        kostenIncl.addEventListener('keyup', berekenKosten);
+      }
+      var kostenBtw = document.getElementById('k-btw');
+      if (kostenBtw && !kostenBtw._bhBound) {
+        kostenBtw._bhBound = true;
+        kostenBtw.addEventListener('change', berekenKosten);
+      }
+    };
+    bindRegelEvents();
+
+    // Re-bind elke 500ms zolang dialog open is — vangt nieuw-toegevoegde
+    // factuurregels op (voegRegelToe maakt nieuwe inputs zonder event-listeners).
+    // Tegelijk: forced recalc als safety net voor weggevallen events.
+    setInterval(function() {
+      try { bindRegelEvents(); herbereken(); }
+      catch(_) {}
+    }, 500);
   } catch (e) {
     if (typeof console !== 'undefined') console.error('[NieuweBoeking] init:', e);
     var fs = document.getElementById('footer-status');

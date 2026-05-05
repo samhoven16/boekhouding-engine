@@ -507,8 +507,16 @@ function toonPostSetupWelkomModal_() {
     <div class="later"><button onclick="kies('later')">Later — sluit dit venster</button></div>
     <script>
       function kies(actie) {
-        google.script.run.withSuccessHandler(function(){ google.script.host.close(); })
-          .markeerWelkomGezienEnNavigeer_(actie);
+        // Apps Script-conventie: functies met trailing _ zijn privaat en
+        // NIET aanroepbaar via google.script.run. Daarom verwijst dit naar
+        // de PUBLIEKE wrapper markeerWelkomGezienEnNavigeer (geen underscore).
+        google.script.run
+          .withSuccessHandler(function(){ google.script.host.close(); })
+          .withFailureHandler(function(e){
+            try { console.error('Welkom-actie:', e); } catch(_) {}
+            google.script.host.close();
+          })
+          .markeerWelkomGezienEnNavigeer(actie);
       }
     </script>
   `).setWidth(460).setHeight(440);
@@ -520,7 +528,15 @@ function toonPostSetupWelkomModal_() {
  * Zet de welkom-gezien-vlag en navigeert (optioneel) naar de gekozen
  * vervolg-actie. Aangeroepen vanuit de welkom-modal.
  */
-function markeerWelkomGezienEnNavigeer_(actie) {
+/**
+ * Zet de welkom-gezien-vlag en navigeert (optioneel) naar de gekozen
+ * vervolg-actie. Aangeroepen vanuit de welkom-modal.
+ *
+ * BELANGRIJK: PUBLIEKE naam (geen trailing underscore) — anders kan
+ * google.script.run de functie niet aanroepen. Apps Script-conventie:
+ * functies met trailing _ zijn private en niet bereikbaar vanuit dialogs.
+ */
+function markeerWelkomGezienEnNavigeer(actie) {
   PropertiesService.getUserProperties().setProperty(POST_SETUP_WELKOM_GEZIEN, 'true');
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
