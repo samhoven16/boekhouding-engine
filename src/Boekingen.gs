@@ -338,19 +338,25 @@ function boekAfschrijvingen() {
         <option>Jaarlijks</option><option>Maandelijks</option>
       </select></label>
       <br><br>
-      <button type="button" class="btn" onclick="submit_()">Afschrijvingen boeken</button>
-      <button type="button" onclick="google.script.host.close()" style="margin-left:8px">Annuleren</button>
+      <button type="button" class="btn" id="btnBoekenAfs">Afschrijvingen boeken</button>
+      <button type="button" id="btnAnnAfs" style="margin-left:8px">Annuleren</button>
     </form>
     <script>
       function submit_() {
         const form = document.getElementById('form');
         const data = {};
         new FormData(form).forEach((v, k) => data[k] = v);
-        google.script.run.withSuccessHandler(() => {
-          alert('Afschrijvingen geboekt!');
-          google.script.host.close();
-        }).verwerkAfschrijvingen(data);
+        google.script.run
+          .withSuccessHandler(() => { alert('Afschrijvingen geboekt!'); google.script.host.close(); })
+          .withFailureHandler((e) => alert('Fout: ' + (e && e.message ? e.message : 'onbekend')))
+          .verwerkAfschrijvingen(data);
       }
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('btnBoekenAfs');
+        if (b) b.addEventListener('click', function(e){ e.preventDefault(); submit_(); });
+        var a = document.getElementById('btnAnnAfs');
+        if (a) a.addEventListener('click', function(){ try { google.script.host.close(); } catch (_) {} });
+      });
     </script>
   `).setWidth(600).setHeight(450).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 

@@ -156,8 +156,8 @@ function boekPriveCorrectie() {
       <label>Bedrag (€) <input type="number" name="bedrag" step="0.01" min="0" required></label>
       <label>Omschrijving <input type="text" name="omschr" value="Privé"></label>
       <br>
-      <button type="button" class="btn" onclick="submit_()">Boeken</button>
-      <button type="button" class="btn-sec" onclick="google.script.host.close()">Annuleren</button>
+      <button type="button" class="btn" id="btnBoeken">Boeken</button>
+      <button type="button" class="btn-sec" id="btnAnnuleren">Annuleren</button>
     </form>
     <script>
       function submit_() {
@@ -165,8 +165,15 @@ function boekPriveCorrectie() {
         const data = Object.fromEntries(new FormData(f));
         google.script.run
           .withSuccessHandler(() => { alert('Geboekt!'); google.script.host.close(); })
+          .withFailureHandler((e) => alert('Fout: ' + (e && e.message ? e.message : 'onbekend')))
           .verwerkPriveCorrectie(data);
       }
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('btnBoeken');
+        if (b) b.addEventListener('click', function(e){ e.preventDefault(); submit_(); });
+        var a = document.getElementById('btnAnnuleren');
+        if (a) a.addEventListener('click', function(){ try { google.script.host.close(); } catch (_) {} });
+      });
     </script>
   `).setWidth(400).setHeight(320).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   ui.showModalDialog(html, 'Privé correctie');

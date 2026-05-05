@@ -216,56 +216,99 @@ function toonNotificaties() {
   sheet.getRange(1, 1, 1, 4).merge()
     .setValue('🔔 Wat moet ik nu doen?')
     .setBackground('#0D1B4E').setFontColor('#FFFFFF')
-    .setFontWeight('bold').setFontSize(16).setHorizontalAlignment('center');
-  sheet.setRowHeight(1, 40);
+    .setFontWeight('bold').setFontSize(18).setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  sheet.setRowHeight(1, 48);
 
   sheet.getRange(2, 1, 1, 4).merge()
     .setValue('Persoonlijke acties op basis van je boekhouding — ' +
               'gesorteerd op urgentie en euro-impact')
     .setBackground('#F7F9FC').setFontColor('#5F6B7A')
     .setFontSize(11).setHorizontalAlignment('center');
-  sheet.setRowHeight(2, 28);
-
-  const headers = ['Actie', 'Wat', 'Hoe', 'Voordeel'];
-  sheet.getRange(4, 1, 1, 4).setValues([headers])
-    .setBackground('#F7F9FC').setFontColor('#0D1B4E')
-    .setFontWeight('bold').setFontSize(11);
-  sheet.setRowHeight(4, 28);
-  sheet.setFrozenRows(4);
+  sheet.setRowHeight(2, 30);
 
   const notificaties = genereerNotificaties_();
+  const totaalImpact = notificaties.reduce(function(s, n) { return s + (n.euros || 0); }, 0);
+  const aantalUrgent = notificaties.filter(function(n) { return n.urgent; }).length;
+
+  // Samenvattings-banner met euro-impact
+  const samenvattingTekst = notificaties.length === 0
+    ? '✅ Alles in orde — geen openstaande acties'
+    : (aantalUrgent > 0
+        ? '⚠️  ' + aantalUrgent + ' urgent · ' + notificaties.length + ' totaal'
+        : '📋 ' + notificaties.length + ' actie' + (notificaties.length === 1 ? '' : 's') + ' open')
+      + (totaalImpact > 0 ? '   ·   Totale impact: ' + formatBedrag_(totaalImpact) : '');
+  const samenvattingBg = notificaties.length === 0 ? '#E6F7F4'
+                       : (aantalUrgent > 0 ? '#FFEBEE' : '#FFF8E1');
+  const samenvattingFg = notificaties.length === 0 ? '#1B5E20'
+                       : (aantalUrgent > 0 ? '#B71C1C' : '#5A3F00');
+  sheet.getRange(3, 1, 1, 4).merge()
+    .setValue(samenvattingTekst)
+    .setBackground(samenvattingBg).setFontColor(samenvattingFg)
+    .setFontWeight('bold').setFontSize(13).setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  sheet.setRowHeight(3, 38);
+
+  const headers = ['', 'Actie', 'Hoe', 'Voordeel'];
+  sheet.getRange(5, 1, 1, 4).setValues([headers])
+    .setBackground('#0D1B4E').setFontColor('#FFFFFF')
+    .setFontWeight('bold').setFontSize(11)
+    .setVerticalAlignment('middle');
+  sheet.setRowHeight(5, 30);
+  sheet.setFrozenRows(5);
+
   if (notificaties.length === 0) {
-    sheet.getRange(5, 1, 1, 4).merge()
-      .setValue('✓ Niks dringends. Je boekhouding draait soepel.')
+    sheet.getRange(6, 1, 1, 4).merge()
+      .setValue('🎉 Niks dringends. Je boekhouding draait soepel — ga lekker ondernemen!')
       .setBackground('#E6F7F4').setFontColor('#1B5E20')
-      .setFontWeight('bold').setFontSize(13).setHorizontalAlignment('center');
-    sheet.setRowHeight(5, 36);
+      .setFontWeight('bold').setFontSize(13).setHorizontalAlignment('center')
+      .setVerticalAlignment('middle');
+    sheet.setRowHeight(6, 48);
   } else {
-    let rij = 5;
+    let rij = 6;
     notificaties.forEach(function(n) {
-      const bg = n.urgent ? '#FFCDD2' : (n.prioriteit >= 70 ? '#FFF8E1' : '#F7F9FC');
-      const fg = n.urgent ? '#B71C1C' : '#1A1A1A';
-      sheet.getRange(rij, 1).setValue(n.titel)
-        .setBackground(bg).setFontColor(fg).setFontWeight('bold').setFontSize(11)
+      // Kleur-codering: urgent rood, hoge prio oranje, normaal lichtgrijs.
+      // Even/oneven banding voor leesbaarheid.
+      const evenRij = (rij - 6) % 2 === 0;
+      let bg, fg, icon;
+      if (n.urgent) {
+        bg = evenRij ? '#FFCDD2' : '#FFB3B3'; fg = '#B71C1C'; icon = '🔥';
+      } else if (n.prioriteit >= 70) {
+        bg = evenRij ? '#FFF8E1' : '#FFECB3'; fg = '#5A3F00'; icon = '⚡';
+      } else {
+        bg = evenRij ? '#FFFFFF' : '#F7F9FC'; fg = '#1A1A1A'; icon = '📋';
+      }
+      sheet.getRange(rij, 1).setValue(icon)
+        .setBackground(bg).setFontSize(18).setHorizontalAlignment('center')
+        .setVerticalAlignment('middle');
+      sheet.getRange(rij, 2).setValue(n.titel + '\n' + n.tekst)
+        .setBackground(bg).setFontColor(fg).setFontSize(11)
         .setVerticalAlignment('top').setWrap(true);
-      sheet.getRange(rij, 2).setValue(n.tekst)
-        .setBackground(bg).setFontColor(fg).setFontSize(10)
-        .setVerticalAlignment('top').setWrap(true);
+      sheet.getRange(rij, 2).setRichTextValue(
+        SpreadsheetApp.newRichTextValue()
+          .setText(n.titel + '\n' + n.tekst)
+          .setTextStyle(0, n.titel.length,
+            SpreadsheetApp.newTextStyle().setBold(true).setFontSize(12).setForegroundColor(fg).build())
+          .setTextStyle(n.titel.length + 1, (n.titel + '\n' + n.tekst).length,
+            SpreadsheetApp.newTextStyle().setBold(false).setFontSize(11).setForegroundColor(fg).build())
+          .build()
+      );
       sheet.getRange(rij, 3).setValue(n.actie)
-        .setBackground(bg).setFontColor(fg).setFontSize(10)
+        .setBackground(bg).setFontColor(fg).setFontSize(10).setFontStyle('italic')
         .setVerticalAlignment('top').setWrap(true);
       sheet.getRange(rij, 4).setValue(n.euros ? formatBedrag_(n.euros) : '—')
-        .setBackground(bg).setFontColor(n.euros ? '#1B5E20' : '#888')
-        .setFontWeight('bold').setFontSize(11).setHorizontalAlignment('right')
-        .setVerticalAlignment('top');
-      sheet.setRowHeight(rij, Math.min(80, 32 + Math.floor(n.tekst.length / 60) * 16));
+        .setBackground(bg).setFontColor(n.euros ? '#1B5E20' : '#9CA3B0')
+        .setFontWeight('bold').setFontSize(13).setHorizontalAlignment('right')
+        .setVerticalAlignment('middle');
+      sheet.setRowHeight(rij, Math.min(110, 56 + Math.floor((n.titel.length + n.tekst.length) / 50) * 14));
       rij++;
     });
   }
 
-  sheet.setColumnWidth(1, 280);
-  sheet.setColumnWidth(2, 380);
-  sheet.setColumnWidth(3, 240);
-  sheet.setColumnWidth(4, 110);
+  sheet.setColumnWidth(1, 60);
+  sheet.setColumnWidth(2, 460);
+  sheet.setColumnWidth(3, 280);
+  sheet.setColumnWidth(4, 130);
+  sheet.hideGridlines();
   ss.setActiveSheet(sheet);
 }

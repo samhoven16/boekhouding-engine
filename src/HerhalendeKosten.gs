@@ -126,7 +126,7 @@ function beheerHerhalendeKosten() {
     </div>
     <div class="info" style="font-size:11px;margin-top:-8px;">100% = volledig zakelijk. Bijv. 70% = 70% kostenrekening + 30% privéonttrekkingen (2400).</div>
 
-    <button class="btn" onclick="opslaan()">Opslaan</button>
+    <button class="btn" id="btnOpslaanHK">Opslaan</button>
     <div id="status" style="margin-top:8px;color:green;display:none"></div>
 
     <script>
@@ -153,8 +153,18 @@ function beheerHerhalendeKosten() {
             el.style.display = 'block';
             setTimeout(function() { google.script.host.close(); }, 1500);
           })
+          .withFailureHandler(function(e) {
+            var el = document.getElementById('status');
+            el.style.display = 'block';
+            el.style.color = '#B71C1C';
+            el.textContent = 'Fout: ' + (e && e.message ? e.message : 'onbekend');
+          })
           .opslaanHerhalendeKost({ naam, leveranc, bedrag, btw, freq, datum, rekening, auto, notities, splitPct });
       }
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('btnOpslaanHK');
+        if (b) b.addEventListener('click', function(e){ e.preventDefault(); opslaan(); });
+      });
     </script>
   `).setWidth(500).setHeight(620).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
