@@ -24,7 +24,6 @@ const SHEETS = {
   DEBITEUREN:        'Debiteuren',
   CREDITEUREN:       'Crediteuren',
   HERHALENDE_KOSTEN: 'Herhalende Kosten',
-  BELEGGINGEN:       'Beleggingen',
   AUDIT_LOG:         'Audit Log',
 };
 
@@ -230,7 +229,6 @@ const PROP = {
   SETUP_DONE:            'setupDone',
   BOEKJAAR:              'boekjaar',
   KPI_SNAPSHOT:          'kpiSnapshot',   // CQRS-lite: precomputed financial state
-  BELEGGINGEN_SNAPSHOT:  'beleggingenSnapshot',  // dagelijkse portfolio waarde voor trend-tracking
   DREMPEL_HOOG_BEDRAG:   'drempelHoogBedrag',    // alert-threshold uitgaven (default €500)
   ACCOUNTANT_EMAIL:      'accountantEmail',      // ontvanger maandrapport
 };

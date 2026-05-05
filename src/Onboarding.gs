@@ -487,93 +487,48 @@ function toonPostSetupWelkomModal_() {
     <h1>${begroeting}</h1>
     <p class="sub">Je boekhouding staat klaar. Drie acties die je nu kunt doen — of later via het Boekhouding-menu.</p>
     <div class="acties">
-      <button class="actie" onclick="kies('instellingen')">
+      <button class="actie" type="button" data-actie="instellingen">
         <span class="n">1</span>
         <span class="t"><strong>Bedrijfsgegevens invullen</strong><span>Naam, BTW-nummer, IBAN — nodig voor facturen</span></span>
       </button>
-      <button class="actie" onclick="kies('profiel')">
+      <button class="actie" type="button" data-actie="profiel">
         <span class="n">2</span>
         <span class="t"><strong>Fiscaal profiel invullen (60 sec)</strong><span>Voor persoonlijk advies over KIA, AOV, WBSO &amp; AOW-leeftijd</span></span>
       </button>
-      <button class="actie" onclick="kies('boeking')">
+      <button class="actie" type="button" data-actie="boeking">
         <span class="n">3</span>
         <span class="t"><strong>Eerste factuur of kostenpost boeken</strong><span>Nieuwe boeking dialoog openen</span></span>
       </button>
-      <button class="actie" onclick="kies('dashboard')">
+      <button class="actie" type="button" data-actie="dashboard">
         <span class="n">4</span>
         <span class="t"><strong>Dashboard bekijken</strong><span>KPI's en openstaande facturen in één oogopslag</span></span>
       </button>
     </div>
-    <div class="later"><button id="btn-later" type="button">Later — sluit dit venster</button></div>
-    <div id="welkom-status" style="margin-top:10px;padding:8px;border-radius:6px;display:none;font-size:12px"></div>
+    <div class="later"><button id="btn-later" type="button" data-actie="later">Later — sluit dit venster</button></div>
     <script>
-      function kies(actie) {
-        // Defensieve aanpak: ALTIJD het venster sluiten + actie loggen,
-        // zelfs als google.script.run faalt. Voorheen bleef dialog hangen
-        // bij privacy-fouten of CSP-blokkades zonder feedback.
-        var status = document.getElementById('welkom-status');
-        function meldOK() {
-          if (status) {
-            status.style.display = 'block';
-            status.style.background = '#E6F7F4';
-            status.style.color = '#1B5E20';
-            status.textContent = '✓ Bezig...';
-          }
-          setTimeout(function(){
-            try { google.script.host.close(); } catch(_) {}
-          }, 350);
-        }
-        function meldFout(msg) {
-          if (status) {
-            status.style.display = 'block';
-            status.style.background = '#FFEBEE';
-            status.style.color = '#B71C1C';
-            status.textContent = '⚠ ' + (msg || 'Kon actie niet uitvoeren — venster sluit toch');
-          }
-          // Force-sluit na 2 sec zodat klant niet vastzit
-          setTimeout(function(){ try { google.script.host.close(); } catch(_) {} }, 2000);
-        }
-        try {
-          google.script.run
-            .withSuccessHandler(meldOK)
-            .withFailureHandler(function(e){ meldFout(e && e.message ? e.message : 'Onbekende fout'); })
-            .markeerWelkomGezienEnNavigeer(actie);
-        } catch (err) {
-          meldFout('Geen verbinding met script — venster sluit');
-        }
+      // FIRE-AND-FORGET pattern: server-call gaat de lucht in,
+      // dialog sluit DIRECT zonder wachten op response.
+      // Voorheen: wachten op .withSuccessHandler kon eindeloos hangen
+      // bij CSP/privacy/cache issues. Nu: nooit hangen.
+      function doeActie(actie) {
+        try { google.script.run.markeerWelkomGezienEnNavigeer(actie); } catch (_) {}
+        try { google.script.host.close(); } catch (_) {}
       }
-      // Bind via addEventListener als safety-net (inline onclick kan in
-      // sommige Apps Script CSP-modes worden geblokkeerd).
-      document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('button.actie').forEach(function(btn, i) {
-          var actie = btn.getAttribute('onclick') || '';
-          var match = actie.match(/kies\('(\w+)'\)/);
-          if (match && match[1]) {
-            btn.removeAttribute('onclick');
-            btn.addEventListener('click', function(e){ e.preventDefault(); kies(match[1]); });
-          }
-        });
-        var laterBtn = document.getElementById('btn-later');
-        if (laterBtn) laterBtn.addEventListener('click', function(){ kies('later'); });
-      });
-      // Ook direct binden voor het geval DOMContentLoaded al gepasseerd is
-      (function bindNow() {
-        document.querySelectorAll('button.actie').forEach(function(btn) {
+      // Bind via addEventListener — werkt in elke CSP-mode incl. iframe-strict.
+      function bindAlleKnoppen() {
+        document.querySelectorAll('button[data-actie]').forEach(function(btn) {
           if (btn._bound) return;
-          var actie = btn.getAttribute('onclick') || '';
-          var match = actie.match(/kies\('(\w+)'\)/);
-          if (match && match[1]) {
-            btn._bound = true;
-            btn.removeAttribute('onclick');
-            btn.addEventListener('click', function(e){ e.preventDefault(); kies(match[1]); });
-          }
+          btn._bound = true;
+          btn.addEventListener('click', function(ev) {
+            ev.preventDefault();
+            doeActie(btn.getAttribute('data-actie'));
+          });
         });
-        var laterBtn = document.getElementById('btn-later');
-        if (laterBtn && !laterBtn._bound) {
-          laterBtn._bound = true;
-          laterBtn.addEventListener('click', function(){ kies('later'); });
-        }
-      })();
+      }
+      // Bind nu (DOM is klaar bij script-execution in Apps Script dialogs)
+      bindAlleKnoppen();
+      // Plus DOMContentLoaded als extra zekerheid
+      document.addEventListener('DOMContentLoaded', bindAlleKnoppen);
     </script>
   `).setWidth(460).setHeight(440);
 

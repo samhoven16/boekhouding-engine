@@ -153,16 +153,16 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 
 <!-- TABBAR -->
 <div class="tabbar">
-  <div class="tab actief" id="tab-factuur" onclick="wisselTab('factuur')">
+  <div class="tab actief" id="tab-factuur" data-tab="factuur">
     <span class="icon">🧾</span>Factuur
   </div>
-  <div class="tab" id="tab-kosten" onclick="wisselTab('kosten')">
+  <div class="tab" id="tab-kosten" data-tab="kosten">
     <span class="icon">💸</span>Kosten
   </div>
-  <div class="tab" id="tab-declaratie" onclick="wisselTab('declaratie')">
+  <div class="tab" id="tab-declaratie" data-tab="declaratie">
     <span class="icon">📤</span>Declaratie
   </div>
-  <div class="tab" id="tab-upload" onclick="wisselTab('upload')">
+  <div class="tab" id="tab-upload" data-tab="upload">
     <span class="icon">📸</span>Upload + AI
   </div>
 </div>
@@ -234,6 +234,10 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
       <tr><td id="tot-btw-label">BTW (21%)</td><td id="tot-btw">€ 0,00</td></tr>
       <tr class="eindtotaal"><td>Totaal te betalen</td><td id="tot-incl">€ 0,00</td></tr>
     </table>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 12px;font-size:11px;color:#5F6B7A;border-top:1px solid #E5EAF2;background:#F7F9FC">
+      <span id="recalc-status">⚙️ Wachten op JS…</span>
+      <button type="button" id="btn-recalc" style="background:none;border:1px solid #E5EAF2;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;color:#0D1B4E">🔄 Herbereken nu</button>
+    </div>
   </div>
   <div class="rij">
     <div class="veld">
@@ -513,12 +517,50 @@ window.addEventListener('error', function(ev) {
     };
     bindRegelEvents();
 
-    // Re-bind elke 500ms zolang dialog open is — vangt nieuw-toegevoegde
-    // factuurregels op (voegRegelToe maakt nieuwe inputs zonder event-listeners).
-    // Tegelijk: forced recalc als safety net voor weggevallen events.
+    // Tabs via addEventListener — inline onclick kan in moderne Apps Script
+    // CSP-modes worden geblokkeerd. Klant kon dan niet op Kosten/Declaratie/
+    // Upload klikken. Met data-attribuut + listener werkt 't gegarandeerd.
+    document.querySelectorAll('.tab[data-tab]').forEach(function(tabEl) {
+      if (tabEl._bound) return;
+      tabEl._bound = true;
+      tabEl.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        wisselTab(tabEl.getAttribute('data-tab'));
+      });
+    });
+
+    // Manuele recalc-knop — als auto-recalc om welke reden ook niet werkt,
+    // klant kan zelf forceren. Werkt altijd want directe DOM-binding.
+    var recalcBtn = document.getElementById('btn-recalc');
+    if (recalcBtn) {
+      recalcBtn.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        try { herbereken(); } catch (e) {
+          var s = document.getElementById('recalc-status');
+          if (s) { s.textContent = '⚠️ ' + (e.message || 'fout'); s.style.color = '#c62828'; }
+        }
+      });
+    }
+    // Live-counter — bewijst dat JS draait. Als dit getal niet stijgt,
+    // is JS volledig geblokkeerd door browser/CSP en zien we dat meteen.
+    var recalcTeller = 0;
     setInterval(function() {
-      try { bindRegelEvents(); herbereken(); }
-      catch(_) {}
+      try {
+        bindRegelEvents();
+        herbereken();
+        recalcTeller++;
+        var s = document.getElementById('recalc-status');
+        if (s) {
+          s.textContent = '✓ Live (recalc #' + recalcTeller + ')';
+          s.style.color = '#1B5E20';
+        }
+      } catch (e) {
+        var s = document.getElementById('recalc-status');
+        if (s) {
+          s.textContent = '⚠️ Recalc fout: ' + (e.message || '?');
+          s.style.color = '#c62828';
+        }
+      }
     }, 500);
   } catch (e) {
     if (typeof console !== 'undefined') console.error('[NieuweBoeking] init:', e);

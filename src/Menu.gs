@@ -185,8 +185,6 @@ function onOpen() {
       .addItem('Privé transactie toevoegen', 'voegPriveTransactieToe')
       .addItem('Vermogensoverzicht beheren', 'beheerVermogensoverzicht')
       .addSeparator()
-      .addItem('Beleggingen tab (live koersen)', 'voegBeleggingenTabToe')
-      .addSeparator()
       .addItem('IB-aangifte schatting (Box 1/2/3)', 'openIbAangifteHelper')
     )
 

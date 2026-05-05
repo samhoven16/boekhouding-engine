@@ -48,7 +48,7 @@ function onEdit(e) {
  * Niet-fataal: nooit een gebruikersactie blokkeren als logging faalt.
  *
  * Watch-list: VERKOOPFACTUREN, INKOOPFACTUREN, INSTELLINGEN, BANKTRANSACTIES,
- *             HERHALENDE_KOSTEN, JOURNAALPOSTEN, RELATIES, BELEGGINGEN.
+ *             HERHALENDE_KOSTEN, JOURNAALPOSTEN, RELATIES.
  */
 function _AUDIT_WATCH_SHEETS_() {
   // Function used as constant — recomputed lazily so SHEETS is loaded.
@@ -60,7 +60,6 @@ function _AUDIT_WATCH_SHEETS_() {
     SHEETS.HERHALENDE_KOSTEN,
     SHEETS.JOURNAALPOSTEN,
     SHEETS.RELATIES,
-    SHEETS.BELEGGINGEN,
   ];
 }
 
@@ -1108,11 +1107,7 @@ function dagelijkseTaken() {
     try { schrijfAuditLog_('FOUT dagelijkse taak', 'dashboard/herhalende kosten: ' + e.message); } catch (_) {}
   }
 
-  try {
-    vernieuwBeleggingenSnapshot_();
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT beleggingen: ' + e.message);
-  }
+
 
   try {
     controleerSheetGrootte_(ss);

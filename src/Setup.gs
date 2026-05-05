@@ -72,7 +72,6 @@ function setup() {
       ['Grootboekschema laden',     function() { vulGrootboekschema_(ss); }],
       ['Instellingen initialiseren', function() { zetInstellingen_(ss); }],
       ['Audit Log aanmaken',        function() { setupAuditLogSheet_(); }],
-      ['Beleggingen-tab aanmaken',  function() { setupBeleggingenSheet_(); }],
       ['Formuliers-tabs aanmaken',  function() { maakFormuliersTabbladen_(ss); }],
       ['Hoofdformulier aanmaken',   function() { maakHoofdFormulier_(ss); }],
       ['Werkruimte ordenen',        function() { herorganiseerWerkruimteSilent_(ss); }],

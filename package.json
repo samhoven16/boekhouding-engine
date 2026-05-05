@@ -17,6 +17,7 @@
     "prepare": "husky",
     "push:gas": "node scripts/clasp-push.js",
     "push:licence": "cd licence-server && NODE_TLS_REJECT_UNAUTHORIZED=0 npx clasp push --force",
+    "update": "git pull && npm install --silent && npm run push:gas",
     "deploy": "npm test && npm run push:gas",
     "deploy:licence": "npm run push:licence",
     "deploy:all": "npm test && npm run push:gas && npm run push:licence",
