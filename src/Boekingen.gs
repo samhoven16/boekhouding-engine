@@ -348,7 +348,7 @@ function boekAfschrijvingen() {
         new FormData(form).forEach((v, k) => data[k] = v);
         google.script.run
           .withSuccessHandler(() => { alert('Afschrijvingen geboekt!'); google.script.host.close(); })
-          .withFailureHandler((e) => alert('Fout: ' + (e && e.message ? e.message : 'onbekend')))
+          .withFailureHandler((e) => alert('⚠️ ' + (e && e.message ? e.message : 'Er ging iets mis. Controleer je invoer en probeer opnieuw.')))
           .verwerkAfschrijvingen(data);
       }
       document.addEventListener('DOMContentLoaded', function() {

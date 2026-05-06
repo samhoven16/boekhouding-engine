@@ -959,7 +959,8 @@ function getFormUrl_(formId) {
   try {
     return FormApp.openById(formId).getPublishedUrl();
   } catch (e) {
-    return 'Fout: ' + e.message;
+    Logger.log('getFormPublishedUrl_ fout: ' + e.message);
+    return null;
   }
 }
 

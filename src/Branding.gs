@@ -355,7 +355,7 @@ function opslaan() {
       })
       .withFailureHandler(function(e) {
         document.getElementById('opslaanStatus').style.color = 'red';
-        document.getElementById('opslaanStatus').textContent = 'Fout: ' + e.message;
+        document.getElementById('opslaanStatus').textContent = '⚠️ ' + (e && e.message ? e.message : 'Er ging iets mis. Probeer opnieuw.');
       })
       .slaKleurOp(kleur);
   }
@@ -388,7 +388,7 @@ function verwijderLogo() {
       logoBase64 = null;
       document.getElementById('logoStatus').textContent = 'Logo verwijderd';
     })
-    .withFailureHandler(function(e) { alert('Fout: ' + e.message); })
+    .withFailureHandler(function(e) { alert('⚠️ ' + (e && e.message ? e.message : 'Er ging iets mis. Probeer opnieuw.')); })
     .verwijderLogo();
 }
 

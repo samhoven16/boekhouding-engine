@@ -255,7 +255,7 @@ function opslaan() {
     })
     .withFailureHandler(function(e){
       s.className = 'status error';
-      s.textContent = 'Fout: ' + e.message;
+      s.textContent = '⚠️ ' + (e && e.message ? e.message : 'Er ging iets mis. Probeer opnieuw.');
     })
     .slaFiscaalProfielOp(data);
 }

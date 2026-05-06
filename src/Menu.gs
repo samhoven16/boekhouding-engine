@@ -340,7 +340,7 @@ function openBonUpload() {
             fileData = null;
           })
           .withFailureHandler(function(err) {
-            toonStatus('Fout: ' + err.message, 'red');
+            toonStatus('⚠️ ' + (err && err.message ? err.message : 'Er ging iets mis. Probeer opnieuw.'), 'red');
             document.getElementById('uploadBtn').textContent = 'Opnieuw proberen';
             document.getElementById('uploadBtn').disabled = false;
           })

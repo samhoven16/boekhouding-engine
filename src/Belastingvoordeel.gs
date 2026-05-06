@@ -403,7 +403,7 @@ function simuleer(){
       n.textContent=fmt(r.nettoEffect);
       n.style.color=r.nettoEffect>=0?'#81C784':'#FFC107';
     })
-    .withFailureHandler(function(e){alert('Fout: '+e.message);})
+    .withFailureHandler(function(e){alert('⚠️ '+(e&&e.message?e.message:'Er ging iets mis. Probeer opnieuw.'));})
     .runWatAlsSimulator(data);
 }
 
@@ -550,7 +550,7 @@ function boek(){
       document.getElementById('preview').style.display='none';
       setTimeout(function(){google.script.host.close();},1800);
     })
-    .withFailureHandler(function(e){s.className='status e';s.textContent='Fout: '+e.message;})
+    .withFailureHandler(function(e){s.className='status e';s.textContent='⚠️ '+(e&&e.message?e.message:'Er ging iets mis. Controleer je invoer.');})
     .boekReiskosten(data);
 }
 </script>
@@ -677,7 +677,7 @@ function boek(){
       s.textContent='✓ '+r.aantal+' dagen geboekt, totaal '+r.totaalKm+' km = '+r.totaalBedrag;
       setTimeout(function(){google.script.host.close();},2000);
     })
-    .withFailureHandler(function(e){s.className='status e';s.textContent='Fout: '+e.message;})
+    .withFailureHandler(function(e){s.className='status e';s.textContent='⚠️ '+(e&&e.message?e.message:'Er ging iets mis. Controleer je invoer.');})
     .boekReiskostenWeek(rijen);
 }
 </script>

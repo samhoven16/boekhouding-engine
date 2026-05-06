@@ -398,7 +398,7 @@ function importeerBankafschrift() {
             document.getElementById('result').textContent = n + ' transacties geïmporteerd.';
           })
           .withFailureHandler(e => {
-            document.getElementById('result').textContent = 'Fout: ' + e.message;
+            document.getElementById('result').textContent = '⚠️ ' + (e && e.message ? e.message : 'Er ging iets mis. Probeer opnieuw.');
             document.getElementById('result').style.color = 'red';
           })
           .verwerkBankCsvImport(csv, sep, cols);

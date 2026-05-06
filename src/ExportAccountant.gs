@@ -163,7 +163,7 @@ function emailNaarAccountant() {
             document.querySelector('.btn').textContent = 'Opnieuw proberen';
             document.getElementById('status').style.display = 'block';
             document.getElementById('status').style.color = 'red';
-            document.getElementById('status').textContent = 'Fout: ' + err.message;
+            document.getElementById('status').textContent = '⚠️ ' + (err && err.message ? err.message : 'Er ging iets mis. Probeer opnieuw.');
           })
           .verstuurSamenvattingAccountant(email, bericht);
       }

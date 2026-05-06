@@ -396,7 +396,7 @@ function toonActivatieDialog_() {
         .withFailureHandler(function(err) {
           btn.disabled = false;
           btn.textContent = 'Stuur activeringscode';
-          toonFout('fout1', 'Fout: ' + err.message);
+          toonFout('fout1', '⚠️ ' + (err && err.message ? err.message : 'Er ging iets mis. Probeer opnieuw.'));
         })
         .aanvraagOtp(email);
     }
@@ -429,7 +429,7 @@ function toonActivatieDialog_() {
         .withFailureHandler(function(err) {
           btn.disabled = false;
           btn.textContent = 'Activeer Boekhoudbaar';
-          toonFout('fout2', 'Fout: ' + err.message);
+          toonFout('fout2', '⚠️ ' + (err && err.message ? err.message : 'Activering mislukt. Controleer je code.'));
         })
         .activeerMetOtp(emailVal, otp);
     }

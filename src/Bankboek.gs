@@ -165,7 +165,7 @@ function boekPriveCorrectie() {
         const data = Object.fromEntries(new FormData(f));
         google.script.run
           .withSuccessHandler(() => { alert('Geboekt!'); google.script.host.close(); })
-          .withFailureHandler((e) => alert('Fout: ' + (e && e.message ? e.message : 'onbekend')))
+          .withFailureHandler((e) => alert('⚠️ ' + (e && e.message ? e.message : 'Er ging iets mis. Controleer je invoer en probeer opnieuw.')))
           .verwerkPriveCorrectie(data);
       }
       document.addEventListener('DOMContentLoaded', function() {
