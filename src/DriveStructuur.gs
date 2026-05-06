@@ -21,18 +21,30 @@ function maakDriveStructuur_(jaar) {
   const props = PropertiesService.getScriptProperties();
   const bedrijf = getInstelling_('Bedrijfsnaam') || 'Boekhouding';
 
-  // Hoofdmap ophalen of aanmaken
+  // Hoofdmap ophalen of aanmaken (collision-veilig)
   const hoofdmapKey = 'DRIVE_HOOFDMAP_' + jaar;
   let hoofdmap = getDriveMapViaKey_(hoofdmapKey);
 
   if (!hoofdmap) {
     const naam = bedrijf + ' – Boekhouding ' + jaar;
-    hoofdmap = DriveApp.createFolder(naam);
-    props.setProperty(hoofdmapKey, hoofdmap.getId());
-    Logger.log('Drive hoofdmap aangemaakt: ' + hoofdmap.getUrl());
+    // Collision-check: heeft de klant al een map met deze naam? (bv. handmatig
+    // aangemaakt of een vorige setup waarbij de property is verloren). Drive
+    // staat duplicaten met identieke naam toe — zonder check krijg je twee
+    // parallelle "Boekhouding 2026" mappen en files belanden in de verkeerde.
+    hoofdmap = _vindBestaandeDriveMap_(naam);
+    if (hoofdmap) {
+      props.setProperty(hoofdmapKey, hoofdmap.getId());
+      Logger.log('Drive hoofdmap hergebruikt (collision-detect): ' + hoofdmap.getUrl());
+      try { schrijfAuditLog_('Drive map hergebruikt', naam + ' (' + hoofdmap.getId() + ')'); } catch (_) {}
+    } else {
+      hoofdmap = DriveApp.createFolder(naam);
+      props.setProperty(hoofdmapKey, hoofdmap.getId());
+      Logger.log('Drive hoofdmap aangemaakt: ' + hoofdmap.getUrl());
+      try { schrijfAuditLog_('Drive map aangemaakt', naam + ' (' + hoofdmap.getId() + ')'); } catch (_) {}
+    }
   }
 
-  // Submappen
+  // Submappen — zelfde collision-check binnen hoofdmap
   const submappen = {
     ['DRIVE_VERKOOPFACTUREN_' + jaar]: '📄 Verkoopfacturen',
     ['DRIVE_INKOOPFACTUREN_'  + jaar]: '🧾 Inkoopfacturen en bonnetjes',
@@ -42,13 +54,45 @@ function maakDriveStructuur_(jaar) {
   };
 
   Object.entries(submappen).forEach(([key, naam]) => {
-    if (!getDriveMapViaKey_(key)) {
-      const submap = hoofdmap.createFolder(naam);
-      props.setProperty(key, submap.getId());
-    }
+    if (getDriveMapViaKey_(key)) return;
+    let submap = _vindBestaandeSubmap_(hoofdmap, naam);
+    if (!submap) submap = hoofdmap.createFolder(naam);
+    props.setProperty(key, submap.getId());
   });
 
   return hoofdmap;
+}
+
+/**
+ * Zoekt een bestaande root-level map op naam en retourneert de eerste niet-trash
+ * match. Voorkomt dubbele "Boekhouding 2026" mappen wanneer klant er handmatig
+ * één heeft aangemaakt of property verloren is.
+ */
+function _vindBestaandeDriveMap_(naam) {
+  try {
+    const it = DriveApp.getFoldersByName(naam);
+    while (it.hasNext()) {
+      const f = it.next();
+      if (!f.isTrashed()) return f;
+    }
+  } catch (_) {}
+  return null;
+}
+
+/**
+ * Zoekt submap binnen een specifieke parent. Filtert prullenbak-items en
+ * voorkomt dubbele submappen na herinstallatie.
+ */
+function _vindBestaandeSubmap_(parent, naam) {
+  if (!parent) return null;
+  try {
+    const it = parent.getFoldersByName(naam);
+    while (it.hasNext()) {
+      const f = it.next();
+      if (!f.isTrashed()) return f;
+    }
+  } catch (_) {}
+  return null;
 }
 
 // ─────────────────────────────────────────────
