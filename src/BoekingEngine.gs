@@ -59,6 +59,33 @@ function saniteer_(waarde) {
   return s;
 }
 
+/**
+ * Recursief alle string-velden in een object/array via saniteer_.
+ * Beschermt geneste payloads (formData, API-bodies) tegen formule-
+ * injectie en control-chars. Behoudt structuur (objects/arrays/numbers/
+ * booleans/null), saniteert alleen strings.
+ *
+ * Max-depth 6 voorkomt infinite-loops bij circulaire refs.
+ */
+function saniteerObject_(obj, _depth) {
+  const d = (_depth || 0);
+  if (d > 6) return obj;  // safety-bail
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') return saniteer_(obj);
+  if (typeof obj === 'number' || typeof obj === 'boolean') return obj;
+  if (Array.isArray(obj)) return obj.map(function(x) { return saniteerObject_(x, d + 1); });
+  if (typeof obj === 'object') {
+    const out = {};
+    Object.keys(obj).forEach(function(k) {
+      // Sleutel ook saniteren (paranoia: voorkomt prototype-pollution-strings)
+      const veiligeKey = saniteer_(k).slice(0, 200);
+      out[veiligeKey] = saniteerObject_(obj[k], d + 1);
+    });
+    return out;
+  }
+  return obj;
+}
+
 function saniteerGetal_(waarde) {
   const n = parseFloat(String(waarde || '0').replace(',', '.'));
   return isNaN(n) ? 0 : Math.round(n * 100) / 100;
@@ -441,9 +468,18 @@ function schrijfAuditLog_(actie, details) {
     const props     = PropertiesService.getScriptProperties();
     const gebruiker = Session.getActiveUser().getEmail() || 'systeem';
     const tijdstip  = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd HH:mm:ss');
+    // Tenant-id (eerste 8 chars SS-id-hash) voor multi-tenant support-debug:
+    // bij ticket "klant X heeft probleem" matcht owner SS-hash met klant-info.
+    let tenant = '';
+    try {
+      const ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
+      tenant = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, ssId)
+        .map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); })
+        .join('').slice(0, 8);
+    } catch (_) { tenant = 'na'; }
     // Cap details om 9KB ScriptProperties limit te respecteren
     const detailsCapped = String(details || '').slice(0, 500);
-    const entry        = tijdstip + ' | ' + gebruiker + ' | ' + actie + ' | ' + detailsCapped;
+    const entry        = tijdstip + ' | ' + tenant + ' | ' + gebruiker + ' | ' + actie + ' | ' + detailsCapped;
 
     // Houd laatste 100 regels bij in ScriptProperties (max ~8KB om 9KB limit veilig te houden)
     const LOG_KEY = 'auditLogBuffer';

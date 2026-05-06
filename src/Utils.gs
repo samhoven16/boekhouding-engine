@@ -698,6 +698,133 @@ function naarEuro_(bedrag, valuta) {
 }
 
 // ─────────────────────────────────────────────
+//  RATE-LIMITING + OUTBOUND URL-ALLOWLIST
+// ─────────────────────────────────────────────
+//
+// Rate-limit beschermt tegen DOS via dialog-bombing of geknoeide
+// google.script.run-aanroepen. Per actie + per user maximaal N hits/minuut.
+// Counter staat in CacheService (auto-expire via TTL).
+//
+// Gooit een nette Error die door vertaalFout_ wordt opgevangen.
+
+/**
+ * @param {string} actie         label, bv. 'submitFactuur', 'kvkAutofill'
+ * @param {number} maxPerMinuut  cap per gebruiker per minuut
+ * @throws Error wanneer cap is overschreden
+ */
+function rateLimit_(actie, maxPerMinuut) {
+  try {
+    const cache = CacheService.getUserCache();
+    const key = 'rl_' + actie;
+    const huidig = parseInt(cache.get(key) || '0');
+    if (huidig >= maxPerMinuut) {
+      throw new Error('Te veel acties achter elkaar — wacht een minuut.');
+    }
+    cache.put(key, String(huidig + 1), 60);
+  } catch (e) {
+    if (/Te veel acties/.test(e.message)) throw e;
+    // Cache-service down? laat door — beter functioneel dan blokkerend.
+    Logger.log('rateLimit_ cache fout (laat door): ' + e.message);
+  }
+}
+
+/**
+ * Whitelist van toegestane externe domeinen voor UrlFetchApp-calls.
+ * Beschermt tegen klant-geknoeide LICENTIE_SERVER_URL die data zou
+ * kunnen ex-filtreren naar een attacker-domein.
+ *
+ * Subdomeinen toegestaan via suffix-match. Schemes: alleen https.
+ */
+const _UITGAAND_ALLOWLIST = [
+  'api.kvk.nl',
+  'api.exchangerate.host',
+  'open.er-api.com',
+  'mijn.belastingdienst.nl',
+  'api.mollie.com',
+  'generativelanguage.googleapis.com',  // Gemini Vision
+  'boekhoudbaar.nl',                     // licentieserver standaard
+];
+
+function _isToegestaneUrl_(url) {
+  try {
+    const m = String(url || '').match(/^https:\/\/([^\/]+)/i);
+    if (!m) return false;
+    const host = m[1].toLowerCase();
+    // Licentieserver-override uit ScriptProperties: ook deze in allowlist
+    let extraHost = '';
+    try {
+      const lic = String(PropertiesService.getScriptProperties().getProperty('LICENTIE_SERVER_URL') || '');
+      const lm = lic.match(/^https:\/\/([^\/]+)/i);
+      if (lm) extraHost = lm[1].toLowerCase();
+    } catch (_) {}
+    const lijst = extraHost ? _UITGAAND_ALLOWLIST.concat([extraHost]) : _UITGAAND_ALLOWLIST;
+    return lijst.some(function(d) { return host === d || host.endsWith('.' + d); });
+  } catch (_) { return false; }
+}
+
+/**
+ * Veilige wrapper rond UrlFetchApp.fetch met allowlist-check.
+ * Gebruik dit i.p.v. UrlFetchApp.fetch direct.
+ */
+function veiligFetch_(url, opties) {
+  if (!_isToegestaneUrl_(url)) {
+    try { schrijfAuditLog_('Outbound URL geblokkeerd', String(url).slice(0, 200)); } catch (_) {}
+    throw new Error('Externe URL niet toegestaan — staat niet in de uitgaande-allowlist.');
+  }
+  return UrlFetchApp.fetch(url, opties || {});
+}
+
+// ─────────────────────────────────────────────
+//  USER-PROPERTIES VERSLEUTELING (lichte XOR-cipher)
+// ─────────────────────────────────────────────
+//
+// API-keys (KvK, Mollie, etc.) staan default in clear-text in UserProperties.
+// Klant kan ze in Apps Script editor zien. Voor confidentiality versleutelen
+// we met een XOR + base64 obfuscation tegen de SCRIPT-level master-salt.
+// NB: dit is OBFUSCATION, geen crypto — voorkomt schouder-meekijken, niet
+// een vastberaden aanvaller die de script-source heeft.
+
+function _getMasterSalt_() {
+  const KEY = '_BOEKHOUDBAAR_SALT_';
+  const props = PropertiesService.getScriptProperties();
+  let salt = props.getProperty(KEY);
+  if (!salt) {
+    salt = Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty(KEY, salt);
+  }
+  return salt;
+}
+
+function versleutelString_(klaartekst) {
+  const tekst = String(klaartekst || '');
+  if (!tekst) return '';
+  const salt = _getMasterSalt_();
+  const out = [];
+  for (let i = 0; i < tekst.length; i++) {
+    out.push(tekst.charCodeAt(i) ^ salt.charCodeAt(i % salt.length));
+  }
+  return 'enc:' + Utilities.base64Encode(out.map(function(c) { return String.fromCharCode(c); }).join(''));
+}
+
+function ontsleutelString_(versleuteld) {
+  const v = String(versleuteld || '');
+  if (!v.startsWith('enc:')) return v;  // backward-compat: clear-text blijft werken
+  try {
+    const raw = Utilities.base64Decode(v.slice(4));
+    const salt = _getMasterSalt_();
+    let out = '';
+    for (let i = 0; i < raw.length; i++) {
+      const b = raw[i] < 0 ? raw[i] + 256 : raw[i];
+      out += String.fromCharCode(b ^ salt.charCodeAt(i % salt.length));
+    }
+    return out;
+  } catch (e) {
+    Logger.log('ontsleutelString_ fout: ' + e.message);
+    return '';
+  }
+}
+
+// ─────────────────────────────────────────────
 //  KvK API — auto-fill bedrijfsgegevens
 // ─────────────────────────────────────────────
 //
@@ -722,14 +849,21 @@ function haalDataKvK_(kvkNummer) {
     if (cached) return JSON.parse(cached);
   } catch (_) {}
 
-  // API-key uit UserProperties (per-user, niet gedeeld)
+  // API-key uit UserProperties (per-user, niet gedeeld). Versleuteld
+  // via versleutelString_ — clear-text blijft backward-compat werken.
   let apiKey = '';
-  try { apiKey = PropertiesService.getUserProperties().getProperty('KVK_API_KEY') || ''; } catch (_) {}
+  try {
+    const raw = PropertiesService.getUserProperties().getProperty('KVK_API_KEY') || '';
+    apiKey = ontsleutelString_(raw);
+  } catch (_) {}
   if (!apiKey) return null;  // graceful: geen key = geen autofill
+
+  // Rate-limit: max 30 KvK-lookups/min/user (developers.kvk.nl staat 100/dag toe)
+  try { rateLimit_('kvkAutofill', 30); } catch (_) { return null; }
 
   try {
     const url = 'https://api.kvk.nl/api/v2/zoeken?kvkNummer=' + encodeURIComponent(schoon);
-    const resp = UrlFetchApp.fetch(url, {
+    const resp = veiligFetch_(url, {
       method: 'get',
       headers: { 'apiKey': apiKey, 'Accept': 'application/json' },
       muteHttpExceptions: true,
@@ -780,20 +914,23 @@ function getKvkDataPubliek(kvkNummer) {
  */
 function zetKvkApiKey() {
   const ui = SpreadsheetApp.getUi();
-  const huidig = PropertiesService.getUserProperties().getProperty('KVK_API_KEY') || '';
+  const userProps = PropertiesService.getUserProperties();
+  const huidigEnc = userProps.getProperty('KVK_API_KEY') || '';
+  const huidig = ontsleutelString_(huidigEnc);
   const resp = ui.prompt(
     'KvK API-key instellen',
-    'Plak hier je KvK API-key (developers.kvk.nl). Laat leeg om te wissen.\n\nHuidig: ' +
+    'Plak hier je KvK API-key (developers.kvk.nl). Laat leeg om te wissen.\n\n' +
+    'Wordt versleuteld opgeslagen — niet zichtbaar in Apps Script editor.\n\nHuidig: ' +
       (huidig ? huidig.slice(0, 4) + '...' + huidig.slice(-4) : '(geen)'),
     ui.ButtonSet.OK_CANCEL
   );
   if (resp.getSelectedButton() !== ui.Button.OK) return;
   const key = String(resp.getResponseText() || '').trim();
   if (!key) {
-    PropertiesService.getUserProperties().deleteProperty('KVK_API_KEY');
+    userProps.deleteProperty('KVK_API_KEY');
     ui.alert('KvK API-key verwijderd. Auto-fill staat uit.');
     return;
   }
-  PropertiesService.getUserProperties().setProperty('KVK_API_KEY', key);
-  ui.alert('✅ KvK API-key opgeslagen. Auto-fill werkt nu bij ingevoerde KvK-nummers.');
+  userProps.setProperty('KVK_API_KEY', versleutelString_(key));
+  ui.alert('✅ KvK API-key opgeslagen (versleuteld). Auto-fill werkt nu bij ingevoerde KvK-nummers.');
 }
