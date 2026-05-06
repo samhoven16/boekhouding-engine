@@ -160,6 +160,7 @@ function onOpen() {
       .addItem('Bedrijfsstijl (logo & kleur)', 'openBrandingInstellingen')
       .addItem('Google Drive mappen', 'toonDriveStructuur')
       .addItem('Website / webshop koppelen (API)', 'toonZapierInstructies')
+      .addItem('KvK API-key (voor auto-fill bedrijfsgegevens)', 'zetKvkApiKey')
       .addSeparator()
       .addItem('Jaarafsluiting wizard', 'sluitJaarAf')
       .addItem('Nieuw boekjaar starten (alleen Drive)', 'maakNieuwBoekjaar')

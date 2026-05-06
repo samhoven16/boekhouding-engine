@@ -689,3 +689,104 @@ function naarEuro_(bedrag, valuta) {
   if (!rate || rate === 1) return Math.round(n * 100) / 100;
   return Math.round((n / rate) * 100) / 100;
 }
+
+// ─────────────────────────────────────────────
+//  KVK API — auto-fill bedrijfsgegevens
+// ─────────────────────────────────────────────
+//
+// Vult adres/rechtsvorm automatisch in bij ingevoerd KvK-nummer.
+// API: KvK Open Data (api.kvk.nl/api/v2/zoeken). Vereist API-key in
+// UserProperties onder 'KVK_API_KEY' — per-user, niet per-script.
+// Zonder key: silent return null (geen fout, geen autofill).
+//
+// Cache: resultaten 24u in CacheService — KvK-data wijzigt zelden.
+//
+// @param {string} kvkNummer  Acht cijfers (mag leading-zeros hebben).
+// @return {Object|null}      { naam, adres, postcode, plaats, rechtsvorm } of null.
+function haalDataKvK_(kvkNummer) {
+  const schoon = String(kvkNummer || '').replace(/\D/g, '');
+  if (!/^\d{8}$/.test(schoon)) return null;
+
+  // Cache-hit?
+  let cache = null;
+  try {
+    cache = CacheService.getScriptCache();
+    const cached = cache.get('kvk_' + schoon);
+    if (cached) return JSON.parse(cached);
+  } catch (_) {}
+
+  // API-key uit UserProperties (per-user, niet gedeeld)
+  let apiKey = '';
+  try { apiKey = PropertiesService.getUserProperties().getProperty('KVK_API_KEY') || ''; } catch (_) {}
+  if (!apiKey) return null;  // graceful: geen key = geen autofill
+
+  try {
+    const url = 'https://api.kvk.nl/api/v2/zoeken?kvkNummer=' + encodeURIComponent(schoon);
+    const resp = UrlFetchApp.fetch(url, {
+      method: 'get',
+      headers: { 'apiKey': apiKey, 'Accept': 'application/json' },
+      muteHttpExceptions: true,
+    });
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('haalDataKvK_ status ' + resp.getResponseCode() + ': ' + resp.getContentText().slice(0, 200));
+      return null;
+    }
+    const json = JSON.parse(resp.getContentText());
+    const item = (json.resultaten || [])[0];
+    if (!item) return null;
+
+    const adres = (item._embedded && item._embedded.eersteHandelsnaam && item._embedded.eersteHandelsnaam._embedded
+                  && item._embedded.eersteHandelsnaam._embedded.adres) || item.adres || {};
+    const result = {
+      naam:        String(item.handelsnaam || item.naam || ''),
+      kvkNummer:   schoon,
+      rechtsvorm:  String(item.type || ''),
+      adres:       String(adres.straatnaam || ''),
+      huisnummer:  String(adres.huisnummer || ''),
+      postcode:    String(adres.postcode || ''),
+      plaats:      String(adres.plaats || adres.woonplaats || ''),
+    };
+
+    if (cache) try { cache.put('kvk_' + schoon, JSON.stringify(result), 86400); } catch (_) {}
+    try { schrijfAuditLog_('KvK API', 'autofill voor ' + schoon); } catch (_) {}
+    return result;
+  } catch (e) {
+    Logger.log('haalDataKvK_ fout: ' + e.message);
+    return null;
+  }
+}
+
+/**
+ * Publieke wrapper voor dialog-gebruik via google.script.run.
+ * Retourneert object met velden of null.
+ */
+function getKvkDataPubliek(kvkNummer) {
+  return haalDataKvK_(kvkNummer);
+}
+
+/**
+ * Eenmalige setup van KvK API-key per user. Roep aan via Apps Script
+ * editor of via een Instellingen-dialog.
+ *
+ * Klant haalt key bij developers.kvk.nl/getting-started
+ * (eerste 100 calls/maand gratis).
+ */
+function zetKvkApiKey() {
+  const ui = SpreadsheetApp.getUi();
+  const huidig = PropertiesService.getUserProperties().getProperty('KVK_API_KEY') || '';
+  const resp = ui.prompt(
+    'KvK API-key instellen',
+    'Plak hier je KvK API-key (developers.kvk.nl). Laat leeg om te wissen.\n\nHuidig: ' +
+      (huidig ? huidig.slice(0, 4) + '...' + huidig.slice(-4) : '(geen)'),
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+  const key = String(resp.getResponseText() || '').trim();
+  if (!key) {
+    PropertiesService.getUserProperties().deleteProperty('KVK_API_KEY');
+    ui.alert('KvK API-key verwijderd. Auto-fill staat uit.');
+    return;
+  }
+  PropertiesService.getUserProperties().setProperty('KVK_API_KEY', key);
+  ui.alert('✅ KvK API-key opgeslagen. Auto-fill werkt nu bij ingevoerde KvK-nummers.');
+}
