@@ -58,6 +58,12 @@ function zetMollieApiKey() {
 function genereerMolliePaymentLink_(factuur) {
   if (!factuur || !factuur.factuurnummer || !(factuur.bedragIncl > 0)) return null;
 
+  // Feature-flag check — klant kan ondanks API-key Mollie-link uitzetten
+  // via Instellingen 'Feature: mollie_betaal_link' = Nee
+  try {
+    if (typeof featureAan_ === 'function' && !featureAan_('mollie_betaal_link')) return null;
+  } catch (_) {}
+
   let apiKey = '';
   try {
     const raw = PropertiesService.getUserProperties().getProperty(MOLLIE_KEY_PROP) || '';

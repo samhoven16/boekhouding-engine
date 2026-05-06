@@ -34,6 +34,15 @@ function doPost(e) {
       return jsonResponse_({ succes: false, fout: 'Body te groot (max 100KB)' });
     }
 
+    // ── Rate-limit met integratie-whitelist ───────────────────────
+    // Webhook-aanroepen via Zapier/Make hebben legitiem hogere rate dan
+    // interactieve klant. rateLimit_ met bron='webhook' geeft ×3 cap.
+    try {
+      if (typeof rateLimit_ === 'function') rateLimit_('webhookPost', 60, 'webhook');
+    } catch (rlErr) {
+      return jsonResponse_({ succes: false, fout: rlErr.message });
+    }
+
     // ── API-sleutel + HMAC-handtekening validatie ─────────────────
     // Twee modi naast elkaar (backward-compat):
     //   1. Plain API-key in body/query (bestaande flow)

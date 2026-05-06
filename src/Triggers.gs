@@ -1158,8 +1158,14 @@ function dagelijkseTaken() {
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   _runTaak_('groottecheck',     function() { controleerSheetGrootte_(ss); });
   _runTaak_('verlopenShares',   function() { if (typeof ruimVerlopenShares_ === 'function') ruimVerlopenShares_(); });
-  _runTaak_('autoBackup',       function() { if (typeof maakAutomatischeBackup_ === 'function') maakAutomatischeBackup_(); });
-  _runTaak_('dlqRetry',         function() { if (typeof dlqVerwerkRetries_ === 'function') dlqVerwerkRetries_(); });
+  _runTaak_('autoBackup',       function() {
+    if (typeof featureAan_ === 'function' && !featureAan_('auto_backup')) return;
+    if (typeof maakAutomatischeBackup_ === 'function') maakAutomatischeBackup_();
+  });
+  _runTaak_('dlqRetry',         function() {
+    if (typeof featureAan_ === 'function' && !featureAan_('dlq_retry')) return;
+    if (typeof dlqVerwerkRetries_ === 'function') dlqVerwerkRetries_();
+  });
 
   // Aggregaat: totale duur dagelijkseTaken
   try { metricsLog_('dagelijkseTaken.totaal', Date.now() - dagelijksTotaal0, true); } catch (_) {}

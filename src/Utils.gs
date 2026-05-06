@@ -808,16 +808,23 @@ function cacheVersie_(prefix) {
 // Gooit een nette Error die door vertaalFout_ wordt opgevangen.
 
 /**
- * @param {string} actie         label, bv. 'submitFactuur', 'kvkAutofill'
- * @param {number} maxPerMinuut  cap per gebruiker per minuut
+ * @param {string}  actie         label, bv. 'submitFactuur', 'kvkAutofill'
+ * @param {number}  maxPerMinuut  cap per gebruiker per minuut
+ * @param {string=} bron          optionele bron-identifier (bv. 'zapier', 'klant')
+ *                                 als 'zapier'/'integration' → ruimere cap (×3)
  * @throws Error wanneer cap is overschreden
  */
-function rateLimit_(actie, maxPerMinuut) {
+function rateLimit_(actie, maxPerMinuut, bron) {
   try {
+    // Whitelist voor integraties: Zapier/Make/n8n hebben legitiem
+    // hogere call-rate dan een interactieve klant.
+    const isIntegratie = bron && /^(zapier|make|n8n|integratie|integration|webhook)$/i.test(bron);
+    const effectieveCap = isIntegratie ? maxPerMinuut * 3 : maxPerMinuut;
+
     const cache = CacheService.getUserCache();
-    const key = 'rl_' + actie;
+    const key = 'rl_' + actie + (isIntegratie ? '_int' : '');
     const huidig = parseInt(cache.get(key) || '0');
-    if (huidig >= maxPerMinuut) {
+    if (huidig >= effectieveCap) {
       throw new Error('Te veel acties achter elkaar — wacht een minuut.');
     }
     cache.put(key, String(huidig + 1), 60);
@@ -826,6 +833,71 @@ function rateLimit_(actie, maxPerMinuut) {
     // Cache-service down? laat door — beter functioneel dan blokkerend.
     Logger.log('rateLimit_ cache fout (laat door): ' + e.message);
   }
+}
+
+// ─────────────────────────────────────────────
+//  FEATURE FLAGS
+// ─────────────────────────────────────────────
+//
+// Centraal punt voor "feature aan/uit" toggles. Voorkomt conditional-spaghetti
+// in elk bestand met `if (instelling === 'Ja') { ... }`. Ondersteunt:
+//   - Per-klant via Instellingen-sheet (boolean Ja/Nee)
+//   - Globaal via ScriptProperty 'feature_<naam>'
+//   - Default: alle features `false` tenzij expliciet aan
+//
+// Conventie: nieuwe feature ALTIJD via featureAan_('naam'), NOOIT via
+// directe getInstelling_-call. Maakt opruimen van oude flags later mogelijk
+// (grep-able).
+const FEATURE_DEFAULTS = {
+  'mollie_betaal_link':       false,  // wordt aan zodra MOLLIE_API_KEY ingevuld is
+  'kvk_autofill':             false,  // idem voor KVK_API_KEY
+  'accountant_share':         true,
+  'auto_backup':              true,
+  'dlq_retry':                true,
+  'webhook_hmac':             false,  // optionele opwaardering
+  'multi_jaar_dashboard':     false,  // experimentele feature
+  'inkoop_ocr':               true,   // Gemini Vision is geconfigureerd
+};
+
+/**
+ * @param {string} naam    feature-key uit FEATURE_DEFAULTS
+ * @returns {boolean}
+ */
+function featureAan_(naam) {
+  if (!naam) return false;
+  // Per-klant override via Instellingen
+  try {
+    const klantOverride = getInstelling_('Feature: ' + naam);
+    if (klantOverride === 'Ja' || klantOverride === 'true') return true;
+    if (klantOverride === 'Nee' || klantOverride === 'false') return false;
+  } catch (_) {}
+  // Globale override via ScriptProperty
+  try {
+    const globaal = PropertiesService.getScriptProperties().getProperty('feature_' + naam);
+    if (globaal === 'true' || globaal === '1') return true;
+    if (globaal === 'false' || globaal === '0') return false;
+  } catch (_) {}
+  // Auto-detectie voor key-based features (Mollie/KvK)
+  if (naam === 'mollie_betaal_link') {
+    try { return !!PropertiesService.getUserProperties().getProperty('MOLLIE_API_KEY'); } catch (_) { return false; }
+  }
+  if (naam === 'kvk_autofill') {
+    try { return !!PropertiesService.getUserProperties().getProperty('KVK_API_KEY'); } catch (_) { return false; }
+  }
+  // Default
+  return Object.prototype.hasOwnProperty.call(FEATURE_DEFAULTS, naam) ? FEATURE_DEFAULTS[naam] : false;
+}
+
+/**
+ * Toon overzicht van alle features + huidige status. Voor support/debug.
+ */
+function toonFeatures() {
+  const ui = SpreadsheetApp.getUi();
+  const lijst = Object.keys(FEATURE_DEFAULTS).sort().map(function(naam) {
+    const aan = featureAan_(naam);
+    return (aan ? '✅' : '⬜') + ' ' + naam + (aan ? ' (aan)' : ' (uit)');
+  }).join('\n');
+  ui.alert('🚩 Feature flags', lijst + '\n\nWijzig per-klant via tabblad Instellingen, sleutel "Feature: <naam>" = Ja/Nee.', ui.ButtonSet.OK);
 }
 
 /**
