@@ -16,6 +16,21 @@
  * Beide stappen lopen onafhankelijk: één fout blokkeert de andere niet.
  */
 function onEdit(e) {
+  // Dedup: GAS fires onEdit 2× wanneer er ZOWEL een simple-trigger
+  // (= deze functienaam onEdit) ALS een installable trigger ('onEdit' in
+  // installeelTriggers_) bestaat. Zonder check krijg je dubbele audit-log
+  // entries en bij side-effects (mail) dubbele acties.
+  // Cache-key per range+timestamp; ttl 5s.
+  try {
+    const a1 = e && e.range ? e.range.getA1Notation() : '';
+    if (a1) {
+      const key = 'onEditDedup_' + a1 + '_' + Math.floor(Date.now() / 5000);
+      const cache = CacheService.getScriptCache();
+      if (cache.get(key)) return;  // tweede fire binnen 5s op zelfde cel → skip
+      cache.put(key, '1', 5);
+    }
+  } catch (_) { /* dedup-fail: laat door (better duplicaat dan miss) */ }
+
   // ── Audit trail: log alle edits op gevoelige sheets ───────────
   try {
     schrijfAuditEdit_(e);

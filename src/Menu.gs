@@ -26,6 +26,11 @@ function onOpen() {
   // Onboarding wizard bij eerste gebruik + update-melding bij terugkerende gebruikers
   try { controleerOnboarding_(); } catch (e) { Logger.log('Onboarding check fout: ' + e.message); }
 
+  // Trigger-watchdog: detecteert "valse start" (klant heeft scopes niet geaccepteerd
+  // → triggers draaien niet). Geeft toast met diagnose-instructie.
+  try { if (typeof controleerTriggerWatchdog_ === 'function') controleerTriggerWatchdog_(); }
+  catch (e) { Logger.log('Trigger-watchdog overgeslagen: ' + e.message); }
+
   // Eénmalig welkom-modal na geslaagde setup — 3 quick-start acties
   try { toonPostSetupWelkomModal_(); } catch (e) { Logger.log('Welkom-modal overgeslagen: ' + e.message); }
 
@@ -111,6 +116,9 @@ function onOpen() {
       .addSeparator()
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
       .addItem('🔧 Systeemstatus (voor support)', 'toonSysteemStatus')
+      .addItem('🩺 Diagnostiek — autorisatie-check', 'controleerAutorisaties')
+      .addItem('📋 Geïnstalleerde triggers tonen', 'toonTriggers')
+      .addItem('📈 Apps Script executions openen', 'openExecutionsDashboard')
       .addItem('🚩 Feature flags overzicht', 'toonFeatures')
       .addItem('📨 Mislukte taken (DLQ) tonen', 'toonDlqOverzicht')
       .addItem('🔁 Forceer DLQ-retry nu', 'forceerDlqRetry')

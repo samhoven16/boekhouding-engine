@@ -2,6 +2,15 @@
  * Config.gs
  * Centrale configuratie en constanten voor het boekhoudprogramma.
  * Referentie Grootboekschema (RGS) conform Nederlandse standaard.
+ *
+ * REGEL — geen GAS-service-calls op top-level scope:
+ *   FOUT:    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('X');
+ *   GOED:    function getSheetX_() { return SpreadsheetApp.getActiveSpreadsheet().getSheetByName('X'); }
+ * GAS scant ALLE .gs-bestanden bij elke trigger-fire/menu-open. Een fout op
+ * top-level breekt het hele script. Daarom: SpreadsheetApp/DriveApp/GmailApp/
+ * UrlFetchApp/PropertiesService alleen binnen functies aanroepen.
+ * Geverifieerd via: grep -nE "^(const|let|var)\s+\w+\s*=\s*(SpreadsheetApp|DriveApp|GmailApp|MailApp|FormApp|UrlFetchApp|PropertiesService|CacheService|Session|ScriptApp)\." src/*.gs
+ * Moet 0 hits opleveren.
  */
 
 // ─────────────────────────────────────────────
