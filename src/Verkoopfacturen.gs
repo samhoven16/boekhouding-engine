@@ -894,6 +894,7 @@ function _bouwFactuurlijstHtml_() {
     'function fmt(b){b=parseFloat(b)||0;return(b<0?"-\u20ac":"\u20ac")+Math.abs(b).toLocaleString("nl-NL",{minimumFractionDigits:2,maximumFractionDigits:2});}' +
     'function esc(s){return String(s||"").replace(/[&<>"\']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\\\"":"&quot;","\'":"&#39;"}[c];});}' +
     'function badgeKls(s){var m={"Verzonden":"b-open","Concept":"b-concept","Deels betaald":"b-deels","Vervallen":"b-vervallen","Betaald":"b-betaald","Gecrediteerd":"b-gecrediteerd"};return m[s]||"b-concept";}' +
+    'function statusEmoji(s){var m={"Concept":"✏️","Verzonden":"📧","Deels betaald":"🔵","Betaald":"✅","Vervallen":"⚠️","Gecrediteerd":"↩️"};return m[s]||"";}' +
     'function laad(){' +
     '  document.getElementById("body").innerHTML=\'<div class="loading"><div class="spin"></div><br>Even laden\u2026</div>\';' +
     '  google.script.run.withSuccessHandler(function(d){' +
@@ -936,7 +937,7 @@ function _bouwFactuurlijstHtml_() {
     '    h+=\'<td>\'+fmt(f.bedragIncl)+\'</td>\';' +
     '    h+=\'<td class="\'+( urgent?"urgent":"" )+\'">\'+fmt(f.openBedrag)+\'</td>\';' +
     '    h+=\'<td class="\'+( urgent?"urgent":"" )+\'">\'+esc(f.vervaldatum)+\'</td>\';' +
-    '    h+=\'<td><span class="badge \'+badgeKls(f.status)+\'">\'+esc(f.status)+\'</span></td>\';' +
+    '    h+=\'<td><span class="badge \'+badgeKls(f.status)+\'">\'+statusEmoji(f.status)+\' \'+esc(f.status)+\'</span></td>\';' +
     '    h+=\'<td style="white-space:nowrap">\';' +
     // data-actie + dataset-attributen ipv inline onclick (CSP-veilig + voorkomt
     // quote-escape-hell met factuurnummers die quotes/specials kunnen bevatten).
