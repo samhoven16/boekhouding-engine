@@ -34,13 +34,50 @@ function genereerBalans() {
   let rij = 4;
 
   // ── ACTIVA ─────────────────────────────────────────────────────────────
-  rij = schrijfBalansZijde_(sheet, saldi, 'Actief', 'ACTIVA', rij, 1);
+  const activaResult = schrijfBalansZijde_(sheet, saldi, 'Actief', 'ACTIVA', rij, 1);
+  rij = activaResult.volgendeRij;
 
   // Resultaat jaar toevoegen aan eigen vermogen
   const resultaatJaar = berekenResultaatJaar_(saldi);
 
   // ── PASSIVA ────────────────────────────────────────────────────────────
-  rij = schrijfBalansZijde_(sheet, saldi, 'Passief', 'PASSIVA', rij + 2, 1, resultaatJaar);
+  const passivaResult = schrijfBalansZijde_(sheet, saldi, 'Passief', 'PASSIVA', rij + 2, 1, resultaatJaar);
+  rij = passivaResult.volgendeRij;
+
+  // ── BALANS-VALIDATIE ───────────────────────────────────────────────────
+  // Boekhoud-invariant: Activa = Passiva (debet = credit). Een verschil
+  // duidt op een open boekingsfout, ontbrekende journaalpost of typo in
+  // grootboekschema. Zonder waarschuwing blijft dit lang onopgemerkt
+  // tot de jaarrekening niet sluit. Tonen we daarom prominent.
+  const totaalActiva  = rondBedrag_(activaResult.totaal);
+  const totaalPassiva = rondBedrag_(passivaResult.totaal);
+  const verschil      = rondBedrag_(totaalActiva - totaalPassiva);
+
+  rij += 2;
+  if (Math.abs(verschil) < 0.01) {
+    sheet.getRange(rij, 1, 1, 4).merge()
+      .setValue('✅ Balans sluit — Activa = Passiva (' + formatBedrag_(totaalActiva) + ')')
+      .setBackground('#E8F5E9').setFontColor('#1B5E20')
+      .setFontWeight('bold').setFontSize(11)
+      .setHorizontalAlignment('center');
+  } else {
+    sheet.getRange(rij, 1, 1, 4).merge()
+      .setValue('⚠️ Balans sluit NIET — verschil ' + formatBedrag_(verschil) +
+        '  (Activa: ' + formatBedrag_(totaalActiva) +
+        ' / Passiva: ' + formatBedrag_(totaalPassiva) + ')')
+      .setBackground('#FFEBEE').setFontColor('#B71C1C')
+      .setFontWeight('bold').setFontSize(11)
+      .setHorizontalAlignment('center');
+    sheet.setRowHeight(rij, 32);
+    rij++;
+    sheet.getRange(rij, 1, 1, 4).merge()
+      .setValue('Mogelijke oorzaken: ontbrekende boeking, dubbele journaalpost, of foutieve openingsbalans. Run Boekhouding → Controle → Gezondheidscheck.')
+      .setBackground('#FFEBEE').setFontColor('#B71C1C')
+      .setFontStyle('italic').setFontSize(10)
+      .setHorizontalAlignment('center').setWrap(true);
+    sheet.setRowHeight(rij, 36);
+    try { schrijfAuditLog_('Balans-mismatch', 'Verschil ' + formatBedrag_(verschil) + ' Activa=' + formatBedrag_(totaalActiva) + ' Passiva=' + formatBedrag_(totaalPassiva)); } catch (_) {}
+  }
 
   // Kolom opmaak
   sheet.setColumnWidth(1, 60);
@@ -121,7 +158,7 @@ function schrijfBalansZijde_(sheet, saldi, zijdeType, titel, startRij, startKol,
     .setNumberFormat('€#,##0.00').setFontWeight('bold').setFontSize(12)
     .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#FFFFFF');
 
-  return rij + 1;
+  return { volgendeRij: rij + 1, totaal: totaalZijde };
 }
 
 // ─────────────────────────────────────────────
