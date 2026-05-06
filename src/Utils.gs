@@ -160,6 +160,41 @@ function escHtml_(s) {
 }
 
 // ─────────────────────────────────────────────
+//  FOUTMELDING-VERTALING
+// ─────────────────────────────────────────────
+//
+// Vertaalt raw GAS-fouten naar klant-vriendelijke NL-zinnen.
+// Logt altijd de oorspronkelijke message naar audit-log voor support/debug.
+//
+// Gebruik in dialog-failure-handlers ipv `'Fout: ' + e.message`:
+//   .withFailureHandler(function(e) { toonStatus(vertaalFout_(e), '#c62828'); })
+//
+// Server-side `Logger.log` blijft raw — daar willen we juist de stack-trace.
+//
+// JARGON-GLOSSARIUM (waarheidsbron voor user-facing strings):
+//   journaalpost (UI)      → boeking
+//   memoriaal (UI)         → handmatige boeking
+//   creditnota (UI)        → correctiefactuur
+//   grootboekrekening (UI) → rekening
+//   debet/credit (UI)      → in/uit
+// REGEL: function-namen, sheet-namen, kolom-headers, grootboek-codes blijven onveranderd.
+function vertaalFout_(e) {
+  const raw = String((e && e.message) || e || '').trim();
+  try { schrijfAuditLog_('FOUT_VERTAALD', raw.slice(0, 240)); } catch (_) {}
+  if (!raw) return 'Er ging iets mis. Probeer opnieuw of bekijk de Audit Log.';
+  if (/too many times|rate.?limit|service invoked/i.test(raw)) return 'Te veel acties achter elkaar — wacht een minuut en probeer opnieuw.';
+  if (/permission|not.*authoriz|access.*denied|geen toegang/i.test(raw)) return 'Geen toegang tot dit bestand. Vraag de eigenaar of probeer opnieuw in te loggen.';
+  if (/quota|limit\s*exceeded|dagelijkse limiet/i.test(raw)) return 'Dagelijkse limiet bereikt — probeer morgen opnieuw of upgrade naar Google Workspace.';
+  if (/timeout|deadline|time.?out/i.test(raw)) return 'Het duurde te lang — controleer je internet en probeer opnieuw.';
+  if (/network|fetch|getaddrinfo|enotfound/i.test(raw)) return 'Netwerkfout — controleer je internetverbinding en probeer opnieuw.';
+  if (/not found|niet gevonden|404/i.test(raw)) return 'Item niet gevonden — herlaad de pagina.';
+  if (/invalid|ongeldig|cannot read|undefined/i.test(raw)) return 'Ongeldige invoer — controleer de waarden en probeer opnieuw.';
+  // Behoud business-fouten die we zelf met `throw new Error(...)` gooien (NL-tekst)
+  if (/^[A-Za-zÀ-ÿ ]/.test(raw) && raw.length < 200 && !/[a-z]:[A-Z]|stack|trace/i.test(raw)) return raw;
+  return 'Er ging iets mis. Controleer je invoer en probeer opnieuw. (Details: Audit Log)';
+}
+
+// ─────────────────────────────────────────────
 //  VALIDATIE FUNCTIES
 // ─────────────────────────────────────────────
 

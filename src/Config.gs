@@ -58,6 +58,18 @@ const FACTUUR_STATUS = {
   GECREDITEERD:   'Gecrediteerd',
 };
 
+// Centrale emoji-mapping per FACTUUR_STATUS — voorkomt dat verschillende
+// modules eigen emoji's kiezen (was: 🔥 in Notificaties, ❌ in GezondheidCheck,
+// alleen rode cel-bg in Verkoopfacturen). Eén bron van waarheid.
+const STATUS_EMOJI = {
+  'Concept':        '✏️',
+  'Verzonden':      '📧',
+  'Deels betaald':  '🔵',
+  'Betaald':        '✅',
+  'Vervallen':      '⚠️',
+  'Gecrediteerd':   '↩️',
+};
+
 // ─────────────────────────────────────────────
 //  RELATIE TYPES
 // ─────────────────────────────────────────────
