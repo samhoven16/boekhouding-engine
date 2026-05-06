@@ -452,6 +452,18 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
       schrijfAuditLog_('Email verstuurd', factuurNummerOpgemaakt + ' → ' + klantEmail);
     } else {
       schrijfAuditLog_('Email MISLUKT', factuurNummerOpgemaakt + ' → ' + klantEmail + ' – versturen mislukt');
+      // DLQ: voeg toe voor auto-retry door dagelijksetaken. Voorkomt dat
+      // eenmalige email-fout (transient SMTP, quota-spike) verdwijnt in stille fail.
+      try {
+        if (typeof dlqVoegToe_ === 'function') {
+          dlqVoegToe_('EMAIL_FACTUUR', {
+            email: klantEmail, klantnaam: klantnaam,
+            factuurnummer: factuurNummerOpgemaakt,
+            bedragIncl: totalIncl, vervaldatum: vervaldatum,
+            pdfUrl: pdfUrl, ublUrl: ublUrl,
+          }, 'Initiële email mislukt — auto-retry binnen 1 uur');
+        }
+      } catch (_) {}
     }
   } else if (directMailen && !klantEmail) {
     schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen klant e-mailadres bekend. Vul het e-mailadres in bij de klant-relatie en verstuur handmatig via Boekhouding → Verkoopfacturen.');
