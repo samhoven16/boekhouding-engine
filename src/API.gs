@@ -28,30 +28,46 @@
 // ─────────────────────────────────────────────
 function doPost(e) {
   try {
-    // API-sleutel validatie
+    // ── Body-size limit (DOS-bescherming) ─────────────────────────
+    const rawBody = (e && e.postData && e.postData.contents) || '';
+    if (rawBody.length > 100 * 1024) {
+      return jsonResponse_({ succes: false, fout: 'Body te groot (max 100KB)' });
+    }
+
+    // ── API-sleutel + HMAC-handtekening validatie ─────────────────
+    // Twee modi naast elkaar (backward-compat):
+    //   1. Plain API-key in body/query (bestaande flow)
+    //   2. HMAC-SHA256 handtekening van body via secret-key (sterker)
+    // Klant kan kiezen via Instellingen 'Webhook HMAC-modus'.
     const apiSleutel = getInstelling_('Webhook API sleutel');
-    if (apiSleutel) {
-      // Sleutel kan meegegeven worden via:
-      //   URL query param:  ?apikey=...
-      //   JSON body veld:   { "apikey": "..." }
-      // NB: HTTP-headers zijn niet toegankelijk vanuit Apps Script Web Apps.
+    const hmacSecret = getInstelling_('Webhook HMAC secret') || '';
+    const hmacModus = String(getInstelling_('Webhook HMAC-modus') || '').toLowerCase() === 'ja';
+
+    if (hmacModus && hmacSecret) {
+      // HMAC-pad: client stuurt ?signature=hex(hmac-sha256(body))
+      const sig = String((e.parameter && e.parameter.signature) || '');
+      const verwacht = _hmacSha256Hex_(rawBody, hmacSecret);
+      if (!sig || !veiligVergelijkApi_(sig, verwacht)) {
+        try { schrijfAuditLog_('API HMAC mismatch', 'sig=' + sig.slice(0, 12) + '... bodyLen=' + rawBody.length); } catch (_) {}
+        return jsonResponse_({ succes: false, fout: 'Ongeldige of ontbrekende handtekening' });
+      }
+    } else if (apiSleutel) {
       const queryKey = (e && e.parameter && e.parameter.apikey) || '';
-      const bodyKey  = (e.postData && e.postData.contents &&
-                        safeJsonParse_(e.postData.contents)['apikey']) || '';
+      const bodyKey  = (rawBody && safeJsonParse_(rawBody)['apikey']) || '';
       const meegezonden = queryKey || bodyKey;
-      // Constant-time compare voorkomt timing-attacks waarbij een attacker
-      // byte-voor-byte de API-sleutel kan raden via responstijd-verschillen.
       if (!veiligVergelijkApi_(meegezonden, apiSleutel)) {
         return jsonResponse_({ succes: false, fout: 'Ongeldige of ontbrekende API-sleutel' });
       }
     }
 
     let payload = {};
-    if (e.postData && e.postData.contents) {
-      payload = safeJsonParse_(e.postData.contents);
+    if (rawBody) {
+      payload = safeJsonParse_(rawBody);
     } else if (e.parameter) {
       payload = e.parameter;
     }
+    // Recursief saniteren — voorkomt formula-injection via webhook-body
+    payload = saniteerObject_(payload);
 
     const actie = String(payload.actie || '').toLowerCase();
     const ss = getSpreadsheet_();
@@ -391,6 +407,22 @@ function veiligVergelijkApi_(a, b) {
   let mismatch = 0;
   for (let i = 0; i < s1.length; i++) mismatch |= (s1.charCodeAt(i) ^ s2.charCodeAt(i));
   return mismatch === 0;
+}
+
+/**
+ * HMAC-SHA256 van een payload met een gedeelde secret. Output hex-encoded.
+ * Gebruikt door doPost om webhooks van Zapier/Make te authenticeren via
+ * X-Body-Signature pattern.
+ *
+ * Client-side voorbeeld:
+ *   signature = hex(hmac_sha256(secret, requestBody))
+ *   POST ?signature=<hex>
+ */
+function _hmacSha256Hex_(bericht, secret) {
+  const raw = Utilities.computeHmacSha256Signature(String(bericht || ''), String(secret || ''));
+  return raw.map(function(b) {
+    return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0');
+  }).join('');
 }
 
 function safeJsonParse_(str) {

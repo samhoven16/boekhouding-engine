@@ -52,6 +52,18 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
            <strong>BTW verlegd</strong> — Op deze factuur is de btw verlegd naar de afnemer (art. 12 lid 3 Wet OB 1968 / art. 196 EU-richtlijn 2006/112/EG).
          </div>`
       : '';
+    // Mollie betaal-link (optioneel — alleen indien API-key geconfigureerd)
+    let molliePaymentHtml = '';
+    try {
+      if (typeof molliePaymentBlock_ === 'function') {
+        molliePaymentHtml = molliePaymentBlock_({
+          factuurnummer: factuurNr,
+          klantnaam: klantnaam,
+          klantEmail: formData['Klant e-mailadres'] || '',
+          bedragIncl: totalIncl,
+        });
+      }
+    } catch (e) { Logger.log('molliePaymentBlock_ fout: ' + e.message); }
 
     const html = `
 <!DOCTYPE html>
@@ -160,6 +172,7 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
 
   ${korVerklaring}
   ${verleggingsVerklaring}
+  ${molliePaymentHtml}
 
   <div class="betaalinfo">
     <h4>Betaalinformatie</h4>

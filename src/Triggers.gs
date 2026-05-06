@@ -1152,6 +1152,7 @@ function dagelijkseTaken() {
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   _runTaak_('groottecheck',     function() { controleerSheetGrootte_(ss); });
+  _runTaak_('verlopenShares',   function() { if (typeof ruimVerlopenShares_ === 'function') ruimVerlopenShares_(); });
 
   // Aggregaat: totale duur dagelijkseTaken
   try { metricsLog_('dagelijkseTaken.totaal', Date.now() - dagelijksTotaal0, true); } catch (_) {}
