@@ -129,6 +129,42 @@ function _zetBedragKleurRegels_(sheet, kolomLetter, vanRij) {
 }
 
 /**
+ * Toont een uitnodigende empty-state in rij 2 wanneer een data-tabblad
+ * alleen de header bevat. Voorkomt dat klant een leeg, verwarrend
+ * tabblad ziet — vervangt door actie-hint met toon van "wat nu?".
+ *
+ * Idempotent: detecteert bestaande empty-state-rij (begint met emoji-marker)
+ * en overschrijft deze.
+ *
+ * @param {Sheet}  sheet      Tabblad waar de banner moet komen
+ * @param {number} kolomBreedte  Aantal kolommen om te mergen
+ * @param {string} bericht    Klant-tekst (mag emoji bevatten)
+ */
+function _zetEmptyState_(sheet, kolomBreedte, bericht) {
+  if (!sheet || kolomBreedte < 1) return;
+  const lastRow = sheet.getLastRow();
+  // Alleen tonen wanneer er geen echte data-rijen zijn (alleen header)
+  if (lastRow > 1) {
+    // Verwijder eventueel oude empty-state-banner als er nu echte data is
+    try {
+      const eersteCelRij2 = sheet.getRange(2, 1).getValue();
+      if (typeof eersteCelRij2 === 'string' && eersteCelRij2.indexOf('💡') === 0) {
+        sheet.deleteRow(2);
+      }
+    } catch (_) {}
+    return;
+  }
+  try {
+    sheet.getRange(2, 1, 1, kolomBreedte).merge()
+      .setValue('💡 ' + bericht)
+      .setBackground('#FFF8E1').setFontColor('#5A3F00')
+      .setFontStyle('italic').setFontSize(11)
+      .setHorizontalAlignment('center').setVerticalAlignment('middle');
+    sheet.setRowHeight(2, 44);
+  } catch (e) { Logger.log('_zetEmptyState_ fout: ' + e.message); }
+}
+
+/**
  * Standaard header-opmaak voor een tabblad: navy band, witte font, frozen rij.
  */
 function _zetMooieHeader_(sheet, breedte) {
@@ -165,6 +201,9 @@ function _verfraaiVerkoopfacturen_(ss) {
     [10, 12, 13, 14].forEach(function(c) {
       if (c <= lastCol) sheet.getRange(2, c, lastRow - 1, 1).setNumberFormat('€ #,##0.00');
     });
+  } else {
+    _zetEmptyState_(sheet, lastCol,
+      'Nog geen verkoopfacturen. Open Boekhouding → "Nieuwe boeking" om je eerste factuur te maken.');
   }
   // Status-kolom = O (15)
   _zetStatusKleurRegels_(sheet, 'O', 2);
@@ -185,6 +224,9 @@ function _verfraaiInkoopfacturen_(ss) {
     [9, 11, 12].forEach(function(c) {
       if (c <= lastCol) sheet.getRange(2, c, lastRow - 1, 1).setNumberFormat('€ #,##0.00');
     });
+  } else {
+    _zetEmptyState_(sheet, lastCol,
+      'Nog geen inkoopfacturen of bonnen. Boekhouding → "Nieuwe boeking" → tabblad "Kosten" of "Upload bon".');
   }
   // Status-kolom = M (13)
   _zetStatusKleurRegels_(sheet, 'M', 2);

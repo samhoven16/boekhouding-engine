@@ -979,6 +979,35 @@ function genereerBelastingadvies() {
     .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#B8C2D1')
     .setFontSize(10).setHorizontalAlignment('center');
 
+  // Empty-state: nog geen omzet → tonen wat te doen, geen "lege" rijen advies.
+  // Detectie via winstVoorAftrek + omzet — als beide 0 is er nog niets te
+  // adviseren. Klant ziet uitnodigende hint i.p.v. "0,00 €" in iedere rij.
+  const omzet = advies.omzet || 0;
+  const winst = advies.winstVoorAftrek || 0;
+  if (omzet === 0 && winst === 0) {
+    sheet.setColumnWidth(1, 720);
+    sheet.getRange(4, 1, 1, 3).merge()
+      .setValue('💡 Nog geen omzet of kosten in ' + jaar)
+      .setBackground('#FFF8E1').setFontColor('#5A3F00')
+      .setFontWeight('bold').setFontSize(13)
+      .setHorizontalAlignment('center').setVerticalAlignment('middle');
+    sheet.setRowHeight(4, 38);
+    sheet.getRange(5, 1, 1, 3).merge()
+      .setValue('Voer eerst een paar facturen of kostenposten in via Boekhouding → "Nieuwe boeking". ' +
+        'Zodra er omzet of kosten staan, krijg je hier persoonlijk belastingadvies met:\n\n' +
+        '• Geschatte IB + Zvw voor dit jaar\n' +
+        '• Aftrekposten waar je recht op hebt (KIA, MIA, EIA)\n' +
+        '• Reiskosten, lijfrente-jaarruimte, BTW-spaarpot\n' +
+        '• Tips op basis van je boekjaar\n\n' +
+        'Je kunt ook eerst je fiscaal profiel invullen: Boekhouding → "Vul je profiel in voor persoonlijk advies".')
+      .setBackground('#FFFFFF').setFontColor('#5F6B7A')
+      .setFontSize(11).setWrap(true)
+      .setHorizontalAlignment('left').setVerticalAlignment('top');
+    sheet.setRowHeight(5, 220);
+    try { ss.setActiveSheet(sheet); } catch (_) {}
+    return;
+  }
+
   let rij = 4;
 
   // ── BELASTINGVOORDEEL-TOP-BANNER ───────────────────────────────────
