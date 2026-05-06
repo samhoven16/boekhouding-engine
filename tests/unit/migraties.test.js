@@ -40,7 +40,8 @@ describe('Onboarding.gs — migratie-framework', () => {
   test('voerMigratiesUit_ functie aanwezig + idempotent', () => {
     expect(ONB_SRC).toMatch(/function voerMigratiesUit_/);
     // Idempotency-pattern: filter + forEach (geen state-mutatie buiten ss)
-    expect(ONB_SRC).toMatch(/MIGRATIES_REGISTER\.filter/);
+    // Chained call mag op nieuwe regel staan voor leesbaarheid
+    expect(ONB_SRC).toMatch(/MIGRATIES_REGISTER\s*[\r\n.]*\.filter/);
   });
 
   test('controleerOpUpdate_ roept voerMigratiesUit_ aan VÓÓR setProperty', () => {

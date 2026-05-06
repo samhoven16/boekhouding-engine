@@ -1134,50 +1134,84 @@ function verwerkJournaalpostFormulier(e) {
 // ─────────────────────────────────────────────
 function dagelijkseTaken() {
   const ss = getSpreadsheet_();
+  const dagelijksTotaal0 = Date.now();
 
   // Elke taak in eigen try-catch: één falende taak stopt de rest niet.
-  try {
-    markeerVervallenFacturen_(ss);
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT markeerVervallen: ' + e.message);
-    try { schrijfAuditLog_('FOUT dagelijkse taak', 'markeerVervallen: ' + e.message); } catch (_) {}
-  }
-
-  try {
-    stuurAutomatischeBetalingsherinneringen_(ss);
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT herinneringen: ' + e.message);
-    try { schrijfAuditLog_('FOUT dagelijkse taak', 'herinneringen: ' + e.message); } catch (_) {}
-  }
-
-  try {
+  // Wrap in _runTaak_ voor automatische metrics + status-logging.
+  _runTaak_('markeerVervallen', function() { markeerVervallenFacturen_(ss); });
+  _runTaak_('herinneringen',    function() { stuurAutomatischeBetalingsherinneringen_(ss); });
+  _runTaak_('btwDeadline',      function() {
     if (getInstelling_('BTW aangifte herinnering') === 'Ja') controleerBtwDeadlines_();
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT BTW deadline: ' + e.message);
-  }
+  });
+  _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
+  _runTaak_('dashboard',        function() { vernieuwDashboard(); });
+  _runTaak_('groottecheck',     function() { controleerSheetGrootte_(ss); });
 
-  try {
-    voerGezondheidCheckStil_();
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT gezondheidscheck: ' + e.message);
-  }
-
-  try {
-    vernieuwDashboard();
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT dashboard: ' + e.message);
-    try { schrijfAuditLog_('FOUT dagelijkse taak', 'dashboard/herhalende kosten: ' + e.message); } catch (_) {}
-  }
-
-
-
-  try {
-    controleerSheetGrootte_(ss);
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT groottecheck: ' + e.message);
-  }
-
+  // Aggregaat: totale duur dagelijkseTaken
+  try { metricsLog_('dagelijkseTaken.totaal', Date.now() - dagelijksTotaal0, true); } catch (_) {}
   Logger.log('Dagelijkse taken uitgevoerd: ' + new Date());
+}
+
+/**
+ * Runt een sub-taak met automatische:
+ *  - try/catch isolation (een fout stopt de keten niet)
+ *  - duur-meting → metricsLog_
+ *  - status-tracking → taakStatus-sheet (laatste run + status)
+ *  - audit-log bij fout
+ */
+function _runTaak_(naam, fn) {
+  const t0 = Date.now();
+  let status = 'OK';
+  let foutBericht = '';
+  try {
+    fn();
+  } catch (e) {
+    status = 'FOUT';
+    foutBericht = e.message;
+    Logger.log('dagelijkse taak FOUT ' + naam + ': ' + e.message);
+    try { schrijfAuditLog_('FOUT dagelijkse taak', naam + ': ' + e.message); } catch (_) {}
+  } finally {
+    const durMs = Date.now() - t0;
+    try { metricsLog_('taak.' + naam, durMs, status === 'OK', { fout: foutBericht || undefined }); } catch (_) {}
+    try { _updateTaakStatus_(naam, status, durMs, foutBericht); } catch (_) {}
+  }
+}
+
+/**
+ * Verborgen tabblad 'Taakstatus' toont per achtergrond-taak: laatste run,
+ * duur, status, eventueel laatste fout. Klant-vriendelijk overzicht via
+ * Boekhouding → Controle → Taakstatus tonen.
+ */
+function _updateTaakStatus_(naam, status, durMs, fout) {
+  const ss = getSpreadsheet_();
+  if (!ss) return;
+  const SHEET = 'Taakstatus';
+  let sheet = ss.getSheetByName(SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET);
+    sheet.getRange(1, 1, 1, 5)
+      .setValues([['Taak', 'Laatste run', 'Duur (ms)', 'Status', 'Laatste fout']])
+      .setFontWeight('bold').setBackground('#0D1B4E').setFontColor('#FFFFFF');
+    sheet.setFrozenRows(1);
+    sheet.hideSheet();
+  }
+  // Zoek bestaande rij voor deze taak (één rij per taak — geen historie hier;
+  // historie staat in Metrics-tab).
+  const data = sheet.getDataRange().getValues();
+  let rij = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === naam) { rij = i + 1; break; }
+  }
+  const waarden = [naam, new Date(), durMs, status, fout || ''];
+  if (rij === -1) {
+    sheet.appendRow(waarden);
+  } else {
+    sheet.getRange(rij, 1, 1, 5).setValues([waarden]);
+  }
+  // Kleur status-cel
+  if (rij === -1) rij = sheet.getLastRow();
+  sheet.getRange(rij, 4).setBackground(status === 'OK' ? '#E8F5E9' : '#FFEBEE')
+    .setFontColor(status === 'OK' ? '#1B5E20' : '#B71C1C');
 }
 
 // ─────────────────────────────────────────────
@@ -1374,7 +1408,24 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
   const props = PropertiesService.getScriptProperties();
   const STAP_DAGEN = [1, 7, 14];
 
-  for (let i = 1; i < data.length; i++) {
+  // Resume-cursor: bij crash halverwege wordt dunningCursor opgeslagen, bij
+  // volgende run hervatten we vanaf die rij. Voorkomt dat eerste 50 rijen 2x
+  // herinnering krijgen na een 6-min timeout halverwege rij 51.
+  // Reset naar 1 zodra alle rijen langs zijn gegaan (einde van loop).
+  const CURSOR_KEY = 'dunningCursor';
+  const startRij = parseInt(props.getProperty(CURSOR_KEY) || '1');
+  const MAX_PER_RUN = 100;  // batch-grootte voor 6-min execution-limit
+  let verwerkt = 0;
+  let i = startRij;
+
+  for (; i < data.length; i++) {
+    if (verwerkt >= MAX_PER_RUN) {
+      // Pauzeer hier — volgende run hervat
+      props.setProperty(CURSOR_KEY, String(i));
+      Logger.log('Dunning batch-pauze bij rij ' + i + ' (max ' + MAX_PER_RUN + ' per run)');
+      try { schrijfAuditLog_('Dunning batch-pauze', 'rij ' + i + ' van ' + data.length); } catch (_) {}
+      return;
+    }
     const status = data[i][14];
     if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
 
@@ -1428,12 +1479,16 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       }
       GmailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
       props.setProperty(stapKey, String(volgendeStap));
+      verwerkt++;  // tel alleen werkelijk verstuurde mails — voorkomt batch-skip bij scrolling
       Logger.log(`Herinnering stap ${volgendeStap}/3 verstuurd voor ${factuurnummer} naar ${klantEmail}`);
     } catch (err) {
       Logger.log(`Herinnering fout voor ${factuurnummer}: ${err.message}`);
       try { schrijfAuditLog_('Herinnering MISLUKT', factuurnummer + ' – ' + err.message); } catch (_) {}
     }
   }
+
+  // Volledige sweep voltooid — reset cursor zodat volgende run weer vanaf rij 1 begint
+  props.deleteProperty(CURSOR_KEY);
 }
 
 // ─────────────────────────────────────────────

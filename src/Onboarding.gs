@@ -324,6 +324,13 @@ function controleerOpUpdate_() {
 
   // Pad: lokale upgrade door owner (clasp push) → "Bijgewerkt naar X" toast
   if (opgeslagenVersie !== HUIDIGE_VERSIE) {
+    // Pre-migratie backup — als een migratie data wist of corruptie veroorzaakt,
+    // moet er een rollback-pad zijn. Maakt copy in /Boekhoudbaar/Backups/
+    // (best-effort: bij Drive-fout gaat migratie WEL door — versie-bump is dan
+    // het ergste dat misgaat, geen data-loss).
+    try { _maakPreMigratieBackup_(opgeslagenVersie, HUIDIGE_VERSIE); }
+    catch (be) { Logger.log('Pre-migratie backup overgeslagen: ' + be.message); }
+
     // Migraties uitvoeren VÓÓR het bumpen van de versie-property — anders
     // worden migraties bij een crash niet meer geprobeerd op volgende open.
     try { voerMigratiesUit_(opgeslagenVersie, HUIDIGE_VERSIE); }
@@ -675,16 +682,64 @@ const MIGRATIES_REGISTER = [
 function voerMigratiesUit_(vanafVersie, naarVersie) {
   const ss = getSpreadsheet_();
   if (!ss) return;
-  // Selecteer migraties die vanaf-versie EN target overlappen:
-  //   m.van  ≤ naarVersie    (target is hoog genoeg om migratie nodig te hebben)
-  //   m.naar ≥ vanafVersie   (klant is niet al voorbij m.naar)
-  const toepasselijk = MIGRATIES_REGISTER.filter(function(m) {
-    return !_versieIsNieuwer_(m.van, naarVersie)
-        && !_versieIsNieuwer_(vanafVersie, m.naar);
-  });
+  // Selecteer ALLE migraties tussen vanafVersie en naarVersie:
+  //   m.van  ≥ vanafVersie  (klant heeft deze nog niet gehad)
+  //   m.naar ≤ naarVersie   (deze migratie hoort tot doel-versie)
+  // Sorteer chronologisch zodat een sprong (bv. 2.0→2.5) elke tussenliggende
+  // migratie 2.0→2.1, 2.1→2.2, ..., 2.4→2.5 in de juiste volgorde draait.
+  // Eerdere implementatie miste tussenliggende migraties bij meerdere stappen.
+  const toepasselijk = MIGRATIES_REGISTER
+    .filter(function(m) {
+      return !_versieIsNieuwer_(vanafVersie, m.van)   // m.van >= vanaf
+          && !_versieIsNieuwer_(m.naar, naarVersie);  // m.naar <= naar
+    })
+    .sort(function(a, b) {
+      // Oplopende volgorde op .van — _versieIsNieuwer_(a,b) = true → a > b
+      if (_versieIsNieuwer_(a.van, b.van)) return 1;
+      if (_versieIsNieuwer_(b.van, a.van)) return -1;
+      return 0;
+    });
   toepasselijk.forEach(function(m) {
     Logger.log('Migratie ' + m.naam + ' (' + m.van + ' → ' + m.naar + ') uitvoeren...');
     m.fn(ss);
     Logger.log('Migratie ' + m.naam + ' klaar.');
   });
+}
+
+/**
+ * Maakt een copy van de spreadsheet vóór een migratie wordt gedraaid.
+ * Slaat op in /Boekhoudbaar/Backups/ — naam bevat van/naar versie + datum.
+ * Best-effort: bij Drive-fout (quota, permissions) blokkeert de migratie niet.
+ *
+ * Backups ouder dan 90 dagen worden NIET automatisch verwijderd; klant
+ * beheert zelf z'n Drive-quota.
+ */
+function _maakPreMigratieBackup_(vanaf, naar) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return;
+    const huidigJaar = new Date().getFullYear();
+    let backupMap = null;
+    try {
+      const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
+      if (hoofdId) {
+        const hoofd = DriveApp.getFolderById(hoofdId);
+        const it = hoofd.getFoldersByName('Backups');
+        backupMap = it.hasNext() ? it.next() : hoofd.createFolder('Backups');
+      }
+    } catch (_) {}
+    if (!backupMap) backupMap = DriveApp.getRootFolder();
+    const ts = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd_HH-mm');
+    const naam = 'pre-migratie-' + vanaf + '-naar-' + naar + '-' + ts;
+    const copy = ss.copy(naam);
+    try {
+      const file = DriveApp.getFileById(copy.getId());
+      backupMap.addFile(file);
+      DriveApp.getRootFolder().removeFile(file);
+    } catch (_) {}
+    try { schrijfAuditLog_('Pre-migratie backup', naam + ' (' + copy.getId() + ')'); } catch (_) {}
+  } catch (e) {
+    Logger.log('_maakPreMigratieBackup_ fout: ' + e.message);
+    throw e;
+  }
 }
