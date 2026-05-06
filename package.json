@@ -21,7 +21,11 @@
     "deploy": "npm test && npm run push:gas",
     "deploy:licence": "npm run push:licence",
     "deploy:all": "npm test && npm run push:gas && npm run push:licence",
-    "deploy:check": "node scripts/deploy-check.js"
+    "deploy:check": "node scripts/deploy-check.js",
+    "env:dev": "cp .clasp.dev.json .clasp.json && echo 'Switched to DEV — clasp push gaat naar dev-script'",
+    "env:prod": "cp .clasp.prod.json .clasp.json && echo 'Switched to PROD — clasp push gaat naar productie-script'",
+    "deploy:dev": "npm run env:dev && npm test && npm run push:gas",
+    "deploy:prod": "npm run env:prod && npm test && npm run push:gas"
   },
   "lint-staged": {
     "src/**/*.gs": "eslint"

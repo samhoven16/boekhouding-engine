@@ -228,21 +228,69 @@ const STANDAARD_GROOTBOEK = [
 //  PROPERTY KEYS (voor script properties)
 // ─────────────────────────────────────────────
 const PROP = {
+  // Counters
   VOLGEND_FACTUUR_NR:    'volgendFactuurNr',
   VOLGEND_INKOOP_NR:     'volgendInkoopNr',
   VOLGEND_BOEKING_NR:    'volgendBoekingNr',
+
+  // Forms (legacy + huidig)
   FORM_HOOFD_ID:         'formHoofdId',
-  // Behouden voor backward-compatibiliteit (bestaande installaties)
   FORM_VERKOOP_ID:       'formVerkoopId',
   FORM_INKOOP_ID:        'formInkoopId',
   FORM_BANK_ID:          'formBankId',
   FORM_RELATIE_ID:       'formRelatieId',
   FORM_JOURNAAL_ID:      'formJournaalId',
+
+  // Setup + onboarding
   SETUP_DONE:            'setupDone',
+  ONBOARDING_VOLTOOID:   'onboarding_voltooid',
+  VERSIE:                'geinstalleerde_versie',
+
+  // Cache + KPI
   BOEKJAAR:              'boekjaar',
-  KPI_SNAPSHOT:          'kpiSnapshot',   // CQRS-lite: precomputed financial state
-  DREMPEL_HOOG_BEDRAG:   'drempelHoogBedrag',    // alert-threshold uitgaven (default €500)
-  ACCOUNTANT_EMAIL:      'accountantEmail',      // ontvanger maandrapport
+  KPI_SNAPSHOT:          'kpiSnapshot',
+  DREMPEL_HOOG_BEDRAG:   'drempelHoogBedrag',
+  ACCOUNTANT_EMAIL:      'accountantEmail',
+
+  // Background-task cursors
+  DUNNING_CURSOR:        'dunningCursor',
+
+  // Licentie
+  LICENTIE_SLEUTEL:      'licentiesleutel',
+  LICENTIE_CACHE_GELDIG: 'licentieCacheGeldigTot',
+  LICENTIE_KLANT:        'licentieKlantnaam',
+  LICENTIE_VERSIE:       'licentieVersie',
+  LICENTIE_SS_ID:        'licentieSsId',
+  LICENTIE_OWNER_BYPASS: 'LICENTIE_OWNER_BYPASS',
+  LICENTIE_SERVER_URL:   'LICENTIE_SERVER_URL',
+
+  // Multi-tenant + security
+  MASTER_SALT:           '_BOEKHOUDBAAR_SALT_',
+
+  // Drive structure (vul aan met _<jaar>)
+  DRIVE_HOOFDMAP_PREFIX:    'DRIVE_HOOFDMAP_',
+  DRIVE_VERKOOPFACTUREN_PREFIX: 'DRIVE_VERKOOPFACTUREN_',
+  DRIVE_INKOOPFACTUREN_PREFIX:  'DRIVE_INKOOPFACTUREN_',
+  DRIVE_BTW_PREFIX:             'DRIVE_BTW_',
+  DRIVE_BANKAFSCHRIFTEN_PREFIX: 'DRIVE_BANKAFSCHRIFTEN_',
+  DRIVE_JAARREKENING_PREFIX:    'DRIVE_JAARREKENING_',
+
+  // Audit + buffer
+  AUDIT_LOG_BUFFER:      'auditLogBuffer',
+
+  // Accountant-share
+  ACCOUNTANT_SHARES:     'accountantShares',
+
+  // Spreadsheet identification (standalone-mode)
+  SPREADSHEET_ID:        'SPREADSHEET_ID',
+};
+
+// User-properties (per-user, niet per-script)
+const USER_PROP = {
+  POST_SETUP_WELKOM_GEZIEN: 'postSetupWelkomGezien',
+  KVK_API_KEY:           'KVK_API_KEY',
+  MOLLIE_API_KEY:        'MOLLIE_API_KEY',
+  SERVER_VERSIE_TOAST_TS:'serverVersieToastTs',
 };
 
 // ─────────────────────────────────────────────

@@ -81,6 +81,66 @@ function metMetrics_(naam, fn) {
  * @param {string} bericht     korte beschrijving
  * @param {Object=} context    optionele key-value details
  */
+/**
+ * Support-dialoog: toont alle ScriptProperties + cache-state.
+ * Gevoelige waarden (API-keys, salt) worden gemaskeerd (eerste 4 / laatste 4).
+ *
+ * Klant kan dit kopiëren en mailen bij support-ticket.
+ */
+function toonSysteemStatus() {
+  try {
+    const ui = SpreadsheetApp.getUi();
+    const props = PropertiesService.getScriptProperties().getProperties();
+    const userProps = PropertiesService.getUserProperties().getProperties();
+
+    const masker = function(val) {
+      const s = String(val || '');
+      if (s.length <= 8) return s ? '***' : '(leeg)';
+      return s.slice(0, 4) + '…' + s.slice(-4);
+    };
+    const gevoelig = function(k) {
+      return /key|secret|token|sleutel|salt|hmac/i.test(k);
+    };
+
+    let html = '<style>body{font-family:-apple-system,sans-serif;padding:20px;font-size:12px;background:#F7F9FC}h2{color:#0D1B4E;margin:0 0 10px}h3{color:#2EC4B6;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:16px 0 6px}table{border-collapse:collapse;width:100%;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04)}td{padding:6px 10px;border-bottom:1px solid #E5EAF2;vertical-align:top;font-family:monospace;font-size:11px}td:first-child{font-weight:600;color:#0D1B4E;width:40%;word-break:break-all}.btn{margin-top:14px;background:#0D1B4E;color:#fff;padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:12px}</style>';
+    html += '<h2>🔧 Systeemstatus (support-snapshot)</h2>';
+    html += '<p style="color:#5F6B7A;font-size:11px">Kopieer onderstaande inhoud bij een support-ticket. API-keys + secrets zijn gemaskeerd.</p>';
+
+    html += '<h3>Script Properties</h3><table>';
+    Object.keys(props).sort().forEach(function(k) {
+      const v = gevoelig(k) ? masker(props[k]) : escHtml_(String(props[k] || '').slice(0, 100));
+      html += '<tr><td>' + escHtml_(k) + '</td><td>' + v + '</td></tr>';
+    });
+    html += '</table>';
+
+    html += '<h3>User Properties (deze gebruiker)</h3><table>';
+    Object.keys(userProps).sort().forEach(function(k) {
+      const v = gevoelig(k) ? masker(userProps[k]) : escHtml_(String(userProps[k] || '').slice(0, 100));
+      html += '<tr><td>' + escHtml_(k) + '</td><td>' + v + '</td></tr>';
+    });
+    html += '</table>';
+
+    // SS-info
+    let ssInfo = '';
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      ssInfo = ss.getName() + ' / ' + ss.getId().slice(0, 12) + '…';
+    } catch (_) { ssInfo = '(geen)'; }
+    html += '<h3>Spreadsheet</h3><table><tr><td>Naam / ID</td><td>' + escHtml_(ssInfo) + '</td></tr>';
+    try {
+      html += '<tr><td>User</td><td>' + escHtml_(Session.getActiveUser().getEmail() || 'anoniem') + '</td></tr>';
+    } catch (_) {}
+    html += '<tr><td>Tijdstip</td><td>' + new Date().toLocaleString('nl-NL') + '</td></tr></table>';
+
+    ui.showModalDialog(
+      HtmlService.createHtmlOutput(html).setWidth(640).setHeight(640).setSandboxMode(HtmlService.SandboxMode.IFRAME),
+      '🔧 Systeemstatus'
+    );
+  } catch (e) {
+    SpreadsheetApp.getUi().alert('Status-fout', vertaalFout_(e), SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
 function meldFataalAanOwner_(categorie, bericht, context) {
   try {
     const cacheKey = 'fataal_' + categorie + '_' + Utilities.base64Encode(String(bericht).slice(0, 80)).slice(0, 40);

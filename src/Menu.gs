@@ -110,6 +110,7 @@ function onOpen() {
       .addItem('Maandrapport nu versturen', 'mailMaandrapport')
       .addSeparator()
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
+      .addItem('🔧 Systeemstatus (voor support)', 'toonSysteemStatus')
       .addItem('Gesloten periodes beheren', 'beheerGeslotenPeriodes')
     )
 

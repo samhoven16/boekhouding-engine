@@ -368,6 +368,68 @@ function maakBackup() {
   }
 }
 
+/**
+ * Automatische dagelijkse backup \u2014 aangeroepen door dagelijkseTaken.
+ * Geen UI, geen alerts; logs naar audit-log. Bewaart max 30 dagen aan
+ * backups in /Boekhoudbaar/Backups/ \u2014 oudere worden naar prullenbak.
+ */
+function maakAutomatischeBackup_() {
+  try {
+    const ss = getSpreadsheet_();
+    if (!ss) return;
+    const ssId = ss.getId();
+    const bedrijf = (getInstelling_('Bedrijfsnaam') || 'Boekhouding')
+      .replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+    const datum = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd');
+    const bestandsnaam = 'AutoBackup_' + bedrijf + '_' + datum + '.xlsx';
+
+    // Skip als backup van vandaag al bestaat (dagelijkse trigger kan 2\u00d7 runnen
+    // bij retry \u2014 voorkom Drive-vervuiling)
+    const huidigJaar = new Date().getFullYear();
+    let backupMap = null;
+    try {
+      const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
+      if (hoofdId) {
+        const hoofd = DriveApp.getFolderById(hoofdId);
+        const it = hoofd.getFoldersByName('Backups');
+        backupMap = it.hasNext() ? it.next() : hoofd.createFolder('Backups');
+      }
+    } catch (_) {}
+    if (!backupMap) {
+      const it = DriveApp.getFoldersByName('Boekhouding Backups');
+      backupMap = it.hasNext() ? it.next() : DriveApp.createFolder('Boekhouding Backups');
+    }
+
+    const bestaand = backupMap.getFilesByName(bestandsnaam);
+    if (bestaand.hasNext()) return;  // al gemaakt vandaag
+
+    const resp = UrlFetchApp.fetch(
+      'https://docs.google.com/spreadsheets/d/' + ssId + '/export?format=xlsx',
+      { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+        muteHttpExceptions: true }
+    );
+    if (resp.getResponseCode() < 200 || resp.getResponseCode() >= 300) {
+      throw new Error('export HTTP ' + resp.getResponseCode());
+    }
+    const blob = resp.getBlob().setName(bestandsnaam);
+    backupMap.createFile(blob);
+    try { schrijfAuditLog_('AutoBackup', bestandsnaam + ' (' + Math.round(blob.getBytes().length / 1024) + ' KB)'); } catch (_) {}
+
+    // Retentie: verwijder backups ouder dan 30 dagen
+    const grens = Date.now() - 30 * 86400000;
+    const oudIt = backupMap.getFilesByType(MimeType.MICROSOFT_EXCEL);
+    while (oudIt.hasNext()) {
+      const f = oudIt.next();
+      if (f.getName().startsWith('AutoBackup_') && f.getDateCreated().getTime() < grens) {
+        try { f.setTrashed(true); } catch (_) {}
+      }
+    }
+  } catch (e) {
+    Logger.log('maakAutomatischeBackup_ fout: ' + e.message);
+    try { schrijfAuditLog_('FOUT AutoBackup', e.message); } catch (_) {}
+  }
+}
+
 // ─────────────────────────────────────────────
 //  HELPER: SHEET → CSV
 // ─────────────────────────────────────────────
