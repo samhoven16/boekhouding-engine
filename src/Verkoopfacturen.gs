@@ -36,10 +36,20 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     // Anders is de KOR-tekst misleidend → klantverwarring + audit-risico.
     const btwTariefStr = String(formData['BTW tarief'] || '');
     const isVrijgesteld = /Vrijgesteld/i.test(btwTariefStr);
+    const isVerlegd     = /Verlegd/i.test(btwTariefStr);
     const heeftBtw = parseFloat(totalBtw) > 0.005;
     const korVerklaring = (korActief && !isVrijgesteld && !heeftBtw)
       ? `<div style="background:#FFF8E1;border:1px solid #F9A825;border-radius:4px;padding:10px 14px;margin-bottom:16px;font-size:10pt;color:#5A3F00">
            <strong>Kleineondernemersregeling (KOR)</strong> — Er is geen btw in rekening gebracht, op basis van artikel 25 Wet OB.
+         </div>`
+      : '';
+    // Verleggings-verklaring is wettelijk verplicht op B2B-EU-facturen waar
+    // BTW is verlegd naar de afnemer (art. 12 lid 3 Wet OB / art. 196 EU-
+    // richtlijn 2006/112/EG). Zonder deze tekst kan Belastingdienst herziening
+    // eisen — klant moet kunnen bewijzen waarom geen BTW is afgedragen.
+    const verleggingsVerklaring = isVerlegd
+      ? `<div style="background:#E3F2FD;border:1px solid #1976D2;border-radius:4px;padding:10px 14px;margin-bottom:16px;font-size:10pt;color:#0D47A1">
+           <strong>BTW verlegd</strong> — Op deze factuur is de btw verlegd naar de afnemer (art. 12 lid 3 Wet OB 1968 / art. 196 EU-richtlijn 2006/112/EG).
          </div>`
       : '';
 
@@ -149,6 +159,7 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
   </div>
 
   ${korVerklaring}
+  ${verleggingsVerklaring}
 
   <div class="betaalinfo">
     <h4>Betaalinformatie</h4>
