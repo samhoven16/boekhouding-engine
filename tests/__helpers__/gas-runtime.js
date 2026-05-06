@@ -81,6 +81,13 @@ function createGasRuntime(files, overrides = {}) {
     SpreadsheetApp: {
       getActiveSpreadsheet: jest.fn(() => null),
       getUi:                jest.fn(),
+      flush:                jest.fn(),
+    },
+
+    // ── MailApp ─────────────────────────────────────────────────────────
+    MailApp: {
+      sendEmail:                  jest.fn(),
+      getRemainingDailyQuota:     jest.fn(() => 100),
     },
 
     // ── DriveApp ────────────────────────────────────────────────────────

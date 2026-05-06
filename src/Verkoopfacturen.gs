@@ -241,9 +241,39 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
  */
 function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   if (!factuurnummer || !email) return false;
+
+  // Per-factuur LockService: voorkomt dat dubbel-klikken op verstuur-knop
+  // twee parallelle email-versturingen aanjaagt. Lock-key is per-factuurnr
+  // zodat verschillende facturen wel parallel kunnen.
+  // Apps Script LockService is script-wide, niet per-key — dus we gebruiken
+  // een ScriptProperty als mutex-flag met TTL.
+  const props = PropertiesService.getScriptProperties();
+  const flagKey = 'verstuurBezig_' + factuurnummer;
+  const nu = Date.now();
+  const bezigSinds = parseInt(props.getProperty(flagKey) || '0');
+  if (bezigSinds && (nu - bezigSinds) < 30000) {  // 30s mutex-window
+    Logger.log('stuurFactuurNaarEmailAdres: SKIPPED — al bezig met ' + factuurnummer + ' (' + Math.round((nu - bezigSinds)/1000) + 's)');
+    try { schrijfAuditLog_('Factuur dubbel-versturen geblokkeerd', factuurnummer + ' (' + Math.round((nu - bezigSinds)/1000) + 's)'); } catch (_) {}
+    return false;
+  }
+  props.setProperty(flagKey, String(nu));
+
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
-  if (!sheet) return false;
+  if (!sheet) { props.deleteProperty(flagKey); return false; }
+
+  // Pre-flight quota-check — voorkomt mid-flight email-fail
+  try {
+    const remaining = MailApp.getRemainingDailyQuota();
+    if (remaining < 1) {
+      props.deleteProperty(flagKey);
+      try { schrijfAuditLog_('Email quota uitgeput', factuurnummer + ' rem=0'); } catch (_) {}
+      throw new Error('Dagelijkse e-maillimiet bereikt — probeer morgen opnieuw of upgrade naar Workspace.');
+    }
+  } catch (e) {
+    if (/limiet bereikt/.test(e.message)) throw e;  // bubble up naar dialog
+    // Quota-API down? laat door
+  }
 
   const data = sheet.getDataRange().getValues();
   let gevonden = null;
@@ -255,10 +285,13 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
       break;
     }
   }
-  if (!gevonden) { Logger.log('stuurFactuurNaarEmailAdres: factuur niet gevonden: ' + factuurnummer); return false; }
+  if (!gevonden) { props.deleteProperty(flagKey); Logger.log('stuurFactuurNaarEmailAdres: factuur niet gevonden: ' + factuurnummer); return false; }
 
   const pdfUrl = gevonden[19];
-  if (!pdfUrl) { Logger.log('stuurFactuurNaarEmailAdres: geen PDF voor ' + factuurnummer); return false; }
+  if (!pdfUrl) { props.deleteProperty(flagKey); Logger.log('stuurFactuurNaarEmailAdres: geen PDF voor ' + factuurnummer); return false; }
+
+  // Flush vóór email — zorg dat status-changes uit nieuw-aangemaakte factuurs zichtbaar zijn
+  SpreadsheetApp.flush();
 
   const ok = stuurFactuurEmailNaarKlant_(
     email,
@@ -285,6 +318,8 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   } else {
     schrijfAuditLog_('Factuur email MISLUKT (succes-scherm)', (gevonden ? gevonden[1] : factuurnummer) + ' → ' + email);
   }
+  // Mutex-flag wissen — andere klikken kunnen weer
+  try { props.deleteProperty(flagKey); } catch (_) {}
   return ok;
 }
 

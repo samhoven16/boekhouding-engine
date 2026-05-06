@@ -320,6 +320,8 @@ function maakBackup() {
   const bestandsnaam = 'Backup_' + bedrijf + '_' + datum + '.xlsx';
 
   try {
+    // Flush forceren — backup mag NIET stale data bevatten (compliance).
+    SpreadsheetApp.flush();
     // XLSX export via de Google Sheets export-URL (vereist OAuth-token van de eigenaar)
     const resp = UrlFetchApp.fetch(
       'https://docs.google.com/spreadsheets/d/' + ssId + '/export?format=xlsx',

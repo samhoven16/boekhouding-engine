@@ -393,14 +393,19 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     });
   }
 
-  // PDF genereren
-  Utilities.sleep(500);
+  // PDF genereren — eerst flush() forceren zodat appendRow + journaalposten
+  // ALLEMAAL gepersistereerd zijn vóór de export-URL aangeroepen wordt.
+  // Zonder flush kan PDF stale data bevatten (Google Sheets schrijft async).
+  // Utilities.sleep(500) was eerder de fragiele oplossing — flush() is contractueel.
+  SpreadsheetApp.flush();
+  Utilities.sleep(200);
   const formData = {
     'Factuuradres klant': klantAdres,
     'BTW-nummer klant': data['BTW-nummer klant'] || '',
     'BTW tarief': data['BTW tarief'] || '21% (hoog)',
     'Projectcode / Referentie': data['Projectcode / Referentie'] || '',
     'Notities / bijzonderheden': data['Notities op factuur'] || '',
+    'Klant e-mailadres': klantEmail,
   };
   const pdfUrl = genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regels, totalExcl, totalBtw, totalIncl, formData);
 
@@ -1409,6 +1414,21 @@ function controleerSheetGrootte_(ss) {
 function stuurAutomatischeBetalingsherinneringen_(ss) {
   const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
   if (!sheet || sheet.getLastRow() < 2) return;
+
+  // Pre-flight quota-check — voorkomt dat dagelijkse trigger 50 herinneringen
+  // probeert maar bij rij 30 stopt door quota-uitputting (consumer Apps Script
+  // = 100/dag). Lokale veiligheidsmarge: stop met 5 buffer-emails over voor
+  // factuurversturen + accountantsmail.
+  let resterendQuota = 100;
+  try {
+    resterendQuota = MailApp.getRemainingDailyQuota();
+    if (resterendQuota <= 5) {
+      Logger.log('Dunning OVERGESLAGEN: quota bijna op (' + resterendQuota + ' over). Reserveer voor handmatige acties.');
+      try { schrijfAuditLog_('Dunning overgeslagen', 'Quota bijna op: ' + resterendQuota + ' over'); } catch (_) {}
+      try { meldFataalAanOwner_('QUOTA', 'Email-quota bijna op (' + resterendQuota + ' over)', { module: 'dunning' }); } catch (_) {}
+      return;
+    }
+  } catch (_) { /* quota-API down? laat door */ }
 
   const data = sheet.getDataRange().getValues();
   const vandaag = new Date();
