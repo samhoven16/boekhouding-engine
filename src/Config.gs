@@ -24,7 +24,6 @@ const SHEETS = {
   DEBITEUREN:        'Debiteuren',
   CREDITEUREN:       'Crediteuren',
   HERHALENDE_KOSTEN: 'Herhalende Kosten',
-  BELEGGINGEN:       'Beleggingen',
   AUDIT_LOG:         'Audit Log',
 };
 
@@ -57,6 +56,18 @@ const FACTUUR_STATUS = {
   BETAALD:        'Betaald',
   VERVALLEN:      'Vervallen',
   GECREDITEERD:   'Gecrediteerd',
+};
+
+// Centrale emoji-mapping per FACTUUR_STATUS — voorkomt dat verschillende
+// modules eigen emoji's kiezen (was: 🔥 in Notificaties, ❌ in GezondheidCheck,
+// alleen rode cel-bg in Verkoopfacturen). Eén bron van waarheid.
+const STATUS_EMOJI = {
+  'Concept':        '✏️',
+  'Verzonden':      '📧',
+  'Deels betaald':  '🔵',
+  'Betaald':        '✅',
+  'Vervallen':      '⚠️',
+  'Gecrediteerd':   '↩️',
 };
 
 // ─────────────────────────────────────────────
@@ -230,7 +241,6 @@ const PROP = {
   SETUP_DONE:            'setupDone',
   BOEKJAAR:              'boekjaar',
   KPI_SNAPSHOT:          'kpiSnapshot',   // CQRS-lite: precomputed financial state
-  BELEGGINGEN_SNAPSHOT:  'beleggingenSnapshot',  // dagelijkse portfolio waarde voor trend-tracking
   DREMPEL_HOOG_BEDRAG:   'drempelHoogBedrag',    // alert-threshold uitgaven (default €500)
   ACCOUNTANT_EMAIL:      'accountantEmail',      // ontvanger maandrapport
 };

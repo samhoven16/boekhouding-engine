@@ -29,6 +29,25 @@ function onOpen() {
   // Eénmalig welkom-modal na geslaagde setup — 3 quick-start acties
   try { toonPostSetupWelkomModal_(); } catch (e) { Logger.log('Welkom-modal overgeslagen: ' + e.message); }
 
+  // Smart toast — urgent seizoens-tip bij elke open. Discreet, 7 sec rechtsonder.
+  // Klant ziet automatisch wat dit moment belangrijk is (BTW-deadline, KIA-grens
+  // etc.) zonder dat hij naar dashboard hoeft te navigeren of zelf moet onthouden.
+  try {
+    if (typeof getSeizoensTip_ === 'function') {
+      const tip = getSeizoensTip_();
+      if (tip && tip.urgent) {
+        const ss2 = getSpreadsheet_();
+        if (ss2 && ss2.toast) {
+          ss2.toast(
+            tip.deadline ? 'Deadline ' + tip.deadline + '. Open Dashboard voor details.' : tip.titel,
+            tip.titel,
+            7
+          );
+        }
+      }
+    }
+  } catch (e) { Logger.log('Seizoens-tip toast overgeslagen: ' + e.message); }
+
   // Globaal bericht van licentieserver (bv. onderhoud, nieuwe versie) — max 1×/dag/bericht.
   try { toonGlobaalBerichtIndienNieuw_(); } catch (e) { Logger.log('Globaal bericht overgeslagen: ' + e.message); }
 
@@ -81,6 +100,7 @@ function onOpen() {
     // ── Kwaliteit & Controle ──────────────────
     .addSubMenu(ui.createMenu('Controle & Export')
       .addItem('Gezondheidscheck uitvoeren', 'voerGezondheidCheckUit')
+      .addItem('✨ Tabbladen opnieuw opmaken (kleuren + format)', 'verfraaiTabbladen')
       .addSeparator()
       .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
       .addItem('Accountantspakket exporteren', 'exporteerAccountantsPakket')
@@ -92,15 +112,16 @@ function onOpen() {
     )
 
     // ── Hulp & advies ─────────────────────────
-    .addItem('Hulp & Assistent', 'openAssistent')
-    .addItem('Belastingtips & besparingen', 'genereerBelastingadvies')
-    .addItem('💡 Wat-als simulator (impact extra omzet/investering)', 'toonWatAlsSimulator')
-    .addItem('📋 Persoonlijk fiscaal profiel invullen', 'toonFiscaalProfielWizard')
-    .addItem('🚗 Reiskosten registreren (km × €0,23)', 'toonReiskostenTracker')
-    .addItem('🚗 Reiskosten week-overzicht (bulk)', 'toonReiskostenWeek')
-    .addItem('🏦 Lijfrente-jaarruimte berekenen', 'toonLijfrenteJaarruimte')
-    .addItem('💰 BTW-spaarpot status (hoeveel reserveren?)', 'toonBtwSpaarpot')
-    .addItem('💼 Voorlopige aanslag-tip (per kwartaal reserveren)', 'toonVoorlopigeAanslagTip')
+    .addItem('🔔 Wat moet ik nu doen? (notificaties)', 'toonNotificaties')
+    .addItem('Hulp & uitleg', 'openAssistent')
+    .addItem('Fiscaal advies & belastingbesparing', 'genereerBelastingadvies')
+    .addItem('💡 Wat-als-rekenmachine (extra omzet of investering)', 'toonWatAlsSimulator')
+    .addItem('📋 Vul je profiel in voor persoonlijk advies', 'toonFiscaalProfielWizard')
+    .addItem('🚗 Zakelijke kilometers registreren', 'toonReiskostenTracker')
+    .addItem('🚗 Hele week kilometers tegelijk', 'toonReiskostenWeek')
+    .addItem('🏦 Lijfrente: hoeveel mag ik storten?', 'toonLijfrenteJaarruimte')
+    .addItem('💰 BTW-spaarpot: heb ik genoeg apart staan?', 'toonBtwSpaarpot')
+    .addItem('💼 Voorlopige belasting: hoeveel reserveren per maand?', 'toonVoorlopigeAanslagTip')
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────
@@ -139,6 +160,7 @@ function onOpen() {
       .addItem('Bedrijfsstijl (logo & kleur)', 'openBrandingInstellingen')
       .addItem('Google Drive mappen', 'toonDriveStructuur')
       .addItem('Website / webshop koppelen (API)', 'toonZapierInstructies')
+      .addItem('KvK API-key (voor auto-fill bedrijfsgegevens)', 'zetKvkApiKey')
       .addSeparator()
       .addItem('Jaarafsluiting wizard', 'sluitJaarAf')
       .addItem('Nieuw boekjaar starten (alleen Drive)', 'maakNieuwBoekjaar')
@@ -163,8 +185,6 @@ function onOpen() {
       .addSeparator()
       .addItem('Privé transactie toevoegen', 'voegPriveTransactieToe')
       .addItem('Vermogensoverzicht beheren', 'beheerVermogensoverzicht')
-      .addSeparator()
-      .addItem('Beleggingen tab (live koersen)', 'voegBeleggingenTabToe')
       .addSeparator()
       .addItem('IB-aangifte schatting (Box 1/2/3)', 'openIbAangifteHelper')
     )
@@ -213,7 +233,7 @@ function openHoofdFormulier() {
     <a class="btn" href="${url}" target="_blank">Formulier openen</a>
     <p class="url">${url}</p>
     <div class="tip"><b>Tip —</b> stuur deze link naar jezelf (WhatsApp, e-mail) zodat je ook vanaf je telefoon kunt invoeren.</div>
-  `).setWidth(500).setHeight(300);
+  `).setWidth(500).setHeight(300).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Formulier openen');
 }
 
@@ -321,7 +341,7 @@ function openBonUpload() {
             fileData = null;
           })
           .withFailureHandler(function(err) {
-            toonStatus('Fout: ' + err.message, 'red');
+            toonStatus('⚠️ ' + (err && err.message ? err.message : 'Er ging iets mis. Probeer opnieuw.'), 'red');
             document.getElementById('uploadBtn').textContent = 'Opnieuw proberen';
             document.getElementById('uploadBtn').disabled = false;
           })
@@ -340,7 +360,7 @@ function openBonUpload() {
         el.textContent = tekst;
       }
     </script>
-  `).setWidth(500).setHeight(560);
+  `).setWidth(500).setHeight(560).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Bon of factuur uploaden');
 }
 
@@ -388,7 +408,7 @@ function openJournaalpostFormulier() {
   const url = FormApp.openById(formId).getPublishedUrl();
   const html = HtmlService.createHtmlOutput(
     `<p><a href="${url}" target="_blank">📋 Handmatige boeking openen</a></p>`
-  ).setWidth(450).setHeight(100);
+  ).setWidth(450).setHeight(100).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Handmatige boeking');
 }
 
@@ -421,7 +441,7 @@ function toonFormulierLinks() {
     <p class="hint">Sla deze link op als bladwijzer op je telefoon voor snelle invoer onderweg.</p>
   `;
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(500).setHeight(250),
+    HtmlService.createHtmlOutput(html).setWidth(500).setHeight(250).setSandboxMode(HtmlService.SandboxMode.IFRAME),
     'Formulierlink'
   );
 }
@@ -479,6 +499,6 @@ function openBeginbalansDialoog() {
     <p>Tegenrekening: <b>2000 – Ondernemingsvermogen</b></p>
     <p><button class="btn" onclick="google.script.run.openJournaalpostFormulier()">Openingssaldi invoeren</button></p>
     <button class="btn-sec" onclick="google.script.host.close()">Sluiten</button>
-  `).setWidth(450).setHeight(280);
+  `).setWidth(450).setHeight(280).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Openingssaldi');
 }

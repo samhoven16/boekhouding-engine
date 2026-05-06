@@ -9,7 +9,10 @@
 
 const ONBOARDING_PROP = 'onboarding_voltooid';
 const VERSIE_PROP     = 'geinstalleerde_versie';
-const HUIDIGE_VERSIE  = '2.0.0';
+// Bump bij elke deploy waarbij sheet-schema, triggers of klant-zichtbaar
+// gedrag verandert. Format: MAJOR.MINOR.PATCH (semver).
+//   2.0.0 → 2.1.0  (Fase 0-4 polish-ronde mei 2026)
+const HUIDIGE_VERSIE  = '2.1.0';
 
 // ─────────────────────────────────────────────
 //  ONBOARDING STARTEN (automatisch bij eerste gebruik)
@@ -228,8 +231,8 @@ input:focus,select:focus{outline:none;border-color:#2EC4B6}
   geeft dan minder gepersonaliseerd advies.
 </div>
 
-<button class="btn" onclick="opslaan()">Opslaan & persoonlijk advies activeren</button>
-<button class="btn-skip" onclick="google.script.host.close()">Sla over (later doen)</button>
+<button class="btn" id="btnOpslaan" data-actie="opslaan">Opslaan & persoonlijk advies activeren</button>
+<button class="btn-skip" id="btnSluiten" data-actie="sluiten">Sla over (later doen)</button>
 
 <div id="status" class="status"></div>
 
@@ -255,13 +258,27 @@ function opslaan() {
     })
     .withFailureHandler(function(e){
       s.className = 'status error';
-      s.textContent = 'Fout: ' + e.message;
+      s.textContent = '⚠️ ' + (e && e.message ? e.message : 'Er ging iets mis. Probeer opnieuw.');
     })
     .slaFiscaalProfielOp(data);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  var ACTIES = {
+    opslaan: opslaan,
+    sluiten: function() { try { google.script.host.close(); } catch (_) {} },
+  };
+  document.querySelectorAll('[data-actie]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      var fn = ACTIES[el.getAttribute('data-actie')];
+      if (typeof fn === 'function') fn();
+    });
+  });
+});
 </script>
 </body></html>
-  `).setWidth(560).setHeight(700);
+  `).setWidth(560).setHeight(700).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   SpreadsheetApp.getUi().showModalDialog(html, '📋 Fiscaal profiel');
 }
@@ -307,6 +324,15 @@ function controleerOpUpdate_() {
 
   // Pad: lokale upgrade door owner (clasp push) → "Bijgewerkt naar X" toast
   if (opgeslagenVersie !== HUIDIGE_VERSIE) {
+    // Migraties uitvoeren VÓÓR het bumpen van de versie-property — anders
+    // worden migraties bij een crash niet meer geprobeerd op volgende open.
+    try { voerMigratiesUit_(opgeslagenVersie, HUIDIGE_VERSIE); }
+    catch (e) {
+      Logger.log('Migratie-fout (' + opgeslagenVersie + ' → ' + HUIDIGE_VERSIE + '): ' + e.message);
+      try { schrijfAuditLog_('Migratie FOUT', e.message); } catch (_) {}
+      // Versie NIET bumpen — volgende keer opnieuw proberen
+      return;
+    }
     props.setProperty(VERSIE_PROP, HUIDIGE_VERSIE);
     toonUpdateMelding_(opgeslagenVersie, HUIDIGE_VERSIE);
     return;
@@ -426,7 +452,7 @@ function toonWatIsErNieuw() {
 
     <p class="foot">Vragen of problemen? <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a></p>
     <button class="btn-sec" onclick="google.script.host.close()">Sluiten</button>
-  `).setWidth(520).setHeight(500);
+  `).setWidth(520).setHeight(500).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   SpreadsheetApp.getUi().showModalDialog(html, 'Wat is er nieuw?');
 }
@@ -462,56 +488,84 @@ function toonPostSetupWelkomModal_() {
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
-           color:#1A1A1A;background:#F7F9FC;padding:26px 28px}
-      .label{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2EC4B6;margin-bottom:8px}
-      h1{color:#0D1B4E;font-size:22px;font-weight:800;letter-spacing:-0.01em;margin-bottom:10px;line-height:1.25}
-      p.sub{color:#5F6B7A;font-size:14px;line-height:1.55;margin-bottom:20px}
-      .acties{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+           color:#1A1A1A;background:linear-gradient(135deg,#F7F9FC 0%,#EAF4F2 100%);padding:30px 32px;-webkit-font-smoothing:antialiased}
+      .label{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#2EC4B6;margin-bottom:10px}
+      h1{color:#0D1B4E;font-size:24px;font-weight:800;letter-spacing:-0.015em;margin-bottom:8px;line-height:1.2}
+      p.sub{color:#5F6B7A;font-size:14px;line-height:1.6;margin-bottom:22px}
+      .acties{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
       .actie{
         display:flex;align-items:center;gap:14px;padding:14px 16px;
-        background:#fff;border:1px solid #E5EAF2;border-radius:10px;
-        cursor:pointer;transition:border-color .15s ease,transform .15s ease,box-shadow .15s ease;
+        background:#fff;border:1px solid #E5EAF2;border-radius:12px;
+        cursor:pointer;transition:all .18s ease;
         font-family:inherit;font-size:14px;text-align:left;color:#1A1A1A;width:100%;
+        box-shadow:0 1px 2px rgba(13,27,78,.04);
       }
-      .actie:hover{border-color:rgba(46,196,182,.45);transform:translateY(-1px);box-shadow:0 2px 10px rgba(13,27,78,.06)}
-      .actie .n{width:28px;height:28px;border-radius:50%;background:rgba(46,196,182,.12);color:#0D1B4E;
-                font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
-      .actie .t{flex:1}
-      .actie .t strong{display:block;color:#0D1B4E;font-weight:700;font-size:14px;margin-bottom:2px}
-      .actie .t span{color:#5F6B7A;font-size:12px}
-      .later{text-align:center;margin-top:6px}
-      .later button{background:none;border:none;color:#5F6B7A;font-size:13px;cursor:pointer;font-family:inherit;padding:8px 12px}
-      .later button:hover{color:#0D1B4E}
+      .actie:hover{border-color:#2EC4B6;transform:translateY(-2px);box-shadow:0 6px 18px rgba(13,27,78,.10);background:#FFFFFF}
+      .actie:active{transform:translateY(0);box-shadow:0 2px 6px rgba(13,27,78,.08)}
+      .actie .n{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2EC4B6 0%,#1FA89C 100%);color:#fff;
+                font-size:14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+                box-shadow:0 2px 6px rgba(46,196,182,.3)}
+      .actie .t{flex:1;min-width:0}
+      .actie .t strong{display:block;color:#0D1B4E;font-weight:700;font-size:14px;margin-bottom:3px;letter-spacing:-0.01em}
+      .actie .t span{color:#5F6B7A;font-size:12px;line-height:1.45;display:block}
+      .actie .arrow{color:#9CA3B0;font-size:18px;flex-shrink:0;transition:color .15s,transform .15s}
+      .actie:hover .arrow{color:#2EC4B6;transform:translateX(2px)}
+      .later{text-align:center;margin-top:8px}
+      .later button{background:none;border:none;color:#5F6B7A;font-size:13px;cursor:pointer;font-family:inherit;padding:8px 12px;border-radius:6px;transition:all .15s}
+      .later button:hover{color:#0D1B4E;background:rgba(13,27,78,.04)}
     </style>
-    <div class="label">Setup voltooid</div>
+    <div class="label">✨ Setup voltooid</div>
     <h1>${begroeting}</h1>
-    <p class="sub">Je boekhouding staat klaar. Drie acties die je nu kunt doen — of later via het Boekhouding-menu.</p>
+    <p class="sub">Je boekhouding staat klaar. Kies hieronder waar je wil beginnen — of later via het Boekhouding-menu.</p>
     <div class="acties">
-      <button class="actie" onclick="kies('instellingen')">
+      <button class="actie" type="button" data-actie="instellingen">
         <span class="n">1</span>
         <span class="t"><strong>Bedrijfsgegevens invullen</strong><span>Naam, BTW-nummer, IBAN — nodig voor facturen</span></span>
+        <span class="arrow">›</span>
       </button>
-      <button class="actie" onclick="kies('profiel')">
+      <button class="actie" type="button" data-actie="profiel">
         <span class="n">2</span>
         <span class="t"><strong>Fiscaal profiel invullen (60 sec)</strong><span>Voor persoonlijk advies over KIA, AOV, WBSO &amp; AOW-leeftijd</span></span>
+        <span class="arrow">›</span>
       </button>
-      <button class="actie" onclick="kies('boeking')">
+      <button class="actie" type="button" data-actie="boeking">
         <span class="n">3</span>
         <span class="t"><strong>Eerste factuur of kostenpost boeken</strong><span>Nieuwe boeking dialoog openen</span></span>
+        <span class="arrow">›</span>
       </button>
-      <button class="actie" onclick="kies('dashboard')">
+      <button class="actie" type="button" data-actie="dashboard">
         <span class="n">4</span>
         <span class="t"><strong>Dashboard bekijken</strong><span>KPI's en openstaande facturen in één oogopslag</span></span>
+        <span class="arrow">›</span>
       </button>
     </div>
-    <div class="later"><button onclick="kies('later')">Later — sluit dit venster</button></div>
+    <div class="later"><button id="btn-later" type="button" data-actie="later">Later — sluit dit venster</button></div>
     <script>
-      function kies(actie) {
-        google.script.run.withSuccessHandler(function(){ google.script.host.close(); })
-          .markeerWelkomGezienEnNavigeer_(actie);
+      // FIRE-AND-FORGET pattern: server-call gaat de lucht in,
+      // dialog sluit DIRECT zonder wachten op response.
+      // Voorheen: wachten op .withSuccessHandler kon eindeloos hangen
+      // bij CSP/privacy/cache issues. Nu: nooit hangen.
+      function doeActie(actie) {
+        try { google.script.run.markeerWelkomGezienEnNavigeer(actie); } catch (_) {}
+        try { google.script.host.close(); } catch (_) {}
       }
+      // Bind via addEventListener — werkt in elke CSP-mode incl. iframe-strict.
+      function bindAlleKnoppen() {
+        document.querySelectorAll('button[data-actie]').forEach(function(btn) {
+          if (btn._bound) return;
+          btn._bound = true;
+          btn.addEventListener('click', function(ev) {
+            ev.preventDefault();
+            doeActie(btn.getAttribute('data-actie'));
+          });
+        });
+      }
+      // Bind nu (DOM is klaar bij script-execution in Apps Script dialogs)
+      bindAlleKnoppen();
+      // Plus DOMContentLoaded als extra zekerheid
+      document.addEventListener('DOMContentLoaded', bindAlleKnoppen);
     </script>
-  `).setWidth(460).setHeight(440);
+  `).setWidth(460).setHeight(440).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   ui.showModalDialog(html, 'Welkom bij Boekhoudbaar');
 }
@@ -520,7 +574,15 @@ function toonPostSetupWelkomModal_() {
  * Zet de welkom-gezien-vlag en navigeert (optioneel) naar de gekozen
  * vervolg-actie. Aangeroepen vanuit de welkom-modal.
  */
-function markeerWelkomGezienEnNavigeer_(actie) {
+/**
+ * Zet de welkom-gezien-vlag en navigeert (optioneel) naar de gekozen
+ * vervolg-actie. Aangeroepen vanuit de welkom-modal.
+ *
+ * BELANGRIJK: PUBLIEKE naam (geen trailing underscore) — anders kan
+ * google.script.run de functie niet aanroepen. Apps Script-conventie:
+ * functies met trailing _ zijn private en niet bereikbaar vanuit dialogs.
+ */
+function markeerWelkomGezienEnNavigeer(actie) {
   PropertiesService.getUserProperties().setProperty(POST_SETUP_WELKOM_GEZIEN, 'true');
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -531,13 +593,19 @@ function markeerWelkomGezienEnNavigeer_(actie) {
       const s = ss.getSheetByName(SHEETS.DASHBOARD);
       if (s) ss.setActiveSheet(s);
     } else if (actie === 'boeking') {
-      if (typeof openNieuweBoeking === 'function') openNieuweBoeking();
+      // Apps Script kan maar 1 modal tegelijk tonen — wacht 1500ms zodat de
+      // client-side host.close() van welkom-modal echt afgerond is.
+      if (typeof openNieuweBoeking === 'function') {
+        Utilities.sleep(1500);
+        openNieuweBoeking();
+      }
     } else if (actie === 'profiel') {
       // Auto-trigger fiscaal profiel — voorheen alleen via menu te bereiken,
       // nu prominent als stap 2 in welkomstmodal zodat klant direct
       // persoonlijk advies krijgt zonder zelf te zoeken.
+      // 1500ms i.p.v. 300ms — Apps Script kan geen 2 modals stacken.
       if (typeof toonFiscaalProfielWizard === 'function') {
-        Utilities.sleep(300);  // wacht tot welkom-modal sluit
+        Utilities.sleep(1500);
         toonFiscaalProfielWizard();
       }
     }
@@ -562,4 +630,61 @@ function resetOnboarding() {
     'De welkomst-wizard + post-setup welkom-modal worden opnieuw getoond.',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
+}
+
+// ─────────────────────────────────────────────
+//  MIGRATIES
+// ─────────────────────────────────────────────
+//
+// Bij elke versie-bump waarbij sheet-schema, ScriptProperty-format of
+// klant-data wijzigt, voeg een migreer_v{X}_naar_v{Y}_(ss) functie toe
+// onder MIGRATIES_REGISTER. Volgorde van uitvoering: oplopende vanaf
+// klant-versie naar HUIDIGE_VERSIE.
+//
+// REGEL: migraties moeten IDEMPOTENT zijn — bij crash + retry mag er
+// geen data-corruptie zijn. Patroon:
+//   if (alreadyMigrated_) return;  // skip
+//   doActualMigration();
+//
+// Test elke migratie in tests/unit/migraties.test.js.
+const MIGRATIES_REGISTER = [
+  // Voorbeeld-migratie voor de 2.0 → 2.1 polish-ronde. Geen schema-
+  // wijzigingen in deze release; deze migratie is een no-op die het
+  // framework valideert. Kan vervangen worden zodra echte migratie nodig is.
+  {
+    van: '2.0.0',
+    naar: '2.1.0',
+    naam: 'polish_ronde_mei_2026',
+    fn: function(_ss) {
+      // Geen schema-wijziging in 2.1.0 — alleen UX/foutmeldingen/jargon.
+      // Deze stub bewijst dat het framework werkt + audit-log schrijft.
+      try { schrijfAuditLog_('Migratie 2.0→2.1', 'no-op (UX-polish only)'); } catch (_) {}
+    },
+  },
+];
+
+/**
+ * Voert alle migraties uit die nodig zijn om van `vanafVersie` naar
+ * `naarVersie` te komen. Migraties zijn aflopend op `van` gesorteerd
+ * — als klant op 1.5.0 staat en 2.1.0 binnenkomt, draait de chain
+ * 1.5→2.0 dan 2.0→2.1 (in registratie-volgorde).
+ *
+ * Bij fout: throw — de versie-property wordt door caller NIET ge-bumpt
+ * zodat volgende open opnieuw probeert.
+ */
+function voerMigratiesUit_(vanafVersie, naarVersie) {
+  const ss = getSpreadsheet_();
+  if (!ss) return;
+  // Selecteer migraties die vanaf-versie EN target overlappen:
+  //   m.van  ≤ naarVersie    (target is hoog genoeg om migratie nodig te hebben)
+  //   m.naar ≥ vanafVersie   (klant is niet al voorbij m.naar)
+  const toepasselijk = MIGRATIES_REGISTER.filter(function(m) {
+    return !_versieIsNieuwer_(m.van, naarVersie)
+        && !_versieIsNieuwer_(vanafVersie, m.naar);
+  });
+  toepasselijk.forEach(function(m) {
+    Logger.log('Migratie ' + m.naam + ' (' + m.van + ' → ' + m.naar + ') uitvoeren...');
+    m.fn(ss);
+    Logger.log('Migratie ' + m.naam + ' klaar.');
+  });
 }

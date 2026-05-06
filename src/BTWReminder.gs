@@ -272,7 +272,7 @@ function naarBelastingdienst() {
 function exporteerAangifte() {
   google.script.run
     .withSuccessHandler(function(){ alert('Aangifte staat klaar op tabblad "BTW Aangifte".'); })
-    .withFailureHandler(function(e){ alert('Fout: ' + e.message); })
+    .withFailureHandler(function(e){ alert('⚠️ ' + (e && e.message ? e.message : 'Er ging iets mis. Probeer opnieuw.')); })
     .genereerBtwAangifte('${kw.kw}');
 }
 </script>
@@ -280,7 +280,7 @@ function exporteerAangifte() {
 </html>`;
 
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(720).setHeight(580),
+    HtmlService.createHtmlOutput(html).setWidth(720).setHeight(580).setSandboxMode(HtmlService.SandboxMode.IFRAME),
     'BTW Aangifte Assistent — ' + kw.naam
   );
 }

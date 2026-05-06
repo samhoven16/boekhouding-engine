@@ -185,7 +185,7 @@ function herberekeningGrootboekSaldi() {
     updateGrootboekSaldo_(ss, credit, bedrag, 'credit');
   }
 
-  SpreadsheetApp.getUi().alert('Saldi herberekend op basis van alle journaalposten.');
+  SpreadsheetApp.getUi().alert('Saldi opnieuw berekend op basis van alle boekingen.');
 }
 
 // ─────────────────────────────────────────────
@@ -197,8 +197,8 @@ function exporteerGrootboekkaart() {
   const ui = SpreadsheetApp.getUi();
 
   const resp = ui.prompt(
-    'Grootboekkaart',
-    'Voer de grootboekrekening code in (bijv. 1100):',
+    'Rekening-overzicht',
+    'Voer de rekeningcode in (bijv. 1100 voor Bank, 8000 voor Omzet):',
     ui.ButtonSet.OK_CANCEL
   );
   if (resp.getSelectedButton() !== ui.Button.OK) return;
@@ -338,21 +338,27 @@ function boekAfschrijvingen() {
         <option>Jaarlijks</option><option>Maandelijks</option>
       </select></label>
       <br><br>
-      <button type="button" class="btn" onclick="submit_()">Afschrijvingen boeken</button>
-      <button type="button" onclick="google.script.host.close()" style="margin-left:8px">Annuleren</button>
+      <button type="button" class="btn" id="btnBoekenAfs">Afschrijvingen boeken</button>
+      <button type="button" id="btnAnnAfs" style="margin-left:8px">Annuleren</button>
     </form>
     <script>
       function submit_() {
         const form = document.getElementById('form');
         const data = {};
         new FormData(form).forEach((v, k) => data[k] = v);
-        google.script.run.withSuccessHandler(() => {
-          alert('Afschrijvingen geboekt!');
-          google.script.host.close();
-        }).verwerkAfschrijvingen(data);
+        google.script.run
+          .withSuccessHandler(() => { alert('Afschrijvingen geboekt!'); google.script.host.close(); })
+          .withFailureHandler((e) => alert('⚠️ ' + (e && e.message ? e.message : 'Er ging iets mis. Controleer je invoer en probeer opnieuw.')))
+          .verwerkAfschrijvingen(data);
       }
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('btnBoekenAfs');
+        if (b) b.addEventListener('click', function(e){ e.preventDefault(); submit_(); });
+        var a = document.getElementById('btnAnnAfs');
+        if (a) a.addEventListener('click', function(){ try { google.script.host.close(); } catch (_) {} });
+      });
     </script>
-  `).setWidth(600).setHeight(450);
+  `).setWidth(600).setHeight(450).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   ui.showModalDialog(html, 'Afschrijvingen');
 }
@@ -421,7 +427,11 @@ function vernieuwDebiteurenOverzicht() {
     const openBedrag = rondBedrag_(incl - betaald);
     if (openBedrag <= 0) continue;
 
-    const vervaldatum = vfData[i][3] ? new Date(vfData[i][3]) : null;
+    // Sheet-cell kan Date OF DD-MM-YYYY string zijn (na CSV-import). Native
+    // new Date('01-04-2026') geeft NaN; parseDatum_ handelt beide formaten af.
+    const vervaldatum = vfData[i][3]
+      ? (vfData[i][3] instanceof Date ? vfData[i][3] : parseDatum_(vfData[i][3]))
+      : null;
     const dagenOver = vervaldatum && !isNaN(vervaldatum.getTime())
       ? Math.floor((vandaag - vervaldatum) / (1000 * 60 * 60 * 24))
       : 0;

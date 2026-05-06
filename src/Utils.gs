@@ -111,11 +111,18 @@ function rondBedrag_(bedrag) {
 }
 
 /**
- * Formatteert een bedrag als EUR string
+ * Formatteert een bedrag als EUR-string in NL-standaard.
+ * Gebruikt non-breaking space (U+00A0) tussen € en bedrag — voorkomt dat
+ * "€ 1.234,56" over twee regels wordt afgebroken in HTML/PDF-render.
+ *
+ * Voorbeelden:
+ *   formatBedrag_(1234.56)  → "€ 1.234,56"
+ *   formatBedrag_(-99)      → "-€ 99,00"
+ *   formatBedrag_(0)        → "€ 0,00"
  */
 function formatBedrag_(bedrag) {
   const b = parseFloat(bedrag) || 0;
-  const prefix = b < 0 ? '-€' : '€';
+  const prefix = b < 0 ? '-€ ' : '€ ';
   return prefix + Math.abs(b).toLocaleString('nl-NL', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -157,6 +164,41 @@ function escHtml_(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
+}
+
+// ─────────────────────────────────────────────
+//  FOUTMELDING-VERTALING
+// ─────────────────────────────────────────────
+//
+// Vertaalt raw GAS-fouten naar klant-vriendelijke NL-zinnen.
+// Logt altijd de oorspronkelijke message naar audit-log voor support/debug.
+//
+// Gebruik in dialog-failure-handlers ipv `'Fout: ' + e.message`:
+//   .withFailureHandler(function(e) { toonStatus(vertaalFout_(e), '#c62828'); })
+//
+// Server-side `Logger.log` blijft raw — daar willen we juist de stack-trace.
+//
+// JARGON-GLOSSARIUM (waarheidsbron voor user-facing strings):
+//   journaalpost (UI)      → boeking
+//   memoriaal (UI)         → handmatige boeking
+//   creditnota (UI)        → correctiefactuur
+//   grootboekrekening (UI) → rekening
+//   debet/credit (UI)      → in/uit
+// REGEL: function-namen, sheet-namen, kolom-headers, grootboek-codes blijven onveranderd.
+function vertaalFout_(e) {
+  const raw = String((e && e.message) || e || '').trim();
+  try { schrijfAuditLog_('FOUT_VERTAALD', raw.slice(0, 240)); } catch (_) {}
+  if (!raw) return 'Er ging iets mis. Probeer opnieuw of bekijk de Audit Log.';
+  if (/too many times|rate.?limit|service invoked/i.test(raw)) return 'Te veel acties achter elkaar — wacht een minuut en probeer opnieuw.';
+  if (/permission|not.*authoriz|access.*denied|geen toegang/i.test(raw)) return 'Geen toegang tot dit bestand. Vraag de eigenaar of probeer opnieuw in te loggen.';
+  if (/quota|limit\s*exceeded|dagelijkse limiet/i.test(raw)) return 'Dagelijkse limiet bereikt — probeer morgen opnieuw of upgrade naar Google Workspace.';
+  if (/timeout|deadline|time.?out/i.test(raw)) return 'Het duurde te lang — controleer je internet en probeer opnieuw.';
+  if (/network|fetch|getaddrinfo|enotfound/i.test(raw)) return 'Netwerkfout — controleer je internetverbinding en probeer opnieuw.';
+  if (/not found|niet gevonden|404/i.test(raw)) return 'Item niet gevonden — herlaad de pagina.';
+  if (/invalid|ongeldig|cannot read|undefined/i.test(raw)) return 'Ongeldige invoer — controleer de waarden en probeer opnieuw.';
+  // Behoud business-fouten die we zelf met `throw new Error(...)` gooien (NL-tekst)
+  if (/^[A-Za-zÀ-ÿ ]/.test(raw) && raw.length < 200 && !/[a-z]:[A-Z]|stack|trace/i.test(raw)) return raw;
+  return 'Er ging iets mis. Controleer je invoer en probeer opnieuw. (Details: Audit Log)';
 }
 
 // ─────────────────────────────────────────────
@@ -653,4 +695,105 @@ function naarEuro_(bedrag, valuta) {
   const rate = getWisselkoers_(valuta);
   if (!rate || rate === 1) return Math.round(n * 100) / 100;
   return Math.round((n / rate) * 100) / 100;
+}
+
+// ─────────────────────────────────────────────
+//  KvK API — auto-fill bedrijfsgegevens
+// ─────────────────────────────────────────────
+//
+// Vult adres/rechtsvorm automatisch in bij ingevoerd KvK-nummer.
+// API: KvK Open Data (api.kvk.nl/api/v2/zoeken). Vereist API-key in
+// UserProperties onder 'KVK_API_KEY' — per-user, niet per-script.
+// Zonder key: silent return null (geen fout, geen autofill).
+//
+// Cache: resultaten 24u in CacheService — KvK-data wijzigt zelden.
+//
+// @param {string} kvkNummer  Acht cijfers (mag leading-zeros hebben).
+// @return {Object|null}      { naam, adres, postcode, plaats, rechtsvorm } of null.
+function haalDataKvK_(kvkNummer) {
+  const schoon = String(kvkNummer || '').replace(/\D/g, '');
+  if (!/^\d{8}$/.test(schoon)) return null;
+
+  // Cache-hit?
+  let cache = null;
+  try {
+    cache = CacheService.getScriptCache();
+    const cached = cache.get('kvk_' + schoon);
+    if (cached) return JSON.parse(cached);
+  } catch (_) {}
+
+  // API-key uit UserProperties (per-user, niet gedeeld)
+  let apiKey = '';
+  try { apiKey = PropertiesService.getUserProperties().getProperty('KVK_API_KEY') || ''; } catch (_) {}
+  if (!apiKey) return null;  // graceful: geen key = geen autofill
+
+  try {
+    const url = 'https://api.kvk.nl/api/v2/zoeken?kvkNummer=' + encodeURIComponent(schoon);
+    const resp = UrlFetchApp.fetch(url, {
+      method: 'get',
+      headers: { 'apiKey': apiKey, 'Accept': 'application/json' },
+      muteHttpExceptions: true,
+    });
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('haalDataKvK_ status ' + resp.getResponseCode() + ': ' + resp.getContentText().slice(0, 200));
+      return null;
+    }
+    const json = JSON.parse(resp.getContentText());
+    const item = (json.resultaten || [])[0];
+    if (!item) return null;
+
+    const adres = (item._embedded && item._embedded.eersteHandelsnaam && item._embedded.eersteHandelsnaam._embedded
+                  && item._embedded.eersteHandelsnaam._embedded.adres) || item.adres || {};
+    const result = {
+      naam:        String(item.handelsnaam || item.naam || ''),
+      kvkNummer:   schoon,
+      rechtsvorm:  String(item.type || ''),
+      adres:       String(adres.straatnaam || ''),
+      huisnummer:  String(adres.huisnummer || ''),
+      postcode:    String(adres.postcode || ''),
+      plaats:      String(adres.plaats || adres.woonplaats || ''),
+    };
+
+    if (cache) try { cache.put('kvk_' + schoon, JSON.stringify(result), 86400); } catch (_) {}
+    try { schrijfAuditLog_('KvK API', 'autofill voor ' + schoon); } catch (_) {}
+    return result;
+  } catch (e) {
+    Logger.log('haalDataKvK_ fout: ' + e.message);
+    return null;
+  }
+}
+
+/**
+ * Publieke wrapper voor dialog-gebruik via google.script.run.
+ * Retourneert object met velden of null.
+ */
+function getKvkDataPubliek(kvkNummer) {
+  return haalDataKvK_(kvkNummer);
+}
+
+/**
+ * Eenmalige setup van KvK API-key per user. Roep aan via Apps Script
+ * editor of via een Instellingen-dialog.
+ *
+ * Klant haalt key bij developers.kvk.nl/getting-started
+ * (eerste 100 calls/maand gratis).
+ */
+function zetKvkApiKey() {
+  const ui = SpreadsheetApp.getUi();
+  const huidig = PropertiesService.getUserProperties().getProperty('KVK_API_KEY') || '';
+  const resp = ui.prompt(
+    'KvK API-key instellen',
+    'Plak hier je KvK API-key (developers.kvk.nl). Laat leeg om te wissen.\n\nHuidig: ' +
+      (huidig ? huidig.slice(0, 4) + '...' + huidig.slice(-4) : '(geen)'),
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+  const key = String(resp.getResponseText() || '').trim();
+  if (!key) {
+    PropertiesService.getUserProperties().deleteProperty('KVK_API_KEY');
+    ui.alert('KvK API-key verwijderd. Auto-fill staat uit.');
+    return;
+  }
+  PropertiesService.getUserProperties().setProperty('KVK_API_KEY', key);
+  ui.alert('✅ KvK API-key opgeslagen. Auto-fill werkt nu bij ingevoerde KvK-nummers.');
 }

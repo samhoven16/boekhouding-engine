@@ -204,7 +204,7 @@ function toggle(el) {
 </script>
 </body>
 </html>
-  `).setWidth(580).setHeight(560);
+  `).setWidth(580).setHeight(560).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   SpreadsheetApp.getUi().showModalDialog(html, 'Hulpcenter');
 }

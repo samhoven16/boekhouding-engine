@@ -105,9 +105,11 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
 
   // ── Verkoopfacturen analyseren ─────────────
   for (let i = 1; i < vfData.length; i++) {
-    // parseDatum_ verwerkt DD-MM-YYYY, ISO én Date-objecten — voorkomt dat
-    // facturen met locale-string-datum stilletjes uit de aangifte vallen.
-    const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
+    // Skip lege rijen en rijen zonder datum eerst — voorheen gaf
+    // parseDatum_(null) een Date(today) waardoor verwijderde rijen
+    // onbedoeld in huidig kwartaal vielen.
+    if (!vfData[i][2]) continue;
+    const datum = parseDatum_(vfData[i][2]);
     if (!datum || isNaN(datum.getTime()) || datum < vanDatum || datum > totDatum) continue;
 
     // Skip GECREDITEERD facturen — de creditnota-rij (negatieve grondslag)
@@ -137,7 +139,8 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
 
   // ── Inkoopfacturen – voorbelasting ─────────
   for (let i = 1; i < ifData.length; i++) {
-    const datum = ifData[i][3] ? parseDatum_(ifData[i][3]) : null;
+    if (!ifData[i][3]) continue;
+    const datum = parseDatum_(ifData[i][3]);
     if (!datum || isNaN(datum.getTime()) || datum < vanDatum || datum > totDatum) continue;
 
     const btwBedrag = parseFloat(ifData[i][10]) || 0;
@@ -237,7 +240,7 @@ function valideerBtwInvariants_(a) {
   if (a.r1a_grondslag < 0 || a.r1b_grondslag < 0) {
     issues.push({
       code: 'BTW-NEG-GRONDSLAG',
-      tekst: 'Negatieve grondslag(en) — vaak door creditnota; controleer dat dit klopt',
+      tekst: 'Negatieve grondslag(en) — vaak door correctiefactuur; controleer dat dit klopt',
     });
   }
 

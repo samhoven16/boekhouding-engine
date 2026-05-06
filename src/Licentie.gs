@@ -252,7 +252,7 @@ function vergrendelKopie_() {
           Al gekocht? Mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.
         </p>
       </body></html>
-    `).setWidth(460).setHeight(380);
+    `).setWidth(460).setHeight(380).setSandboxMode(HtmlService.SandboxMode.IFRAME);
     SpreadsheetApp.getUi().showModalDialog(html, 'Boekhoudbaar — Licentie vereist');
   } catch (_) {}
 }
@@ -282,7 +282,7 @@ function toonActivatieDialog_() {
           ? 'U bent de eigenaar van dit bestand. U kunt de normale activatie volgen, of de eigenaar-bypass activeren.'
           : 'Geen licentieserver geconfigureerd. Voor de eigenaar van het bestand: open Apps Script editor (Extensies → Apps Script) en run de functie <b>activeerEigenaarLicentie</b> éénmalig.'}
       </div>
-      <button onclick="bypass()" style="margin-top:8px;background:#5A3F00;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">
+      <button id="btnBypass" data-actie="bypass" style="margin-top:8px;background:#5A3F00;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">
         Activeer eigenaar-bypass nu
       </button>
     </div>
@@ -338,7 +338,7 @@ function toonActivatieDialog_() {
         <label class="veld">E-mailadres</label>
         <input type="email" id="email" placeholder="jan@uwbedrijf.nl" autocomplete="email">
         <div class="fout" id="fout1"></div>
-        <button class="btn" id="btn1" onclick="stuurCode()">Stuur activeringscode</button>
+        <button class="btn" id="btn1" data-actie="stuurCode">Stuur activeringscode</button>
         <p class="hint">Geen mail ontvangen? Check je spam-map of mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.</p>
         ${ownerBlock}
       </div>
@@ -350,8 +350,8 @@ function toonActivatieDialog_() {
         <input type="text" id="otp" placeholder="000000" maxlength="6"
                inputmode="numeric" autocomplete="one-time-code">
         <div class="fout" id="fout2"></div>
-        <button class="btn" id="btn2" onclick="activeer()">Activeer Boekhoudbaar</button>
-        <p class="hint"><button class="link-btn" onclick="nieuweCode()">Andere code aanvragen</button></p>
+        <button class="btn" id="btn2" data-actie="activeer">Activeer Boekhoudbaar</button>
+        <p class="hint"><button class="link-btn" data-actie="nieuweCode">Andere code aanvragen</button></p>
       </div>
 
       <!-- Stap 3: succes -->
@@ -396,7 +396,7 @@ function toonActivatieDialog_() {
         .withFailureHandler(function(err) {
           btn.disabled = false;
           btn.textContent = 'Stuur activeringscode';
-          toonFout('fout1', 'Fout: ' + err.message);
+          toonFout('fout1', '⚠️ ' + (err && err.message ? err.message : 'Er ging iets mis. Probeer opnieuw.'));
         })
         .aanvraagOtp(email);
     }
@@ -429,7 +429,7 @@ function toonActivatieDialog_() {
         .withFailureHandler(function(err) {
           btn.disabled = false;
           btn.textContent = 'Activeer Boekhoudbaar';
-          toonFout('fout2', 'Fout: ' + err.message);
+          toonFout('fout2', '⚠️ ' + (err && err.message ? err.message : 'Activering mislukt. Controleer je code.'));
         })
         .activeerMetOtp(emailVal, otp);
     }
@@ -463,9 +463,27 @@ function toonActivatieDialog_() {
       el.textContent = tekst;
       el.style.display = 'block';
     }
+
+    // Defense-in-depth: bind via addEventListener voor het geval inline-handlers
+    // door strikte CSP/sandbox worden geblokkeerd.
+    var ACTIES = { stuurCode: stuurCode, activeer: activeer, nieuweCode: nieuweCode, bypass: bypass };
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('[data-actie]').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+          e.preventDefault();
+          var fn = ACTIES[el.getAttribute('data-actie')];
+          if (typeof fn === 'function') fn();
+        });
+      });
+      // Enter-toets in inputvelden = primaire actie
+      var emEl = document.getElementById('email');
+      if (emEl) emEl.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); stuurCode(); } });
+      var otpEl = document.getElementById('otp');
+      if (otpEl) otpEl.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); activeer(); } });
+    });
     </script>
     </body></html>
-  `).setWidth(400).setHeight(380);
+  `).setWidth(400).setHeight(380).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   SpreadsheetApp.getUi().showModalDialog(html, '📊 Boekhoudbaar — Licentie activeren');
 }

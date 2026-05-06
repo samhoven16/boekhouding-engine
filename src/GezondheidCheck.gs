@@ -283,7 +283,7 @@ function controleerVerkoopfacturen_(ss) {
 
     if (negatiefBedrag > 0) {
       resultaten.push({ check: 'Facturen – Negatieve bedragen', status: 'FOUT',
-        bericht: `${negatiefBedrag} factuur/facturen met een negatief bedrag. Gebruik creditnota's voor correcties — niet negatieve facturen.` });
+        bericht: `${negatiefBedrag} factuur/facturen met een negatief bedrag. Maak correctiefacturen (creditnota's) i.p.v. negatieve facturen.` });
     }
 
     if (vervallenOpen > 0) {

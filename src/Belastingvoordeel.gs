@@ -210,7 +210,7 @@ function getSeizoensTip_() {
         `• KIA: investeringen tussen €2.901 en €130.744 → 28% extra aftrek\n` +
         `• MIA/VAMIL: milieu-investeringen op RVO Milieulijst → 27-45% aftrek\n` +
         `• EIA: energie-investeringen op RVO Energielijst → 40% aftrek\n` +
-        `• Lijfrente-storting: tot jaarruimte (~13,3% premiegrondslag)\n` +
+        `• Lijfrente-storting: tot jaarruimte (30% premiegrondslag, Wet toekomst pensioenen)\n` +
         `• Vooruitbetalen kosten 2026 → kosten lopend jaar\n` +
         `• Achteraf opboeken vergeten reiskosten (€0,23/km)\n` +
         `Doe het VANDAAG, niet 31 december (banken zijn dan dicht).`,
@@ -230,6 +230,37 @@ function getSeizoensTip_() {
     deadline: null,
     urgent: false,
   };
+}
+
+/**
+ * Detecteert een omzet-mijlpaal die net is bereikt — vandaag voor het eerst.
+ * Verzamelt feeling van vooruitgang ("je bent nu bij €10k YTD!").
+ * Returnt {bereikt, mijlpaal, tekst} of null als geen nieuwe mijlpaal.
+ *
+ * Stalt mijlpalen in UserProperties zodat zelfde mijlpaal niet 2× toont.
+ */
+function detecteerMijlpaal_(omzetYTD) {
+  const drempels = [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+  const omzet = parseFloat(omzetYTD) || 0;
+  if (omzet <= 0) return null;
+  const huidig = drempels.filter(function(d) { return omzet >= d; }).pop();
+  if (!huidig) return null;
+  try {
+    const userProps = PropertiesService.getUserProperties();
+    const jaar = new Date().getFullYear();
+    const key = 'mijlpaal_omzet_' + huidig + '_' + jaar;
+    if (userProps.getProperty(key) === 'getoond') return null;
+    userProps.setProperty(key, 'getoond');
+    const fmt = function(n) { return '€' + n.toLocaleString('nl-NL'); };
+    return {
+      mijlpaal: huidig,
+      tekst: '🎉 Mijlpaal bereikt: ' + fmt(huidig) + ' omzet dit jaar! ' +
+             (huidig >= 100000 ? 'Indrukwekkend werk.' :
+              huidig >= 25000 ? 'Topprestatie — blijf zo doorgaan.' :
+              huidig >= 5000 ? 'Mooie voortgang!' :
+              'Goed bezig!'),
+    };
+  } catch (_) { return null; }
 }
 
 /**
@@ -331,7 +362,7 @@ input[type=number]:focus{outline:none;border-color:#2EC4B6}
   </div>
   <div>
     <label>&nbsp;</label>
-    <button class="btn" onclick="simuleer()">Bereken impact</button>
+    <button class="btn" id="btn-simuleer" data-actie="simuleer">Bereken impact</button>
   </div>
 </div>
 
@@ -372,12 +403,17 @@ function simuleer(){
       n.textContent=fmt(r.nettoEffect);
       n.style.color=r.nettoEffect>=0?'#81C784':'#FFC107';
     })
-    .withFailureHandler(function(e){alert('Fout: '+e.message);})
+    .withFailureHandler(function(e){alert('⚠️ '+(e&&e.message?e.message:'Er ging iets mis. Probeer opnieuw.'));})
     .runWatAlsSimulator(data);
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('btn-simuleer');
+  if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); simuleer(); });
+});
 </script>
 </body></html>
-  `).setWidth(540).setHeight(620);
+  `).setWidth(540).setHeight(620).setSandboxMode(HtmlService.SandboxMode.IFRAME);
 
   SpreadsheetApp.getUi().showModalDialog(html, '💡 Wat-als simulator');
 }
@@ -387,10 +423,21 @@ function simuleer(){
  * met huidige fiscale situatie als basis.
  */
 function runWatAlsSimulator(mutatie) {
+  // Strict input-validatie — defensief tegen UI-bugs of geknoeide
+  // google.script.run-aanroepen. Negatieve bedragen worden geblokkeerd
+  // via Math.max(0, ...) zodat simulatie nooit met -€500 omzet werkt.
+  if (mutatie && typeof mutatie !== 'object') {
+    throw new Error('Ongeldige simulatiedata.');
+  }
+  const veilig = {
+    extraOmzet:       Math.max(0, parseFloat((mutatie || {}).extraOmzet)       || 0),
+    extraInvestering: Math.max(0, parseFloat((mutatie || {}).extraInvestering) || 0),
+    extraLijfrente:   Math.max(0, parseFloat((mutatie || {}).extraLijfrente)   || 0),
+  };
   const ss = getSpreadsheet_();
   const basis = berekenBelastingadvies_(ss);
   const B = getBelasting_();
-  return simuleerWatAls_(basis, B, mutatie || {});
+  return simuleerWatAls_(basis, B, veilig);
 }
 
 // ─────────────────────────────────────────────
@@ -503,7 +550,7 @@ function boek(){
       document.getElementById('preview').style.display='none';
       setTimeout(function(){google.script.host.close();},1800);
     })
-    .withFailureHandler(function(e){s.className='status e';s.textContent='Fout: '+e.message;})
+    .withFailureHandler(function(e){s.className='status e';s.textContent='⚠️ '+(e&&e.message?e.message:'Er ging iets mis. Controleer je invoer.');})
     .boekReiskosten(data);
 }
 </script>
@@ -630,7 +677,7 @@ function boek(){
       s.textContent='✓ '+r.aantal+' dagen geboekt, totaal '+r.totaalKm+' km = '+r.totaalBedrag;
       setTimeout(function(){google.script.host.close();},2000);
     })
-    .withFailureHandler(function(e){s.className='status e';s.textContent='Fout: '+e.message;})
+    .withFailureHandler(function(e){s.className='status e';s.textContent='⚠️ '+(e&&e.message?e.message:'Er ging iets mis. Controleer je invoer.');})
     .boekReiskostenWeek(rijen);
 }
 </script>
@@ -775,9 +822,10 @@ function toonVoorlopigeAanslagTip() {
 //  LIJFRENTE-JAARRUIMTE CALCULATOR
 // ─────────────────────────────────────────────
 //
-// Jaarruimte = 13,3% × premiegrondslag − pensioen-aanspraken-toevoeging.
+// Jaarruimte = 30% × premiegrondslag − 6,27 × pensioenaangroei
+// (Wet toekomst pensioenen 2023; was 13,3% vóór 2023).
 // Premiegrondslag = winst − AOW-franchise.
-// Als klant pensioen mist (geen werkgever-pensioen), kan tot ~€18.000
+// Als klant pensioen mist (geen werkgever-pensioen), kan tot ~€38.000
 // per jaar gestort worden in lijfrente — aftrekbaar in box 1.
 // Vele ZZP'ers laten dit liggen omdat ze de berekening niet snappen.
 
@@ -794,6 +842,9 @@ function toonLijfrenteJaarruimte() {
   const winstHuidig = advies.winstVoorAftrek || 0;
   const aowFranchise = B.AOW_FRANCHISE || 14110;
   const lijfrenteMax = B.LIJFRENTE_MAX || 35987;
+  // Wet toekomst pensioenen (2023) verhoogde jaarruimte-pct van 13,3% naar 30%.
+  // Centraal in BELASTING_PER_JAAR — niet hardcoden in dialog.
+  const lijfrentePct = B.LIJFRENTE_PCT || 0.30;
 
   const html = HtmlService.createHtmlOutput(`
 <!DOCTYPE html>
@@ -839,7 +890,7 @@ input:focus{outline:none;border-color:#2EC4B6}
 </div>
 
 <script>
-var FRANCHISE=${aowFranchise}, PCT=0.133, MAX=${lijfrenteMax};
+var FRANCHISE=${aowFranchise}, PCT=${lijfrentePct}, MAX=${lijfrenteMax};
 function bereken(){
   var w=parseFloat(document.getElementById('winst').value)||0;
   var p=parseFloat(document.getElementById('pensioen').value)||0;
@@ -1038,9 +1089,11 @@ function simuleerWatAls_(basis, BELASTING, mutatie) {
     nieuw.aftrek += parseFloat(mutatie.extraLijfrente);
   }
 
-  // Recompute IB + Zvw
+  // Recompute IB + Zvw — AOW-status uit instellingen, niet hardcoded false
+  // (voorheen onderschatting van ~20% voor AOW-gerechtigden).
   const belastbaar = Math.max(0, nieuw.winst - nieuw.aftrek);
-  const ibBruto = berekenIBProgressief_(belastbaar, BELASTING, false);
+  const aow = isAowGerechtigd_(BELASTING);
+  const ibBruto = berekenIBProgressief_(belastbaar, BELASTING, aow);
   const ahk = berekenHeffingskorting_(belastbaar, BELASTING);
   const ak = berekenArbeidskorting_(nieuw.winst, BELASTING);
   nieuw.ib = Math.max(0, rondBedrag_(ibBruto - ahk - ak));

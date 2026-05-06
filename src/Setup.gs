@@ -15,9 +15,10 @@ function setup() {
 
   // ── Idempotency guard ──────────────────────────────────────────────────
   if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) === 'true') {
-    alertOfLog_(ui, 'Setup al uitgevoerd',
-      'Het systeem is al geconfigureerd.\n\n' +
-      'Gebruik "Boekhouding → Beheer → Herstel / Herinstalleer" als u opzettelijk opnieuw wilt instellen.');
+    alertOfLog_(ui, 'Setup is al klaar',
+      'Je boekhouding draait al — niks meer te doen hier.\n\n' +
+      'Wil je toch helemaal opnieuw beginnen? Ga naar:\n' +
+      'Boekhouding → Instellingen → Setup opnieuw uitvoeren (reset)');
     return;
   }
   // ──────────────────────────────────────────────────────────────────────
@@ -71,7 +72,6 @@ function setup() {
       ['Grootboekschema laden',     function() { vulGrootboekschema_(ss); }],
       ['Instellingen initialiseren', function() { zetInstellingen_(ss); }],
       ['Audit Log aanmaken',        function() { setupAuditLogSheet_(); }],
-      ['Beleggingen-tab aanmaken',  function() { setupBeleggingenSheet_(); }],
       ['Formuliers-tabs aanmaken',  function() { maakFormuliersTabbladen_(ss); }],
       ['Hoofdformulier aanmaken',   function() { maakHoofdFormulier_(ss); }],
       ['Werkruimte ordenen',        function() { herorganiseerWerkruimteSilent_(ss); }],
@@ -882,11 +882,13 @@ function maakGoogleForms_(ss) {
     props.setProperty(PROP.FORM_RELATIE_ID, form.getId());
   }
 
-  // ── 5. Handmatige Journaalpost ──────────────────────────────────────────
+  // ── 5. Handmatige Boeking ───────────────────────────────────────────────
+  // (intern: journaalpost — zo heet het in de boekhoud-wereld, maar voor
+  // de klant in UI-teksten wordt het "boeking" genoemd.)
   if (!props.getProperty(PROP.FORM_JOURNAAL_ID)) {
-    const form = FormApp.create(`${bedrijf} – Handmatige journaalpost`);
-    form.setDescription('Voer een handmatige boeking in (memoriaal / openingsbalans / correctie).');
-    form.setConfirmationMessage('De journaalpost is geboekt.');
+    const form = FormApp.create(`${bedrijf} – Handmatige boeking`);
+    form.setDescription('Voer een handmatige boeking in (voor correctie, openingssaldo of overige aanpassing).');
+    form.setConfirmationMessage('De boeking is verwerkt.');
 
     form.addDateItem().setTitle('Boekingsdatum').setRequired(true);
     form.addTextItem().setTitle('Omschrijving').setRequired(true);
@@ -959,7 +961,8 @@ function getFormUrl_(formId) {
   try {
     return FormApp.openById(formId).getPublishedUrl();
   } catch (e) {
-    return 'Fout: ' + e.message;
+    Logger.log('getFormPublishedUrl_ fout: ' + e.message);
+    return null;
   }
 }
 
@@ -1081,7 +1084,12 @@ function zetHeaderRij_(sheet, headers) {
   rij.setFontWeight('bold');
   rij.setFontSize(10);
   sheet.setFrozenRows(1);
-  sheet.setFrozenColumns(1);
+  // setFrozenColumns(1) BEWUST WEGGELATEN — veroorzaakt fout
+  // "Je kunt vastgezette kolommen niet samenvoegen met niet-vastgezette
+  // kolommen" zodra een latere helper een merge over kolom 1+2 doet
+  // (bv. titel-row banner). Sheets die kolom-freeze écht nodig hebben
+  // (Cashflow met maand-rijen) zetten dat expliciet zelf via
+  // sheet.setFrozenColumns(N) NA alle merges.
 
   // Autofit kolommen
   for (let i = 1; i <= headers.length; i++) {
@@ -1149,8 +1157,9 @@ function setInstelling_(sleutel, waarde) {
 function resetSetup() {
   const ui = SpreadsheetApp.getUi();
   const bevestiging = ui.alert(
-    'Waarschuwing',
-    'Dit verwijdert alle triggers en form-koppelingen (NIET de data).\nDoorgaan?',
+    'Setup opnieuw uitvoeren?',
+    'Dit wist alle formulieren en automatisering — je boekhoud-data blijft veilig staan.\n\n' +
+    'Daarna kun je setup opnieuw doorlopen.\n\nDoorgaan?',
     ui.ButtonSet.YES_NO
   );
   if (bevestiging !== ui.Button.YES) return;
@@ -1163,5 +1172,8 @@ function resetSetup() {
 
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
 
-  ui.alert('Reset geslaagd. Voer nu opnieuw "Setup uitvoeren" uit.');
+  ui.alert('Klaar! ✓',
+    'Reset gelukt. Run nu opnieuw setup via:\n' +
+    'Boekhouding → Instellingen → Eerste keer instellen (setup)',
+    ui.ButtonSet.OK);
 }

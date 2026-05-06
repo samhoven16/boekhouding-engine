@@ -115,7 +115,9 @@ const BELASTING_PER_JAAR = {
     HEFFINGSKORTING_NUL_VAN:    78426,
     ARBEIDSKORTING_MAX:     5685,    // 2026: tot inkomen €45.592
     ARBEIDSKORTING_TOP_TOT: 45592,
-    ARBEIDSKORTING_AFBOUW_VAN: 45592,
+    // Off-by-one: afbouw start €1 boven topgrens (€45.593 i.p.v. €45.592)
+    // anders krijgt inkomen €45.592 = max → €45.593 = direct in afbouwzone
+    ARBEIDSKORTING_AFBOUW_VAN: 45593,
     ARBEIDSKORTING_AFBOUW_PCT: 0.0651,
     ZVW_PCT:                0.0485,
     ZVW_MAX_INKOMEN:        79409,
@@ -319,7 +321,10 @@ function berekenHeffingskorting_(belastbaarInkomen, B) {
   if (inkomen <= 0 || max === 0) return 0;
   const afbouwVan = B.HEFFINGSKORTING_AFBOUW_VAN || 0;
   const afbouwPct = B.HEFFINGSKORTING_AFBOUW_PCT || 0;
-  const nulVan = B.HEFFINGSKORTING_NUL_VAN || (afbouwVan + max / Math.max(afbouwPct, 0.0001));
+  // Fallback: bereken nul-van uit max + afbouw-pct als config 't niet expliciet definieert.
+  // Wiskundig: max € korting bij afbouwVan, lineair afgebouwd → 0 bij afbouwVan + max/pct.
+  const nulVan = B.HEFFINGSKORTING_NUL_VAN ||
+    Math.round(afbouwVan + (max / Math.max(afbouwPct, 0.0001)));
   if (inkomen <= afbouwVan) return rondBedrag_(max);
   if (inkomen >= nulVan) return 0;
   const verlaging = (inkomen - afbouwVan) * afbouwPct;
@@ -481,6 +486,8 @@ function berekenBelastingadvies_(ss) {
     // Strict 4-cijferig jaartal validatie — voorheen accepteerde parseInt
     // strings als "2025xyz" of "2025-2026" (geeft 2025) wat tot foute startersaftrek-claim
     // kan leiden. Nu alleen pure jaartallen tussen 1990 en huidigJaar.
+    // Strict 4-cijferig jaartal — extra trim voor zekerheid (instelling kan
+    // " 2025 " met spaties bevatten als gebruiker copy-paste gebruikte).
     const startjaarRaw = String(getInstelling_('Startjaar onderneming') || '').trim();
     const startjaar = /^\d{4}$/.test(startjaarRaw) ? parseInt(startjaarRaw, 10) : 0;
     // startjaar > 0:        ingevuld (anders default 0)
@@ -812,8 +819,12 @@ function berekenBelastingadvies_(ss) {
 
   // ── 8c. Thuiswerkaftrek ────────────────────────────────────────────────
   // Defensieve parse — voorkomt NaN-bugs door non-numeric input zoals '250 dagen'
+  // Defensieve clamp: 0-365 dagen. Voorheen kon "1000 dagen" door en
+  // gaf €2.400 onrealistische thuiswerkaftrek.
   const thuiswerkDagenRaw = parseInt(getInstelling_('Thuiswerk dagen per jaar') || '0', 10);
-  const thuiswerkDagen = (isFinite(thuiswerkDagenRaw) && thuiswerkDagenRaw > 0) ? thuiswerkDagenRaw : 0;
+  const thuiswerkDagen = (isFinite(thuiswerkDagenRaw) && thuiswerkDagenRaw > 0)
+    ? Math.min(365, thuiswerkDagenRaw)
+    : 0;
   if (thuiswerkDagen > 0) {
     const thuiswerkAftrek = rondBedrag_(thuiswerkDagen * BELASTING.THUISWERK_PER_DAG);
     aftrekken.push({ naam: `Thuiswerkvergoeding (${thuiswerkDagen} dagen × €${BELASTING.THUISWERK_PER_DAG})`, bedrag: thuiswerkAftrek, voorwaarde: 'Werkdagen vanuit huis', code: '7350' });
@@ -968,6 +979,35 @@ function genereerBelastingadvies() {
     .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#B8C2D1')
     .setFontSize(10).setHorizontalAlignment('center');
 
+  // Empty-state: nog geen omzet → tonen wat te doen, geen "lege" rijen advies.
+  // Detectie via winstVoorAftrek + omzet — als beide 0 is er nog niets te
+  // adviseren. Klant ziet uitnodigende hint i.p.v. "0,00 €" in iedere rij.
+  const omzet = advies.omzet || 0;
+  const winst = advies.winstVoorAftrek || 0;
+  if (omzet === 0 && winst === 0) {
+    sheet.setColumnWidth(1, 720);
+    sheet.getRange(4, 1, 1, 3).merge()
+      .setValue('💡 Nog geen omzet of kosten in ' + jaar)
+      .setBackground('#FFF8E1').setFontColor('#5A3F00')
+      .setFontWeight('bold').setFontSize(13)
+      .setHorizontalAlignment('center').setVerticalAlignment('middle');
+    sheet.setRowHeight(4, 38);
+    sheet.getRange(5, 1, 1, 3).merge()
+      .setValue('Voer eerst een paar facturen of kostenposten in via Boekhouding → "Nieuwe boeking". ' +
+        'Zodra er omzet of kosten staan, krijg je hier persoonlijk belastingadvies met:\n\n' +
+        '• Geschatte IB + Zvw voor dit jaar\n' +
+        '• Aftrekposten waar je recht op hebt (KIA, MIA, EIA)\n' +
+        '• Reiskosten, lijfrente-jaarruimte, BTW-spaarpot\n' +
+        '• Tips op basis van je boekjaar\n\n' +
+        'Je kunt ook eerst je fiscaal profiel invullen: Boekhouding → "Vul je profiel in voor persoonlijk advies".')
+      .setBackground('#FFFFFF').setFontColor('#5F6B7A')
+      .setFontSize(11).setWrap(true)
+      .setHorizontalAlignment('left').setVerticalAlignment('top');
+    sheet.setRowHeight(5, 220);
+    try { ss.setActiveSheet(sheet); } catch (_) {}
+    return;
+  }
+
   let rij = 4;
 
   // ── BELASTINGVOORDEEL-TOP-BANNER ───────────────────────────────────
@@ -979,7 +1019,11 @@ function genereerBelastingadvies() {
     const B = getBelasting_();
     voordeel = berekenBelastingvoordeel_(advies, B);
     seizoen = (typeof getSeizoensTipRender_ === 'function') ? getSeizoensTipRender_() : null;
-  } catch (_) {}
+  } catch (e) {
+    // Voorheen silent — klant zag dan geen voordeel-banner zonder te weten waarom
+    Logger.log('Belastingvoordeel-banner berekening: ' + e.message);
+    try { schrijfAuditLog_('Belastingvoordeel banner FOUT', e.message); } catch (_) {}
+  }
 
   if (voordeel) {
     sheet.getRange(rij, 1, 1, 3).merge()

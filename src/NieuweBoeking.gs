@@ -153,16 +153,16 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 
 <!-- TABBAR -->
 <div class="tabbar">
-  <div class="tab actief" id="tab-factuur" onclick="wisselTab('factuur')">
+  <div class="tab actief" id="tab-factuur" data-tab="factuur">
     <span class="icon">🧾</span>Factuur
   </div>
-  <div class="tab" id="tab-kosten" onclick="wisselTab('kosten')">
+  <div class="tab" id="tab-kosten" data-tab="kosten">
     <span class="icon">💸</span>Kosten
   </div>
-  <div class="tab" id="tab-declaratie" onclick="wisselTab('declaratie')">
+  <div class="tab" id="tab-declaratie" data-tab="declaratie">
     <span class="icon">📤</span>Declaratie
   </div>
-  <div class="tab" id="tab-upload" onclick="wisselTab('upload')">
+  <div class="tab" id="tab-upload" data-tab="upload">
     <span class="icon">📸</span>Upload + AI
   </div>
 </div>
@@ -234,6 +234,10 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
       <tr><td id="tot-btw-label">BTW (21%)</td><td id="tot-btw">€ 0,00</td></tr>
       <tr class="eindtotaal"><td>Totaal te betalen</td><td id="tot-incl">€ 0,00</td></tr>
     </table>
+    <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 12px;font-size:11px;color:#5F6B7A;border-top:1px solid #E5EAF2;background:#F7F9FC">
+      <span id="recalc-status">⚙️ Wachten op JS…</span>
+      <button type="button" id="btn-recalc" style="background:none;border:1px solid #E5EAF2;border-radius:4px;padding:4px 10px;font-size:11px;cursor:pointer;color:#0D1B4E">🔄 Herbereken nu</button>
+    </div>
   </div>
   <div class="rij">
     <div class="veld">
@@ -439,26 +443,133 @@ var BON_B64 = null;
 var BON_MIME = null;
 var HERKENNER = null;
 
+/* ── GLOBAL ERROR HANDLER ──
+   Vangt elke onverwachte JS-fout en toont 'm onder de tabs i.p.v.
+   stille dialog die niets doet. Cruciaal voor debugging in productie
+   want gebruikers zien anders een dialog waar niks op klikt werkt. */
+window.addEventListener('error', function(ev) {
+  try {
+    var fs = document.getElementById('footer-status');
+    if (fs) {
+      fs.style.color = '#c62828';
+      fs.textContent = '⚠️ Technische fout: ' + (ev.message || 'onbekend') +
+                       ' (open Help → kopieer in chat support)';
+    }
+    if (typeof console !== 'undefined') console.error('[NieuweBoeking] error:', ev);
+  } catch (_) {}
+});
+
 /* ── INIT ── */
 (function init(){
-  // Datums instellen op vandaag
-  var vandaag = '${ctx.vandaag}';
-  ['f-datum','k-datum','d-datum','u-datum'].forEach(function(id){
-    var el = document.getElementById(id);
-    if(el) el.value = vandaag;
-  });
-  // Pre-valideer datum velden zodat ze direct groen tonen
-  [['f-datum','factuur'],['k-datum','kosten'],['d-datum','declaratie']].forEach(function(pair){
-    var el = document.getElementById(pair[0]);
-    if(el && el.value) valideerVeld(pair[1], 'datum', el);
-  });
-  // BTW standaard
-  var btwStd = '${ctx.btwStandaard}';
-  setSelect('f-btw', btwStd);
-  setSelect('k-btw', btwStd);
-  setSelect('d-btw', btwStd);
-  setSelect('u-btw', btwStd);
-  herbereken();
+  try {
+    // Datums instellen op vandaag — defensief: ctx.vandaag kan undefined zijn
+    var vandaag = '${ctx.vandaag}' || new Date().toISOString().slice(0, 10);
+    ['f-datum','k-datum','d-datum','u-datum'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.value = vandaag;
+    });
+    // Pre-valideer datum velden zodat ze direct groen tonen
+    [['f-datum','factuur'],['k-datum','kosten'],['d-datum','declaratie']].forEach(function(pair){
+      var el = document.getElementById(pair[0]);
+      if(el && el.value) valideerVeld(pair[1], 'datum', el);
+    });
+    // BTW standaard
+    var btwStd = '${ctx.btwStandaard}' || '21% (hoog)';
+    setSelect('f-btw', btwStd);
+    setSelect('k-btw', btwStd);
+    setSelect('d-btw', btwStd);
+    setSelect('u-btw', btwStd);
+    herbereken();
+
+    // Bind extra event-listeners als safety-net — als inline oninput-handlers
+    // door CSP/browser-issues niet triggeren, deze wel via addEventListener.
+    // Bovendien: input/change/blur events op alle factuurregel-inputs.
+    var bindRegelEvents = function() {
+      for (var i = 1; i <= MAX_REGELS; i++) {
+        ['omschr','aantal','prijs'].forEach(function(veld) {
+          var el = document.getElementById('f-r' + i + veld);
+          if (el && !el._bhBound) {
+            el._bhBound = true;  // voorkom dubbele bind
+            el.addEventListener('input', herbereken);
+            el.addEventListener('change', herbereken);
+            el.addEventListener('keyup', herbereken);
+            el.addEventListener('blur', herbereken);
+          }
+        });
+      }
+      var btwSel = document.getElementById('f-btw');
+      if (btwSel && !btwSel._bhBound) {
+        btwSel._bhBound = true;
+        btwSel.addEventListener('change', herbereken);
+      }
+      var kostenIncl = document.getElementById('k-incl');
+      if (kostenIncl && !kostenIncl._bhBound) {
+        kostenIncl._bhBound = true;
+        kostenIncl.addEventListener('input', berekenKosten);
+        kostenIncl.addEventListener('change', berekenKosten);
+        kostenIncl.addEventListener('keyup', berekenKosten);
+      }
+      var kostenBtw = document.getElementById('k-btw');
+      if (kostenBtw && !kostenBtw._bhBound) {
+        kostenBtw._bhBound = true;
+        kostenBtw.addEventListener('change', berekenKosten);
+      }
+    };
+    bindRegelEvents();
+
+    // Tabs via addEventListener — inline onclick kan in moderne Apps Script
+    // CSP-modes worden geblokkeerd. Klant kon dan niet op Kosten/Declaratie/
+    // Upload klikken. Met data-attribuut + listener werkt 't gegarandeerd.
+    document.querySelectorAll('.tab[data-tab]').forEach(function(tabEl) {
+      if (tabEl._bound) return;
+      tabEl._bound = true;
+      tabEl.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        wisselTab(tabEl.getAttribute('data-tab'));
+      });
+    });
+
+    // Manuele recalc-knop — als auto-recalc om welke reden ook niet werkt,
+    // klant kan zelf forceren. Werkt altijd want directe DOM-binding.
+    var recalcBtn = document.getElementById('btn-recalc');
+    if (recalcBtn) {
+      recalcBtn.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        try { herbereken(); } catch (e) {
+          var s = document.getElementById('recalc-status');
+          if (s) { s.textContent = '⚠️ ' + (e.message || 'fout'); s.style.color = '#c62828'; }
+        }
+      });
+    }
+    // Live-counter — bewijst dat JS draait. Als dit getal niet stijgt,
+    // is JS volledig geblokkeerd door browser/CSP en zien we dat meteen.
+    var recalcTeller = 0;
+    setInterval(function() {
+      try {
+        bindRegelEvents();
+        herbereken();
+        recalcTeller++;
+        var s = document.getElementById('recalc-status');
+        if (s) {
+          s.textContent = '✓ Live (recalc #' + recalcTeller + ')';
+          s.style.color = '#1B5E20';
+        }
+      } catch (e) {
+        var s = document.getElementById('recalc-status');
+        if (s) {
+          s.textContent = '⚠️ Recalc fout: ' + (e.message || '?');
+          s.style.color = '#c62828';
+        }
+      }
+    }, 500);
+  } catch (e) {
+    if (typeof console !== 'undefined') console.error('[NieuweBoeking] init:', e);
+    var fs = document.getElementById('footer-status');
+    if (fs) {
+      fs.style.color = '#c62828';
+      fs.textContent = '⚠️ Init fout: ' + e.message;
+    }
+  }
 })();
 
 function setSelect(id, waarde) {
@@ -471,15 +582,23 @@ function setSelect(id, waarde) {
   }
 }
 
-/* ── TAB NAVIGATIE ── */
+/* ── TAB NAVIGATIE — defensief wrap zodat één error niet alle tabs breekt ── */
 function wisselTab(type) {
-  ACTIEF_TAB = type;
-  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('actief'); });
-  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('actief'); });
-  document.getElementById('tab-' + type).classList.add('actief');
-  document.getElementById('panel-' + type).classList.add('actief');
-  document.getElementById('btn-bevestig').textContent = type === 'upload' ? '✅ Bon opslaan' : '✅ Opslaan';
-  document.getElementById('footer-status').textContent = '';
+  try {
+    ACTIEF_TAB = type;
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('actief'); });
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('actief'); });
+    var tabEl = document.getElementById('tab-' + type);
+    var panelEl = document.getElementById('panel-' + type);
+    if (tabEl) tabEl.classList.add('actief');
+    if (panelEl) panelEl.classList.add('actief');
+    var btn = document.getElementById('btn-bevestig');
+    if (btn) btn.textContent = type === 'upload' ? '✅ Bon opslaan' : '✅ Opslaan';
+    var fs = document.getElementById('footer-status');
+    if (fs) fs.textContent = '';
+  } catch (e) {
+    if (typeof console !== 'undefined') console.error('[wisselTab]', e);
+  }
 }
 
 /* ── FACTUUR: REGELS ── */
@@ -509,34 +628,48 @@ function verwijderRegel(n) {
 /* ── BTW BEREKENING FACTUUR ── */
 function fmt(n){ return '\u20ac\u00a0' + parseFloat(n||0).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function btwPct(sel){
-  var v = document.getElementById(sel).value;
-  // Strikte detectie: gebruik '21%' / '9%' niet kale cijfers — anders matcht
-   // '212' of een hypothetisch toekomst-tarief als '29%' fout naar 9%.
-  if (v.indexOf('21%') !== -1 || /\\bhoog\\b/i.test(v)) return 0.21;
-  if (v.indexOf('9%') !== -1 || /\\blaag\\b/i.test(v)) return 0.09;
+  var el = document.getElementById(sel);
+  if (!el) return 0;
+  var v = String(el.value || '').toLowerCase();
+  // Geen regex nodig (en dus geen \\b-escape-issues in template-literals).
+  // Volgorde: eerst 21% want '21%' bevat geen '9%'; daarna 9% strikt
+  // (.indexOf('9%') voorkomt fout-match op '29%' want dat heeft geen '9%' subset).
+  if (v.indexOf('21%') !== -1 || v.indexOf('hoog') !== -1) return 0.21;
+  if (v.indexOf('9%') !== -1  || v.indexOf('laag') !== -1) return 0.09;
   return 0;
 }
 
 function herbereken() {
-  var excl = 0;
-  for(var i=1;i<=REGEL_TELLER;i++){
-    var omEl = document.getElementById('f-r'+i+'omschr');
-    if(!omEl) continue;
-    var a = parseFloat((document.getElementById('f-r'+i+'aantal')||{}).value||0);
-    var p = parseFloat((document.getElementById('f-r'+i+'prijs')||{}).value||0);
-    var tot = Math.round(a*p*100)/100;
-    var totEl = document.getElementById('f-r'+i+'tot');
-    if(totEl) totEl.value = tot>0 ? fmt(tot) : '';
-    excl += tot;
+  try {
+    var excl = 0;
+    for(var i=1;i<=REGEL_TELLER;i++){
+      var omEl = document.getElementById('f-r'+i+'omschr');
+      if(!omEl) continue;
+      var a = parseFloat((document.getElementById('f-r'+i+'aantal')||{}).value||0);
+      var p = parseFloat((document.getElementById('f-r'+i+'prijs')||{}).value||0);
+      if (!isFinite(a) || a < 0) a = 0;
+      if (!isFinite(p) || p < 0) p = 0;
+      var tot = Math.round(a*p*100)/100;
+      var totEl = document.getElementById('f-r'+i+'tot');
+      if(totEl) totEl.value = tot>0 ? fmt(tot) : '';
+      excl += tot;
+    }
+    var pct = btwPct('f-btw');
+    var btw = Math.round(excl*pct*100)/100;
+    var incl = Math.round((excl+btw)*100)/100;
+    var totExclEl = document.getElementById('tot-excl');
+    var totBtwEl  = document.getElementById('tot-btw');
+    var totInclEl = document.getElementById('tot-incl');
+    if (totExclEl) totExclEl.textContent = fmt(excl);
+    if (totBtwEl)  totBtwEl.textContent  = fmt(btw);
+    if (totInclEl) totInclEl.textContent = fmt(incl);
+    var btwSelEl = document.getElementById('f-btw');
+    var btwLabelMatch = btwSelEl ? String(btwSelEl.value || '').match(/\d+%/) : null;
+    var totBtwLabel = document.getElementById('tot-btw-label');
+    if (totBtwLabel) totBtwLabel.textContent = 'BTW (' + (btwLabelMatch ? btwLabelMatch[0] : '0%') + ')';
+  } catch (e) {
+    if (typeof console !== 'undefined') console.error('[herbereken]', e);
   }
-  var pct = btwPct('f-btw');
-  var btw = Math.round(excl*pct*100)/100;
-  var incl = Math.round((excl+btw)*100)/100;
-  document.getElementById('tot-excl').textContent = fmt(excl);
-  document.getElementById('tot-btw').textContent  = fmt(btw);
-  document.getElementById('tot-incl').textContent = fmt(incl);
-  var btwLabel = document.getElementById('f-btw').value.match(/\d+%/);
-  document.getElementById('tot-btw-label').textContent = 'BTW (' + (btwLabel ? btwLabel[0] : '0%') + ')';
 }
 
 /* ── BTW BEREKENING KOSTEN ── */
@@ -603,9 +736,27 @@ function bevestig() {
       notities: val('f-notities'),
       klantAdres: val('f-klantadres'), kvkKlant: val('f-kvk'), btwNrKlant: val('f-btwnr'),
     };
+    var ongeldigeExtraRegels = [];
     for(var i=1;i<=REGEL_TELLER;i++){
       var o=val('f-r'+i+'omschr'), p=val('f-r'+i+'prijs'), a=val('f-r'+i+'aantal');
-      if(o){ data['r'+i+'omschr']=o; data['r'+i+'prijs']=parseFloat(p)||0; data['r'+i+'aantal']=parseFloat(a)||1; }
+      var oTrim=(o||'').trim(), pNum=parseFloat(p)||0, aNum=parseFloat(a)||0;
+      if(!oTrim && pNum===0 && aNum===0) continue;
+      if(!oTrim){ ongeldigeExtraRegels.push('Regel '+i+': omschrijving ontbreekt'); continue; }
+      if(aNum<=0){ ongeldigeExtraRegels.push('Regel '+i+' ('+oTrim+'): aantal moet > 0'); continue; }
+      if(pNum<=0){ ongeldigeExtraRegels.push('Regel '+i+' ('+oTrim+'): prijs moet > €0'); continue; }
+      data['r'+i+'omschr']=oTrim;
+      data['r'+i+'prijs']=pNum;
+      data['r'+i+'aantal']=aNum;
+    }
+    if(ongeldigeExtraRegels.length){
+      toonStatus('⚠️ ' + ongeldigeExtraRegels.join(' — '), '#c62828');
+      btn.disabled=false; btn.textContent='✅ Opslaan';
+      return;
+    }
+    if(!data['r1omschr']){
+      toonStatus('⚠️ Vul minimaal regel 1 in (omschrijving + prijs).', '#c62828');
+      btn.disabled=false; btn.textContent='✅ Opslaan';
+      return;
     }
 
   } else if (type === 'kosten') {
@@ -889,7 +1040,13 @@ function vulUploadVelden(s) {
 </body></html>`;
 
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(720).setHeight(640),
+    HtmlService.createHtmlOutput(html)
+      .setWidth(720).setHeight(640)
+      // IFRAME-sandbox is default in moderne GAS maar expliciet maken:
+      // garandeert dat inline onclick/oninput-handlers en google.script.run
+      // correct werken. Zonder expliciete mode kan een GAS-update CSP-strict
+      // worden en stillekens alle interactiviteit breken.
+      .setSandboxMode(HtmlService.SandboxMode.IFRAME),
     '+ Nieuwe boeking'
   );
 }
