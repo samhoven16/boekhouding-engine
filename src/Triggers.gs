@@ -92,15 +92,49 @@ function schrijfAuditEdit_(e) {
     'cell-edit',
   ];
 
-  // Voeg toe aan einde, daarna trim oudste rijen tot max 500 entries
+  // Voeg toe aan einde, daarna trim:
+  //  • Datum-cutoff op 7 jaar (AWR art. 52 bewaarplicht — moet bewaard blijven)
+  //  • Hard-cap 5000 rijen als safety-net tegen runaway-growth
+  // Voorheen: 500 rijen ≈ 2,5 jaar, te kort voor compliance.
   auditSheet.appendRow(rij);
 
-  const maxRijen = 500;
-  const totaalRijen = auditSheet.getLastRow();
-  if (totaalRijen > maxRijen + 1) {
-    // Verwijder oudste data-rijen (rij 2 en verder)
-    const teVerwijderen = totaalRijen - maxRijen - 1;
-    auditSheet.deleteRows(2, teVerwijderen);
+  _trimAuditLog_(auditSheet);
+}
+
+/**
+ * Verwijdert audit-log rijen die ouder zijn dan 7 jaar (bewaarplicht-grens
+ * art. 52 AWR is precies 7 jaar; we behouden alles binnen de termijn).
+ * Daarnaast hard-cap op 5000 rijen om runaway-growth te beperken.
+ *
+ * Idempotent: opnieuw draaien bij gelijke staat = no-op.
+ */
+function _trimAuditLog_(auditSheet) {
+  if (!auditSheet) return;
+  const lastRow = auditSheet.getLastRow();
+  if (lastRow <= 1) return;
+
+  const HARD_CAP = 5000;
+  const ZEVEN_JAAR_MS = 7 * 365.25 * 24 * 3600 * 1000;
+  const cutoffDate = new Date(Date.now() - ZEVEN_JAAR_MS);
+
+  // Lees alleen kolom 1 (datum) — efficiënt voor grote logs
+  const datums = auditSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  let aantalTeOud = 0;
+  for (let i = 0; i < datums.length; i++) {
+    const d = datums[i][0];
+    if (!(d instanceof Date)) break;        // log corrupt? stop trim
+    if (d.getTime() >= cutoffDate.getTime()) break;  // alle volgende zijn jonger
+    aantalTeOud++;
+  }
+
+  // Hard-cap: als totaal nog steeds > HARD_CAP na 7y-trim, verwijder ook oudste
+  // recent-jonge rijen om limit te respecteren.
+  const naCutoffTrim = lastRow - 1 - aantalTeOud;
+  let extraOver = Math.max(0, naCutoffTrim - HARD_CAP);
+
+  const totaalTeVerwijderen = aantalTeOud + extraOver;
+  if (totaalTeVerwijderen > 0) {
+    auditSheet.deleteRows(2, totaalTeVerwijderen);
   }
 }
 
