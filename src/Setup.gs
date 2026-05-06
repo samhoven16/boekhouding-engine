@@ -882,11 +882,13 @@ function maakGoogleForms_(ss) {
     props.setProperty(PROP.FORM_RELATIE_ID, form.getId());
   }
 
-  // ── 5. Handmatige Journaalpost ──────────────────────────────────────────
+  // ── 5. Handmatige Boeking ───────────────────────────────────────────────
+  // (intern: journaalpost — zo heet het in de boekhoud-wereld, maar voor
+  // de klant in UI-teksten wordt het "boeking" genoemd.)
   if (!props.getProperty(PROP.FORM_JOURNAAL_ID)) {
-    const form = FormApp.create(`${bedrijf} – Handmatige journaalpost`);
-    form.setDescription('Voer een handmatige boeking in (memoriaal / openingsbalans / correctie).');
-    form.setConfirmationMessage('De journaalpost is geboekt.');
+    const form = FormApp.create(`${bedrijf} – Handmatige boeking`);
+    form.setDescription('Voer een handmatige boeking in (voor correctie, openingssaldo of overige aanpassing).');
+    form.setConfirmationMessage('De boeking is verwerkt.');
 
     form.addDateItem().setTitle('Boekingsdatum').setRequired(true);
     form.addTextItem().setTitle('Omschrijving').setRequired(true);

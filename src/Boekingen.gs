@@ -185,7 +185,7 @@ function herberekeningGrootboekSaldi() {
     updateGrootboekSaldo_(ss, credit, bedrag, 'credit');
   }
 
-  SpreadsheetApp.getUi().alert('Saldi herberekend op basis van alle journaalposten.');
+  SpreadsheetApp.getUi().alert('Saldi opnieuw berekend op basis van alle boekingen.');
 }
 
 // ─────────────────────────────────────────────
@@ -197,8 +197,8 @@ function exporteerGrootboekkaart() {
   const ui = SpreadsheetApp.getUi();
 
   const resp = ui.prompt(
-    'Grootboekkaart',
-    'Voer de grootboekrekening code in (bijv. 1100):',
+    'Rekening-overzicht',
+    'Voer de rekeningcode in (bijv. 1100 voor Bank, 8000 voor Omzet):',
     ui.ButtonSet.OK_CANCEL
   );
   if (resp.getSelectedButton() !== ui.Button.OK) return;

@@ -267,7 +267,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   }
   if (korting > _subtotaal) {
     throw new Error('Korting (' + formatBedrag_(korting) + ') is groter dan totaal regels (' +
-      formatBedrag_(_subtotaal) + '). Een factuur mag niet negatief zijn — gebruik een creditnota i.p.v. negatieve factuur.');
+      formatBedrag_(_subtotaal) + '). Een factuur mag niet negatief zijn — maak een correctiefactuur (creditnota) voor terugbetaling.');
   }
   const totalExcl    = rondBedrag_(_subtotaal - korting);
   const totalBtw   = btwTarief !== null ? rondBedrag_(totalExcl * btwTarief) : 0;
@@ -1306,7 +1306,7 @@ function controleerSheetGrootte_(ss) {
   const eigenEmail = getInstelling_('Email rapporten naar') || '';
   const bedrijf = getInstelling_('Bedrijfsnaam') || '';
   const bericht =
-    'De spreadsheet bevat ' + (vfRijen + ifRijen) + ' facturen en ' + jrRijen + ' journaalposten. ' +
+    'De spreadsheet bevat ' + (vfRijen + ifRijen) + ' facturen en ' + jrRijen + ' boekingen. ' +
     'Dit werkt prima, maar het Dashboard-refresh wordt merkbaar trager. ' +
     'Overweeg om een nieuw boekjaar te starten via Boekhouding → Instellingen → Nieuw boekjaar.';
 

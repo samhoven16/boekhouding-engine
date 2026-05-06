@@ -240,7 +240,7 @@ function valideerBtwInvariants_(a) {
   if (a.r1a_grondslag < 0 || a.r1b_grondslag < 0) {
     issues.push({
       code: 'BTW-NEG-GRONDSLAG',
-      tekst: 'Negatieve grondslag(en) — vaak door creditnota; controleer dat dit klopt',
+      tekst: 'Negatieve grondslag(en) — vaak door correctiefactuur; controleer dat dit klopt',
     });
   }
 
