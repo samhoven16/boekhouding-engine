@@ -9,7 +9,10 @@
 
 const ONBOARDING_PROP = 'onboarding_voltooid';
 const VERSIE_PROP     = 'geinstalleerde_versie';
-const HUIDIGE_VERSIE  = '2.0.0';
+// Bump bij elke deploy waarbij sheet-schema, triggers of klant-zichtbaar
+// gedrag verandert. Format: MAJOR.MINOR.PATCH (semver).
+//   2.0.0 → 2.1.0  (Fase 0-4 polish-ronde mei 2026)
+const HUIDIGE_VERSIE  = '2.1.0';
 
 // ─────────────────────────────────────────────
 //  ONBOARDING STARTEN (automatisch bij eerste gebruik)
@@ -321,6 +324,15 @@ function controleerOpUpdate_() {
 
   // Pad: lokale upgrade door owner (clasp push) → "Bijgewerkt naar X" toast
   if (opgeslagenVersie !== HUIDIGE_VERSIE) {
+    // Migraties uitvoeren VÓÓR het bumpen van de versie-property — anders
+    // worden migraties bij een crash niet meer geprobeerd op volgende open.
+    try { voerMigratiesUit_(opgeslagenVersie, HUIDIGE_VERSIE); }
+    catch (e) {
+      Logger.log('Migratie-fout (' + opgeslagenVersie + ' → ' + HUIDIGE_VERSIE + '): ' + e.message);
+      try { schrijfAuditLog_('Migratie FOUT', e.message); } catch (_) {}
+      // Versie NIET bumpen — volgende keer opnieuw proberen
+      return;
+    }
     props.setProperty(VERSIE_PROP, HUIDIGE_VERSIE);
     toonUpdateMelding_(opgeslagenVersie, HUIDIGE_VERSIE);
     return;
@@ -618,4 +630,61 @@ function resetOnboarding() {
     'De welkomst-wizard + post-setup welkom-modal worden opnieuw getoond.',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
+}
+
+// ─────────────────────────────────────────────
+//  MIGRATIES
+// ─────────────────────────────────────────────
+//
+// Bij elke versie-bump waarbij sheet-schema, ScriptProperty-format of
+// klant-data wijzigt, voeg een migreer_v{X}_naar_v{Y}_(ss) functie toe
+// onder MIGRATIES_REGISTER. Volgorde van uitvoering: oplopende vanaf
+// klant-versie naar HUIDIGE_VERSIE.
+//
+// REGEL: migraties moeten IDEMPOTENT zijn — bij crash + retry mag er
+// geen data-corruptie zijn. Patroon:
+//   if (alreadyMigrated_) return;  // skip
+//   doActualMigration();
+//
+// Test elke migratie in tests/unit/migraties.test.js.
+const MIGRATIES_REGISTER = [
+  // Voorbeeld-migratie voor de 2.0 → 2.1 polish-ronde. Geen schema-
+  // wijzigingen in deze release; deze migratie is een no-op die het
+  // framework valideert. Kan vervangen worden zodra echte migratie nodig is.
+  {
+    van: '2.0.0',
+    naar: '2.1.0',
+    naam: 'polish_ronde_mei_2026',
+    fn: function(_ss) {
+      // Geen schema-wijziging in 2.1.0 — alleen UX/foutmeldingen/jargon.
+      // Deze stub bewijst dat het framework werkt + audit-log schrijft.
+      try { schrijfAuditLog_('Migratie 2.0→2.1', 'no-op (UX-polish only)'); } catch (_) {}
+    },
+  },
+];
+
+/**
+ * Voert alle migraties uit die nodig zijn om van `vanafVersie` naar
+ * `naarVersie` te komen. Migraties zijn aflopend op `van` gesorteerd
+ * — als klant op 1.5.0 staat en 2.1.0 binnenkomt, draait de chain
+ * 1.5→2.0 dan 2.0→2.1 (in registratie-volgorde).
+ *
+ * Bij fout: throw — de versie-property wordt door caller NIET ge-bumpt
+ * zodat volgende open opnieuw probeert.
+ */
+function voerMigratiesUit_(vanafVersie, naarVersie) {
+  const ss = getSpreadsheet_();
+  if (!ss) return;
+  // Selecteer migraties die vanaf-versie EN target overlappen:
+  //   m.van  ≤ naarVersie    (target is hoog genoeg om migratie nodig te hebben)
+  //   m.naar ≥ vanafVersie   (klant is niet al voorbij m.naar)
+  const toepasselijk = MIGRATIES_REGISTER.filter(function(m) {
+    return !_versieIsNieuwer_(m.van, naarVersie)
+        && !_versieIsNieuwer_(vanafVersie, m.naar);
+  });
+  toepasselijk.forEach(function(m) {
+    Logger.log('Migratie ' + m.naam + ' (' + m.van + ' → ' + m.naar + ') uitvoeren...');
+    m.fn(ss);
+    Logger.log('Migratie ' + m.naam + ' klaar.');
+  });
 }
