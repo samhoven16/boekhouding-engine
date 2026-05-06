@@ -854,46 +854,62 @@ function getFactuurlijstData() {
  */
 function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
   if (!factuurnr) throw new Error('Geen factuurnummer opgegeven');
-  const ss    = getSpreadsheet_();
-  const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
-  const data  = sheet.getDataRange().getValues();
-  const datum = betaaldatumStr ? parseDatum_(betaaldatumStr) : new Date();
 
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][1]) !== String(factuurnr)) continue;
+  // Optimistic locking: voorkom dat handmatig "Markeer betaald" + bank-CSV-
+  // import gelijktijdig dezelfde factuur 2x als betaald markeren (= 2x
+  // journaalpost = €X dubbel geboekt). LockService.tryLock(3s) wacht max
+  // 3s; bij timeout valt aanroep door — idempotency-check vangt rest.
+  const lock = LockService.getScriptLock();
+  const gotLock = lock.tryLock(3000);
 
-    // Idempotentie-check: als al betaald, geen tweede journaalpost aanmaken
-    const huidigStatus = String(data[i][14] || '');
-    if (huidigStatus === FACTUUR_STATUS.BETAALD || huidigStatus === FACTUUR_STATUS.GECREDITEERD) {
-      return { ok: true, bericht: 'Factuur ' + factuurnr + ' was al gemarkeerd als betaald.' };
+  try {
+    const ss    = getSpreadsheet_();
+    const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+    // Re-read NA lock om laatste-stand te zien (een ander process kan net
+    // hebben gemarkeerd terwijl we wachtten op lock)
+    const data  = sheet.getDataRange().getValues();
+    const datum = betaaldatumStr ? parseDatum_(betaaldatumStr) : new Date();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][1]) !== String(factuurnr)) continue;
+
+      // Idempotentie-check NA lock-acquire — race-vrij
+      const huidigStatus = String(data[i][14] || '');
+      if (huidigStatus === FACTUUR_STATUS.BETAALD || huidigStatus === FACTUUR_STATUS.GECREDITEERD) {
+        return { ok: true, bericht: 'Factuur ' + factuurnr + ' was al gemarkeerd als betaald.' };
+      }
+
+      const bedragIncl = parseFloat(data[i][12]) || 0;
+      if (bedragIncl <= 0) throw new Error('Factuur ' + factuurnr + ' heeft geen geldig bedrag');
+
+      sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag
+      sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.BETAALD);  // Status
+      sheet.getRange(i + 1, 16).setValue(datum);                   // Betaaldatum
+      SpreadsheetApp.flush();                                       // Forceer write vóór journaalpost
+
+      // Journaalpost: Debiteuren → Bank (exact 1x per aanroep dankzij idempotentie-check)
+      maakJournaalpost_(ss, {
+        datum,
+        omschr:  'Ontvangst factuur ' + factuurnr,
+        dagboek: 'Bankboek',
+        debet:   '1200',
+        credit:  '1100',
+        bedrag:  bedragIncl,
+        ref:     factuurnr,
+        type:    BOEKING_TYPE.BANKONTVANGST,
+      });
+
+      schrijfAuditLog_('Factuur betaald', factuurnr + ' via factuurlijst dialog');
+      // Invalidate snapshot: debiteurenOpen and aantalOpenFacturen have changed.
+      // The next snapshot read will recompute fresh (no vernieuwDashboard overhead here).
+      invalideerKpiSnapshot_();
+      try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
+      return { ok: true, bericht: 'Factuur ' + factuurnr + ' gemarkeerd als betaald.' };
     }
-
-    const bedragIncl = parseFloat(data[i][12]) || 0;
-    if (bedragIncl <= 0) throw new Error('Factuur ' + factuurnr + ' heeft geen geldig bedrag');
-
-    sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag
-    sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.BETAALD);  // Status
-    sheet.getRange(i + 1, 16).setValue(datum);                   // Betaaldatum
-
-    // Journaalpost: Debiteuren → Bank (exact 1x per aanroep dankzij idempotentie-check)
-    maakJournaalpost_(ss, {
-      datum,
-      omschr:  'Ontvangst factuur ' + factuurnr,
-      dagboek: 'Bankboek',
-      debet:   '1200',
-      credit:  '1100',
-      bedrag:  bedragIncl,
-      ref:     factuurnr,
-      type:    BOEKING_TYPE.BANKONTVANGST,
-    });
-
-    schrijfAuditLog_('Factuur betaald', factuurnr + ' via factuurlijst dialog');
-    // Invalidate snapshot: debiteurenOpen and aantalOpenFacturen have changed.
-    // The next snapshot read will recompute fresh (no vernieuwDashboard overhead here).
-    invalideerKpiSnapshot_();
-    return { ok: true, bericht: 'Factuur ' + factuurnr + ' gemarkeerd als betaald.' };
+    throw new Error('Factuurnummer ' + factuurnr + ' niet gevonden');
+  } finally {
+    if (gotLock) try { lock.releaseLock(); } catch (_) {}
   }
-  throw new Error('Factuurnummer ' + factuurnr + ' niet gevonden');
 }
 
 function _bouwFactuurlijstHtml_() {

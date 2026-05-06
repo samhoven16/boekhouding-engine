@@ -1159,6 +1159,7 @@ function dagelijkseTaken() {
   _runTaak_('groottecheck',     function() { controleerSheetGrootte_(ss); });
   _runTaak_('verlopenShares',   function() { if (typeof ruimVerlopenShares_ === 'function') ruimVerlopenShares_(); });
   _runTaak_('autoBackup',       function() { if (typeof maakAutomatischeBackup_ === 'function') maakAutomatischeBackup_(); });
+  _runTaak_('dlqRetry',         function() { if (typeof dlqVerwerkRetries_ === 'function') dlqVerwerkRetries_(); });
 
   // Aggregaat: totale duur dagelijkseTaken
   try { metricsLog_('dagelijkseTaken.totaal', Date.now() - dagelijksTotaal0, true); } catch (_) {}
@@ -1512,6 +1513,17 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
     } catch (err) {
       Logger.log(`Herinnering fout voor ${factuurnummer}: ${err.message}`);
       try { schrijfAuditLog_('Herinnering MISLUKT', factuurnummer + ' – ' + err.message); } catch (_) {}
+      // DLQ: voeg toe voor auto-retry. Opzettelijk geen pdfUrl-attachment in
+      // payload — die kan groter zijn dan cell-limit. Retry-handler haalt PDF
+      // opnieuw op via factuurnummer.
+      try {
+        if (typeof dlqVoegToe_ === 'function') {
+          dlqVoegToe_('EMAIL_HERINNERING', {
+            email: klantEmail, onderwerp: onderwerp, tekst: tekst,
+            opties: { name: bedrijf },
+          }, err.message);
+        }
+      } catch (_) {}
     }
   }
 

@@ -111,6 +111,8 @@ function onOpen() {
       .addSeparator()
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
       .addItem('🔧 Systeemstatus (voor support)', 'toonSysteemStatus')
+      .addItem('📨 Mislukte taken (DLQ) tonen', 'toonDlqOverzicht')
+      .addItem('🔁 Forceer DLQ-retry nu', 'forceerDlqRetry')
       .addItem('Gesloten periodes beheren', 'beheerGeslotenPeriodes')
     )
 

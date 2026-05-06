@@ -187,18 +187,33 @@ function escHtml_(s) {
 // REGEL: function-namen, sheet-namen, kolom-headers, grootboek-codes blijven onveranderd.
 function vertaalFout_(e) {
   const raw = String((e && e.message) || e || '').trim();
-  try { schrijfAuditLog_('FOUT_VERTAALD', raw.slice(0, 240)); } catch (_) {}
-  if (!raw) return 'Er ging iets mis. Probeer opnieuw of bekijk de Audit Log.';
-  if (/too many times|rate.?limit|service invoked/i.test(raw)) return 'Te veel acties achter elkaar — wacht een minuut en probeer opnieuw.';
-  if (/permission|not.*authoriz|access.*denied|geen toegang/i.test(raw)) return 'Geen toegang tot dit bestand. Vraag de eigenaar of probeer opnieuw in te loggen.';
-  if (/quota|limit\s*exceeded|dagelijkse limiet/i.test(raw)) return 'Dagelijkse limiet bereikt — probeer morgen opnieuw of upgrade naar Google Workspace.';
-  if (/timeout|deadline|time.?out/i.test(raw)) return 'Het duurde te lang — controleer je internet en probeer opnieuw.';
-  if (/network|fetch|getaddrinfo|enotfound/i.test(raw)) return 'Netwerkfout — controleer je internetverbinding en probeer opnieuw.';
-  if (/not found|niet gevonden|404/i.test(raw)) return 'Item niet gevonden — herlaad de pagina.';
-  if (/invalid|ongeldig|cannot read|undefined/i.test(raw)) return 'Ongeldige invoer — controleer de waarden en probeer opnieuw.';
+  // Unique Request ID — toonbaar in dialog footer, koppelbaar aan audit-log.
+  // Klant kan dit ID copieren in support-ticket; owner zoekt daarmee in
+  // audit-log naar exacte details + tenant-hash + tijdstip.
+  const reqId = _genereerRequestId_();
+  try { schrijfAuditLog_('FOUT_VERTAALD [' + reqId + ']', raw.slice(0, 240)); } catch (_) {}
+  if (!raw) return 'Er ging iets mis. Probeer opnieuw of bekijk de Audit Log. (ref: ' + reqId + ')';
+  const suffix = ' (ref: ' + reqId + ')';
+  if (/too many times|rate.?limit|service invoked/i.test(raw)) return 'Te veel acties achter elkaar — wacht een minuut en probeer opnieuw.' + suffix;
+  if (/permission|not.*authoriz|access.*denied|geen toegang/i.test(raw)) return 'Geen toegang tot dit bestand. Vraag de eigenaar of probeer opnieuw in te loggen.' + suffix;
+  if (/quota|limit\s*exceeded|dagelijkse limiet/i.test(raw)) return 'Dagelijkse limiet bereikt — probeer morgen opnieuw of upgrade naar Google Workspace.' + suffix;
+  if (/timeout|deadline|time.?out/i.test(raw)) return 'Het duurde te lang — controleer je internet en probeer opnieuw.' + suffix;
+  if (/network|fetch|getaddrinfo|enotfound/i.test(raw)) return 'Netwerkfout — controleer je internetverbinding en probeer opnieuw.' + suffix;
+  if (/not found|niet gevonden|404/i.test(raw)) return 'Item niet gevonden — herlaad de pagina.' + suffix;
+  if (/invalid|ongeldig|cannot read|undefined/i.test(raw)) return 'Ongeldige invoer — controleer de waarden en probeer opnieuw.' + suffix;
   // Behoud business-fouten die we zelf met `throw new Error(...)` gooien (NL-tekst)
-  if (/^[A-Za-zÀ-ÿ ]/.test(raw) && raw.length < 200 && !/[a-z]:[A-Z]|stack|trace/i.test(raw)) return raw;
-  return 'Er ging iets mis. Controleer je invoer en probeer opnieuw. (Details: Audit Log)';
+  if (/^[A-Za-zÀ-ÿ ]/.test(raw) && raw.length < 200 && !/[a-z]:[A-Z]|stack|trace/i.test(raw)) return raw + suffix;
+  return 'Er ging iets mis. Controleer je invoer en probeer opnieuw.' + suffix;
+}
+
+/**
+ * Genereert een korte, kopieerbare Request ID voor support-tracking.
+ * Format: 8 chars uit Utilities.getUuid() — kort genoeg voor mondeling
+ * doorgeven, uniek genoeg voor audit-log-zoekslag.
+ */
+function _genereerRequestId_() {
+  try { return Utilities.getUuid().slice(0, 8); }
+  catch (_) { return 'req' + Date.now().toString(36).slice(-6); }
 }
 
 // ─────────────────────────────────────────────
