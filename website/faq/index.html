@@ -32,7 +32,7 @@
   ]},
   {"@type":"FAQPage","mainEntity":[
     {"@type":"Question","name":"Moet ik elk jaar opnieuw betalen?","acceptedAnswer":{"@type":"Answer","text":"Nee. Je betaalt één keer €49 en daarna nooit meer. Geen jaarlijkse licentie, geen verlengingsmail, geen verborgen kosten."}},
-    {"@type":"Question","name":"Wat als het niet werkt voor mij?","acceptedAnswer":{"@type":"Answer","text":"Mail binnen 14 dagen na aankoop op hallo@boekhoudbaar.nl en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening."}},
+    {"@type":"Question","name":"Wat als het niet werkt voor mij?","acceptedAnswer":{"@type":"Answer","text":"Mail binnen 30 dagen na aankoop op hallo@boekhoudbaar.nl en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening."}},
     {"@type":"Question","name":"Waar staan mijn gegevens precies?","acceptedAnswer":{"@type":"Answer","text":"In één Google Spreadsheet, in jouw eigen Google Drive. Alleen jij — en wie jij expliciet toegang geeft — kan erbij. Ik kan er niet bij, Google gebruikt de inhoud niet voor advertenties."}},
     {"@type":"Question","name":"Kan mijn boekhouder meekijken?","acceptedAnswer":{"@type":"Answer","text":"Ja, gratis. Je klikt op Delen in Google Sheets, typt het mailadres van je boekhouder, en klaar. Geen extra licentie."}},
     {"@type":"Question","name":"Werkt het ook op een Mac of tablet?","acceptedAnswer":{"@type":"Answer","text":"Ja. Boekhoudbaar draait in je browser, dus je kunt het openen op Mac, Windows, Linux, iPad, zelfs je telefoon."}},
@@ -42,7 +42,11 @@
     {"@type":"Question","name":"Moet ik een nieuw @gmail.com-adres aanmaken?","acceptedAnswer":{"@type":"Answer","text":"Nee. Google laat je een account aanmaken met elk bestaand e-mailadres — bijvoorbeeld sam@jouwdomein.nl."}},
     {"@type":"Question","name":"Hoe verwerk ik betalingen van Mollie of Stripe?","acceptedAnswer":{"@type":"Answer","text":"Elke uitbetaling naar je bank boek je als bankontvangst, de transactiekosten als bankkosten (BTW-vrij). Stap-voor-stap voorbeeld in de meegeleverde instructie."}},
     {"@type":"Question","name":"Kan ik Boekhoudbaar gebruiken voor mijn KOR-aangifte?","acceptedAnswer":{"@type":"Answer","text":"Ja. Vul in instellingen aan dat KOR actief is, en de sheet rekent geen BTW meer op je facturen. Je doet jaarlijks een KOR-aangifte (op = op €20.000 omzet)."}},
-    {"@type":"Question","name":"Werkt Boekhoudbaar offline?","acceptedAnswer":{"@type":"Answer","text":"Niet volledig. Google Sheets heeft een offline-mode, maar de live functies (PDF genereren, e-mailen, BTW-aangifte) hebben internet nodig."}}
+    {"@type":"Question","name":"Werkt Boekhoudbaar offline?","acceptedAnswer":{"@type":"Answer","text":"Niet volledig. Google Sheets heeft een offline-mode, maar de live functies (PDF genereren, e-mailen, BTW-aangifte) hebben internet nodig."}},
+    {"@type":"Question","name":"Wat is de iDEAL-betaal-link op mijn factuur?","acceptedAnswer":{"@type":"Answer","text":"Bij elke factuur krijgt je klant een betaal-knop met iDEAL, Bancontact en creditcard. Klant scant of klikt — direct betaald. Werkt via Mollie. Eerste 100 transacties gratis bij Mollie, daarna ~€0,29 per transactie."}},
+    {"@type":"Question","name":"Hoe werkt de AI-bonnen-scan?","acceptedAnswer":{"@type":"Answer","text":"Maak een foto van je bon of upload een PDF. Boekhoudbaar leest leverancier, datum, bedrag en BTW automatisch in via Gemini Vision. Je hoeft alleen nog te checken en op Opslaan te klikken."}},
+    {"@type":"Question","name":"Hoe werkt de read-only-deelflow met mijn accountant?","acceptedAnswer":{"@type":"Answer","text":"Eén klik en er wordt een aparte spreadsheet gemaakt met alleen rapportages — Balans, W&V, Cashflow, BTW. Bron-data is verborgen. Accountant krijgt leesrechten voor 30 dagen (configureerbaar 1-365), daarna automatisch ingetrokken."}},
+    {"@type":"Question","name":"Wat is de BTW-spaarpot?","acceptedAnswer":{"@type":"Answer","text":"Bij elke factuur reserveert het systeem automatisch jouw BTW-deel op een aparte rekening (1205) zodat je het niet per ongeluk uitgeeft. Bij kwartaalaangifte staat het bedrag klaar voor overmaking naar de Belastingdienst."}}
   ]}
 ]}
 </script>
@@ -215,7 +219,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
 
     <details data-cat="prijs">
       <summary>Wat als het niet werkt voor mij?</summary>
-      <p>Mail me binnen <strong>14 dagen</strong> na aankoop op <a href="mailto:hallo@boekhoudbaar.nl">hallo@boekhoudbaar.nl</a> en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening.</p>
+      <p>Mail me binnen <strong>30 dagen</strong> na aankoop op <a href="mailto:hallo@boekhoudbaar.nl">hallo@boekhoudbaar.nl</a> en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening.</p>
     </details>
 
     <details data-cat="prijs">
@@ -236,6 +240,41 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
     <details data-cat="prijs">
       <summary>Kan ik Boekhoudbaar aanbevelen aan mijn klanten?</summary>
       <p>Ja, graag. Ben je boekhouder, accountant of ondernemerscoach? Mail me voor het partnermodel — je krijgt een vergoeding per klant die jij aanmeldt. Geen minimum, geen contract.</p>
+    </details>
+  </div>
+
+  <!-- NIEUWE FUNCTIES (Sprint A-L) -->
+  <div class="faq-categorie">
+    <h2 class="faq-categorie-titel">Nieuwe functies</h2>
+
+    <details data-cat="features">
+      <summary>Wat is de iDEAL-betaal-link op mijn factuur?</summary>
+      <p>Bij elke factuur krijgt je klant automatisch een betaal-knop met iDEAL, Bancontact en creditcard. Klant scant of klikt — direct betaald, geen IBAN-typo's. Werkt via Mollie. Eerste 100 transacties zijn gratis bij Mollie; daarna ~€0,29 per transactie (eigen Mollie-account vereist, maar de koppeling zit al in Boekhoudbaar).</p>
+    </details>
+
+    <details data-cat="features">
+      <summary>Hoe werkt de AI-bonnen-scan?</summary>
+      <p>Maak een foto van je bon (tankbeurt, lunch, materiaal) of upload een PDF. Boekhoudbaar leest leverancier, datum, bedrag en BTW automatisch in via Gemini Vision. Je hoeft alleen nog te checken en op "Opslaan" te klikken. Werkt ook met facturen die per mail binnenkomen.</p>
+    </details>
+
+    <details data-cat="features">
+      <summary>Wat houdt KvK-autofill in?</summary>
+      <p>Type een KvK-nummer en het systeem haalt direct adres, rechtsvorm en officiële bedrijfsnaam op via de KvK-API. Geen typefouten meer in klantgegevens. Bij verleggingsregeling weet de software direct of de BTW-status klopt.</p>
+    </details>
+
+    <details data-cat="features">
+      <summary>Wat zit er in het persoonlijk fiscaal advies?</summary>
+      <p>Op basis van jouw cijfers berekent het systeem live je geschatte IB + Zvw-bijdrage, met heffingskorting + arbeidskorting (incl. afbouw) + KIA + zelfstandigenaftrek + lijfrente-jaarruimte (30% Wet toekomst pensioenen) + AOW-aware schijven voor 67+. Je ziet concrete euro's: "stort €X in lijfrente, bespaar €Y belasting".</p>
+    </details>
+
+    <details data-cat="features">
+      <summary>Hoe werkt de read-only-deelflow met mijn accountant?</summary>
+      <p>Eén klik en er wordt een aparte spreadsheet gemaakt met alleen rapportages — Balans, W&amp;V, Cashflow, BTW Aangifte, Belastingadvies. Bron-data (Verkoopfacturen, Bankafschriften, Relaties) zijn verborgen. Je accountant krijgt alleen leesrechten via specifieke email. Default: 30 dagen toegang, daarna automatisch ingetrokken. Configureerbaar 1-365 dagen.</p>
+    </details>
+
+    <details data-cat="features">
+      <summary>Wat is de BTW-spaarpot?</summary>
+      <p>Bij elke factuur reserveert het systeem automatisch jouw BTW-deel — geboekt op een aparte rekening (1205 BTW-spaarpot) zodat je het niet per ongeluk uitgeeft. Bij de kwartaalaangifte staat het bedrag klaar om over te maken naar de Belastingdienst. Optioneel: zet uit via Instellingen → "BTW automatisch reserveren" = Nee.</p>
     </details>
   </div>
 

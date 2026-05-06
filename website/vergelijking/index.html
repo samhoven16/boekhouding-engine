@@ -88,6 +88,9 @@ section .sub-tekst{font-size:17px;color:var(--grijs);margin-top:14px;max-width:6
 .vergelijk-tabel thead .col-ons{color:var(--blauw);background:rgba(46,196,182,.12);}
 .vergelijk-tabel .ja{color:#1B5E20;}
 .vergelijk-tabel .nee{color:#9b1c1c;}
+/* ja-warm = "ja maar met haakje" — eerlijker dan pure ja/nee */
+.vergelijk-tabel .col-ons.ja{font-weight:700;color:#0F4F49;}
+.vergelijk-tabel td:not(.col-ons).ja{font-weight:500;color:#5C6B6A;font-size:13px;}
 
 /* FIT */
 .fit-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:36px;}
@@ -296,6 +299,42 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
             <td class="ja">✓ Eigen app</td>
             <td class="ja">✓ Eigen app</td>
           </tr>
+          <tr>
+            <td>iDEAL betaal-link op factuur</td>
+            <td class="col-ons ja">✓ Mollie geïntegreerd</td>
+            <td class="ja">✓ Vaak extra kosten</td>
+            <td class="ja">✓ Vaak extra kosten</td>
+          </tr>
+          <tr>
+            <td>AI-bonnen-scan (foto → autofill)</td>
+            <td class="col-ons ja">✓ Gemini Vision</td>
+            <td class="nee">✗ Alleen handmatig</td>
+            <td class="nee">✗ Alleen handmatig</td>
+          </tr>
+          <tr>
+            <td>KvK-gegevens auto-fill</td>
+            <td class="col-ons ja">✓ Bij elk KvK-nr</td>
+            <td class="nee">✗ Handmatig invullen</td>
+            <td class="nee">✗ Handmatig invullen</td>
+          </tr>
+          <tr>
+            <td>Persoonlijk fiscaal advies (live)</td>
+            <td class="col-ons ja">✓ IB+Zvw+heffingskorting</td>
+            <td class="nee">✗ Alleen rapportages</td>
+            <td class="nee">✗ Alleen rapportages</td>
+          </tr>
+          <tr>
+            <td>Accountant read-only deelflow</td>
+            <td class="col-ons ja">✓ Auto-revoke 30 dgn</td>
+            <td class="ja">✓ Extra zetwerk</td>
+            <td class="ja">✓ Extra zetwerk</td>
+          </tr>
+          <tr>
+            <td>BTW-spaarpot automatisch</td>
+            <td class="col-ons ja">✓ Per factuur gereserveerd</td>
+            <td class="nee">✗ Handmatig overboeken</td>
+            <td class="nee">✗ Handmatig overboeken</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -395,7 +434,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
   <!-- CTA -->
   <div class="page-cta">
     <h2>Past Boekhoudbaar bij jouw situatie?</h2>
-    <p>Probeer het 14 dagen risicoloos. Werkt het niet? Stuur me een mail, je €49 staat dezelfde dag terug.</p>
+    <p>Probeer het 30 dagen risicoloos. Werkt het niet? Stuur me een mail, je €49 staat dezelfde dag terug.</p>
     <a href="/kopen" class="btn-koop">Probeer Boekhoudbaar voor €49 →</a>
   </div>
 
