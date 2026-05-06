@@ -566,9 +566,11 @@ function boek(){
  */
 function boekReiskosten(data) {
   const ss = getSpreadsheet_();
-  const km = parseFloat(data.km) || 0;
+  // Strict parsing — voorkomt €0-reiskosten-boeking door corrupt invoer
+  const km = parseBedragStrict_(data.km, 'Aantal km');
   if (km <= 0) throw new Error('Aantal km moet groter dan 0 zijn');
-  const datum = parseDatum_(data.datum) || new Date();
+  if (km > 9999) throw new Error('Aantal km onwaarschijnlijk hoog (' + km + ') — controleer invoer');
+  const datum = parseDatumStrict_(data.datum, 'Datum');
   const bedrag = rondBedrag_(km * 0.23);
   const omschr = (data.omschr || 'Reiskosten') + ' (' + km + ' km × €0,23)';
   maakJournaalpost_(ss, {

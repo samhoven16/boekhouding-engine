@@ -575,13 +575,17 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 // ─────────────────────────────────────────────
 function verwerkUitgavenUitHoofdformulier_(ss, data) {
   const leverancier = String(data['Leveranciernaam'] || '').trim();
-  const datum       = parseDatum_(data['Factuurdatum uitgave']) || new Date();
-  const bedragExcl  = parseBedrag_(data['Bedrag excl. BTW'] || '0');
-  // Validatie EERST — voorkom gap in inkoopnummer-reeks
+  // Strict parsing: bij invalid datum/bedrag → throw met klant-vriendelijke melding
+  // i.p.v. silent fallback naar today/0 → factuur met €0,00 voorkomen.
   if (!leverancier) {
     schrijfAuditLog_('Uitgave geweigerd', 'leverancier ontbreekt');
     throw new Error('Leveranciernaam is verplicht.');
   }
+  let datum, bedragExcl;
+  try { datum = parseDatumStrict_(data['Factuurdatum uitgave'], 'Factuurdatum uitgave'); }
+  catch (e) { schrijfAuditLog_('Uitgave geweigerd', 'datum: ' + e.message); throw e; }
+  try { bedragExcl = parseBedragStrict_(data['Bedrag excl. BTW'], 'Bedrag excl. BTW'); }
+  catch (e) { schrijfAuditLog_('Uitgave geweigerd', 'bedrag: ' + e.message); throw e; }
   if (bedragExcl <= 0) {
     schrijfAuditLog_('Uitgave geweigerd', 'bedragExcl ≤ 0');
     throw new Error('Vul een bedrag in groter dan €0,00');
@@ -614,7 +618,18 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
     '', data['Notities uitgave'] || '', '', new Date(),
   ];
 
-  ss.getSheetByName(SHEETS.INKOOPFACTUREN).appendRow(inkoopData);
+  // Critical write — dubbel-loggen tegen sheet-failure
+  const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (!ifSheet) throw new Error('Tabblad Inkoopfacturen niet gevonden — run setup() eerst.');
+  try {
+    ifSheet.appendRow(inkoopData);
+  } catch (writeErr) {
+    noodLog_('INKOOPFACTUUR_SHEET_FOUT', 'IK' + inkoopNr + ' | ' + leverancier + ' | ' + bedragIncl + ' | ' + writeErr.message);
+    try { meldFataalAanOwner_('DATA_LOSS', 'appendRow inkoopfactuur faalde', { ref: 'IK' + inkoopNr, fout: writeErr.message }); } catch (_) {}
+    throw writeErr;
+  }
+  noodLog_('Inkoopfactuur opgeslagen', 'IK' + inkoopNr + ' | ' + bedragIncl);
+  SpreadsheetApp.flush();  // garandeer write vóór journaalposten
   try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
 
   const omschr = `Inkoopfactuur ${data['Factuurnummer leverancier'] || inkoopNr} – ${leverancier}`;
@@ -736,9 +751,12 @@ function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
 //  DECLARATIE (privé voorgeschoten)
 // ─────────────────────────────────────────────
 function verwerkDeclaratieUitHoofdformulier_(ss, data) {
-  const datum      = parseDatum_(data['Datum declaratie']) || new Date();
-  const bedragExcl = parseBedrag_(data['Bedrag excl. BTW declaratie'] || '0');
-  // Validatie EERST — voorkom gap in inkoopnummer-reeks bij lege submit
+  // Strict parsing voor financiële integriteit — bij ongeldig direct throw
+  let datum, bedragExcl;
+  try { datum = parseDatumStrict_(data['Datum declaratie'], 'Datum declaratie'); }
+  catch (e) { schrijfAuditLog_('Declaratie geweigerd', 'datum: ' + e.message); throw e; }
+  try { bedragExcl = parseBedragStrict_(data['Bedrag excl. BTW declaratie'], 'Bedrag declaratie'); }
+  catch (e) { schrijfAuditLog_('Declaratie geweigerd', 'bedrag: ' + e.message); throw e; }
   if (bedragExcl <= 0) {
     schrijfAuditLog_('Declaratie geweigerd', 'bedragExcl ≤ 0 — geen inkoopnummer geclaimd');
     throw new Error('Vul een bedrag in groter dan €0,00');
@@ -768,7 +786,18 @@ function verwerkDeclaratieUitHoofdformulier_(ss, data) {
     kostenRek, 'Declaratie', '', '', new Date(),
   ];
 
-  ss.getSheetByName(SHEETS.INKOOPFACTUREN).appendRow(inkoopData);
+  // Critical write — dubbel-loggen
+  const ifSheetD = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (!ifSheetD) throw new Error('Tabblad Inkoopfacturen niet gevonden — run setup() eerst.');
+  try {
+    ifSheetD.appendRow(inkoopData);
+  } catch (writeErr) {
+    noodLog_('DECLARATIE_SHEET_FOUT', 'IK' + inkoopNr + ' | ' + writeErr.message);
+    try { meldFataalAanOwner_('DATA_LOSS', 'appendRow declaratie faalde', { ref: 'IK' + inkoopNr }); } catch (_) {}
+    throw writeErr;
+  }
+  noodLog_('Declaratie opgeslagen', 'IK' + inkoopNr);
+  SpreadsheetApp.flush();
   try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
 
   // Privé-voorgeschoten kosten: kostenrekening (excl) + BTW-voorbelasting → 4500 (incl).

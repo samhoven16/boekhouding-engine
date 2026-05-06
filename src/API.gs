@@ -166,6 +166,23 @@ function verwerkFactuurWebhook_(ss, p) {
   if (!p.klantnaam) return jsonResponse_({ succes: false, fout: 'klantnaam is verplicht' });
   if (!p.omschrijving && !p.regel1_omschrijving) return jsonResponse_({ succes: false, fout: 'omschrijving of regel1_omschrijving is verplicht' });
 
+  // ── Idempotency-key (webhooks moeten replay-safe zijn) ────────────────
+  // Stripe/Mollie/Zapier kunnen dezelfde webhook 2× sturen bij retry.
+  // Klant kan ook idempotency_key meesturen. Zonder key: hash van payload.
+  const idemKey = String(p.idempotency_key || p.idempotencyKey || '').trim();
+  if (idemKey) {
+    const cacheKey = 'webhook_' + idemKey.slice(0, 60);
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      // Replay van eerdere call — return zelfde resultaat (idempotent)
+      try { schrijfAuditLog_('Webhook idempotent replay', cacheKey); } catch (_) {}
+      return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+    }
+    // Markeer "in behandeling" — voorkomt dat 2 parallelle replays beide doorgaan
+    cache.put(cacheKey, JSON.stringify({ succes: true, bericht: 'In behandeling — verstuur niet opnieuw' }), 3600);
+  }
+
   // Bouw data-object op compatibel met het formulierformaat
   const data = {
     'Klantnaam':                           p.klantnaam,
@@ -193,13 +210,22 @@ function verwerkFactuurWebhook_(ss, p) {
     // Pak de factuurnummer DIRECT uit het resultaat — voorkomt race-condition
     // waarbij parallelle invocations VOLGEND_FACTUUR_NR ondertussen ophogen.
     const result = verwerkInkomstenUitHoofdformulier_(ss, data);
-    return jsonResponse_({
+    const respObj = {
       succes: true,
       bericht: 'Factuur aangemaakt',
       factuurnummer: result && result.factuurnummer ? result.factuurnummer : 'onbekend',
       pdfUrl: result && result.pdfUrl ? result.pdfUrl : null,
-    });
+    };
+    // Cache definitief resultaat onder idempotency-key (replay levert nu echte data terug)
+    if (idemKey) {
+      try { CacheService.getScriptCache().put('webhook_' + idemKey.slice(0, 60), JSON.stringify(respObj), 21600); } catch (_) {}
+    }
+    return jsonResponse_(respObj);
   } catch (err) {
+    // Bij fout: verwijder idempotency-marker zodat retry kan
+    if (idemKey) {
+      try { CacheService.getScriptCache().remove('webhook_' + idemKey.slice(0, 60)); } catch (_) {}
+    }
     return jsonResponse_({ succes: false, fout: err.message });
   }
 }
