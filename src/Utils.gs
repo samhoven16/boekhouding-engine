@@ -111,11 +111,18 @@ function rondBedrag_(bedrag) {
 }
 
 /**
- * Formatteert een bedrag als EUR string
+ * Formatteert een bedrag als EUR-string in NL-standaard.
+ * Gebruikt non-breaking space (U+00A0) tussen € en bedrag — voorkomt dat
+ * "€ 1.234,56" over twee regels wordt afgebroken in HTML/PDF-render.
+ *
+ * Voorbeelden:
+ *   formatBedrag_(1234.56)  → "€ 1.234,56"
+ *   formatBedrag_(-99)      → "-€ 99,00"
+ *   formatBedrag_(0)        → "€ 0,00"
  */
 function formatBedrag_(bedrag) {
   const b = parseFloat(bedrag) || 0;
-  const prefix = b < 0 ? '-€' : '€';
+  const prefix = b < 0 ? '-€ ' : '€ ';
   return prefix + Math.abs(b).toLocaleString('nl-NL', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -691,7 +698,7 @@ function naarEuro_(bedrag, valuta) {
 }
 
 // ─────────────────────────────────────────────
-//  KVK API — auto-fill bedrijfsgegevens
+//  KvK API — auto-fill bedrijfsgegevens
 // ─────────────────────────────────────────────
 //
 // Vult adres/rechtsvorm automatisch in bij ingevoerd KvK-nummer.

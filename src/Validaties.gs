@@ -79,7 +79,7 @@ function valideerIban_(iban) {
 }
 
 // ─────────────────────────────────────────────
-//  KVK-NUMMER VALIDATIE
+//  KvK-NUMMER VALIDATIE
 //  Formaat: precies 8 cijfers
 // ─────────────────────────────────────────────
 

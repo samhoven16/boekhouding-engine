@@ -78,21 +78,35 @@ describe('Utils.gs', () => {
   });
 
   describe('formatBedrag_', () => {
-    test('positief bedrag → € prefix', () => {
-      expect(ctx.formatBedrag_(1234.56)).toMatch(/^€/);
-      expect(ctx.formatBedrag_(1234.56)).toContain('1.234,56');
+    // NL-locale toLocaleString kan thousand-separator U+00A0 (non-breaking
+    // space) of '.' gebruiken afhankelijk van Intl-implementatie. We
+    // valideren patroon (€ + spatie + cijfers) i.p.v. exacte byte-match.
+    const eurPattern = /^€\s\d/;
+
+    test('positief bedrag → "€ "-prefix met spatie + 1.234,56', () => {
+      const out = ctx.formatBedrag_(1234.56);
+      expect(out).toMatch(eurPattern);
+      expect(out).toMatch(/1[\. ]234,56$/);
     });
 
-    test('negatief bedrag → -€ prefix', () => {
-      expect(ctx.formatBedrag_(-99)).toMatch(/^-€/);
+    test('negatief bedrag → "-€ "-prefix', () => {
+      const out = ctx.formatBedrag_(-99);
+      expect(out).toMatch(/^-€\s/);
+      expect(out).toContain('99,00');
     });
 
-    test('nul → €0,00', () => {
-      expect(ctx.formatBedrag_(0)).toBe('€0,00');
+    test('nul → € + spatie + 0,00', () => {
+      const out = ctx.formatBedrag_(0);
+      expect(out).toMatch(/^€\s/);
+      expect(out).toContain('0,00');
     });
 
     test('afrondt op 2 decimalen', () => {
       expect(ctx.formatBedrag_(1.236)).toContain('1,24');
+    });
+
+    test('spatie ná €-symbool aanwezig (NL-standaard)', () => {
+      expect(ctx.formatBedrag_(50)).toMatch(/^€\s/);
     });
   });
 
