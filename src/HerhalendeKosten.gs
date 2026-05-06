@@ -237,7 +237,8 @@ function verwerkHerhalendeKosten_() {
 
   // Voorkom dubbele boekingen bij gelijktijdige dashboard-refreshes
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(8000)) return { geboekt: 0, komend: [] };
+  // 30s timeout — financiële operaties hebben voorrang boven UI-snelheid
+  if (!lock.tryLock(30000)) return { geboekt: 0, komend: [] };
 
   // Cap inhaal-iteraties: voorkomt runaway-loops als iemand een datum
   // in 1990 invoert (ongeluk of ongeldige migratie).
@@ -321,7 +322,7 @@ function verwerkHerhalendeKosten_() {
 
 function _volgendHerhalendKostId_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const sleutel = 'volgendHerhalendKostId';

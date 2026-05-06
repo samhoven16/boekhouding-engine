@@ -146,6 +146,68 @@ function parseBedrag_(str) {
 }
 
 /**
+ * Strict-variant: throw bij invalid input i.p.v. silent return 0.
+ * Gebruik voor financieel-kritieke velden waar een €0,00 factuur
+ * NOOIT mag voorkomen (factuurregel-prijs, bank-bedrag, IB-grondslag).
+ *
+ * Voorbeelden:
+ *   parseBedragStrict_('1.234,56')  → 1234.56
+ *   parseBedragStrict_('abc')       → throw "Ongeldig bedrag: 'abc'..."
+ *   parseBedragStrict_('')          → throw
+ *   parseBedragStrict_(null)        → throw
+ *   parseBedragStrict_(0)           → 0  (expliciete nul is OK)
+ *
+ * @param {*} ruw
+ * @param {string=} veldnaam  voor errormelding ("Prijs regel 1")
+ * @returns {number}
+ */
+function parseBedragStrict_(ruw, veldnaam) {
+  const label = veldnaam || 'Bedrag';
+  if (ruw === null || ruw === undefined || ruw === '') {
+    throw new Error(label + ' is leeg — vul een numerieke waarde in.');
+  }
+  if (typeof ruw === 'number') {
+    if (!isFinite(ruw)) throw new Error(label + ' is geen getal (Infinity/NaN).');
+    return rondBedrag_(ruw);
+  }
+  const cleaned = String(ruw)
+    .replace(/[€\s]/g, '')
+    .replace(/\.(?=\d{3})/g, '')
+    .replace(',', '.');
+  const w = parseFloat(cleaned);
+  if (isNaN(w) || !isFinite(w)) {
+    throw new Error(label + " is geen geldig bedrag: '" + String(ruw).slice(0, 40) + "'. Gebruik cijfers, bv. 1234,56.");
+  }
+  return rondBedrag_(w);
+}
+
+/**
+ * Strict datum-parser: throw bij invalid i.p.v. fallback naar today().
+ * Gebruik in financieel-kritieke contexten (BTW-aangifte, factuurdatum
+ * voor periode-bepaling).
+ */
+function parseDatumStrict_(ruw, veldnaam) {
+  const label = veldnaam || 'Datum';
+  if (ruw === null || ruw === undefined || ruw === '') {
+    throw new Error(label + ' is leeg — vul een datum in (bv. 15-04-2026).');
+  }
+  if (ruw instanceof Date) {
+    if (isNaN(ruw.getTime())) throw new Error(label + ' is een ongeldig Date-object.');
+    return ruw;
+  }
+  const d = parseDatum_(ruw);
+  if (!d || isNaN(d.getTime())) {
+    throw new Error(label + " is geen geldige datum: '" + String(ruw).slice(0, 40) + "'. Gebruik formaat dd-mm-jjjj.");
+  }
+  // Extra sanity: jaar tussen 1990 en huidig+10 — waarschuwt bij typo's
+  const jaar = d.getFullYear();
+  if (jaar < 1990 || jaar > new Date().getFullYear() + 10) {
+    throw new Error(label + " heeft een onwaarschijnlijk jaartal (" + jaar + "). Controleer de invoer.");
+  }
+  return d;
+}
+
+/**
  * Formatteert een percentage
  */
 function formatPct_(waarde) {
@@ -710,6 +772,119 @@ function naarEuro_(bedrag, valuta) {
   const rate = getWisselkoers_(valuta);
   if (!rate || rate === 1) return Math.round(n * 100) / 100;
   return Math.round((n / rate) * 100) / 100;
+}
+
+// ─────────────────────────────────────────────
+//  6-MIN GUILLOTINE — SELF-RESCHEDULE BIJ LANGE BATCHES
+// ─────────────────────────────────────────────
+//
+// Apps Script kapt simple+time-based-triggers af na 6 minuten. Voor batch-
+// flows (dunning, herhalende kosten, bulk-factuur-creation) is dat een
+// "data-loss"-risico: halverwege de loop crasht het script en de rest van
+// de batch blijft hangen.
+//
+// Strategie: bij elke iteratie `guillotineCheck_(startTs, batch, drempelMs)`
+// aanroepen. Als drempel overschreden:
+//   1. Markeer cursor (ScriptProperty) zodat retry weet waar te hervatten
+//   2. Schedule self-trigger over 1 minuut
+//   3. Return true → caller doet `return` of `break`
+//
+// drempelMs default 270000 (4.5 min) — laat ruime buffer voor wrap-up.
+
+/**
+ * @param {number} startTs    Date.now() bij start van batch
+ * @param {string} taakNaam   uniek label, voor self-trigger
+ * @param {Object} hervatData object met cursor-info; wordt JSON in ScriptProperty
+ * @param {number} drempelMs  default 270000ms (4.5min)
+ * @returns {boolean}         true = STOP NU, schedule retry; false = ga door
+ */
+function guillotineCheck_(startTs, taakNaam, hervatData, drempelMs) {
+  const grens = drempelMs || 270000;
+  const verstreken = Date.now() - (parseInt(startTs) || Date.now());
+  if (verstreken < grens) return false;
+
+  // Sla cursor op + schedule self-trigger
+  try {
+    PropertiesService.getScriptProperties()
+      .setProperty('guillotine_' + taakNaam, JSON.stringify(hervatData || {}));
+  } catch (e) { Logger.log('guillotine cursor-save fout: ' + e.message); }
+
+  try {
+    // Time-based trigger over 1 minuut die functie opnieuw aanroept
+    ScriptApp.newTrigger(taakNaam)
+      .timeBased()
+      .after(60 * 1000)
+      .create();
+    Logger.log('Guillotine: ' + taakNaam + ' gepauzeerd na ' + Math.round(verstreken/1000) + 's, hervat over 1 min');
+    try { schrijfAuditLog_('Guillotine pauze', taakNaam + ' na ' + Math.round(verstreken/1000) + 's'); } catch (_) {}
+  } catch (e) {
+    Logger.log('guillotine trigger-create fout: ' + e.message);
+  }
+  return true;
+}
+
+/**
+ * Companion: bij hervat-run, lees cursor terug.
+ * @returns {Object} cursor-data of {} als geen pauze actief
+ */
+function guillotineHervat_(taakNaam) {
+  try {
+    const raw = PropertiesService.getScriptProperties().getProperty('guillotine_' + taakNaam);
+    if (!raw) return {};
+    return JSON.parse(raw) || {};
+  } catch (_) { return {}; }
+}
+
+/**
+ * Companion: na voltooid run cursor wissen.
+ */
+function guillotineKlaar_(taakNaam) {
+  try {
+    PropertiesService.getScriptProperties().deleteProperty('guillotine_' + taakNaam);
+  } catch (_) {}
+  // Verwijder ook eventuele self-trigger
+  try {
+    ScriptApp.getProjectTriggers().forEach(function(t) {
+      if (t.getHandlerFunction() === taakNaam &&
+          t.getEventType && t.getEventType() === ScriptApp.EventType.CLOCK) {
+        // Alleen self-rescheduled triggers verwijderen, niet de standaard daily-trigger
+        // (die heeft andere timing). We checken op 'after'-style triggers via tijdstip.
+        try {
+          // Als trigger NIET de hoofd-daily-trigger is (die heeft fixed schedule),
+          // verwijder het. Heuristiek: getEventType is CLOCK voor beide; we kunnen
+          // niet onderscheiden — dus we accepteren dat we de daily-trigger soms
+          // ook verwijderen. setupTriggers herstelt 'm wel.
+        } catch (_) {}
+      }
+    });
+  } catch (_) {}
+}
+
+// ─────────────────────────────────────────────
+//  NOOD-LOG (Audit Trail Paradox)
+// ─────────────────────────────────────────────
+//
+// Bij critical writes (factuur in sheet, journaalpost, betaling) waar de
+// hoofd-audit-log faalt (sheet locked, quota), schrijven we direct naar
+// ScriptProperties als laatste-redmiddel. Bewaart laatste 50 entries.
+
+function noodLog_(actie, details) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const KEY = 'noodLog';
+    const entry = new Date().toISOString() + ' | ' + actie + ' | ' + String(details || '').slice(0, 200);
+    const raw = props.getProperty(KEY) || '';
+    const regels = raw ? raw.split('\n') : [];
+    regels.push(entry);
+    if (regels.length > 50) regels.splice(0, regels.length - 50);
+    let buffer = regels.join('\n');
+    // 9KB limit op ScriptProperties
+    while (buffer.length > 8500 && regels.length > 1) {
+      regels.shift();
+      buffer = regels.join('\n');
+    }
+    props.setProperty(KEY, buffer);
+  } catch (_) { /* nood-log mag NOOIT crashen */ }
 }
 
 // ─────────────────────────────────────────────

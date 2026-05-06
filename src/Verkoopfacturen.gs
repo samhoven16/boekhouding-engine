@@ -293,6 +293,18 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   // Flush vóór email — zorg dat status-changes uit nieuw-aangemaakte factuurs zichtbaar zijn
   SpreadsheetApp.flush();
 
+  // Ghost-success guard: idempotency-key. Zelfde mechanisme als
+  // verwerkInkomstenUitHoofdformulier_ — voorkomt dubbele mail bij retry-after-crash.
+  const idemKey = 'emailVerzonden_' + factuurnummer;
+  const propsIdem = PropertiesService.getScriptProperties();
+  if (propsIdem.getProperty(idemKey) === 'DONE') {
+    Logger.log('stuurFactuurNaarEmailAdres: SKIP — al gemarkeerd DONE voor ' + factuurnummer);
+    try { schrijfAuditLog_('Email DUBBEL geblokkeerd', factuurnummer + ' (factuurlijst)'); } catch (_) {}
+    try { props.deleteProperty(flagKey); } catch (_) {}
+    return true;  // optimistisch — caller hoeft niet opnieuw te proberen
+  }
+  propsIdem.setProperty(idemKey, 'PENDING:' + Date.now());
+
   const ok = stuurFactuurEmailNaarKlant_(
     email,
     gevonden[5],   // klantnaam
@@ -302,6 +314,13 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
     pdfUrl,
     null           // ublUrl — optioneel
   );
+
+  // Idempotency: markeer DONE direct na succes (atomair vóór sheet-write)
+  if (ok) {
+    try { propsIdem.setProperty(idemKey, 'DONE'); } catch (_) {}
+  } else {
+    try { propsIdem.deleteProperty(idemKey); } catch (_) {}  // retry mag
+  }
 
   if (ok) {
     // Alleen upgraden naar VERZONDEN als de factuur nog niet betaald of gecrediteerd is.
@@ -860,7 +879,9 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
   // journaalpost = €X dubbel geboekt). LockService.tryLock(3s) wacht max
   // 3s; bij timeout valt aanroep door — idempotency-check vangt rest.
   const lock = LockService.getScriptLock();
-  const gotLock = lock.tryLock(3000);
+  // 30s — financiële integriteit > UI-snelheid; voorkomt dubbele journaalpost
+  // bij parallelle "Markeer betaald" + bank-CSV-import
+  const gotLock = lock.tryLock(30000);
 
   try {
     const ss    = getSpreadsheet_();

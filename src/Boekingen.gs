@@ -90,7 +90,7 @@ function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
   const lock = LockService.getScriptLock();
   let lockHeld = false;
   try {
-    lock.waitLock(10000);
+    lock.waitLock(30000);
     lockHeld = true;
   } catch (e) {
     Logger.log('updateGrootboekSaldo_: kon geen lock krijgen voor ' + rekeningCode + ': ' + e.message);
@@ -620,7 +620,7 @@ function koppelTransactiesAanFacturen() {
 // ─────────────────────────────────────────────
 function volgendFactuurnummer_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const nr = parseInt(props.getProperty(PROP.VOLGEND_FACTUUR_NR) || '1');
@@ -633,7 +633,7 @@ function volgendFactuurnummer_() {
 
 function volgendInkoopNummer_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const nr = parseInt(props.getProperty(PROP.VOLGEND_INKOOP_NR) || '1');
@@ -646,7 +646,7 @@ function volgendInkoopNummer_() {
 
 function volgendBoekingId_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const nr = parseInt(props.getProperty(PROP.VOLGEND_BOEKING_NR) || '1');
@@ -659,7 +659,7 @@ function volgendBoekingId_() {
 
 function volgendTransactieId_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const sleutel = 'volgendTransactieId';
@@ -673,7 +673,7 @@ function volgendTransactieId_() {
 
 function volgendRelatieId_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const sleutel = 'volgendRelatieId';
@@ -714,7 +714,7 @@ function zoekOfMaakRelatie_(ss, naam, type, email) {
   const emailNorm = String(email || '').trim().toLowerCase();
 
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const sheet = ss.getSheetByName(SHEETS.RELATIES);
     if (!sheet) throw new Error('Tabblad Relaties ontbreekt — run setup opnieuw');
