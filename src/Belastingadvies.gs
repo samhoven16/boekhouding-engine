@@ -376,6 +376,14 @@ function isAowGerechtigd_(B) {
 //  VOLLEDIG BELASTINGADVIES BEREKENEN
 // ─────────────────────────────────────────────
 function berekenBelastingadvies_(ss) {
+  // Cache-wrapper: belastingadvies herberekening duurt 1-2s. Cache 10 min,
+  // invalidatie via bustCache_('advies') na schrijfacties op kerntabbladen.
+  const jaar = new Date().getFullYear();
+  const cacheKey = 'advies_' + jaar + '_v' + cacheVersie_('advies');
+  return cacheBerekening_(cacheKey, 600, function() { return _berekenBelastingadviesRaw_(ss); });
+}
+
+function _berekenBelastingadviesRaw_(ss) {
   const jaar = new Date().getFullYear();
   // Re-evaluate per call zodat server-side tarief-overrides en jaar-rollovers
   // niet pas na een script-reload worden opgepikt. Module-scope BELASTING is

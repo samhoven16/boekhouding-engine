@@ -371,6 +371,9 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 
   vfSheet.appendRow(factuurData);
   const nieuweRij = vfSheet.getLastRow();
+  // Invalideer KPI + Belastingadvies cache — anders ziet klant op Dashboard
+  // de nieuwe factuur pas na 5 min als de cache verloopt.
+  try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
   schrijfAuditLog_('Factuur in sheet', factuurNummerOpgemaakt + ' | klant: ' + klantnaam + ' | excl: ' + totalExcl + ' | incl: ' + totalIncl);
 
   // Journaalposten
@@ -523,6 +526,7 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
   ];
 
   ss.getSheetByName(SHEETS.INKOOPFACTUREN).appendRow(inkoopData);
+  try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
 
   const omschr = `Inkoopfactuur ${data['Factuurnummer leverancier'] || inkoopNr} – ${leverancier}`;
   maakJournaalpost_(ss, {
@@ -676,6 +680,7 @@ function verwerkDeclaratieUitHoofdformulier_(ss, data) {
   ];
 
   ss.getSheetByName(SHEETS.INKOOPFACTUREN).appendRow(inkoopData);
+  try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
 
   // Privé-voorgeschoten kosten: kostenrekening (excl) + BTW-voorbelasting → 4500 (incl).
   // Eerdere versie boekte alleen excl. waardoor BTW niet als voorbelasting werd
@@ -941,6 +946,7 @@ function verwerkInkoopfactuurFormulier(e) {
     ];
 
     ss.getSheetByName(SHEETS.INKOOPFACTUREN).appendRow(inkoopData);
+  try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
 
     // Journaalpost: Kosten + BTW voorbelasting | Credit: Crediteuren
     const omschr = `Inkoopfactuur ${data['Factuurnummer leverancier'] || inkoopNr} – ${leverancier}`;

@@ -698,6 +698,91 @@ function naarEuro_(bedrag, valuta) {
 }
 
 // ─────────────────────────────────────────────
+//  CACHE-WRAPPER VOOR DURE BEREKENINGEN
+// ─────────────────────────────────────────────
+//
+// CacheService heeft 100KB per key en 6u TTL. Dit helper-patroon:
+//   1. Checkt cache → snel pad als hit
+//   2. Bij miss: probeer LockService voor stampede-prevention
+//   3. Berekent → schrijft naar cache
+//
+// Voor Belastingadvies + Dashboard-KPI's die anders 1-3s herberekenen
+// op elke open.
+
+/**
+ * @param {string}   sleutel   uniek + bevat invalidatie-fingerprint
+ *                             (bv. 'kpi_2026_<lastEditTimestamp>')
+ * @param {number}   ttlSec    cache-TTL in seconden (max 21600 = 6u)
+ * @param {function} bereken   functie die bij miss draait
+ * @returns berekende waarde (parsed JSON)
+ */
+function cacheBerekening_(sleutel, ttlSec, bereken) {
+  const cache = CacheService.getScriptCache();
+  const veiligTtl = Math.min(parseInt(ttlSec) || 300, 21600);
+
+  // Cache-hit?
+  try {
+    const cached = cache.get(sleutel);
+    if (cached) return JSON.parse(cached);
+  } catch (_) { /* corrupt cache → bereken opnieuw */ }
+
+  // Cache-miss: stampede-prevention via LockService.
+  // Eerste roeper berekent, anderen wachten max 5s op cache (skip lock-wait
+  // als al pre-empted).
+  const lock = LockService.getScriptLock();
+  const gotLock = lock.tryLock(5000);
+
+  // Tijdens lock-wait kan een ander proces de cache hebben gevuld → opnieuw checken
+  if (gotLock) {
+    try {
+      const recheck = cache.get(sleutel);
+      if (recheck) return JSON.parse(recheck);
+    } catch (_) {}
+  }
+
+  try {
+    const waarde = bereken();
+    try {
+      const json = JSON.stringify(waarde);
+      // CacheService cap: 100KB per key
+      if (json.length < 95 * 1024) cache.put(sleutel, json, veiligTtl);
+    } catch (e) { Logger.log('cacheBerekening_ put fout: ' + e.message); }
+    return waarde;
+  } finally {
+    if (gotLock) try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+/**
+ * Invalideert cache-entries via prefix-match. CacheService heeft geen
+ * native prefix-delete; we tracken keys via een index in een aparte cache-key.
+ *
+ * Roep aan na write-acties op kerntabbladen (Verkoopfacturen, Inkoopfacturen,
+ * Banktransacties, Journaalposten) zodat dashboard-KPI volgende open vers is.
+ */
+function bustCache_(prefix) {
+  try {
+    const cache = CacheService.getScriptCache();
+    // Eenvoudige strategie: vermenigvuldig de cache-version-key. Berekeningen
+    // die deze versie in hun sleutel embedden krijgen automatisch een miss.
+    const VERSIE_KEY = 'cacheVersie_' + (prefix || 'global');
+    const huidig = parseInt(cache.get(VERSIE_KEY) || '0');
+    cache.put(VERSIE_KEY, String(huidig + 1), 21600);
+  } catch (e) { Logger.log('bustCache_ fout: ' + e.message); }
+}
+
+/**
+ * Geeft de huidige cache-versie-suffix voor sleutels die invalidate-aware moeten zijn.
+ * Voorbeeld:
+ *   const sleutel = 'kpi_' + jaar + '_v' + cacheVersie_('kpi');
+ */
+function cacheVersie_(prefix) {
+  try {
+    return CacheService.getScriptCache().get('cacheVersie_' + (prefix || 'global')) || '0';
+  } catch (_) { return '0'; }
+}
+
+// ─────────────────────────────────────────────
 //  RATE-LIMITING + OUTBOUND URL-ALLOWLIST
 // ─────────────────────────────────────────────
 //
