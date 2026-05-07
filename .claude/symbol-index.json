@@ -9,133 +9,77 @@
   "doGet": [
     {
       "file": "API.gs",
-      "line": 120,
+      "line": 146,
       "kind": "function"
     }
   ],
   "verwerkFactuurWebhook_": [
     {
       "file": "API.gs",
-      "line": 165,
+      "line": 191,
       "kind": "function"
     }
   ],
   "verwerkKostenWebhook_": [
     {
       "file": "API.gs",
-      "line": 236,
+      "line": 262,
       "kind": "function"
     }
   ],
   "verwerkDeclaratieWebhook_": [
     {
       "file": "API.gs",
-      "line": 268,
+      "line": 294,
       "kind": "function"
     }
   ],
   "slaKlantOpViaApi_": [
     {
       "file": "API.gs",
-      "line": 291,
+      "line": 317,
       "kind": "function"
     }
   ],
   "statusResponse_": [
     {
       "file": "API.gs",
-      "line": 300,
+      "line": 326,
       "kind": "function"
     }
   ],
   "toonZapierInstructies": [
     {
       "file": "API.gs",
-      "line": 319,
+      "line": 345,
       "kind": "function"
     }
   ],
   "jsonResponse_": [
     {
       "file": "API.gs",
-      "line": 426,
+      "line": 452,
       "kind": "function"
     }
   ],
   "veiligVergelijkApi_": [
     {
       "file": "API.gs",
-      "line": 437,
+      "line": 463,
       "kind": "function"
     }
   ],
   "_hmacSha256Hex_": [
     {
       "file": "API.gs",
-      "line": 456,
+      "line": 482,
       "kind": "function"
     }
   ],
   "safeJsonParse_": [
     {
       "file": "API.gs",
-      "line": 463,
-      "kind": "function"
-    }
-  ],
-  "ACCOUNTANT_SHARES_PROP": [
-    {
-      "file": "Accountant.gs",
-      "line": 19,
-      "kind": "const"
-    }
-  ],
-  "ACCOUNTANT_RAPPORT_TABS": [
-    {
-      "file": "Accountant.gs",
-      "line": 20,
-      "kind": "const"
-    }
-  ],
-  "ACCOUNTANT_DEFAULT_DAGEN": [
-    {
-      "file": "Accountant.gs",
-      "line": 21,
-      "kind": "const"
-    }
-  ],
-  "deelMetAccountant": [
-    {
-      "file": "Accountant.gs",
-      "line": 26,
-      "kind": "function"
-    }
-  ],
-  "_maakAccountantKopie_": [
-    {
-      "file": "Accountant.gs",
-      "line": 73,
-      "kind": "function"
-    }
-  ],
-  "_laadShares_": [
-    {
-      "file": "Accountant.gs",
-      "line": 136,
-      "kind": "function"
-    }
-  ],
-  "ruimVerlopenShares_": [
-    {
-      "file": "Accountant.gs",
-      "line": 147,
-      "kind": "function"
-    }
-  ],
-  "toonAccountantShares": [
-    {
-      "file": "Accountant.gs",
-      "line": 172,
+      "line": 489,
       "kind": "function"
     }
   ],
@@ -205,63 +149,63 @@
   "valideerBtwInvariants_": [
     {
       "file": "BTW.gs",
-      "line": 195,
+      "line": 219,
       "kind": "function"
     }
   ],
   "zetBtwAangifteOpSheet_": [
     {
       "file": "BTW.gs",
-      "line": 253,
+      "line": 277,
       "kind": "function"
     }
   ],
   "sluitBtwPeriode": [
     {
       "file": "BTW.gs",
-      "line": 340,
+      "line": 364,
       "kind": "function"
     }
   ],
   "controleerKor": [
     {
       "file": "BTW.gs",
-      "line": 459,
+      "line": 483,
       "kind": "function"
     }
   ],
   "getBtwPerMaand_": [
     {
       "file": "BTW.gs",
-      "line": 515,
+      "line": 539,
       "kind": "function"
     }
   ],
   "parseBtwTarief_": [
     {
       "file": "BTW.gs",
-      "line": 572,
+      "line": 596,
       "kind": "function"
     }
   ],
   "bepaalBtwPeriode_": [
     {
       "file": "BTW.gs",
-      "line": 584,
+      "line": 608,
       "kind": "function"
     }
   ],
   "bepaalBtwDeadline_": [
     {
       "file": "BTW.gs",
-      "line": 596,
+      "line": 620,
       "kind": "function"
     }
   ],
   "volgendeWerkdag_": [
     {
       "file": "BTW.gs",
-      "line": 611,
+      "line": 635,
       "kind": "function"
     }
   ],
@@ -447,108 +391,115 @@
       "kind": "function"
     }
   ],
+  "BELASTING_META": [
+    {
+      "file": "Belastingadvies.gs",
+      "line": 46,
+      "kind": "const"
+    }
+  ],
   "BELASTING_PER_JAAR": [
     {
       "file": "Belastingadvies.gs",
-      "line": 42,
+      "line": 67,
       "kind": "const"
     }
   ],
   "getBelasting_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 189,
+      "line": 214,
       "kind": "function"
     }
   ],
   "BELASTING": [
     {
       "file": "Belastingadvies.gs",
-      "line": 234,
+      "line": 259,
       "kind": "const"
     }
   ],
   "berekenKiaAftrek_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 248,
+      "line": 273,
       "kind": "function"
     }
   ],
   "berekenIBProgressief_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 268,
+      "line": 293,
       "kind": "function"
     }
   ],
   "berekenZvw_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 303,
+      "line": 328,
       "kind": "function"
     }
   ],
   "berekenHeffingskorting_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 318,
+      "line": 343,
       "kind": "function"
     }
   ],
   "berekenArbeidskorting_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 342,
+      "line": 367,
       "kind": "function"
     }
   ],
   "isAowGerechtigd_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 361,
+      "line": 386,
       "kind": "function"
     }
   ],
   "berekenBelastingadvies_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 378,
+      "line": 403,
       "kind": "function"
     }
   ],
   "_berekenBelastingadviesRaw_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 386,
+      "line": 411,
       "kind": "function"
     }
   ],
   "genereerBelastingadvies": [
     {
       "file": "Belastingadvies.gs",
-      "line": 966,
+      "line": 1010,
       "kind": "function"
     }
   ],
   "scanAfschrijvingskandidaten_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 1230,
+      "line": 1274,
       "kind": "function"
     }
   ],
   "signaleerAfschrijvingskandidaat_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 1264,
+      "line": 1308,
       "kind": "function"
     }
   ],
   "berekenPriveBelastingvoordelen_": [
     {
       "file": "Belastingadvies.gs",
-      "line": 1276,
+      "line": 1320,
       "kind": "function"
     }
   ],
@@ -595,7 +546,7 @@
     },
     {
       "file": "NieuweBoeking.gs",
-      "line": 629,
+      "line": 674,
       "kind": "function"
     }
   ],
@@ -815,63 +766,63 @@
   "_verwerkKosten_": [
     {
       "file": "BoekingEngine.gs",
-      "line": 286,
+      "line": 303,
       "kind": "function"
     }
   ],
   "_verwerkDeclaratie_": [
     {
       "file": "BoekingEngine.gs",
-      "line": 321,
+      "line": 338,
       "kind": "function"
     }
   ],
   "_slaBonoOp_": [
     {
       "file": "BoekingEngine.gs",
-      "line": 356,
+      "line": 373,
       "kind": "function"
     }
   ],
   "scanDocumentMetAI": [
     {
       "file": "BoekingEngine.gs",
-      "line": 377,
+      "line": 394,
       "kind": "function"
     }
   ],
   "parseSpraakinvoer": [
     {
       "file": "BoekingEngine.gs",
-      "line": 427,
+      "line": 444,
       "kind": "function"
     }
   ],
   "schrijfAuditLog_": [
     {
       "file": "BoekingEngine.gs",
-      "line": 466,
+      "line": 483,
       "kind": "function"
     }
   ],
   "auditLog_": [
     {
       "file": "BoekingEngine.gs",
-      "line": 503,
+      "line": 520,
       "kind": "function"
     }
   ],
   "slaBusinessTypeOp": [
     {
       "file": "BoekingEngine.gs",
-      "line": 506,
+      "line": 523,
       "kind": "function"
     }
   ],
   "getBusinessType": [
     {
       "file": "BoekingEngine.gs",
-      "line": 513,
+      "line": 530,
       "kind": "function"
     }
   ],
@@ -1455,133 +1406,140 @@
   "maakDashboardGrafieken_": [
     {
       "file": "Dashboard.gs",
-      "line": 616,
+      "line": 628,
       "kind": "function"
     }
   ],
   "berekenMaandData_": [
     {
       "file": "Dashboard.gs",
-      "line": 697,
+      "line": 709,
       "kind": "function"
     }
   ],
   "columnToLetter_": [
     {
       "file": "Dashboard.gs",
-      "line": 743,
+      "line": 755,
       "kind": "function"
     }
   ],
   "berekenRoiData_": [
     {
       "file": "Dashboard.gs",
-      "line": 757,
+      "line": 769,
       "kind": "function"
     }
   ],
   "schoonPlaceholderwaarden_": [
     {
       "file": "Dashboard.gs",
-      "line": 815,
+      "line": 827,
       "kind": "function"
     }
   ],
   "zetStatusColorRules_": [
     {
       "file": "Dashboard.gs",
-      "line": 842,
+      "line": 854,
       "kind": "function"
     }
   ],
   "schrijfEmptyStateHints_": [
     {
       "file": "Dashboard.gs",
-      "line": 907,
+      "line": 919,
       "kind": "function"
     }
   ],
   "bepaalStatusNu_": [
     {
       "file": "Dashboard.gs",
-      "line": 951,
+      "line": 963,
       "kind": "function"
     }
   ],
   "detecteerAfwijkingen_": [
     {
       "file": "Dashboard.gs",
-      "line": 1015,
+      "line": 1027,
       "kind": "function"
     }
   ],
   "berekenBtwIndicatie_": [
     {
       "file": "Dashboard.gs",
-      "line": 1076,
+      "line": 1088,
       "kind": "function"
     }
   ],
   "schrijfBelastingvoordeelWidget_": [
     {
       "file": "Dashboard.gs",
-      "line": 1131,
+      "line": 1143,
       "kind": "function"
     }
   ],
   "berekenKpiData_": [
     {
       "file": "Dashboard.gs",
-      "line": 1222,
+      "line": 1234,
       "kind": "function"
     }
   ],
   "_berekenKpiDataRaw_": [
     {
       "file": "Dashboard.gs",
-      "line": 1230,
+      "line": 1242,
       "kind": "function"
     }
   ],
   "schrijfWaarschuwingen_": [
     {
       "file": "Dashboard.gs",
-      "line": 1305,
+      "line": 1317,
       "kind": "function"
     }
   ],
   "diagnoseDashboard": [
     {
       "file": "Dashboard.gs",
-      "line": 1393,
+      "line": 1405,
       "kind": "function"
     }
   ],
   "openDashboard": [
     {
       "file": "Dashboard.gs",
-      "line": 1426,
+      "line": 1438,
       "kind": "function"
     }
   ],
   "getDashboardData": [
     {
       "file": "Dashboard.gs",
-      "line": 1437,
+      "line": 1449,
       "kind": "function"
     }
   ],
   "_berekenBtwDeadline_": [
     {
       "file": "Dashboard.gs",
-      "line": 1525,
+      "line": 1537,
       "kind": "function"
     }
   ],
   "_bouwDashboardHtml_": [
     {
       "file": "Dashboard.gs",
-      "line": 1554,
+      "line": 1566,
+      "kind": "function"
+    }
+  ],
+  "exporteerAlleData": [
+    {
+      "file": "DataPortability.gs",
+      "line": 13,
       "kind": "function"
     }
   ],
@@ -1732,6 +1690,293 @@
       "kind": "function"
     }
   ],
+  "OSS_DREMPEL": [
+    {
+      "file": "EUVerkoop.gs",
+      "line": 19,
+      "kind": "const"
+    }
+  ],
+  "ICP_SHEET": [
+    {
+      "file": "EUVerkoop.gs",
+      "line": 20,
+      "kind": "const"
+    }
+  ],
+  "_EU_LANDCODES": [
+    {
+      "file": "EUVerkoop.gs",
+      "line": 22,
+      "kind": "const"
+    }
+  ],
+  "detecteerEULand_": [
+    {
+      "file": "EUVerkoop.gs",
+      "line": 37,
+      "kind": "function"
+    }
+  ],
+  "isEUB2B_": [
+    {
+      "file": "EUVerkoop.gs",
+      "line": 50,
+      "kind": "function"
+    }
+  ],
+  "controleerOssDrempel_": [
+    {
+      "file": "EUVerkoop.gs",
+      "line": 61,
+      "kind": "function"
+    }
+  ],
+  "genereerIcpRapport": [
+    {
+      "file": "EUVerkoop.gs",
+      "line": 107,
+      "kind": "function"
+    }
+  ],
+  "ossNotificatie_": [
+    {
+      "file": "EUVerkoop.gs",
+      "line": 222,
+      "kind": "function"
+    }
+  ],
+  "controleerEersteKlantReady": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 21,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckSetup_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 82,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckSheetsAanwezig_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 102,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckTriggers_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 118,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckLicentie_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 138,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckFactuurnummerCounter_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 155,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckMailQuota_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 171,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckPdfTemplate_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 190,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckBedrijfsgegevens_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 207,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckDriveStructuur_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 228,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckBtwInstellingen_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 244,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckFactuurDialogIntegriteit_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 262,
+      "kind": "function"
+    }
+  ],
+  "_ekrCheckOauthScopes_": [
+    {
+      "file": "EersteKlantCheck.gs",
+      "line": 280,
+      "kind": "function"
+    }
+  ],
+  "EMAIL_STATUS_GELDIG": [
+    {
+      "file": "EmailDeliverability.gs",
+      "line": 14,
+      "kind": "const"
+    }
+  ],
+  "EMAIL_STATUS_VERDACHT": [
+    {
+      "file": "EmailDeliverability.gs",
+      "line": 15,
+      "kind": "const"
+    }
+  ],
+  "EMAIL_STATUS_ONGELDIG": [
+    {
+      "file": "EmailDeliverability.gs",
+      "line": 16,
+      "kind": "const"
+    }
+  ],
+  "markeerEmailOngeldig_": [
+    {
+      "file": "EmailDeliverability.gs",
+      "line": 28,
+      "kind": "function"
+    }
+  ],
+  "detecteerBounceType_": [
+    {
+      "file": "EmailDeliverability.gs",
+      "line": 68,
+      "kind": "function"
+    }
+  ],
+  "stuurEmailVeilig_": [
+    {
+      "file": "EmailDeliverability.gs",
+      "line": 91,
+      "kind": "function"
+    }
+  ],
+  "toonOngeldigeEmailRelaties": [
+    {
+      "file": "EmailDeliverability.gs",
+      "line": 136,
+      "kind": "function"
+    }
+  ],
+  "ACHIEVEMENTS": [
+    {
+      "file": "Engagement.gs",
+      "line": 18,
+      "kind": "const"
+    }
+  ],
+  "ACHIEVEMENT_PROP": [
+    {
+      "file": "Engagement.gs",
+      "line": 28,
+      "kind": "const"
+    }
+  ],
+  "checkAchievements_": [
+    {
+      "file": "Engagement.gs",
+      "line": 34,
+      "kind": "function"
+    }
+  ],
+  "toonAchievementToast_": [
+    {
+      "file": "Engagement.gs",
+      "line": 92,
+      "kind": "function"
+    }
+  ],
+  "toonAchievementsOverzicht": [
+    {
+      "file": "Engagement.gs",
+      "line": 106,
+      "kind": "function"
+    }
+  ],
+  "NPS_PROP_LAATSTE": [
+    {
+      "file": "Engagement.gs",
+      "line": 123,
+      "kind": "const"
+    }
+  ],
+  "NPS_PROP_RESPONSE": [
+    {
+      "file": "Engagement.gs",
+      "line": 124,
+      "kind": "const"
+    }
+  ],
+  "checkNpsTrigger_": [
+    {
+      "file": "Engagement.gs",
+      "line": 134,
+      "kind": "function"
+    }
+  ],
+  "toonNpsSurvey": [
+    {
+      "file": "Engagement.gs",
+      "line": 160,
+      "kind": "function"
+    }
+  ],
+  "slaNpsResponseOp_": [
+    {
+      "file": "Engagement.gs",
+      "line": 223,
+      "kind": "function"
+    }
+  ],
+  "toonJaaroverzicht": [
+    {
+      "file": "Engagement.gs",
+      "line": 254,
+      "kind": "function"
+    }
+  ],
+  "_berekenJaarStats_": [
+    {
+      "file": "Engagement.gs",
+      "line": 319,
+      "kind": "function"
+    }
+  ],
+  "checkJaaroverzichtTrigger_": [
+    {
+      "file": "Engagement.gs",
+      "line": 380,
+      "kind": "function"
+    }
+  ],
   "exporteerAccountantsPakket": [
     {
       "file": "ExportAccountant.gs",
@@ -1823,6 +2068,90 @@
       "kind": "function"
     }
   ],
+  "DGA_MIN_SALARIS_2026": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 14,
+      "kind": "const"
+    }
+  ],
+  "SUPPLETIE_DREMPEL": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 15,
+      "kind": "const"
+    }
+  ],
+  "berekenInvesteringsAftrek_": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 30,
+      "kind": "function"
+    }
+  ],
+  "_mia_": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 69,
+      "kind": "function"
+    }
+  ],
+  "_eia_": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 78,
+      "kind": "function"
+    }
+  ],
+  "toonInvesteringsAftrekStapeling": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 89,
+      "kind": "function"
+    }
+  ],
+  "berekenStakingsfiscaliteit_": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 170,
+      "kind": "function"
+    }
+  ],
+  "toonStakingsWizard": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 212,
+      "kind": "function"
+    }
+  ],
+  "detecteerSuppletieMogelijk_": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 240,
+      "kind": "function"
+    }
+  ],
+  "genereerSuppletieRapport": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 288,
+      "kind": "function"
+    }
+  ],
+  "checkDgaSalaris_": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 354,
+      "kind": "function"
+    }
+  ],
+  "dgaSalarisNotificatie_": [
+    {
+      "file": "Fiscaal.gs",
+      "line": 383,
+      "kind": "function"
+    }
+  ],
   "voerGezondheidCheckUit": [
     {
       "file": "GezondheidCheck.gs",
@@ -1833,63 +2162,70 @@
   "controleerBalans_": [
     {
       "file": "GezondheidCheck.gs",
-      "line": 145,
+      "line": 152,
       "kind": "function"
     }
   ],
   "controleerReferentiele_": [
     {
       "file": "GezondheidCheck.gs",
-      "line": 186,
+      "line": 193,
+      "kind": "function"
+    }
+  ],
+  "controleerBetalingsIntegriteit_": [
+    {
+      "file": "GezondheidCheck.gs",
+      "line": 268,
       "kind": "function"
     }
   ],
   "controleerJournaalposten_": [
     {
       "file": "GezondheidCheck.gs",
-      "line": 255,
+      "line": 324,
       "kind": "function"
     }
   ],
   "controleerVerkoopfacturen_": [
     {
       "file": "GezondheidCheck.gs",
-      "line": 324,
+      "line": 393,
       "kind": "function"
     }
   ],
   "controleerBtwConsistentie_": [
     {
       "file": "GezondheidCheck.gs",
-      "line": 389,
+      "line": 458,
       "kind": "function"
     }
   ],
   "controleerInstellingen_": [
     {
       "file": "GezondheidCheck.gs",
-      "line": 432,
+      "line": 501,
       "kind": "function"
     }
   ],
   "schrijfGezondheidCheckResultaten_": [
     {
       "file": "GezondheidCheck.gs",
-      "line": 464,
+      "line": 533,
       "kind": "function"
     }
   ],
   "voerGezondheidCheckStil_": [
     {
       "file": "GezondheidCheck.gs",
-      "line": 550,
+      "line": 619,
       "kind": "function"
     }
   ],
   "leesGezondheidScoreCache_": [
     {
       "file": "GezondheidCheck.gs",
-      "line": 588,
+      "line": 657,
       "kind": "function"
     }
   ],
@@ -2239,56 +2575,56 @@
   "openHoofdFormulier": [
     {
       "file": "Menu.gs",
-      "line": 221,
+      "line": 240,
       "kind": "function"
     }
   ],
   "openBonUpload": [
     {
       "file": "Menu.gs",
-      "line": 263,
+      "line": 282,
       "kind": "function"
     }
   ],
   "verwerkBonUpload": [
     {
       "file": "Menu.gs",
-      "line": 386,
+      "line": 405,
       "kind": "function"
     }
   ],
   "openJournaalpostFormulier": [
     {
       "file": "Menu.gs",
-      "line": 416,
+      "line": 435,
       "kind": "function"
     }
   ],
   "toonFormulierLinks": [
     {
       "file": "Menu.gs",
-      "line": 433,
+      "line": 452,
       "kind": "function"
     }
   ],
   "herlaadGrootboekschema": [
     {
       "file": "Menu.gs",
-      "line": 467,
+      "line": 486,
       "kind": "function"
     }
   ],
   "vernieuwAlleRapporten": [
     {
       "file": "Menu.gs",
-      "line": 475,
+      "line": 494,
       "kind": "function"
     }
   ],
   "openBeginbalansDialoog": [
     {
       "file": "Menu.gs",
-      "line": 488,
+      "line": 507,
       "kind": "function"
     }
   ],
@@ -2369,6 +2705,20 @@
       "kind": "function"
     }
   ],
+  "MOLLIE_WEBHOOK_SECRET_PROP": [
+    {
+      "file": "Mollie.gs",
+      "line": 140,
+      "kind": "const"
+    }
+  ],
+  "verwerkMollieWebhook_": [
+    {
+      "file": "Mollie.gs",
+      "line": 149,
+      "kind": "function"
+    }
+  ],
   "openNieuweBoeking": [
     {
       "file": "NieuweBoeking.gs",
@@ -2418,164 +2768,178 @@
       "kind": "const"
     }
   ],
+  "__recalcTeller": [
+    {
+      "file": "NieuweBoeking.gs",
+      "line": 470,
+      "kind": "const"
+    }
+  ],
+  "bindRegelEventsVeilig": [
+    {
+      "file": "NieuweBoeking.gs",
+      "line": 493,
+      "kind": "function"
+    }
+  ],
   "setSelect": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 575,
+      "line": 620,
       "kind": "function"
     }
   ],
   "wisselTab": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 586,
+      "line": 631,
       "kind": "function"
     }
   ],
   "voegRegelToe": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 605,
+      "line": 650,
       "kind": "function"
     }
   ],
   "verwijderRegel": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 621,
+      "line": 666,
       "kind": "function"
     }
   ],
   "btwPct": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 630,
+      "line": 675,
       "kind": "function"
     }
   ],
   "herbereken": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 642,
+      "line": 687,
       "kind": "function"
     }
   ],
   "berekenKosten": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 676,
+      "line": 721,
       "kind": "function"
     }
   ],
   "REGELS": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 684,
+      "line": 729,
       "kind": "const"
     }
   ],
   "BERICHTEN": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 689,
+      "line": 734,
       "kind": "const"
     }
   ],
   "valideerVeld": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 695,
+      "line": 740,
       "kind": "function"
     }
   ],
   "valideerTab": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 706,
+      "line": 751,
       "kind": "function"
     }
   ],
   "bevestig": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 722,
+      "line": 767,
       "kind": "function"
     }
   ],
   "val": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 812,
+      "line": 857,
       "kind": "function"
     }
   ],
   "wisselUploadType": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 817,
+      "line": 862,
       "kind": "function"
     }
   ],
   "toonStatus": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 822,
+      "line": 867,
       "kind": "function"
     }
   ],
   "toonKlaar": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 834,
+      "line": 879,
       "kind": "function"
     }
   ],
   "stuurFactuurUitKlaar": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 882,
+      "line": 927,
       "kind": "function"
     }
   ],
   "escHtml": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 898,
+      "line": 943,
       "kind": "function"
     }
   ],
   "startSpraak": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 905,
+      "line": 950,
       "kind": "function"
     }
   ],
   "vulSpraakVelden": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 949,
+      "line": 994,
       "kind": "function"
     }
   ],
   "bonGekozen": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 973,
+      "line": 1018,
       "kind": "function"
     }
   ],
   "vulUploadVelden": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 1016,
+      "line": 1061,
       "kind": "function"
     }
   ],
   "_hexNaarRgba_": [
     {
       "file": "NieuweBoeking.gs",
-      "line": 1055,
+      "line": 1100,
       "kind": "function"
     }
   ],
@@ -2617,7 +2981,7 @@
   "toonNotificaties": [
     {
       "file": "Notificaties.gs",
-      "line": 204,
+      "line": 220,
       "kind": "function"
     }
   ],
@@ -3345,588 +3709,616 @@
   "waarschuwBijHogeUitgave_": [
     {
       "file": "Triggers.gs",
-      "line": 716,
+      "line": 737,
       "kind": "function"
     }
   ],
   "verwerkDeclaratieUitHoofdformulier_": [
     {
       "file": "Triggers.gs",
-      "line": 753,
+      "line": 774,
       "kind": "function"
     }
   ],
   "bepaalKostenrekening_": [
     {
       "file": "Triggers.gs",
-      "line": 850,
+      "line": 871,
       "kind": "function"
     }
   ],
   "verwerkVerkoopfactuurFormulier": [
     {
       "file": "Triggers.gs",
-      "line": 874,
+      "line": 895,
       "kind": "function"
     }
   ],
   "verwerkInkoopfactuurFormulier": [
     {
       "file": "Triggers.gs",
-      "line": 1010,
+      "line": 1031,
       "kind": "function"
     }
   ],
   "verwerkBanktransactieFormulier": [
     {
       "file": "Triggers.gs",
-      "line": 1106,
+      "line": 1127,
       "kind": "function"
     }
   ],
   "verwerkRelatieFormulier": [
     {
       "file": "Triggers.gs",
-      "line": 1176,
+      "line": 1197,
       "kind": "function"
     }
   ],
   "verwerkJournaalpostFormulier": [
     {
       "file": "Triggers.gs",
-      "line": 1218,
+      "line": 1239,
       "kind": "function"
     }
   ],
   "dagelijkseTaken": [
     {
       "file": "Triggers.gs",
-      "line": 1259,
+      "line": 1280,
       "kind": "function"
     }
   ],
   "_runTaak_": [
     {
       "file": "Triggers.gs",
-      "line": 1295,
+      "line": 1315,
       "kind": "function"
     }
   ],
   "_updateTaakStatus_": [
     {
       "file": "Triggers.gs",
-      "line": 1318,
+      "line": 1338,
       "kind": "function"
     }
   ],
   "stuurWeeklySamenvatting_": [
     {
       "file": "Triggers.gs",
-      "line": 1360,
+      "line": 1380,
       "kind": "function"
     }
   ],
   "controleerSheetGrootte_": [
     {
       "file": "Triggers.gs",
-      "line": 1492,
+      "line": 1512,
       "kind": "function"
     }
   ],
   "stuurAutomatischeBetalingsherinneringen_": [
     {
       "file": "Triggers.gs",
-      "line": 1534,
+      "line": 1554,
       "kind": "function"
     }
   ],
   "koppelBankTransactieAanFactuur_": [
     {
       "file": "Triggers.gs",
-      "line": 1660,
+      "line": 1680,
       "kind": "function"
     }
   ],
   "markeerVervallenFacturen_": [
     {
       "file": "Triggers.gs",
-      "line": 1738,
+      "line": 1758,
       "kind": "function"
     }
   ],
   "controleerBtwDeadlines_": [
     {
       "file": "Triggers.gs",
-      "line": 1765,
+      "line": 1785,
       "kind": "function"
     }
   ],
   "stuurFoutEmail_": [
     {
       "file": "Triggers.gs",
-      "line": 1809,
+      "line": 1829,
       "kind": "function"
     }
   ],
   "stuurBetalingsherinneringen": [
     {
       "file": "Triggers.gs",
-      "line": 1826,
+      "line": 1846,
       "kind": "function"
     }
   ],
   "haalRelatieEmail_": [
     {
       "file": "Triggers.gs",
-      "line": 1904,
+      "line": 1924,
       "kind": "function"
     }
   ],
   "toonAuditLog": [
     {
       "file": "Triggers.gs",
-      "line": 1921,
+      "line": 1941,
       "kind": "function"
     }
   ],
   "getSpreadsheet_": [
     {
       "file": "Utils.gs",
-      "line": 14,
+      "line": 19,
       "kind": "function"
     }
   ],
   "alertOfLog_": [
     {
       "file": "Utils.gs",
-      "line": 32,
+      "line": 37,
       "kind": "function"
     }
   ],
   "formatDatum_": [
     {
       "file": "Utils.gs",
-      "line": 46,
+      "line": 51,
       "kind": "function"
     }
   ],
   "formatDatumTijd_": [
     {
       "file": "Utils.gs",
-      "line": 56,
+      "line": 61,
       "kind": "function"
     }
   ],
   "parseDatum_": [
     {
       "file": "Utils.gs",
-      "line": 65,
+      "line": 70,
       "kind": "function"
     }
   ],
   "maandNaam_": [
     {
       "file": "Utils.gs",
-      "line": 86,
+      "line": 91,
       "kind": "function"
     }
   ],
   "getMaandPeriode_": [
     {
       "file": "Utils.gs",
-      "line": 95,
+      "line": 100,
       "kind": "function"
     }
   ],
   "rondBedrag_": [
     {
       "file": "Utils.gs",
-      "line": 109,
+      "line": 114,
       "kind": "function"
     }
   ],
   "formatBedrag_": [
     {
       "file": "Utils.gs",
-      "line": 123,
+      "line": 128,
       "kind": "function"
     }
   ],
   "parseBedrag_": [
     {
       "file": "Utils.gs",
-      "line": 135,
+      "line": 140,
       "kind": "function"
     }
   ],
   "parseBedragStrict_": [
     {
       "file": "Utils.gs",
-      "line": 164,
+      "line": 169,
       "kind": "function"
     }
   ],
   "parseDatumStrict_": [
     {
       "file": "Utils.gs",
-      "line": 189,
+      "line": 194,
       "kind": "function"
     }
   ],
   "formatPct_": [
     {
       "file": "Utils.gs",
-      "line": 213,
+      "line": 218,
       "kind": "function"
     }
   ],
   "escHtml_": [
     {
       "file": "Utils.gs",
-      "line": 225,
+      "line": 230,
       "kind": "function"
     }
   ],
   "vertaalFout_": [
     {
       "file": "Utils.gs",
-      "line": 250,
+      "line": 255,
       "kind": "function"
     }
   ],
   "_genereerRequestId_": [
     {
       "file": "Utils.gs",
-      "line": 276,
+      "line": 281,
       "kind": "function"
     }
   ],
-  "isGeldigIBAN_": [
+  "hashBerekeningInput_": [
     {
       "file": "Utils.gs",
-      "line": 285,
+      "line": 293,
       "kind": "function"
     }
   ],
-  "isGeldigBTWNummer_": [
-    {
-      "file": "Utils.gs",
-      "line": 292,
-      "kind": "function"
-    }
-  ],
-  "isGeldigEuBTWNummer_": [
+  "exporteerAuditLogJson": [
     {
       "file": "Utils.gs",
       "line": 307,
       "kind": "function"
     }
   ],
+  "isGeldigIBAN_": [
+    {
+      "file": "Utils.gs",
+      "line": 349,
+      "kind": "function"
+    }
+  ],
+  "isGeldigBTWNummer_": [
+    {
+      "file": "Utils.gs",
+      "line": 356,
+      "kind": "function"
+    }
+  ],
+  "isGeldigEuBTWNummer_": [
+    {
+      "file": "Utils.gs",
+      "line": 371,
+      "kind": "function"
+    }
+  ],
   "isGeldigKvKNummer_": [
     {
       "file": "Utils.gs",
-      "line": 347,
+      "line": 411,
       "kind": "function"
     }
   ],
   "isGeldigEmail_": [
     {
       "file": "Utils.gs",
-      "line": 353,
+      "line": 417,
       "kind": "function"
     }
   ],
   "zetDropdown_": [
     {
       "file": "Utils.gs",
-      "line": 368,
+      "line": 432,
       "kind": "function"
     }
   ],
   "zetDatumValidatie_": [
     {
       "file": "Utils.gs",
-      "line": 379,
+      "line": 443,
       "kind": "function"
     }
   ],
   "zetBedragValidatie_": [
     {
       "file": "Utils.gs",
-      "line": 390,
+      "line": 454,
       "kind": "function"
     }
   ],
   "getLaatsteRij_": [
     {
       "file": "Utils.gs",
-      "line": 402,
+      "line": 466,
       "kind": "function"
     }
   ],
   "exporteerSheetAlsCsv_": [
     {
       "file": "Utils.gs",
-      "line": 417,
+      "line": 481,
       "kind": "function"
     }
   ],
   "stuurRapportPerEmail_": [
     {
       "file": "Utils.gs",
-      "line": 428,
+      "line": 492,
       "kind": "function"
     }
   ],
   "isInPeriode_": [
     {
       "file": "Utils.gs",
-      "line": 453,
+      "line": 517,
       "kind": "function"
     }
   ],
   "getBoekjaarPeriode_": [
     {
       "file": "Utils.gs",
-      "line": 461,
+      "line": 525,
+      "kind": "function"
+    }
+  ],
+  "isInBoekjaar_": [
+    {
+      "file": "Utils.gs",
+      "line": 550,
       "kind": "function"
     }
   ],
   "getBoekjaar_": [
     {
       "file": "Utils.gs",
-      "line": 475,
+      "line": 561,
       "kind": "function"
     }
   ],
   "getKwartaal_": [
     {
       "file": "Utils.gs",
-      "line": 497,
+      "line": 583,
       "kind": "function"
     }
   ],
   "formatFactuurnummer_": [
     {
       "file": "Utils.gs",
-      "line": 512,
+      "line": 598,
       "kind": "function"
     }
   ],
   "getFactuurEmailTekst_": [
     {
       "file": "Utils.gs",
-      "line": 521,
+      "line": 607,
       "kind": "function"
     }
   ],
   "getVersieInfo": [
     {
       "file": "Utils.gs",
-      "line": 548,
+      "line": 634,
       "kind": "function"
     }
   ],
   "SNAPSHOT_SCHEMA_VERSION": [
     {
       "file": "Utils.gs",
-      "line": 603,
+      "line": 689,
       "kind": "const"
     }
   ],
   "KPI_SNAPSHOT_MAX_AGE_MS": [
     {
       "file": "Utils.gs",
-      "line": 604,
+      "line": 690,
       "kind": "const"
     }
   ],
   "_SNAPSHOT_REQUIRED_FIELDS": [
     {
       "file": "Utils.gs",
-      "line": 608,
+      "line": 694,
       "kind": "const"
     }
   ],
   "schrijfKpiSnapshot_": [
     {
       "file": "Utils.gs",
-      "line": 618,
+      "line": 704,
       "kind": "function"
     }
   ],
   "leesKpiSnapshot_": [
     {
       "file": "Utils.gs",
-      "line": 645,
+      "line": 731,
       "kind": "function"
     }
   ],
   "invalideerKpiSnapshot_": [
     {
       "file": "Utils.gs",
-      "line": 683,
+      "line": 769,
       "kind": "function"
     }
   ],
   "controleerSetupGedaan_": [
     {
       "file": "Utils.gs",
-      "line": 696,
+      "line": 782,
       "kind": "function"
     }
   ],
   "getWisselkoers_": [
     {
       "file": "Utils.gs",
-      "line": 722,
+      "line": 808,
       "kind": "function"
     }
   ],
   "naarEuro_": [
     {
       "file": "Utils.gs",
-      "line": 769,
+      "line": 855,
       "kind": "function"
     }
   ],
   "guillotineCheck_": [
     {
       "file": "Utils.gs",
-      "line": 801,
+      "line": 887,
       "kind": "function"
     }
   ],
   "guillotineHervat_": [
     {
       "file": "Utils.gs",
-      "line": 830,
+      "line": 916,
       "kind": "function"
     }
   ],
   "guillotineKlaar_": [
     {
       "file": "Utils.gs",
-      "line": 841,
+      "line": 927,
       "kind": "function"
     }
   ],
   "noodLog_": [
     {
       "file": "Utils.gs",
-      "line": 871,
+      "line": 957,
       "kind": "function"
     }
   ],
   "cacheBerekening_": [
     {
       "file": "Utils.gs",
-      "line": 909,
+      "line": 995,
       "kind": "function"
     }
   ],
   "bustCache_": [
     {
       "file": "Utils.gs",
-      "line": 953,
+      "line": 1039,
       "kind": "function"
     }
   ],
   "cacheVersie_": [
     {
       "file": "Utils.gs",
-      "line": 969,
+      "line": 1055,
       "kind": "function"
     }
   ],
   "rateLimit_": [
     {
       "file": "Utils.gs",
-      "line": 992,
+      "line": 1078,
       "kind": "function"
     }
   ],
   "FEATURE_DEFAULTS": [
     {
       "file": "Utils.gs",
-      "line": 1026,
+      "line": 1112,
       "kind": "const"
     }
   ],
   "featureAan_": [
     {
       "file": "Utils.gs",
-      "line": 1041,
+      "line": 1127,
       "kind": "function"
     }
   ],
   "toonFeatures": [
     {
       "file": "Utils.gs",
-      "line": 1069,
+      "line": 1155,
       "kind": "function"
     }
   ],
   "_UITGAAND_ALLOWLIST": [
     {
       "file": "Utils.gs",
-      "line": 1085,
+      "line": 1171,
       "kind": "const"
     }
   ],
   "_isToegestaneUrl_": [
     {
       "file": "Utils.gs",
-      "line": 1095,
+      "line": 1181,
       "kind": "function"
     }
   ],
   "veiligFetch_": [
     {
       "file": "Utils.gs",
-      "line": 1116,
+      "line": 1202,
       "kind": "function"
     }
   ],
   "_getMasterSalt_": [
     {
       "file": "Utils.gs",
-      "line": 1134,
+      "line": 1220,
       "kind": "function"
     }
   ],
   "versleutelString_": [
     {
       "file": "Utils.gs",
-      "line": 1145,
+      "line": 1231,
       "kind": "function"
     }
   ],
   "ontsleutelString_": [
     {
       "file": "Utils.gs",
-      "line": 1156,
+      "line": 1242,
       "kind": "function"
     }
   ],
   "haalDataKvK_": [
     {
       "file": "Utils.gs",
-      "line": 1187,
+      "line": 1273,
+      "kind": "function"
+    }
+  ],
+  "_kvkBreakerTrip_": [
+    {
+      "file": "Utils.gs",
+      "line": 1346,
       "kind": "function"
     }
   ],
   "getKvkDataPubliek": [
     {
       "file": "Utils.gs",
-      "line": 1251,
+      "line": 1363,
       "kind": "function"
     }
   ],
   "zetKvkApiKey": [
     {
       "file": "Utils.gs",
-      "line": 1262,
+      "line": 1374,
       "kind": "function"
     }
   ],
@@ -4150,7 +4542,7 @@
   "_bouwFactuurlijstHtml_": [
     {
       "file": "Verkoopfacturen.gs",
-      "line": 936,
+      "line": 951,
       "kind": "function"
     }
   ]
