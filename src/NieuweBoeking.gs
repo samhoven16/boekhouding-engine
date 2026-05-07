@@ -459,78 +459,74 @@ window.addEventListener('error', function(ev) {
   } catch (_) {}
 });
 
-/* ── INIT ── */
-(function init(){
+/* ── INIT — gestructureerd in geïsoleerde stappen zodat ÉÉN faal niet
+   ALLES blokkeert. Live-recalc is hoogste prioriteit en moet ALTIJD draaien.
+   Vorige versie had alle init in één try-catch — als bv. setSelect crashte
+   op een bestand met afwijkend BTW-keuzes-veld, dan startte het setInterval
+   nooit en bleef status hangen op "Wachten op JS…". ── */
+
+// 1. setInterval START EERST — vóór andere init. Garandeert live-recalc
+//    onafhankelijk van wat erna mogelijk crashed.
+var __recalcTeller = 0;
+setInterval(function() {
+  try { bindRegelEventsVeilig(); } catch (_) {}
   try {
-    // Datums instellen op vandaag — defensief: ctx.vandaag kan undefined zijn
-    var vandaag = '${ctx.vandaag}' || new Date().toISOString().slice(0, 10);
-    ['f-datum','k-datum','d-datum','u-datum'].forEach(function(id){
-      var el = document.getElementById(id);
-      if(el) el.value = vandaag;
-    });
-    // Pre-valideer datum velden zodat ze direct groen tonen
-    [['f-datum','factuur'],['k-datum','kosten'],['d-datum','declaratie']].forEach(function(pair){
-      var el = document.getElementById(pair[0]);
-      if(el && el.value) valideerVeld(pair[1], 'datum', el);
-    });
-    // BTW standaard
-    var btwStd = '${ctx.btwStandaard}' || '21% (hoog)';
-    setSelect('f-btw', btwStd);
-    setSelect('k-btw', btwStd);
-    setSelect('d-btw', btwStd);
-    setSelect('u-btw', btwStd);
     herbereken();
+    __recalcTeller++;
+    var s = document.getElementById('recalc-status');
+    if (s) {
+      s.textContent = '✓ Live (recalc #' + __recalcTeller + ')';
+      s.style.color = '#1B5E20';
+    }
+  } catch (e) {
+    var s2 = document.getElementById('recalc-status');
+    if (s2) {
+      s2.textContent = '⚠️ Recalc fout: ' + (e.message || '?');
+      s2.style.color = '#c62828';
+    }
+  }
+}, 500);
 
-    // Bind extra event-listeners als safety-net — als inline oninput-handlers
-    // door CSP/browser-issues niet triggeren, deze wel via addEventListener.
-    // Bovendien: input/change/blur events op alle factuurregel-inputs.
-    var bindRegelEvents = function() {
-      for (var i = 1; i <= MAX_REGELS; i++) {
-        ['omschr','aantal','prijs'].forEach(function(veld) {
-          var el = document.getElementById('f-r' + i + veld);
-          if (el && !el._bhBound) {
-            el._bhBound = true;  // voorkom dubbele bind
-            el.addEventListener('input', herbereken);
-            el.addEventListener('change', herbereken);
-            el.addEventListener('keyup', herbereken);
-            el.addEventListener('blur', herbereken);
-          }
-        });
-      }
-      var btwSel = document.getElementById('f-btw');
-      if (btwSel && !btwSel._bhBound) {
-        btwSel._bhBound = true;
-        btwSel.addEventListener('change', herbereken);
-      }
-      var kostenIncl = document.getElementById('k-incl');
-      if (kostenIncl && !kostenIncl._bhBound) {
-        kostenIncl._bhBound = true;
-        kostenIncl.addEventListener('input', berekenKosten);
-        kostenIncl.addEventListener('change', berekenKosten);
-        kostenIncl.addEventListener('keyup', berekenKosten);
-      }
-      var kostenBtw = document.getElementById('k-btw');
-      if (kostenBtw && !kostenBtw._bhBound) {
-        kostenBtw._bhBound = true;
-        kostenBtw.addEventListener('change', berekenKosten);
-      }
-    };
-    bindRegelEvents();
-
-    // Tabs via addEventListener — inline onclick kan in moderne Apps Script
-    // CSP-modes worden geblokkeerd. Klant kon dan niet op Kosten/Declaratie/
-    // Upload klikken. Met data-attribuut + listener werkt 't gegarandeerd.
-    document.querySelectorAll('.tab[data-tab]').forEach(function(tabEl) {
-      if (tabEl._bound) return;
-      tabEl._bound = true;
-      tabEl.addEventListener('click', function(ev) {
-        ev.preventDefault();
-        wisselTab(tabEl.getAttribute('data-tab'));
+// 2. bindRegelEventsVeilig — re-bind alle inputs op factuurregels.
+//    Idempotent (skipt al-gebonden via flag). Ook in setInterval-aangeroepen
+//    zodat dynamisch toegevoegde regels (via "+ Nog een regel") direct binden.
+function bindRegelEventsVeilig() {
+  try {
+    for (var i = 1; i <= MAX_REGELS; i++) {
+      ['omschr','aantal','prijs'].forEach(function(veld) {
+        var el = document.getElementById('f-r' + i + veld);
+        if (el && !el._bhBound) {
+          el._bhBound = true;
+          el.addEventListener('input', herbereken);
+          el.addEventListener('change', herbereken);
+          el.addEventListener('keyup', herbereken);
+          el.addEventListener('blur', herbereken);
+        }
       });
-    });
+    }
+    var btwSel = document.getElementById('f-btw');
+    if (btwSel && !btwSel._bhBound) {
+      btwSel._bhBound = true;
+      btwSel.addEventListener('change', herbereken);
+    }
+    var kostenIncl = document.getElementById('k-incl');
+    if (kostenIncl && !kostenIncl._bhBound) {
+      kostenIncl._bhBound = true;
+      kostenIncl.addEventListener('input', berekenKosten);
+      kostenIncl.addEventListener('change', berekenKosten);
+      kostenIncl.addEventListener('keyup', berekenKosten);
+    }
+    var kostenBtw = document.getElementById('k-btw');
+    if (kostenBtw && !kostenBtw._bhBound) {
+      kostenBtw._bhBound = true;
+      kostenBtw.addEventListener('change', berekenKosten);
+    }
+  } catch (_) {}
+}
 
-    // Manuele recalc-knop — als auto-recalc om welke reden ook niet werkt,
-    // klant kan zelf forceren. Werkt altijd want directe DOM-binding.
+// 3. Manuele recalc-knop — onafhankelijk van overige init
+(function bindManueleRecalc() {
+  try {
     var recalcBtn = document.getElementById('btn-recalc');
     if (recalcBtn) {
       recalcBtn.addEventListener('click', function(ev) {
@@ -541,27 +537,76 @@ window.addEventListener('error', function(ev) {
         }
       });
     }
-    // Live-counter — bewijst dat JS draait. Als dit getal niet stijgt,
-    // is JS volledig geblokkeerd door browser/CSP en zien we dat meteen.
-    var recalcTeller = 0;
-    setInterval(function() {
-      try {
-        bindRegelEvents();
-        herbereken();
-        recalcTeller++;
-        var s = document.getElementById('recalc-status');
-        if (s) {
-          s.textContent = '✓ Live (recalc #' + recalcTeller + ')';
-          s.style.color = '#1B5E20';
-        }
-      } catch (e) {
-        var s = document.getElementById('recalc-status');
-        if (s) {
-          s.textContent = '⚠️ Recalc fout: ' + (e.message || '?');
-          s.style.color = '#c62828';
-        }
+  } catch (_) {}
+})();
+
+// 4. Tabs — onafhankelijk
+(function bindTabs() {
+  try {
+    document.querySelectorAll('.tab[data-tab]').forEach(function(tabEl) {
+      if (tabEl._bound) return;
+      tabEl._bound = true;
+      tabEl.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        try { wisselTab(tabEl.getAttribute('data-tab')); } catch (_) {}
+      });
+    });
+  } catch (_) {}
+})();
+
+// 5. Datums + BTW-default — kan crashen, mag init niet blokkeren
+(function initVeldwaarden() {
+  try {
+    var vandaag = '${ctx.vandaag}' || new Date().toISOString().slice(0, 10);
+    ['f-datum','k-datum','d-datum','u-datum'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.value = vandaag;
+    });
+    [['f-datum','factuur'],['k-datum','kosten'],['d-datum','declaratie']].forEach(function(pair){
+      var el = document.getElementById(pair[0]);
+      if (el && el.value) {
+        try { valideerVeld(pair[1], 'datum', el); } catch (_) {}
       }
-    }, 500);
+    });
+    var btwStd = '${ctx.btwStandaard}' || '21% (hoog)';
+    setSelect('f-btw', btwStd);
+    setSelect('k-btw', btwStd);
+    setSelect('d-btw', btwStd);
+    setSelect('u-btw', btwStd);
+  } catch (e) {
+    if (typeof console !== 'undefined') console.warn('[NieuweBoeking] initVeldwaarden fout:', e);
+  }
+})();
+
+// 6. Eerste herbereken — direct na bind, voor instant total weergave
+(function eersteRecalc() {
+  try { bindRegelEventsVeilig(); herbereken(); } catch (_) {}
+})();
+
+// 7. Bevestig-knop — addEventListener-fallback bovenop inline onclick.
+//    Beschermt tegen CSP-blokkade van inline handlers in strict-mode dialogs.
+(function bindBevestigKnop() {
+  try {
+    var btn = document.getElementById('btn-bevestig');
+    if (btn && !btn._bhBevestigBound) {
+      btn._bhBevestigBound = true;
+      btn.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        try { bevestig(); } catch (e) {
+          var fs = document.getElementById('footer-status');
+          if (fs) {
+            fs.style.color = '#c62828';
+            fs.textContent = '⚠️ ' + (e && e.message ? e.message : 'Onbekende fout');
+          }
+        }
+      });
+    }
+  } catch (_) {}
+})();
+
+(function legacyInitWrapper(){
+  try {
+    // legacy try-block voor toekomstige uitbreiding zonder breaking change
   } catch (e) {
     if (typeof console !== 'undefined') console.error('[NieuweBoeking] init:', e);
     var fs = document.getElementById('footer-status');
