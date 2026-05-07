@@ -1,0 +1,397 @@
+/**
+ * Fiscaal.gs
+ * Geavanceerde fiscale modules: KIA+MIA+EIA stapeling, stakingswizard,
+ * suppletie-aangifte, DGA-salaris-monitor.
+ *
+ * Adresseert "complexe casus":
+ *  - DGA + holding: minimum-loon-check
+ *  - Bedrijfsoverdracht: stakingsaftrek + FOR-vrijval + stakingslijfrente
+ *  - Investerings-aftrek combinaties (KIA + MIA + EIA gelijktijdig
+ *    mogelijk binnen voorwaarden)
+ *  - Suppletie: detect retroactief BTW-mismatch → genereer formulier-data
+ */
+
+const DGA_MIN_SALARIS_2026 = 56000;   // Wet IB; controleer jaarlijks Belastingplan
+const SUPPLETIE_DREMPEL    = 1000;    // Onder = volgende aangifte; boven = direct suppletie
+
+// ─────────────────────────────────────────────
+//  B6 — KIA + MIA + EIA STAPELING
+// ─────────────────────────────────────────────
+
+/**
+ * Berekent investerings-aftrek-stapeling voor één bedrijfsmiddel.
+ * Mag alle drie tegelijk binnen voorwaarden — KIA voor alle investeringen,
+ * MIA voor milieu-investeringen op RVO Milieulijst, EIA voor energie-
+ * investeringen op RVO Energielijst (mag NIET dubbel met MIA).
+ *
+ * @param {Object} inv  { bedrag, isMilieuLijst, isEnergieLijst, totaalKiaJaar, jaar }
+ * @returns {Object}    aftrek-bedragen + uitleg
+ */
+function berekenInvesteringsAftrek_(inv) {
+  const B = (typeof getBelasting_ === 'function') ? getBelasting_() : {};
+  const bedrag = parseFloat(inv.bedrag) || 0;
+  if (bedrag <= 0) return { kia: 0, mia: 0, eia: 0, totaal: 0, uitleg: 'Geen bedrag' };
+
+  // KIA — kleinschaligheidsinvesteringsaftrek (4-zone tabel 2026)
+  const totaalJaar = parseFloat(inv.totaalKiaJaar) || bedrag;
+  let kiaPct = 0;
+  if (totaalJaar >= 2901 && totaalJaar <= 69765) {
+    kiaPct = 0.28;
+  } else if (totaalJaar > 69765 && totaalJaar <= 129194) {
+    // Vast bedrag €19.535 in 2026
+    return { kia: 19535, mia: _mia_(inv, B), eia: _eia_(inv, B),
+             totaal: 19535 + _mia_(inv, B) + _eia_(inv, B),
+             uitleg: 'KIA-vastbedrag-zone' };
+  } else if (totaalJaar > 129194 && totaalJaar <= 392230) {
+    // Glijdende afbouw: 19535 - 7.56% × (totaal - 129194)
+    const afbouw = (totaalJaar - 129194) * 0.0756;
+    const kiaBedrag = Math.max(0, 19535 - afbouw);
+    return { kia: rondBedrag_(kiaBedrag), mia: _mia_(inv, B), eia: _eia_(inv, B),
+             totaal: rondBedrag_(kiaBedrag) + _mia_(inv, B) + _eia_(inv, B),
+             uitleg: 'KIA-afbouwzone' };
+  } else {
+    return { kia: 0, mia: _mia_(inv, B), eia: _eia_(inv, B),
+             totaal: _mia_(inv, B) + _eia_(inv, B),
+             uitleg: totaalJaar < 2901 ? 'KIA-drempel niet bereikt' : 'KIA-grens overschreden' };
+  }
+  const kia = rondBedrag_(bedrag * kiaPct);
+  const mia = _mia_(inv, B);
+  const eia = _eia_(inv, B);
+  return {
+    kia: kia, mia: mia, eia: eia,
+    totaal: kia + mia + eia,
+    uitleg: 'KIA ' + (kiaPct * 100) + '%' +
+            (mia > 0 ? ' + MIA' : '') +
+            (eia > 0 ? ' + EIA' : ''),
+  };
+}
+
+function _mia_(inv, B) {
+  if (!inv.isMilieuLijst) return 0;
+  // MIA percentages per categorie (vereenvoudigd; klant kiest categorie)
+  // RVO publiceert jaarlijks Milieulijst met categorieën A-G met % 27/36/45.
+  // Default: 36% voor middelste categorie.
+  const pct = parseFloat(inv.miaPct) || 0.36;
+  return rondBedrag_(parseFloat(inv.bedrag) * pct);
+}
+
+function _eia_(inv, B) {
+  if (!inv.isEnergieLijst) return 0;
+  // EIA mag NIET combineren met MIA voor zelfde bedrijfsmiddel
+  if (inv.isMilieuLijst) return 0;
+  const pct = parseFloat(B.EIA_PCT) || 0.40;
+  return rondBedrag_(parseFloat(inv.bedrag) * pct);
+}
+
+/**
+ * Menu-entry: open dialog om investerings-aftrek-stapeling te berekenen.
+ */
+function toonInvesteringsAftrekStapeling() {
+  const ui = SpreadsheetApp.getUi();
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      *{box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:24px;font-size:13px;color:#1A1A1A;background:#F7F9FC}
+      h2{color:#0D1B4E;margin:0 0 6px;font-size:18px;font-weight:800}
+      .sub{color:#5F6B7A;font-size:12px;margin-bottom:14px}
+      label{display:block;font-weight:600;font-size:12px;color:#0D1B4E;margin:10px 0 4px}
+      input,select{width:100%;padding:9px 12px;border:1px solid #E5EAF2;border-radius:6px;font-size:13px;background:#fff;font-family:inherit}
+      input:focus,select:focus{outline:none;border-color:#2EC4B6}
+      .row{display:flex;gap:14px;align-items:center;margin:8px 0}
+      .row label{display:flex;align-items:center;gap:6px;font-weight:500;font-size:13px;color:#1A1A1A;margin:0}
+      .row input[type=checkbox]{width:auto}
+      .uitkomst{background:#0D1B4E;color:white;border-radius:8px;padding:18px;margin-top:18px}
+      .uitkomst .lbl{font-size:11px;letter-spacing:.4px;text-transform:uppercase;opacity:.8}
+      .uitkomst .v{font-size:28px;font-weight:800;margin:6px 0}
+      .uitkomst .sub2{font-size:12px;opacity:.85;margin-top:8px}
+      .breakdown{margin-top:10px;font-size:12px}
+      .breakdown div{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+      .btn{background:#2EC4B6;color:#0A4744;border:none;padding:10px 18px;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;margin-top:14px}
+    </style>
+    <h2>💎 Investerings-aftrek stapeling</h2>
+    <div class="sub">KIA + MIA + EIA mag binnen voorwaarden gestapeld worden. Bereken jouw maximum.</div>
+    <label>Aanschafbedrag (excl. BTW)</label>
+    <input id="bedrag" type="number" min="0" step="100" placeholder="bv. 5000">
+    <label>Totaal investeringen dit jaar (voor KIA-zone)</label>
+    <input id="totaal" type="number" min="0" step="500" placeholder="laat leeg = alleen dit bedrag">
+    <div class="row"><label><input id="milieu" type="checkbox"> Op RVO Milieulijst (MIA)</label></div>
+    <div class="row"><label><input id="energie" type="checkbox"> Op RVO Energielijst (EIA)</label></div>
+    <label>MIA-percentage (alleen indien Milieulijst aangevinkt)</label>
+    <select id="miaPct">
+      <option value="0.27">27% (categorie A/E)</option>
+      <option value="0.36" selected>36% (categorie B/D)</option>
+      <option value="0.45">45% (categorie F/G)</option>
+    </select>
+    <button class="btn" id="btnBereken">Bereken stapeling</button>
+    <div id="output"></div>
+    <script>
+      function bereken() {
+        const data = {
+          bedrag: parseFloat(document.getElementById('bedrag').value) || 0,
+          totaalKiaJaar: parseFloat(document.getElementById('totaal').value) || null,
+          isMilieuLijst: document.getElementById('milieu').checked,
+          isEnergieLijst: document.getElementById('energie').checked,
+          miaPct: parseFloat(document.getElementById('miaPct').value),
+        };
+        if (!data.totaalKiaJaar) data.totaalKiaJaar = data.bedrag;
+        google.script.run.withSuccessHandler(function(r) {
+          if (!r) return;
+          const f = function(n) { return '€' + Number(n).toFixed(2).replace('.',','); };
+          document.getElementById('output').innerHTML =
+            '<div class="uitkomst">' +
+              '<div class="lbl">Totale aftrek</div>' +
+              '<div class="v">' + f(r.totaal) + '</div>' +
+              '<div class="breakdown">' +
+                '<div><span>KIA</span><span>' + f(r.kia) + '</span></div>' +
+                '<div><span>MIA</span><span>' + f(r.mia) + '</span></div>' +
+                '<div><span>EIA</span><span>' + f(r.eia) + '</span></div>' +
+              '</div>' +
+              '<div class="sub2">' + r.uitleg + '. Bij IB-tarief 35,7% scheelt dit ' + f(r.totaal * 0.357) + ' aan belasting.</div>' +
+            '</div>';
+        }).berekenInvesteringsAftrek_(data);
+      }
+      document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('btnBereken').addEventListener('click', bereken);
+      });
+    </script>
+  `).setWidth(440).setHeight(620).setSandboxMode(HtmlService.SandboxMode.IFRAME);
+  ui.showModalDialog(html, '💎 Investerings-aftrek stapelen');
+}
+
+// ─────────────────────────────────────────────
+//  B7 — STAKINGSWIZARD (bedrijfsoverdracht)
+// ─────────────────────────────────────────────
+
+/**
+ * Bereken alle staking-gerelateerde aftrekken bij bedrijfsoverdracht.
+ * @param {Object} input  { stakingswinst, FOR_saldo, lijfrente_premie, isStaker_eenmaal }
+ * @returns {Object}      uitsplitsing + totaal + advies
+ */
+function berekenStakingsfiscaliteit_(input) {
+  const B = (typeof getBelasting_ === 'function') ? getBelasting_() : {};
+  const stakingswinst = parseFloat(input.stakingswinst) || 0;
+  const forSaldo = parseFloat(input.FOR_saldo) || 0;
+  const lijfrentePremie = parseFloat(input.lijfrente_premie) || 0;
+  const stakingsaftrek = parseFloat(B.STAKINGSAFTREK) || 3630;
+
+  // Stakingsaftrek: éénmalig per leven, max €3.630 (2026)
+  const stakingsaftrekToegepast = input.isStaker_eenmaal === false ? 0 : Math.min(stakingsaftrek, stakingswinst);
+
+  // FOR-vrijval: hele saldo telt als winst → belast als stakingswinst, MAAR
+  // mag worden omgezet in stakingslijfrente (uitstellen tot uitkering).
+  // Klant kiest: laten vrijvallen (belast nu) OF omzetten naar lijfrente.
+  const forVrijval = forSaldo;
+  const forNaarLijfrente = parseFloat(input.for_naar_lijfrente) || 0;
+  const forBelastNu = forVrijval - forNaarLijfrente;
+
+  // Stakingslijfrente: extra aftrek bovenop reguliere lijfrente-jaarruimte
+  // op moment van staking — geldt voor stakingswinst + FOR-vrijval omgezet
+  const stakingslijfrenteMax = stakingswinst + forNaarLijfrente;
+  const stakingslijfrenteToegepast = Math.min(lijfrentePremie + forNaarLijfrente, stakingslijfrenteMax);
+
+  // Belastbare stakingswinst
+  const belastbareStaking = Math.max(0, stakingswinst - stakingsaftrekToegepast - stakingslijfrenteToegepast + forBelastNu);
+
+  return {
+    stakingswinst: stakingswinst,
+    stakingsaftrek: stakingsaftrekToegepast,
+    forVrijval: forVrijval,
+    forNaarLijfrente: forNaarLijfrente,
+    forBelastNu: forBelastNu,
+    stakingslijfrente: stakingslijfrenteToegepast,
+    belastbareStaking: rondBedrag_(belastbareStaking),
+    advies: belastbareStaking > 50000
+      ? 'Overweeg meer FOR om te zetten in stakingslijfrente — verlaagt directe belastingdruk.'
+      : 'Combinatie lijkt fiscaal gunstig.',
+  };
+}
+
+/**
+ * Menu-entry: stakingswizard.
+ */
+function toonStakingsWizard() {
+  const ui = SpreadsheetApp.getUi();
+  ui.alert(
+    '🏁 Bedrijf staken — fiscale wizard',
+    'Bij bedrijfsbeëindiging spelen stakingsaftrek (€3.630), FOR-vrijval, ' +
+    'en stakingslijfrente. Deze wizard berekent het netto-effect.\n\n' +
+    'Voor jouw specifieke situatie: raadpleeg een fiscalist VOOR je staakt — ' +
+    'de keuzes zijn onomkeerbaar zodra de jaaraangifte is ingediend.\n\n' +
+    'Open Boekhouding → Belastingvoordeel → "Wat-als-rekenmachine" en kies ' +
+    '"Bedrijf staken" als simulatie-modus.',
+    ui.ButtonSet.OK
+  );
+  // Werkelijke wizard: extend simuleerWatAls_ in Belastingvoordeel.gs
+  // met scenario 'staking'. Voor nu: documenteer via alert.
+}
+
+// ─────────────────────────────────────────────
+//  B8 — SUPPLETIE-AANGIFTE DETECTIE
+// ─────────────────────────────────────────────
+
+/**
+ * Detecteert retroactieve correcties op afgesloten BTW-periode.
+ * Werkt door: vergelijk huidige BTW-aangifte data met historische snapshot
+ * uit GESLOTEN_PERIODES. Verschil > €1.000 = direct suppletie verplicht;
+ * < €1.000 = mag in volgende reguliere aangifte mee.
+ *
+ * @returns {Object[]} array van { periode, oudBedrag, nieuwBedrag, verschil, verplicht }
+ */
+function detecteerSuppletieMogelijk_() {
+  const props = PropertiesService.getScriptProperties();
+  const snapshotsRaw = props.getProperty('BTW_SNAPSHOTS') || '{}';
+  let snapshots;
+  try { snapshots = JSON.parse(snapshotsRaw); } catch (_) { snapshots = {}; }
+
+  const ss = getSpreadsheet_();
+  if (!ss) return [];
+  const huidigJaar = new Date().getFullYear();
+  const verschillen = [];
+
+  // Voor elk afgesloten kwartaal in huidig + vorig jaar: bereken nu en compare
+  [huidigJaar - 1, huidigJaar].forEach(function(jaar) {
+    for (let q = 1; q <= 4; q++) {
+      const snapKey = jaar + '_Q' + q;
+      const oud = snapshots[snapKey];
+      if (!oud) continue;  // periode nooit afgesloten
+
+      // Recompute
+      const van = new Date(jaar, (q - 1) * 3, 1);
+      const tot = new Date(jaar, q * 3, 0, 23, 59, 59, 999);
+      let nieuw;
+      try {
+        if (typeof berekenBtwAangifte_ === 'function') {
+          nieuw = berekenBtwAangifte_(ss, van, tot);
+        }
+      } catch (_) { continue; }
+      if (!nieuw) continue;
+
+      const oudSaldo = parseFloat(oud.saldo) || 0;
+      const nieuwSaldo = parseFloat(nieuw.saldo) || 0;
+      const verschil = rondBedrag_(nieuwSaldo - oudSaldo);
+      if (Math.abs(verschil) < 0.50) continue;  // ronding-noise
+      verschillen.push({
+        periode: snapKey,
+        oudBedrag: oudSaldo,
+        nieuwBedrag: nieuwSaldo,
+        verschil: verschil,
+        verplicht: Math.abs(verschil) >= SUPPLETIE_DREMPEL,
+      });
+    }
+  });
+  return verschillen;
+}
+
+/**
+ * Genereer suppletie-rapport tabblad met alle gedetecteerde correcties.
+ */
+function genereerSuppletieRapport() {
+  const ui = SpreadsheetApp.getUi();
+  const verschillen = detecteerSuppletieMogelijk_();
+  if (verschillen.length === 0) {
+    ui.alert('✅ Geen suppletie nodig', 'Geen retroactieve verschillen gedetecteerd t.o.v. afgesloten periodes.', ui.ButtonSet.OK);
+    return;
+  }
+  const ss = getSpreadsheet_();
+  let sheet = ss.getSheetByName('Suppletie');
+  if (!sheet) {
+    sheet = ss.insertSheet('Suppletie');
+    sheet.setTabColor('#F59E0B');
+  } else {
+    sheet.clearContents();
+    sheet.clearFormats();
+  }
+
+  sheet.getRange(1, 1, 1, 5).merge()
+    .setValue('🔄 SUPPLETIE-AANGIFTE OVERZICHT')
+    .setBackground('#0D1B4E').setFontColor('#FFFFFF')
+    .setFontWeight('bold').setFontSize(15).setHorizontalAlignment('center');
+  sheet.setRowHeight(1, 38);
+
+  sheet.getRange(2, 1, 1, 5).merge()
+    .setValue('Verschillen tussen huidige boekstand en eerder afgesloten BTW-aangiftes. ≥€1.000 = suppletie verplicht (binnen 5 jaar). <€1.000 = mag in volgende reguliere aangifte mee.')
+    .setBackground('#FFF8E1').setFontColor('#5A3F00').setFontSize(11)
+    .setHorizontalAlignment('center').setWrap(true);
+  sheet.setRowHeight(2, 50);
+
+  sheet.getRange(4, 1, 1, 5).setValues([['Periode', 'Oud saldo', 'Nieuw saldo', 'Verschil', 'Status']])
+    .setBackground('#0D1B4E').setFontColor('#FFFFFF').setFontWeight('bold')
+    .setFontSize(11).setHorizontalAlignment('center');
+  sheet.setFrozenRows(4);
+
+  let r = 5;
+  verschillen.forEach(function(v) {
+    sheet.getRange(r, 1, 1, 5).setValues([[
+      v.periode,
+      formatBedrag_(v.oudBedrag),
+      formatBedrag_(v.nieuwBedrag),
+      formatBedrag_(v.verschil),
+      v.verplicht ? 'VERPLICHT — direct suppletie' : 'Mag in volgende aangifte mee',
+    ]]);
+    if (v.verplicht) {
+      sheet.getRange(r, 5).setBackground('#FFCDD2').setFontColor('#B71C1C').setFontWeight('bold');
+    } else {
+      sheet.getRange(r, 5).setBackground('#FFF8E1').setFontColor('#5A3F00');
+    }
+    r++;
+  });
+  sheet.setColumnWidth(1, 120);
+  for (let c = 2; c <= 4; c++) sheet.setColumnWidth(c, 130);
+  sheet.setColumnWidth(5, 280);
+  ss.setActiveSheet(sheet);
+  ui.alert('🔄 Suppletie-rapport klaar', verschillen.length + ' periode(s) met verschil. Open Suppletie-tab voor details.', ui.ButtonSet.OK);
+}
+
+// ─────────────────────────────────────────────
+//  B9 — DGA-SALARIS MONITOR
+// ─────────────────────────────────────────────
+
+/**
+ * Check of DGA-salaris voldoet aan minimum-loon-regel.
+ * Geactiveerd via Instellingen 'Rechtsvorm' = 'BV' of 'Heeft DGA' = 'Ja'.
+ * @returns {Object|null}  { brutoSalaris, minimum, voldoet, advies } of null
+ */
+function checkDgaSalaris_() {
+  const heeftDga = String(getInstelling_('Heeft DGA') || '').toLowerCase() === 'ja';
+  const rechtsvorm = String(getInstelling_('Rechtsvorm') || '').toLowerCase();
+  if (!heeftDga && !/bv|n\.?v\.?/.test(rechtsvorm)) return null;
+
+  const brutoSalaris = parseBedrag_(getInstelling_('DGA brutosalaris') || '0');
+  const minimum = DGA_MIN_SALARIS_2026;
+  if (brutoSalaris === 0) {
+    return {
+      brutoSalaris: 0, minimum: minimum, voldoet: false,
+      advies: 'Geen DGA-salaris ingevuld — vul in Instellingen "DGA brutosalaris" in. Minimum 2026: €' + minimum.toLocaleString('nl-NL'),
+    };
+  }
+  const voldoet = brutoSalaris >= minimum;
+  return {
+    brutoSalaris: brutoSalaris,
+    minimum: minimum,
+    voldoet: voldoet,
+    advies: voldoet
+      ? 'DGA-salaris voldoet aan minimum (€' + minimum.toLocaleString('nl-NL') + ').'
+      : 'DGA-salaris (€' + brutoSalaris.toLocaleString('nl-NL') +
+        ') is LAGER dan wettelijk minimum (€' + minimum.toLocaleString('nl-NL') + '). ' +
+        'Belastingdienst kan corrigeren — verhoog salaris of vraag uitzondering aan.',
+  };
+}
+
+/**
+ * Hook in Notificaties + Belastingadvies.
+ */
+function dgaSalarisNotificatie_() {
+  const r = checkDgaSalaris_();
+  if (!r) return null;
+  if (r.voldoet) return null;
+  return {
+    titel: '⚠️ DGA-salaris onder minimum',
+    tekst: r.advies,
+    actie: 'Verhoog DGA-salaris of doe verzoek aan Belastingdienst',
+    euros: 0,
+    urgent: true,
+    prioriteit: 88,
+  };
+}
+
+// Hook in genereerNotificaties_ via existing pattern

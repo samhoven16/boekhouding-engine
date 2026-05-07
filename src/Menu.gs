@@ -136,6 +136,9 @@ function onOpen() {
     .addItem('🏦 Lijfrente: hoeveel mag ik storten?', 'toonLijfrenteJaarruimte')
     .addItem('💰 BTW-spaarpot: heb ik genoeg apart staan?', 'toonBtwSpaarpot')
     .addItem('💼 Voorlopige belasting: hoeveel reserveren per maand?', 'toonVoorlopigeAanslagTip')
+    .addItem('💎 KIA + MIA + EIA stapeling berekenen', 'toonInvesteringsAftrekStapeling')
+    .addItem('🏁 Bedrijf staken: stakingsaftrek + FOR + lijfrente', 'toonStakingsWizard')
+    .addItem('🔄 Suppletie-aangifte controle', 'genereerSuppletieRapport')
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────

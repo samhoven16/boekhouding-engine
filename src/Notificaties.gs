@@ -40,6 +40,14 @@ function genereerNotificaties_() {
       if (oss) lijst.push(oss);
     }
   } catch (_) {}
+
+  // DGA-salaris monitor (alleen relevant bij BV/NV-klanten)
+  try {
+    if (typeof dgaSalarisNotificatie_ === 'function') {
+      const dga = dgaSalarisNotificatie_();
+      if (dga) lijst.push(dga);
+    }
+  } catch (_) {}
   let kpi, advies, B;
   try { kpi = berekenKpiData_(ss); } catch (_) { kpi = {}; }
   try { advies = berekenBelastingadvies_(ss); } catch (_) { advies = { adviezen: [], aftrekken: [] }; }

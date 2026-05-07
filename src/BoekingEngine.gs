@@ -218,9 +218,26 @@ function _verwerkFactuur_(ss, s) {
   formData['Klant e-mailadres']             = s.email || '';
   formData['Factuurdatum']                  = s.datum;
   formData['Betalingstermijn (dagen)']      = s.termijn || '30';
-  formData['BTW tarief']                    = s.btw || '21% (hoog)';
+
+  // \u2500\u2500 Verleggingsregeling auto-detect (zero-failure fiscale correctheid) \u2500
+  // Bij EU-klant met geldig BTW-nummer EN niet-NL \u2192 verleggingsregeling
+  // verplicht (art. 12 lid 3 Wet OB). Tarief automatisch naar 'Verlegd'
+  // override; klant kan handmatig overschrijven met s.btwOverride='Ja'.
+  let btwTarief = s.btw || '21% (hoog)';
+  let verlegdAuto = false;
+  try {
+    if (typeof isEUB2B_ === 'function' && isEUB2B_(s.btwNrKlant, '')) {
+      if (s.btwOverride !== 'Ja' && !/Verlegd/i.test(btwTarief)) {
+        btwTarief = 'Verlegd';
+        verlegdAuto = true;
+        try { schrijfAuditLog_('Verleggingsregeling auto-toegepast', s.klant + ' BTW-nr=' + (s.btwNrKlant || '?')); } catch (_) {}
+      }
+    }
+  } catch (_) {}
+
+  formData['BTW tarief']                    = btwTarief;
   formData['Korting (in \u20ac)']           = s.korting || '0';
-  formData['Notities op factuur']           = s.notities || '';
+  formData['Notities op factuur']           = (s.notities || '') + (verlegdAuto ? '\nBTW verlegd (art. 12 lid 3 Wet OB 1968)' : '');
   formData['Projectcode / Referentie']      = s.referentie || '';
   formData['Factuur direct e-mailen naar klant?'] = s.email ? 'Ja' : 'Nee';
   formData['Factuuradres klant']            = s.klantAdres || '';
