@@ -188,7 +188,9 @@
     --rood: #E11D48;
     --tekst: #1A1A1A;
     --grijs: #5F6B7A;
-    --grijs-licht: #94A3B0;
+    /* WCAG 2.1 AA: #94A3B0 op #FFFFFF gaf 3.2:1 (faalde). Donkerder
+       voor 4.5:1+ contrast op witte achtergrond. */
+    --grijs-licht: #6B7785;
     --bg: #F7F9FC;
     --wit: #ffffff;
     --rand: #E5EAF2;
@@ -203,6 +205,45 @@
     --shadow-glow: 0 0 0 1px var(--accent-soft), 0 14px 40px var(--accent-glow);
     --gradient-mesh: radial-gradient(at 12% 8%, rgba(46,196,182,.12) 0%, transparent 45%), radial-gradient(at 88% 92%, rgba(13,27,78,.10) 0%, transparent 50%);
   }
+
+  /* Dark-mode tokens — auto bij prefers-color-scheme:dark, override via [data-thema=dark] */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-thema=light]) {
+      --blauw: #E5EAF2;
+      --blauw-licht: #B8C2D6;
+      --tekst: #E8EAED;
+      --grijs: #B0B8C2;
+      --grijs-licht: #889098;
+      --bg: #0A0F1F;
+      --wit: #131A2E;
+      --rand: #2A3144;
+      --rand-soft: rgba(255,255,255,.08);
+      --shadow-soft: 0 1px 3px rgba(0,0,0,.5);
+      --shadow-card: 0 8px 32px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-thema=dark] {
+    --blauw: #E5EAF2;
+    --blauw-licht: #B8C2D6;
+    --tekst: #E8EAED;
+    --grijs: #B0B8C2;
+    --grijs-licht: #889098;
+    --bg: #0A0F1F;
+    --wit: #131A2E;
+    --rand: #2A3144;
+    --rand-soft: rgba(255,255,255,.08);
+    --shadow-soft: 0 1px 3px rgba(0,0,0,.5);
+    --shadow-card: 0 8px 32px rgba(0,0,0,.4);
+  }
+  /* Toggle-knop in nav */
+  .thema-toggle {
+    background: transparent; border: 1px solid var(--rand);
+    border-radius: 100px; padding: 6px 12px; cursor: pointer;
+    font-size: 13px; color: var(--grijs); font-family: inherit;
+    transition: background .15s, border-color .15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .thema-toggle:hover { background: var(--bg); border-color: var(--accent); color: var(--blauw); }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1076,6 +1117,24 @@
   }
   .btn-koop:active { transform: scale(.97); transition-duration: .08s; }
   .garantie { font-size: 13px; color: var(--grijs); margin-top: 14px; }
+  .persona-rij {
+    margin-top: 22px; padding: 18px 20px;
+    background: var(--bg);
+    border: 1px solid var(--rand);
+    border-radius: var(--radius);
+  }
+  .persona-titel {
+    font-size: 13px; font-weight: 600; color: var(--blauw);
+    text-align: center; margin-bottom: 14px; letter-spacing: -0.005em;
+  }
+  .persona-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  .persona { text-align: center; }
+  .persona-icon { font-size: 24px; margin-bottom: 4px; }
+  .persona-naam { font-size: 13px; font-weight: 700; color: var(--blauw); margin-bottom: 4px; }
+  .persona-tekst { font-size: 11.5px; color: var(--grijs); line-height: 1.45; }
+  @media (max-width: 580px) { .persona-grid { grid-template-columns: 1fr; gap: 12px; } }
   .garantie-bord {
     display: flex; align-items: flex-start; gap: 14px;
     margin-top: 22px; padding: 16px 20px;
@@ -1372,6 +1431,9 @@
       <li><a href="/gids/">Gidsen</a></li>
       <li><a href="/over/">Over</a></li>
       <li><a href="/faq/">FAQ</a></li>
+      <li><button class="thema-toggle" id="themaToggle" type="button" aria-label="Donker/licht wisselen">
+        <span id="themaIcon" aria-hidden="true">🌙</span><span id="themaTekst">Donker</span>
+      </button></li>
       <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
     </ul>
     <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
@@ -1673,6 +1735,28 @@
         Koop nu voor €49 →
       </a>
       <p class="garantie">Betalen via Mollie (iDEAL, bancontact, creditcard) · licentie direct in je inbox</p>
+
+      <!-- Persona-rij: één tier, eerlijke uitleg waarom geen pakket-onderscheid -->
+      <div class="persona-rij" role="note">
+        <div class="persona-titel">Geen tiers, geen "Premium". Eerlijke prijs voor iedereen:</div>
+        <div class="persona-grid">
+          <div class="persona">
+            <div class="persona-icon" aria-hidden="true">🌱</div>
+            <div class="persona-naam">Net begonnen</div>
+            <div class="persona-tekst">Eerste factuur deze maand? Alles wat je nodig hebt zit erin.</div>
+          </div>
+          <div class="persona">
+            <div class="persona-icon" aria-hidden="true">📈</div>
+            <div class="persona-naam">10 jaar zelfstandig</div>
+            <div class="persona-tekst">Bewuste keuze tegen abonnement. Eigen data, geen lock-in.</div>
+          </div>
+          <div class="persona">
+            <div class="persona-icon" aria-hidden="true">📊</div>
+            <div class="persona-naam">Accountant of coach</div>
+            <div class="persona-tekst">Beveel het je klanten aan. Read-only deelflow ingebouwd.</div>
+          </div>
+        </div>
+      </div>
       <div class="garantie-bord" role="note">
         <span class="garantie-bord-icon" aria-hidden="true">🛡️</span>
         <div>
@@ -1824,6 +1908,37 @@
       if (!ticking) { window.requestAnimationFrame(update); ticking = true; }
     }, { passive: true });
     update();
+  })();
+
+  // Dark-mode toggle: respect prefers-color-scheme + manuele override via cookie
+  (function() {
+    var btn = document.getElementById('themaToggle');
+    var icon = document.getElementById('themaIcon');
+    var tekst = document.getElementById('themaTekst');
+    if (!btn) return;
+    function leesPref() {
+      var m = document.cookie.match(/thema=(\w+)/);
+      return m ? m[1] : null;
+    }
+    function pasToe(thema) {
+      if (thema === 'light' || thema === 'dark') {
+        document.documentElement.setAttribute('data-thema', thema);
+      } else {
+        document.documentElement.removeAttribute('data-thema');
+      }
+      // Update icoon: huidig effectief thema
+      var effectief = thema || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      if (icon) icon.textContent = effectief === 'dark' ? '☀️' : '🌙';
+      if (tekst) tekst.textContent = effectief === 'dark' ? 'Licht' : 'Donker';
+    }
+    pasToe(leesPref());
+    btn.addEventListener('click', function() {
+      var huidig = document.documentElement.getAttribute('data-thema')
+        || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      var nieuw = huidig === 'dark' ? 'light' : 'dark';
+      document.cookie = 'thema=' + nieuw + ';max-age=31536000;path=/;samesite=lax';
+      pasToe(nieuw);
+    });
   })();
 
   // Easter-egg: type "boekhouder" → confetti + ode aan boekhouders
