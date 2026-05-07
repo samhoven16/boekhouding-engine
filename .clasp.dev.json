@@ -1,0 +1,5 @@
+{
+  "_comment": "Dev/staging Apps Script project. Vervang scriptId met je dev-project ID. Maak een tweede Apps Script project aan + plak hier de ID. Klant-master-sjabloon blijft prod; dev is voor risicovolle changes vóór release.",
+  "scriptId": "REPLACE_WITH_DEV_SCRIPT_ID",
+  "rootDir": "./src"
+}

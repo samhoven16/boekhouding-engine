@@ -52,6 +52,18 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
            <strong>BTW verlegd</strong> — Op deze factuur is de btw verlegd naar de afnemer (art. 12 lid 3 Wet OB 1968 / art. 196 EU-richtlijn 2006/112/EG).
          </div>`
       : '';
+    // Mollie betaal-link (optioneel — alleen indien API-key geconfigureerd)
+    let molliePaymentHtml = '';
+    try {
+      if (typeof molliePaymentBlock_ === 'function') {
+        molliePaymentHtml = molliePaymentBlock_({
+          factuurnummer: factuurNr,
+          klantnaam: klantnaam,
+          klantEmail: formData['Klant e-mailadres'] || '',
+          bedragIncl: totalIncl,
+        });
+      }
+    } catch (e) { Logger.log('molliePaymentBlock_ fout: ' + e.message); }
 
     const html = `
 <!DOCTYPE html>
@@ -160,6 +172,7 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
 
   ${korVerklaring}
   ${verleggingsVerklaring}
+  ${molliePaymentHtml}
 
   <div class="betaalinfo">
     <h4>Betaalinformatie</h4>
@@ -228,9 +241,39 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
  */
 function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   if (!factuurnummer || !email) return false;
+
+  // Per-factuur LockService: voorkomt dat dubbel-klikken op verstuur-knop
+  // twee parallelle email-versturingen aanjaagt. Lock-key is per-factuurnr
+  // zodat verschillende facturen wel parallel kunnen.
+  // Apps Script LockService is script-wide, niet per-key — dus we gebruiken
+  // een ScriptProperty als mutex-flag met TTL.
+  const props = PropertiesService.getScriptProperties();
+  const flagKey = 'verstuurBezig_' + factuurnummer;
+  const nu = Date.now();
+  const bezigSinds = parseInt(props.getProperty(flagKey) || '0');
+  if (bezigSinds && (nu - bezigSinds) < 30000) {  // 30s mutex-window
+    Logger.log('stuurFactuurNaarEmailAdres: SKIPPED — al bezig met ' + factuurnummer + ' (' + Math.round((nu - bezigSinds)/1000) + 's)');
+    try { schrijfAuditLog_('Factuur dubbel-versturen geblokkeerd', factuurnummer + ' (' + Math.round((nu - bezigSinds)/1000) + 's)'); } catch (_) {}
+    return false;
+  }
+  props.setProperty(flagKey, String(nu));
+
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
-  if (!sheet) return false;
+  if (!sheet) { props.deleteProperty(flagKey); return false; }
+
+  // Pre-flight quota-check — voorkomt mid-flight email-fail
+  try {
+    const remaining = MailApp.getRemainingDailyQuota();
+    if (remaining < 1) {
+      props.deleteProperty(flagKey);
+      try { schrijfAuditLog_('Email quota uitgeput', factuurnummer + ' rem=0'); } catch (_) {}
+      throw new Error('Dagelijkse e-maillimiet bereikt — probeer morgen opnieuw of upgrade naar Workspace.');
+    }
+  } catch (e) {
+    if (/limiet bereikt/.test(e.message)) throw e;  // bubble up naar dialog
+    // Quota-API down? laat door
+  }
 
   const data = sheet.getDataRange().getValues();
   let gevonden = null;
@@ -242,10 +285,25 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
       break;
     }
   }
-  if (!gevonden) { Logger.log('stuurFactuurNaarEmailAdres: factuur niet gevonden: ' + factuurnummer); return false; }
+  if (!gevonden) { props.deleteProperty(flagKey); Logger.log('stuurFactuurNaarEmailAdres: factuur niet gevonden: ' + factuurnummer); return false; }
 
   const pdfUrl = gevonden[19];
-  if (!pdfUrl) { Logger.log('stuurFactuurNaarEmailAdres: geen PDF voor ' + factuurnummer); return false; }
+  if (!pdfUrl) { props.deleteProperty(flagKey); Logger.log('stuurFactuurNaarEmailAdres: geen PDF voor ' + factuurnummer); return false; }
+
+  // Flush vóór email — zorg dat status-changes uit nieuw-aangemaakte factuurs zichtbaar zijn
+  SpreadsheetApp.flush();
+
+  // Ghost-success guard: idempotency-key. Zelfde mechanisme als
+  // verwerkInkomstenUitHoofdformulier_ — voorkomt dubbele mail bij retry-after-crash.
+  const idemKey = 'emailVerzonden_' + factuurnummer;
+  const propsIdem = PropertiesService.getScriptProperties();
+  if (propsIdem.getProperty(idemKey) === 'DONE') {
+    Logger.log('stuurFactuurNaarEmailAdres: SKIP — al gemarkeerd DONE voor ' + factuurnummer);
+    try { schrijfAuditLog_('Email DUBBEL geblokkeerd', factuurnummer + ' (factuurlijst)'); } catch (_) {}
+    try { props.deleteProperty(flagKey); } catch (_) {}
+    return true;  // optimistisch — caller hoeft niet opnieuw te proberen
+  }
+  propsIdem.setProperty(idemKey, 'PENDING:' + Date.now());
 
   const ok = stuurFactuurEmailNaarKlant_(
     email,
@@ -256,6 +314,13 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
     pdfUrl,
     null           // ublUrl — optioneel
   );
+
+  // Idempotency: markeer DONE direct na succes (atomair vóór sheet-write)
+  if (ok) {
+    try { propsIdem.setProperty(idemKey, 'DONE'); } catch (_) {}
+  } else {
+    try { propsIdem.deleteProperty(idemKey); } catch (_) {}  // retry mag
+  }
 
   if (ok) {
     // Alleen upgraden naar VERZONDEN als de factuur nog niet betaald of gecrediteerd is.
@@ -272,6 +337,8 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   } else {
     schrijfAuditLog_('Factuur email MISLUKT (succes-scherm)', (gevonden ? gevonden[1] : factuurnummer) + ' → ' + email);
   }
+  // Mutex-flag wissen — andere klikken kunnen weer
+  try { props.deleteProperty(flagKey); } catch (_) {}
   return ok;
 }
 
@@ -806,46 +873,64 @@ function getFactuurlijstData() {
  */
 function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
   if (!factuurnr) throw new Error('Geen factuurnummer opgegeven');
-  const ss    = getSpreadsheet_();
-  const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
-  const data  = sheet.getDataRange().getValues();
-  const datum = betaaldatumStr ? parseDatum_(betaaldatumStr) : new Date();
 
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][1]) !== String(factuurnr)) continue;
+  // Optimistic locking: voorkom dat handmatig "Markeer betaald" + bank-CSV-
+  // import gelijktijdig dezelfde factuur 2x als betaald markeren (= 2x
+  // journaalpost = €X dubbel geboekt). LockService.tryLock(3s) wacht max
+  // 3s; bij timeout valt aanroep door — idempotency-check vangt rest.
+  const lock = LockService.getScriptLock();
+  // 30s — financiële integriteit > UI-snelheid; voorkomt dubbele journaalpost
+  // bij parallelle "Markeer betaald" + bank-CSV-import
+  const gotLock = lock.tryLock(30000);
 
-    // Idempotentie-check: als al betaald, geen tweede journaalpost aanmaken
-    const huidigStatus = String(data[i][14] || '');
-    if (huidigStatus === FACTUUR_STATUS.BETAALD || huidigStatus === FACTUUR_STATUS.GECREDITEERD) {
-      return { ok: true, bericht: 'Factuur ' + factuurnr + ' was al gemarkeerd als betaald.' };
+  try {
+    const ss    = getSpreadsheet_();
+    const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+    // Re-read NA lock om laatste-stand te zien (een ander process kan net
+    // hebben gemarkeerd terwijl we wachtten op lock)
+    const data  = sheet.getDataRange().getValues();
+    const datum = betaaldatumStr ? parseDatum_(betaaldatumStr) : new Date();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][1]) !== String(factuurnr)) continue;
+
+      // Idempotentie-check NA lock-acquire — race-vrij
+      const huidigStatus = String(data[i][14] || '');
+      if (huidigStatus === FACTUUR_STATUS.BETAALD || huidigStatus === FACTUUR_STATUS.GECREDITEERD) {
+        return { ok: true, bericht: 'Factuur ' + factuurnr + ' was al gemarkeerd als betaald.' };
+      }
+
+      const bedragIncl = parseFloat(data[i][12]) || 0;
+      if (bedragIncl <= 0) throw new Error('Factuur ' + factuurnr + ' heeft geen geldig bedrag');
+
+      sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag
+      sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.BETAALD);  // Status
+      sheet.getRange(i + 1, 16).setValue(datum);                   // Betaaldatum
+      SpreadsheetApp.flush();                                       // Forceer write vóór journaalpost
+
+      // Journaalpost: Debiteuren → Bank (exact 1x per aanroep dankzij idempotentie-check)
+      maakJournaalpost_(ss, {
+        datum,
+        omschr:  'Ontvangst factuur ' + factuurnr,
+        dagboek: 'Bankboek',
+        debet:   '1200',
+        credit:  '1100',
+        bedrag:  bedragIncl,
+        ref:     factuurnr,
+        type:    BOEKING_TYPE.BANKONTVANGST,
+      });
+
+      schrijfAuditLog_('Factuur betaald', factuurnr + ' via factuurlijst dialog');
+      // Invalidate snapshot: debiteurenOpen and aantalOpenFacturen have changed.
+      // The next snapshot read will recompute fresh (no vernieuwDashboard overhead here).
+      invalideerKpiSnapshot_();
+      try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
+      return { ok: true, bericht: 'Factuur ' + factuurnr + ' gemarkeerd als betaald.' };
     }
-
-    const bedragIncl = parseFloat(data[i][12]) || 0;
-    if (bedragIncl <= 0) throw new Error('Factuur ' + factuurnr + ' heeft geen geldig bedrag');
-
-    sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag
-    sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.BETAALD);  // Status
-    sheet.getRange(i + 1, 16).setValue(datum);                   // Betaaldatum
-
-    // Journaalpost: Debiteuren → Bank (exact 1x per aanroep dankzij idempotentie-check)
-    maakJournaalpost_(ss, {
-      datum,
-      omschr:  'Ontvangst factuur ' + factuurnr,
-      dagboek: 'Bankboek',
-      debet:   '1200',
-      credit:  '1100',
-      bedrag:  bedragIncl,
-      ref:     factuurnr,
-      type:    BOEKING_TYPE.BANKONTVANGST,
-    });
-
-    schrijfAuditLog_('Factuur betaald', factuurnr + ' via factuurlijst dialog');
-    // Invalidate snapshot: debiteurenOpen and aantalOpenFacturen have changed.
-    // The next snapshot read will recompute fresh (no vernieuwDashboard overhead here).
-    invalideerKpiSnapshot_();
-    return { ok: true, bericht: 'Factuur ' + factuurnr + ' gemarkeerd als betaald.' };
+    throw new Error('Factuurnummer ' + factuurnr + ' niet gevonden');
+  } finally {
+    if (gotLock) try { lock.releaseLock(); } catch (_) {}
   }
-  throw new Error('Factuurnummer ' + factuurnr + ' niet gevonden');
 }
 
 function _bouwFactuurlijstHtml_() {

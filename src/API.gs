@@ -28,30 +28,55 @@
 // ─────────────────────────────────────────────
 function doPost(e) {
   try {
-    // API-sleutel validatie
+    // ── Body-size limit (DOS-bescherming) ─────────────────────────
+    const rawBody = (e && e.postData && e.postData.contents) || '';
+    if (rawBody.length > 100 * 1024) {
+      return jsonResponse_({ succes: false, fout: 'Body te groot (max 100KB)' });
+    }
+
+    // ── Rate-limit met integratie-whitelist ───────────────────────
+    // Webhook-aanroepen via Zapier/Make hebben legitiem hogere rate dan
+    // interactieve klant. rateLimit_ met bron='webhook' geeft ×3 cap.
+    try {
+      if (typeof rateLimit_ === 'function') rateLimit_('webhookPost', 60, 'webhook');
+    } catch (rlErr) {
+      return jsonResponse_({ succes: false, fout: rlErr.message });
+    }
+
+    // ── API-sleutel + HMAC-handtekening validatie ─────────────────
+    // Twee modi naast elkaar (backward-compat):
+    //   1. Plain API-key in body/query (bestaande flow)
+    //   2. HMAC-SHA256 handtekening van body via secret-key (sterker)
+    // Klant kan kiezen via Instellingen 'Webhook HMAC-modus'.
     const apiSleutel = getInstelling_('Webhook API sleutel');
-    if (apiSleutel) {
-      // Sleutel kan meegegeven worden via:
-      //   URL query param:  ?apikey=...
-      //   JSON body veld:   { "apikey": "..." }
-      // NB: HTTP-headers zijn niet toegankelijk vanuit Apps Script Web Apps.
+    const hmacSecret = getInstelling_('Webhook HMAC secret') || '';
+    const hmacModus = String(getInstelling_('Webhook HMAC-modus') || '').toLowerCase() === 'ja';
+
+    if (hmacModus && hmacSecret) {
+      // HMAC-pad: client stuurt ?signature=hex(hmac-sha256(body))
+      const sig = String((e.parameter && e.parameter.signature) || '');
+      const verwacht = _hmacSha256Hex_(rawBody, hmacSecret);
+      if (!sig || !veiligVergelijkApi_(sig, verwacht)) {
+        try { schrijfAuditLog_('API HMAC mismatch', 'sig=' + sig.slice(0, 12) + '... bodyLen=' + rawBody.length); } catch (_) {}
+        return jsonResponse_({ succes: false, fout: 'Ongeldige of ontbrekende handtekening' });
+      }
+    } else if (apiSleutel) {
       const queryKey = (e && e.parameter && e.parameter.apikey) || '';
-      const bodyKey  = (e.postData && e.postData.contents &&
-                        safeJsonParse_(e.postData.contents)['apikey']) || '';
+      const bodyKey  = (rawBody && safeJsonParse_(rawBody)['apikey']) || '';
       const meegezonden = queryKey || bodyKey;
-      // Constant-time compare voorkomt timing-attacks waarbij een attacker
-      // byte-voor-byte de API-sleutel kan raden via responstijd-verschillen.
       if (!veiligVergelijkApi_(meegezonden, apiSleutel)) {
         return jsonResponse_({ succes: false, fout: 'Ongeldige of ontbrekende API-sleutel' });
       }
     }
 
     let payload = {};
-    if (e.postData && e.postData.contents) {
-      payload = safeJsonParse_(e.postData.contents);
+    if (rawBody) {
+      payload = safeJsonParse_(rawBody);
     } else if (e.parameter) {
       payload = e.parameter;
     }
+    // Recursief saniteren — voorkomt formula-injection via webhook-body
+    payload = saniteerObject_(payload);
 
     const actie = String(payload.actie || '').toLowerCase();
     const ss = getSpreadsheet_();
@@ -141,6 +166,23 @@ function verwerkFactuurWebhook_(ss, p) {
   if (!p.klantnaam) return jsonResponse_({ succes: false, fout: 'klantnaam is verplicht' });
   if (!p.omschrijving && !p.regel1_omschrijving) return jsonResponse_({ succes: false, fout: 'omschrijving of regel1_omschrijving is verplicht' });
 
+  // ── Idempotency-key (webhooks moeten replay-safe zijn) ────────────────
+  // Stripe/Mollie/Zapier kunnen dezelfde webhook 2× sturen bij retry.
+  // Klant kan ook idempotency_key meesturen. Zonder key: hash van payload.
+  const idemKey = String(p.idempotency_key || p.idempotencyKey || '').trim();
+  if (idemKey) {
+    const cacheKey = 'webhook_' + idemKey.slice(0, 60);
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      // Replay van eerdere call — return zelfde resultaat (idempotent)
+      try { schrijfAuditLog_('Webhook idempotent replay', cacheKey); } catch (_) {}
+      return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+    }
+    // Markeer "in behandeling" — voorkomt dat 2 parallelle replays beide doorgaan
+    cache.put(cacheKey, JSON.stringify({ succes: true, bericht: 'In behandeling — verstuur niet opnieuw' }), 3600);
+  }
+
   // Bouw data-object op compatibel met het formulierformaat
   const data = {
     'Klantnaam':                           p.klantnaam,
@@ -168,13 +210,22 @@ function verwerkFactuurWebhook_(ss, p) {
     // Pak de factuurnummer DIRECT uit het resultaat — voorkomt race-condition
     // waarbij parallelle invocations VOLGEND_FACTUUR_NR ondertussen ophogen.
     const result = verwerkInkomstenUitHoofdformulier_(ss, data);
-    return jsonResponse_({
+    const respObj = {
       succes: true,
       bericht: 'Factuur aangemaakt',
       factuurnummer: result && result.factuurnummer ? result.factuurnummer : 'onbekend',
       pdfUrl: result && result.pdfUrl ? result.pdfUrl : null,
-    });
+    };
+    // Cache definitief resultaat onder idempotency-key (replay levert nu echte data terug)
+    if (idemKey) {
+      try { CacheService.getScriptCache().put('webhook_' + idemKey.slice(0, 60), JSON.stringify(respObj), 21600); } catch (_) {}
+    }
+    return jsonResponse_(respObj);
   } catch (err) {
+    // Bij fout: verwijder idempotency-marker zodat retry kan
+    if (idemKey) {
+      try { CacheService.getScriptCache().remove('webhook_' + idemKey.slice(0, 60)); } catch (_) {}
+    }
     return jsonResponse_({ succes: false, fout: err.message });
   }
 }
@@ -391,6 +442,22 @@ function veiligVergelijkApi_(a, b) {
   let mismatch = 0;
   for (let i = 0; i < s1.length; i++) mismatch |= (s1.charCodeAt(i) ^ s2.charCodeAt(i));
   return mismatch === 0;
+}
+
+/**
+ * HMAC-SHA256 van een payload met een gedeelde secret. Output hex-encoded.
+ * Gebruikt door doPost om webhooks van Zapier/Make te authenticeren via
+ * X-Body-Signature pattern.
+ *
+ * Client-side voorbeeld:
+ *   signature = hex(hmac_sha256(secret, requestBody))
+ *   POST ?signature=<hex>
+ */
+function _hmacSha256Hex_(bericht, secret) {
+  const raw = Utilities.computeHmacSha256Signature(String(bericht || ''), String(secret || ''));
+  return raw.map(function(b) {
+    return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0');
+  }).join('');
 }
 
 function safeJsonParse_(str) {

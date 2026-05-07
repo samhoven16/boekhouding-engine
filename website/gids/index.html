@@ -119,6 +119,13 @@
 
   <p style="font-size:17px;color:var(--grijs);margin-bottom:8px;">Praktische artikelen over de dingen waar je als ondernemer tegenaan loopt. Geen marketingteksten — ik schrijf wat ik zelf had willen weten.</p>
 
+  <!-- Quick-search box voor gidsen — directe filtering -->
+  <div style="position:relative;margin:24px 0 32px;max-width:560px;">
+    <input type="search" id="gids-zoek" placeholder="Zoek een onderwerp — bv. BTW, factuur, urencriterium..." aria-label="Zoek gidsen" style="width:100%;padding:14px 16px 14px 44px;font-size:15px;border:1px solid var(--rand);border-radius:10px;background:#fff;font-family:inherit;transition:border-color .15s,box-shadow .15s;">
+    <span style="position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--grijs);font-size:18px;pointer-events:none;" aria-hidden="true">🔍</span>
+  </div>
+  <p id="gids-resultaat" style="font-size:13px;color:var(--grijs);margin-bottom:12px;display:none;" aria-live="polite"></p>
+
   <div class="gids-grid">
 
     <a href="/gids/zakelijke-rekening-zzp-2026/" class="gids-kaart">
@@ -346,6 +353,39 @@
 <footer class="footer">
   <p>&copy; 2026 Boekhoudbaar &mdash; <a href="/over/">Over Sam</a> &middot; <a href="/gids/">Gidsen</a> &middot; <a href="/transparantie">Transparantie</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/voorwaarden">Voorwaarden</a></p>
 </footer>
+
+<script>
+  // Live-filter voor gids-cards — typing triggert direct verstoppen
+  (function() {
+    var zoek = document.getElementById('gids-zoek');
+    var rs = document.getElementById('gids-resultaat');
+    var kaarten = document.querySelectorAll('.gids-kaart');
+    if (!zoek || !kaarten.length) return;
+    function filter() {
+      var q = zoek.value.trim().toLowerCase();
+      if (!q) {
+        kaarten.forEach(function(k){ k.style.display=''; });
+        rs.style.display = 'none';
+        return;
+      }
+      var aantal = 0;
+      kaarten.forEach(function(k){
+        var text = k.textContent.toLowerCase();
+        var match = text.indexOf(q) !== -1;
+        k.style.display = match ? '' : 'none';
+        if (match) aantal++;
+      });
+      rs.style.display = 'block';
+      rs.textContent = aantal === 0
+        ? 'Geen gidsen gevonden voor "' + q + '" — probeer een ander woord of mail hallo@boekhoudbaar.nl met je vraag.'
+        : aantal + ' gids' + (aantal === 1 ? '' : 'en') + ' gevonden voor "' + q + '"';
+    }
+    zoek.addEventListener('input', filter);
+    // Focus-state subtiel
+    zoek.addEventListener('focus', function(){ this.style.borderColor = 'var(--accent)'; this.style.boxShadow = '0 0 0 3px rgba(46,196,182,.15)'; });
+    zoek.addEventListener('blur', function(){ this.style.borderColor = ''; this.style.boxShadow = ''; });
+  })();
+</script>
 
 </body>
 </html>

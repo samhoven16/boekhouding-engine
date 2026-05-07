@@ -272,13 +272,46 @@ function matchTransactiesMetFacturen_(ss, transacties) {
  * @return {{toegevoegd:number, gematcht:number, fouten:string[]}}
  */
 function verwerkBankImport_(ss, transacties) {
-  const resultaat = { toegevoegd: 0, gematcht: 0, fouten: [] };
+  const resultaat = { toegevoegd: 0, gematcht: 0, fouten: [], overgeslagen: 0 };
   const btSheet = ss.getSheetByName(SHEETS.BANKTRANSACTIES);
   const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
   if (!btSheet) { resultaat.fouten.push('BANKTRANSACTIES-tab ontbreekt'); return resultaat; }
 
-  transacties.forEach(function(t) {
+  // Build dedup-set uit bestaande transacties — voorkomt dat tweede CSV-import
+  // van overlappende periode dezelfde transactie 2× boekt = dubbele journaalpost.
+  // Dedup-key: datum + bedrag + omschr-hash (eerste 30 chars)
+  const bestaandeKeys = new Set();
+  try {
+    const btData = btSheet.getDataRange().getValues();
+    for (let i = 1; i < btData.length; i++) {
+      const dt = btData[i][1] instanceof Date ? Utilities.formatDate(btData[i][1], 'Europe/Amsterdam', 'yyyy-MM-dd') : String(btData[i][1] || '');
+      const key = dt + '|' + (parseFloat(btData[i][3]) || 0).toFixed(2) + '|' + String(btData[i][2] || '').slice(0, 30);
+      bestaandeKeys.add(key);
+    }
+  } catch (e) { Logger.log('BankImport dedup-set fout: ' + e.message); }
+
+  // 6-min guillotine — bij grote CSV (>200 rijen) self-reschedule
+  const startTs = Date.now();
+
+  transacties.forEach(function(t, idx) {
+    if (guillotineCheck_(startTs, 'verwerkBankImport_', { idx: idx, totaal: transacties.length }, 270000)) {
+      // Stop de verwerking — overige transacties worden in volgende run geboekt
+      // (klant moet CSV opnieuw importeren — dedup beschermt tegen dubbel)
+      Logger.log('BankImport guillotine bij idx ' + idx + '/' + transacties.length);
+      return;
+    }
     try {
+      // Idempotency: skip als reeds geïmporteerd (dedup-set)
+      const tDatum = t.datum instanceof Date
+        ? Utilities.formatDate(t.datum, 'Europe/Amsterdam', 'yyyy-MM-dd')
+        : String(t.datum || '');
+      const dedupKey = tDatum + '|' + (parseFloat(t.bedrag) || 0).toFixed(2) + '|' + String(t.omschr || '').slice(0, 30);
+      if (bestaandeKeys.has(dedupKey)) {
+        resultaat.overgeslagen++;
+        return;
+      }
+      bestaandeKeys.add(dedupKey);
+
       const transactieId = volgendTransactieId_ ? volgendTransactieId_() : ('BT-' + Date.now());
       const gekoppeldFactuur = t.match ? t.match.factuurnummer : '';
 

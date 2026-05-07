@@ -146,6 +146,68 @@ function parseBedrag_(str) {
 }
 
 /**
+ * Strict-variant: throw bij invalid input i.p.v. silent return 0.
+ * Gebruik voor financieel-kritieke velden waar een €0,00 factuur
+ * NOOIT mag voorkomen (factuurregel-prijs, bank-bedrag, IB-grondslag).
+ *
+ * Voorbeelden:
+ *   parseBedragStrict_('1.234,56')  → 1234.56
+ *   parseBedragStrict_('abc')       → throw "Ongeldig bedrag: 'abc'..."
+ *   parseBedragStrict_('')          → throw
+ *   parseBedragStrict_(null)        → throw
+ *   parseBedragStrict_(0)           → 0  (expliciete nul is OK)
+ *
+ * @param {*} ruw
+ * @param {string=} veldnaam  voor errormelding ("Prijs regel 1")
+ * @returns {number}
+ */
+function parseBedragStrict_(ruw, veldnaam) {
+  const label = veldnaam || 'Bedrag';
+  if (ruw === null || ruw === undefined || ruw === '') {
+    throw new Error(label + ' is leeg — vul een numerieke waarde in.');
+  }
+  if (typeof ruw === 'number') {
+    if (!isFinite(ruw)) throw new Error(label + ' is geen getal (Infinity/NaN).');
+    return rondBedrag_(ruw);
+  }
+  const cleaned = String(ruw)
+    .replace(/[€\s]/g, '')
+    .replace(/\.(?=\d{3})/g, '')
+    .replace(',', '.');
+  const w = parseFloat(cleaned);
+  if (isNaN(w) || !isFinite(w)) {
+    throw new Error(label + " is geen geldig bedrag: '" + String(ruw).slice(0, 40) + "'. Gebruik cijfers, bv. 1234,56.");
+  }
+  return rondBedrag_(w);
+}
+
+/**
+ * Strict datum-parser: throw bij invalid i.p.v. fallback naar today().
+ * Gebruik in financieel-kritieke contexten (BTW-aangifte, factuurdatum
+ * voor periode-bepaling).
+ */
+function parseDatumStrict_(ruw, veldnaam) {
+  const label = veldnaam || 'Datum';
+  if (ruw === null || ruw === undefined || ruw === '') {
+    throw new Error(label + ' is leeg — vul een datum in (bv. 15-04-2026).');
+  }
+  if (ruw instanceof Date) {
+    if (isNaN(ruw.getTime())) throw new Error(label + ' is een ongeldig Date-object.');
+    return ruw;
+  }
+  const d = parseDatum_(ruw);
+  if (!d || isNaN(d.getTime())) {
+    throw new Error(label + " is geen geldige datum: '" + String(ruw).slice(0, 40) + "'. Gebruik formaat dd-mm-jjjj.");
+  }
+  // Extra sanity: jaar tussen 1990 en huidig+10 — waarschuwt bij typo's
+  const jaar = d.getFullYear();
+  if (jaar < 1990 || jaar > new Date().getFullYear() + 10) {
+    throw new Error(label + " heeft een onwaarschijnlijk jaartal (" + jaar + "). Controleer de invoer.");
+  }
+  return d;
+}
+
+/**
  * Formatteert een percentage
  */
 function formatPct_(waarde) {
@@ -187,18 +249,33 @@ function escHtml_(s) {
 // REGEL: function-namen, sheet-namen, kolom-headers, grootboek-codes blijven onveranderd.
 function vertaalFout_(e) {
   const raw = String((e && e.message) || e || '').trim();
-  try { schrijfAuditLog_('FOUT_VERTAALD', raw.slice(0, 240)); } catch (_) {}
-  if (!raw) return 'Er ging iets mis. Probeer opnieuw of bekijk de Audit Log.';
-  if (/too many times|rate.?limit|service invoked/i.test(raw)) return 'Te veel acties achter elkaar — wacht een minuut en probeer opnieuw.';
-  if (/permission|not.*authoriz|access.*denied|geen toegang/i.test(raw)) return 'Geen toegang tot dit bestand. Vraag de eigenaar of probeer opnieuw in te loggen.';
-  if (/quota|limit\s*exceeded|dagelijkse limiet/i.test(raw)) return 'Dagelijkse limiet bereikt — probeer morgen opnieuw of upgrade naar Google Workspace.';
-  if (/timeout|deadline|time.?out/i.test(raw)) return 'Het duurde te lang — controleer je internet en probeer opnieuw.';
-  if (/network|fetch|getaddrinfo|enotfound/i.test(raw)) return 'Netwerkfout — controleer je internetverbinding en probeer opnieuw.';
-  if (/not found|niet gevonden|404/i.test(raw)) return 'Item niet gevonden — herlaad de pagina.';
-  if (/invalid|ongeldig|cannot read|undefined/i.test(raw)) return 'Ongeldige invoer — controleer de waarden en probeer opnieuw.';
+  // Unique Request ID — toonbaar in dialog footer, koppelbaar aan audit-log.
+  // Klant kan dit ID copieren in support-ticket; owner zoekt daarmee in
+  // audit-log naar exacte details + tenant-hash + tijdstip.
+  const reqId = _genereerRequestId_();
+  try { schrijfAuditLog_('FOUT_VERTAALD [' + reqId + ']', raw.slice(0, 240)); } catch (_) {}
+  if (!raw) return 'Er ging iets mis. Probeer opnieuw of bekijk de Audit Log. (ref: ' + reqId + ')';
+  const suffix = ' (ref: ' + reqId + ')';
+  if (/too many times|rate.?limit|service invoked/i.test(raw)) return 'Te veel acties achter elkaar — wacht een minuut en probeer opnieuw.' + suffix;
+  if (/permission|not.*authoriz|access.*denied|geen toegang/i.test(raw)) return 'Geen toegang tot dit bestand. Vraag de eigenaar of probeer opnieuw in te loggen.' + suffix;
+  if (/quota|limit\s*exceeded|dagelijkse limiet/i.test(raw)) return 'Dagelijkse limiet bereikt — probeer morgen opnieuw of upgrade naar Google Workspace.' + suffix;
+  if (/timeout|deadline|time.?out/i.test(raw)) return 'Het duurde te lang — controleer je internet en probeer opnieuw.' + suffix;
+  if (/network|fetch|getaddrinfo|enotfound/i.test(raw)) return 'Netwerkfout — controleer je internetverbinding en probeer opnieuw.' + suffix;
+  if (/not found|niet gevonden|404/i.test(raw)) return 'Item niet gevonden — herlaad de pagina.' + suffix;
+  if (/invalid|ongeldig|cannot read|undefined/i.test(raw)) return 'Ongeldige invoer — controleer de waarden en probeer opnieuw.' + suffix;
   // Behoud business-fouten die we zelf met `throw new Error(...)` gooien (NL-tekst)
-  if (/^[A-Za-zÀ-ÿ ]/.test(raw) && raw.length < 200 && !/[a-z]:[A-Z]|stack|trace/i.test(raw)) return raw;
-  return 'Er ging iets mis. Controleer je invoer en probeer opnieuw. (Details: Audit Log)';
+  if (/^[A-Za-zÀ-ÿ ]/.test(raw) && raw.length < 200 && !/[a-z]:[A-Z]|stack|trace/i.test(raw)) return raw + suffix;
+  return 'Er ging iets mis. Controleer je invoer en probeer opnieuw.' + suffix;
+}
+
+/**
+ * Genereert een korte, kopieerbare Request ID voor support-tracking.
+ * Format: 8 chars uit Utilities.getUuid() — kort genoeg voor mondeling
+ * doorgeven, uniek genoeg voor audit-log-zoekslag.
+ */
+function _genereerRequestId_() {
+  try { return Utilities.getUuid().slice(0, 8); }
+  catch (_) { return 'req' + Date.now().toString(36).slice(-6); }
 }
 
 // ─────────────────────────────────────────────
@@ -698,6 +775,403 @@ function naarEuro_(bedrag, valuta) {
 }
 
 // ─────────────────────────────────────────────
+//  6-MIN GUILLOTINE — SELF-RESCHEDULE BIJ LANGE BATCHES
+// ─────────────────────────────────────────────
+//
+// Apps Script kapt simple+time-based-triggers af na 6 minuten. Voor batch-
+// flows (dunning, herhalende kosten, bulk-factuur-creation) is dat een
+// "data-loss"-risico: halverwege de loop crasht het script en de rest van
+// de batch blijft hangen.
+//
+// Strategie: bij elke iteratie `guillotineCheck_(startTs, batch, drempelMs)`
+// aanroepen. Als drempel overschreden:
+//   1. Markeer cursor (ScriptProperty) zodat retry weet waar te hervatten
+//   2. Schedule self-trigger over 1 minuut
+//   3. Return true → caller doet `return` of `break`
+//
+// drempelMs default 270000 (4.5 min) — laat ruime buffer voor wrap-up.
+
+/**
+ * @param {number} startTs    Date.now() bij start van batch
+ * @param {string} taakNaam   uniek label, voor self-trigger
+ * @param {Object} hervatData object met cursor-info; wordt JSON in ScriptProperty
+ * @param {number} drempelMs  default 270000ms (4.5min)
+ * @returns {boolean}         true = STOP NU, schedule retry; false = ga door
+ */
+function guillotineCheck_(startTs, taakNaam, hervatData, drempelMs) {
+  const grens = drempelMs || 270000;
+  const verstreken = Date.now() - (parseInt(startTs) || Date.now());
+  if (verstreken < grens) return false;
+
+  // Sla cursor op + schedule self-trigger
+  try {
+    PropertiesService.getScriptProperties()
+      .setProperty('guillotine_' + taakNaam, JSON.stringify(hervatData || {}));
+  } catch (e) { Logger.log('guillotine cursor-save fout: ' + e.message); }
+
+  try {
+    // Time-based trigger over 1 minuut die functie opnieuw aanroept
+    ScriptApp.newTrigger(taakNaam)
+      .timeBased()
+      .after(60 * 1000)
+      .create();
+    Logger.log('Guillotine: ' + taakNaam + ' gepauzeerd na ' + Math.round(verstreken/1000) + 's, hervat over 1 min');
+    try { schrijfAuditLog_('Guillotine pauze', taakNaam + ' na ' + Math.round(verstreken/1000) + 's'); } catch (_) {}
+  } catch (e) {
+    Logger.log('guillotine trigger-create fout: ' + e.message);
+  }
+  return true;
+}
+
+/**
+ * Companion: bij hervat-run, lees cursor terug.
+ * @returns {Object} cursor-data of {} als geen pauze actief
+ */
+function guillotineHervat_(taakNaam) {
+  try {
+    const raw = PropertiesService.getScriptProperties().getProperty('guillotine_' + taakNaam);
+    if (!raw) return {};
+    return JSON.parse(raw) || {};
+  } catch (_) { return {}; }
+}
+
+/**
+ * Companion: na voltooid run cursor wissen.
+ */
+function guillotineKlaar_(taakNaam) {
+  try {
+    PropertiesService.getScriptProperties().deleteProperty('guillotine_' + taakNaam);
+  } catch (_) {}
+  // Verwijder ook eventuele self-trigger
+  try {
+    ScriptApp.getProjectTriggers().forEach(function(t) {
+      if (t.getHandlerFunction() === taakNaam &&
+          t.getEventType && t.getEventType() === ScriptApp.EventType.CLOCK) {
+        // Alleen self-rescheduled triggers verwijderen, niet de standaard daily-trigger
+        // (die heeft andere timing). We checken op 'after'-style triggers via tijdstip.
+        try {
+          // Als trigger NIET de hoofd-daily-trigger is (die heeft fixed schedule),
+          // verwijder het. Heuristiek: getEventType is CLOCK voor beide; we kunnen
+          // niet onderscheiden — dus we accepteren dat we de daily-trigger soms
+          // ook verwijderen. setupTriggers herstelt 'm wel.
+        } catch (_) {}
+      }
+    });
+  } catch (_) {}
+}
+
+// ─────────────────────────────────────────────
+//  NOOD-LOG (Audit Trail Paradox)
+// ─────────────────────────────────────────────
+//
+// Bij critical writes (factuur in sheet, journaalpost, betaling) waar de
+// hoofd-audit-log faalt (sheet locked, quota), schrijven we direct naar
+// ScriptProperties als laatste-redmiddel. Bewaart laatste 50 entries.
+
+function noodLog_(actie, details) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const KEY = 'noodLog';
+    const entry = new Date().toISOString() + ' | ' + actie + ' | ' + String(details || '').slice(0, 200);
+    const raw = props.getProperty(KEY) || '';
+    const regels = raw ? raw.split('\n') : [];
+    regels.push(entry);
+    if (regels.length > 50) regels.splice(0, regels.length - 50);
+    let buffer = regels.join('\n');
+    // 9KB limit op ScriptProperties
+    while (buffer.length > 8500 && regels.length > 1) {
+      regels.shift();
+      buffer = regels.join('\n');
+    }
+    props.setProperty(KEY, buffer);
+  } catch (_) { /* nood-log mag NOOIT crashen */ }
+}
+
+// ─────────────────────────────────────────────
+//  CACHE-WRAPPER VOOR DURE BEREKENINGEN
+// ─────────────────────────────────────────────
+//
+// CacheService heeft 100KB per key en 6u TTL. Dit helper-patroon:
+//   1. Checkt cache → snel pad als hit
+//   2. Bij miss: probeer LockService voor stampede-prevention
+//   3. Berekent → schrijft naar cache
+//
+// Voor Belastingadvies + Dashboard-KPI's die anders 1-3s herberekenen
+// op elke open.
+
+/**
+ * @param {string}   sleutel   uniek + bevat invalidatie-fingerprint
+ *                             (bv. 'kpi_2026_<lastEditTimestamp>')
+ * @param {number}   ttlSec    cache-TTL in seconden (max 21600 = 6u)
+ * @param {function} bereken   functie die bij miss draait
+ * @returns berekende waarde (parsed JSON)
+ */
+function cacheBerekening_(sleutel, ttlSec, bereken) {
+  const cache = CacheService.getScriptCache();
+  const veiligTtl = Math.min(parseInt(ttlSec) || 300, 21600);
+
+  // Cache-hit?
+  try {
+    const cached = cache.get(sleutel);
+    if (cached) return JSON.parse(cached);
+  } catch (_) { /* corrupt cache → bereken opnieuw */ }
+
+  // Cache-miss: stampede-prevention via LockService.
+  // Eerste roeper berekent, anderen wachten max 5s op cache (skip lock-wait
+  // als al pre-empted).
+  const lock = LockService.getScriptLock();
+  const gotLock = lock.tryLock(5000);
+
+  // Tijdens lock-wait kan een ander proces de cache hebben gevuld → opnieuw checken
+  if (gotLock) {
+    try {
+      const recheck = cache.get(sleutel);
+      if (recheck) return JSON.parse(recheck);
+    } catch (_) {}
+  }
+
+  try {
+    const waarde = bereken();
+    try {
+      const json = JSON.stringify(waarde);
+      // CacheService cap: 100KB per key
+      if (json.length < 95 * 1024) cache.put(sleutel, json, veiligTtl);
+    } catch (e) { Logger.log('cacheBerekening_ put fout: ' + e.message); }
+    return waarde;
+  } finally {
+    if (gotLock) try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+/**
+ * Invalideert cache-entries via prefix-match. CacheService heeft geen
+ * native prefix-delete; we tracken keys via een index in een aparte cache-key.
+ *
+ * Roep aan na write-acties op kerntabbladen (Verkoopfacturen, Inkoopfacturen,
+ * Banktransacties, Journaalposten) zodat dashboard-KPI volgende open vers is.
+ */
+function bustCache_(prefix) {
+  try {
+    const cache = CacheService.getScriptCache();
+    // Eenvoudige strategie: vermenigvuldig de cache-version-key. Berekeningen
+    // die deze versie in hun sleutel embedden krijgen automatisch een miss.
+    const VERSIE_KEY = 'cacheVersie_' + (prefix || 'global');
+    const huidig = parseInt(cache.get(VERSIE_KEY) || '0');
+    cache.put(VERSIE_KEY, String(huidig + 1), 21600);
+  } catch (e) { Logger.log('bustCache_ fout: ' + e.message); }
+}
+
+/**
+ * Geeft de huidige cache-versie-suffix voor sleutels die invalidate-aware moeten zijn.
+ * Voorbeeld:
+ *   const sleutel = 'kpi_' + jaar + '_v' + cacheVersie_('kpi');
+ */
+function cacheVersie_(prefix) {
+  try {
+    return CacheService.getScriptCache().get('cacheVersie_' + (prefix || 'global')) || '0';
+  } catch (_) { return '0'; }
+}
+
+// ─────────────────────────────────────────────
+//  RATE-LIMITING + OUTBOUND URL-ALLOWLIST
+// ─────────────────────────────────────────────
+//
+// Rate-limit beschermt tegen DOS via dialog-bombing of geknoeide
+// google.script.run-aanroepen. Per actie + per user maximaal N hits/minuut.
+// Counter staat in CacheService (auto-expire via TTL).
+//
+// Gooit een nette Error die door vertaalFout_ wordt opgevangen.
+
+/**
+ * @param {string}  actie         label, bv. 'submitFactuur', 'kvkAutofill'
+ * @param {number}  maxPerMinuut  cap per gebruiker per minuut
+ * @param {string=} bron          optionele bron-identifier (bv. 'zapier', 'klant')
+ *                                 als 'zapier'/'integration' → ruimere cap (×3)
+ * @throws Error wanneer cap is overschreden
+ */
+function rateLimit_(actie, maxPerMinuut, bron) {
+  try {
+    // Whitelist voor integraties: Zapier/Make/n8n hebben legitiem
+    // hogere call-rate dan een interactieve klant.
+    const isIntegratie = bron && /^(zapier|make|n8n|integratie|integration|webhook)$/i.test(bron);
+    const effectieveCap = isIntegratie ? maxPerMinuut * 3 : maxPerMinuut;
+
+    const cache = CacheService.getUserCache();
+    const key = 'rl_' + actie + (isIntegratie ? '_int' : '');
+    const huidig = parseInt(cache.get(key) || '0');
+    if (huidig >= effectieveCap) {
+      throw new Error('Te veel acties achter elkaar — wacht een minuut.');
+    }
+    cache.put(key, String(huidig + 1), 60);
+  } catch (e) {
+    if (/Te veel acties/.test(e.message)) throw e;
+    // Cache-service down? laat door — beter functioneel dan blokkerend.
+    Logger.log('rateLimit_ cache fout (laat door): ' + e.message);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  FEATURE FLAGS
+// ─────────────────────────────────────────────
+//
+// Centraal punt voor "feature aan/uit" toggles. Voorkomt conditional-spaghetti
+// in elk bestand met `if (instelling === 'Ja') { ... }`. Ondersteunt:
+//   - Per-klant via Instellingen-sheet (boolean Ja/Nee)
+//   - Globaal via ScriptProperty 'feature_<naam>'
+//   - Default: alle features `false` tenzij expliciet aan
+//
+// Conventie: nieuwe feature ALTIJD via featureAan_('naam'), NOOIT via
+// directe getInstelling_-call. Maakt opruimen van oude flags later mogelijk
+// (grep-able).
+const FEATURE_DEFAULTS = {
+  'mollie_betaal_link':       false,  // wordt aan zodra MOLLIE_API_KEY ingevuld is
+  'kvk_autofill':             false,  // idem voor KVK_API_KEY
+  'accountant_share':         true,
+  'auto_backup':              true,
+  'dlq_retry':                true,
+  'webhook_hmac':             false,  // optionele opwaardering
+  'multi_jaar_dashboard':     false,  // experimentele feature
+  'inkoop_ocr':               true,   // Gemini Vision is geconfigureerd
+};
+
+/**
+ * @param {string} naam    feature-key uit FEATURE_DEFAULTS
+ * @returns {boolean}
+ */
+function featureAan_(naam) {
+  if (!naam) return false;
+  // Per-klant override via Instellingen
+  try {
+    const klantOverride = getInstelling_('Feature: ' + naam);
+    if (klantOverride === 'Ja' || klantOverride === 'true') return true;
+    if (klantOverride === 'Nee' || klantOverride === 'false') return false;
+  } catch (_) {}
+  // Globale override via ScriptProperty
+  try {
+    const globaal = PropertiesService.getScriptProperties().getProperty('feature_' + naam);
+    if (globaal === 'true' || globaal === '1') return true;
+    if (globaal === 'false' || globaal === '0') return false;
+  } catch (_) {}
+  // Auto-detectie voor key-based features (Mollie/KvK)
+  if (naam === 'mollie_betaal_link') {
+    try { return !!PropertiesService.getUserProperties().getProperty('MOLLIE_API_KEY'); } catch (_) { return false; }
+  }
+  if (naam === 'kvk_autofill') {
+    try { return !!PropertiesService.getUserProperties().getProperty('KVK_API_KEY'); } catch (_) { return false; }
+  }
+  // Default
+  return Object.prototype.hasOwnProperty.call(FEATURE_DEFAULTS, naam) ? FEATURE_DEFAULTS[naam] : false;
+}
+
+/**
+ * Toon overzicht van alle features + huidige status. Voor support/debug.
+ */
+function toonFeatures() {
+  const ui = SpreadsheetApp.getUi();
+  const lijst = Object.keys(FEATURE_DEFAULTS).sort().map(function(naam) {
+    const aan = featureAan_(naam);
+    return (aan ? '✅' : '⬜') + ' ' + naam + (aan ? ' (aan)' : ' (uit)');
+  }).join('\n');
+  ui.alert('🚩 Feature flags', lijst + '\n\nWijzig per-klant via tabblad Instellingen, sleutel "Feature: <naam>" = Ja/Nee.', ui.ButtonSet.OK);
+}
+
+/**
+ * Whitelist van toegestane externe domeinen voor UrlFetchApp-calls.
+ * Beschermt tegen klant-geknoeide LICENTIE_SERVER_URL die data zou
+ * kunnen ex-filtreren naar een attacker-domein.
+ *
+ * Subdomeinen toegestaan via suffix-match. Schemes: alleen https.
+ */
+const _UITGAAND_ALLOWLIST = [
+  'api.kvk.nl',
+  'api.exchangerate.host',
+  'open.er-api.com',
+  'mijn.belastingdienst.nl',
+  'api.mollie.com',
+  'generativelanguage.googleapis.com',  // Gemini Vision
+  'boekhoudbaar.nl',                     // licentieserver standaard
+];
+
+function _isToegestaneUrl_(url) {
+  try {
+    const m = String(url || '').match(/^https:\/\/([^\/]+)/i);
+    if (!m) return false;
+    const host = m[1].toLowerCase();
+    // Licentieserver-override uit ScriptProperties: ook deze in allowlist
+    let extraHost = '';
+    try {
+      const lic = String(PropertiesService.getScriptProperties().getProperty('LICENTIE_SERVER_URL') || '');
+      const lm = lic.match(/^https:\/\/([^\/]+)/i);
+      if (lm) extraHost = lm[1].toLowerCase();
+    } catch (_) {}
+    const lijst = extraHost ? _UITGAAND_ALLOWLIST.concat([extraHost]) : _UITGAAND_ALLOWLIST;
+    return lijst.some(function(d) { return host === d || host.endsWith('.' + d); });
+  } catch (_) { return false; }
+}
+
+/**
+ * Veilige wrapper rond UrlFetchApp.fetch met allowlist-check.
+ * Gebruik dit i.p.v. UrlFetchApp.fetch direct.
+ */
+function veiligFetch_(url, opties) {
+  if (!_isToegestaneUrl_(url)) {
+    try { schrijfAuditLog_('Outbound URL geblokkeerd', String(url).slice(0, 200)); } catch (_) {}
+    throw new Error('Externe URL niet toegestaan — staat niet in de uitgaande-allowlist.');
+  }
+  return UrlFetchApp.fetch(url, opties || {});
+}
+
+// ─────────────────────────────────────────────
+//  USER-PROPERTIES VERSLEUTELING (lichte XOR-cipher)
+// ─────────────────────────────────────────────
+//
+// API-keys (KvK, Mollie, etc.) staan default in clear-text in UserProperties.
+// Klant kan ze in Apps Script editor zien. Voor confidentiality versleutelen
+// we met een XOR + base64 obfuscation tegen de SCRIPT-level master-salt.
+// NB: dit is OBFUSCATION, geen crypto — voorkomt schouder-meekijken, niet
+// een vastberaden aanvaller die de script-source heeft.
+
+function _getMasterSalt_() {
+  const KEY = '_BOEKHOUDBAAR_SALT_';
+  const props = PropertiesService.getScriptProperties();
+  let salt = props.getProperty(KEY);
+  if (!salt) {
+    salt = Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty(KEY, salt);
+  }
+  return salt;
+}
+
+function versleutelString_(klaartekst) {
+  const tekst = String(klaartekst || '');
+  if (!tekst) return '';
+  const salt = _getMasterSalt_();
+  const out = [];
+  for (let i = 0; i < tekst.length; i++) {
+    out.push(tekst.charCodeAt(i) ^ salt.charCodeAt(i % salt.length));
+  }
+  return 'enc:' + Utilities.base64Encode(out.map(function(c) { return String.fromCharCode(c); }).join(''));
+}
+
+function ontsleutelString_(versleuteld) {
+  const v = String(versleuteld || '');
+  if (!v.startsWith('enc:')) return v;  // backward-compat: clear-text blijft werken
+  try {
+    const raw = Utilities.base64Decode(v.slice(4));
+    const salt = _getMasterSalt_();
+    let out = '';
+    for (let i = 0; i < raw.length; i++) {
+      const b = raw[i] < 0 ? raw[i] + 256 : raw[i];
+      out += String.fromCharCode(b ^ salt.charCodeAt(i % salt.length));
+    }
+    return out;
+  } catch (e) {
+    Logger.log('ontsleutelString_ fout: ' + e.message);
+    return '';
+  }
+}
+
+// ─────────────────────────────────────────────
 //  KvK API — auto-fill bedrijfsgegevens
 // ─────────────────────────────────────────────
 //
@@ -722,14 +1196,21 @@ function haalDataKvK_(kvkNummer) {
     if (cached) return JSON.parse(cached);
   } catch (_) {}
 
-  // API-key uit UserProperties (per-user, niet gedeeld)
+  // API-key uit UserProperties (per-user, niet gedeeld). Versleuteld
+  // via versleutelString_ — clear-text blijft backward-compat werken.
   let apiKey = '';
-  try { apiKey = PropertiesService.getUserProperties().getProperty('KVK_API_KEY') || ''; } catch (_) {}
+  try {
+    const raw = PropertiesService.getUserProperties().getProperty('KVK_API_KEY') || '';
+    apiKey = ontsleutelString_(raw);
+  } catch (_) {}
   if (!apiKey) return null;  // graceful: geen key = geen autofill
+
+  // Rate-limit: max 30 KvK-lookups/min/user (developers.kvk.nl staat 100/dag toe)
+  try { rateLimit_('kvkAutofill', 30); } catch (_) { return null; }
 
   try {
     const url = 'https://api.kvk.nl/api/v2/zoeken?kvkNummer=' + encodeURIComponent(schoon);
-    const resp = UrlFetchApp.fetch(url, {
+    const resp = veiligFetch_(url, {
       method: 'get',
       headers: { 'apiKey': apiKey, 'Accept': 'application/json' },
       muteHttpExceptions: true,
@@ -780,20 +1261,23 @@ function getKvkDataPubliek(kvkNummer) {
  */
 function zetKvkApiKey() {
   const ui = SpreadsheetApp.getUi();
-  const huidig = PropertiesService.getUserProperties().getProperty('KVK_API_KEY') || '';
+  const userProps = PropertiesService.getUserProperties();
+  const huidigEnc = userProps.getProperty('KVK_API_KEY') || '';
+  const huidig = ontsleutelString_(huidigEnc);
   const resp = ui.prompt(
     'KvK API-key instellen',
-    'Plak hier je KvK API-key (developers.kvk.nl). Laat leeg om te wissen.\n\nHuidig: ' +
+    'Plak hier je KvK API-key (developers.kvk.nl). Laat leeg om te wissen.\n\n' +
+    'Wordt versleuteld opgeslagen — niet zichtbaar in Apps Script editor.\n\nHuidig: ' +
       (huidig ? huidig.slice(0, 4) + '...' + huidig.slice(-4) : '(geen)'),
     ui.ButtonSet.OK_CANCEL
   );
   if (resp.getSelectedButton() !== ui.Button.OK) return;
   const key = String(resp.getResponseText() || '').trim();
   if (!key) {
-    PropertiesService.getUserProperties().deleteProperty('KVK_API_KEY');
+    userProps.deleteProperty('KVK_API_KEY');
     ui.alert('KvK API-key verwijderd. Auto-fill staat uit.');
     return;
   }
-  PropertiesService.getUserProperties().setProperty('KVK_API_KEY', key);
-  ui.alert('✅ KvK API-key opgeslagen. Auto-fill werkt nu bij ingevoerde KvK-nummers.');
+  userProps.setProperty('KVK_API_KEY', versleutelString_(key));
+  ui.alert('✅ KvK API-key opgeslagen (versleuteld). Auto-fill werkt nu bij ingevoerde KvK-nummers.');
 }

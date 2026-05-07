@@ -41,7 +41,31 @@ function maakJournaalpost_(ss, opt) {
     }
   }
 
+  // ── Strict input-validation (zero-failure) ────────────────────────────
+  // Geen silent fallback naar 0/today — corrupt invoer crasht direct.
+  // Voorkomt journaalposten met €0 of NaN-bedrag in grootboek.
+  const bedragGevalideerd = (function() {
+    if (opt.bedrag === null || opt.bedrag === undefined || opt.bedrag === '') {
+      throw new Error('maakJournaalpost_: bedrag is leeg (debet=' + opt.debet + ' credit=' + opt.credit + ')');
+    }
+    const n = parseFloat(opt.bedrag);
+    if (isNaN(n) || !isFinite(n)) {
+      throw new Error("maakJournaalpost_: ongeldig bedrag '" + opt.bedrag + "'");
+    }
+    return rondBedrag_(n);
+  })();
+  if (!opt.debet || !opt.credit) {
+    throw new Error('maakJournaalpost_: debet+credit verplicht (debet=' + opt.debet + ' credit=' + opt.credit + ')');
+  }
+  if (String(opt.debet) === String(opt.credit)) {
+    throw new Error('maakJournaalpost_: debet en credit gelijk (' + opt.debet + ') = self-posting; niet toegestaan');
+  }
+
   const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  if (!sheet) {
+    noodLog_('JOURNAALPOST GEEN SHEET', 'debet=' + opt.debet + ' bedrag=' + bedragGevalideerd);
+    throw new Error('Tabblad Journaalposten niet gevonden — run setup() eerst');
+  }
   const boekingId = volgendBoekingId_();
 
   const debetNaam = zoekGrootboekNaam_(opt.debet || '');
@@ -56,7 +80,7 @@ function maakJournaalpost_(ss, opt) {
     debetNaam,
     opt.credit || '',
     creditNaam,
-    rondBedrag_(opt.bedrag || 0),
+    bedragGevalideerd,
     opt.btwTarief !== null && opt.btwTarief !== undefined
       ? (opt.btwTarief * 100) + '%'
       : 'Geen',
@@ -68,9 +92,16 @@ function maakJournaalpost_(ss, opt) {
     new Date(),
   ];
 
-  sheet.appendRow(rij);
-  updateGrootboekSaldo_(ss, opt.debet, opt.bedrag || 0, 'debet');
-  updateGrootboekSaldo_(ss, opt.credit, opt.bedrag || 0, 'credit');
+  // Critical write — dubbel-loggen (audit + nood) tegen sheet-write-fail
+  try {
+    sheet.appendRow(rij);
+  } catch (writeErr) {
+    noodLog_('JOURNAALPOST_SHEET_FOUT', 'id=' + boekingId + ' debet=' + opt.debet + ' bedrag=' + bedragGevalideerd + ' | ' + writeErr.message);
+    try { meldFataalAanOwner_('DATA_LOSS', 'Journaalpost-write faalde', { boekingId: boekingId, debet: opt.debet, credit: opt.credit, bedrag: bedragGevalideerd }); } catch (_) {}
+    throw writeErr;
+  }
+  updateGrootboekSaldo_(ss, opt.debet, bedragGevalideerd, 'debet');
+  updateGrootboekSaldo_(ss, opt.credit, bedragGevalideerd, 'credit');
 
   return boekingId;
 }
@@ -90,7 +121,7 @@ function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
   const lock = LockService.getScriptLock();
   let lockHeld = false;
   try {
-    lock.waitLock(10000);
+    lock.waitLock(30000);
     lockHeld = true;
   } catch (e) {
     Logger.log('updateGrootboekSaldo_: kon geen lock krijgen voor ' + rekeningCode + ': ' + e.message);
@@ -369,10 +400,25 @@ function verwerkAfschrijvingen(data) {
   const factor = periode === 'Maandelijks' ? 1/12 : 1;
   const datum = new Date();
 
+  // LockService rond batch-afschrijvingen — voorkomt dat 2 gelijktijdige
+  // klikken op "Afschrijvingen boeken" dezelfde rekening 2× afschrijven
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error('Andere afschrijving-batch is bezig — wacht een ogenblik en probeer opnieuw.');
+
+  try {
   Object.keys(data).forEach(code => {
     if (code === 'periode') return;
-    const pct = parseFloat(data[code]) / 100;
+    // Strict pct-parsing, maar met silent-skip bij onbedoelde waarden
+    const ruwPct = data[code];
+    if (ruwPct === '' || ruwPct === null || ruwPct === undefined) return;
+    const pctNum = parseFloat(ruwPct);
+    if (isNaN(pctNum)) return;  // klant heeft niet-numeriek getypt: skip i.p.v. crash hele batch
+    const pct = pctNum / 100;
     if (pct <= 0) return;
+    if (pct > 1) {
+      Logger.log('Afschrijving %' + ruwPct + ' op ' + code + ' overgeslagen (>100%)');
+      return;
+    }
 
     const saldo = getGrootboekSaldo_(ss, code);
     if (saldo <= 0) return;
@@ -391,6 +437,9 @@ function verwerkAfschrijvingen(data) {
       type: BOEKING_TYPE.MEMORIAAL,
     });
   });
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
 
   vernieuwDashboard();
 }
@@ -620,7 +669,7 @@ function koppelTransactiesAanFacturen() {
 // ─────────────────────────────────────────────
 function volgendFactuurnummer_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const nr = parseInt(props.getProperty(PROP.VOLGEND_FACTUUR_NR) || '1');
@@ -633,7 +682,7 @@ function volgendFactuurnummer_() {
 
 function volgendInkoopNummer_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const nr = parseInt(props.getProperty(PROP.VOLGEND_INKOOP_NR) || '1');
@@ -646,7 +695,7 @@ function volgendInkoopNummer_() {
 
 function volgendBoekingId_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const nr = parseInt(props.getProperty(PROP.VOLGEND_BOEKING_NR) || '1');
@@ -659,7 +708,7 @@ function volgendBoekingId_() {
 
 function volgendTransactieId_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const sleutel = 'volgendTransactieId';
@@ -673,7 +722,7 @@ function volgendTransactieId_() {
 
 function volgendRelatieId_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const sleutel = 'volgendRelatieId';
@@ -714,7 +763,7 @@ function zoekOfMaakRelatie_(ss, naam, type, email) {
   const emailNorm = String(email || '').trim().toLowerCase();
 
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const sheet = ss.getSheetByName(SHEETS.RELATIES);
     if (!sheet) throw new Error('Tabblad Relaties ontbreekt — run setup opnieuw');

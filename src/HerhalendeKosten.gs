@@ -237,7 +237,8 @@ function verwerkHerhalendeKosten_() {
 
   // Voorkom dubbele boekingen bij gelijktijdige dashboard-refreshes
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(8000)) return { geboekt: 0, komend: [] };
+  // 30s timeout — financiële operaties hebben voorrang boven UI-snelheid
+  if (!lock.tryLock(30000)) return { geboekt: 0, komend: [] };
 
   // Cap inhaal-iteraties: voorkomt runaway-loops als iemand een datum
   // in 1990 invoert (ongeluk of ongeldige migratie).
@@ -271,10 +272,21 @@ function verwerkHerhalendeKosten_() {
       const rekening = String(data[i][7] || '7000').split(' ')[0];
       const auto     = String(data[i][9] || 'Nee');
       const splitPct = Math.min(100, Math.max(0, parseFloat(data[i][11] || '100') || 100));
+      const rijId    = String(data[i][0] || ('rij' + i));   // unieke ID voor idempotency
 
       // Inhaal-loop: boek élke gemiste periode tot vandaag (begrensd).
       let iteratie = 0;
       while (volgende <= vandaag && iteratie < MAX_INHAAL) {
+        // Idempotency: als deze (rij + datum) combinatie al geboekt is, skip.
+        // Voorkomt dubbele journaalpost bij retry-after-crash of paralelle dashboard-refresh.
+        const idemKey = 'herhKost_' + rijId + '_' + Utilities.formatDate(volgende, 'Europe/Amsterdam', 'yyyy-MM-dd');
+        const reedsGeboekt = PropertiesService.getScriptProperties().getProperty(idemKey);
+        if (reedsGeboekt === 'DONE') {
+          // Spring direct naar volgende periode zonder opnieuw boeken
+          volgende = berekenVolgendeDatum_(volgende, freq);
+          iteratie++;
+          continue;
+        }
         if (auto === 'Ja' && bedrag > 0) {
           const zakelijkBedrag = rondBedrag_(bedrag * (splitPct / 100));
           const privaatBedrag  = rondBedrag_(bedrag - zakelijkBedrag);
@@ -301,11 +313,16 @@ function verwerkHerhalendeKosten_() {
             });
           }
           geboekt++;
+          // Markeer (rij+datum) als geboekt — idempotency-guard. TTL niet
+          // ingesteld op cache: ScriptProperty blijft staan tot opt-in cleanup
+          // (anders zou cache-eviction dubbel-boeking veroorzaken).
+          try { PropertiesService.getScriptProperties().setProperty(idemKey, 'DONE'); } catch (_) {}
         }
         volgende = berekenVolgendeDatum_(volgende, freq);
         iteratie++;
       }
       sheet.getRange(i + 1, 7).setValue(volgende);
+      SpreadsheetApp.flush();  // garandeer datum-update vóór trigger evt. opnieuw fired
 
       // Komende betalingen (volgende 30 dagen)
       const dagenTot = Math.ceil((volgende - vandaag) / (1000 * 60 * 60 * 24));
@@ -321,7 +338,7 @@ function verwerkHerhalendeKosten_() {
 
 function _volgendHerhalendKostId_() {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(30000);
   try {
     const props = PropertiesService.getScriptProperties();
     const sleutel = 'volgendHerhalendKostId';

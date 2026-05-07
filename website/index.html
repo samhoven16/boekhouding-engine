@@ -169,15 +169,29 @@
   :root {
     --blauw: #0D1B4E;
     --blauw-licht: #1A2A6B;
+    --blauw-diep: #060F2E;
     --accent: #2EC4B6;
+    --accent-glow: rgba(46,196,182,.45);
+    --accent-soft: rgba(46,196,182,.10);
     --groen: #2E7D32;
+    --oranje: #F59E0B;
+    --rood: #E11D48;
     --tekst: #1A1A1A;
     --grijs: #5F6B7A;
+    --grijs-licht: #94A3B0;
     --bg: #F7F9FC;
     --wit: #ffffff;
     --rand: #E5EAF2;
+    --rand-soft: rgba(13,27,78,.06);
     --radius: 12px;
+    --radius-l: 18px;
+    --radius-pill: 999px;
     --shadow: 0 4px 24px rgba(13,27,78,.10);
+    --shadow-soft: 0 1px 3px rgba(13,27,78,.04), 0 2px 6px rgba(13,27,78,.04);
+    --shadow-card: 0 8px 32px rgba(13,27,78,.08), 0 2px 4px rgba(13,27,78,.04);
+    --shadow-hover: 0 16px 48px rgba(13,27,78,.16), 0 4px 8px rgba(13,27,78,.06);
+    --shadow-glow: 0 0 0 1px var(--accent-soft), 0 14px 40px var(--accent-glow);
+    --gradient-mesh: radial-gradient(at 12% 8%, rgba(46,196,182,.12) 0%, transparent 45%), radial-gradient(at 88% 92%, rgba(13,27,78,.10) 0%, transparent 50%);
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -410,16 +424,29 @@
     to { opacity: 1; transform: translateY(0); }
   }
   .hero-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     background: rgba(46,196,182,.12);
     border: 1px solid rgba(46,196,182,.28);
     color: #A9EFE4;
     border-radius: 100px;
-    padding: 7px 18px;
+    padding: 7px 16px 7px 12px;
     font-size: 13px; font-weight: 600;
     margin-bottom: 28px;
     letter-spacing: .15px;
     backdrop-filter: blur(4px);
+  }
+  .hero-badge-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 var(--accent);
+    animation: dot-pulse 2.4s ease-out infinite;
+  }
+  @keyframes dot-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(46,196,182,.7); }
+    70%  { box-shadow: 0 0 0 10px rgba(46,196,182,0); }
+    100% { box-shadow: 0 0 0 0 rgba(46,196,182,0); }
   }
   .hero h1 {
     font-size: clamp(32px, 5.6vw, 64px);
@@ -528,6 +555,180 @@
   }
   h2 { font-size: clamp(30px, 3.8vw, 46px); font-weight: 800; line-height: 1.12; letter-spacing: -0.022em; color: var(--blauw); }
   .sub-tekst { font-size: 18px; color: var(--grijs); margin-top: 14px; max-width: 640px; line-height: 1.55; letter-spacing: -0.005em; }
+
+  /* ── COMPARE-INLINE TABEL ── */
+  .compare-inline-sectie { background: var(--wit); padding: 80px 24px; }
+  .compare-inline-sectie .container { max-width: 980px; margin: 0 auto; text-align: center; }
+  .compare-tabel-wrap { overflow-x: auto; margin: 32px 0 22px; border-radius: var(--radius-l); box-shadow: var(--shadow-card); }
+  .compare-tabel {
+    width: 100%; min-width: 640px; border-collapse: collapse;
+    background: var(--wit); font-size: 14px; text-align: left;
+  }
+  .compare-tabel th, .compare-tabel td { padding: 14px 18px; border-bottom: 1px solid var(--rand); vertical-align: middle; }
+  .compare-tabel thead th {
+    background: var(--bg); font-weight: 700; color: var(--blauw);
+    text-align: center; padding: 18px 12px; vertical-align: bottom;
+  }
+  .compare-tabel thead th:first-child { background: var(--wit); }
+  .col-label { display: block; font-size: 14px; font-weight: 700; }
+  .col-prijs { display: block; font-size: 11px; color: var(--grijs); font-weight: 500; margin-top: 2px; letter-spacing: .2px; }
+  .compare-tabel thead .col-ons {
+    background: linear-gradient(180deg, rgba(46,196,182,.08) 0%, rgba(46,196,182,.02) 100%);
+    border-bottom: 3px solid var(--accent);
+    position: relative;
+  }
+  .compare-tabel thead .col-ons::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent); border-radius: 4px 4px 0 0;
+  }
+  .compare-tabel thead .col-ons .col-label { color: var(--accent); font-weight: 800; }
+  .compare-tabel tbody th {
+    font-weight: 600; color: var(--blauw); text-align: left;
+    width: 36%; min-width: 200px;
+  }
+  .compare-tabel tbody td { text-align: center; font-weight: 600; }
+  .compare-tabel tbody td.ja { color: var(--accent); font-size: 18px; }
+  .compare-tabel tbody td.ja-warm { color: var(--oranje); font-size: 12px; font-weight: 500; }
+  .compare-tabel tbody td.nee { color: var(--rood); font-size: 18px; }
+  .compare-tabel tbody tr:hover { background: rgba(13,27,78,.02); }
+  .totaal-rij {
+    background: linear-gradient(180deg, var(--bg) 0%, var(--wit) 100%);
+    border-top: 2px solid var(--rand);
+  }
+  .totaal-rij th { font-weight: 800; font-size: 15px; }
+  .prijs-totaal-ons { color: var(--accent); font-size: 22px; font-weight: 800; }
+  .prijs-totaal-ander { color: var(--rood); font-size: 18px; font-weight: 700; text-decoration: line-through; text-decoration-thickness: 2px; }
+  .compare-cta-tekst { margin-top: 8px; }
+  .compare-cta-link {
+    color: var(--blauw); text-decoration: underline; text-underline-offset: 4px;
+    font-weight: 600; font-size: 14px;
+  }
+
+  /* ── SCROLL PROGRESS BAR (subtiele premium-touch) ── */
+  .scroll-progress {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent) 0%, #58E0D2 100%);
+    width: 0%; z-index: 100;
+    box-shadow: 0 0 10px var(--accent-glow);
+    transition: width .08s linear;
+  }
+
+  /* ── ANCHORED PRICING ── */
+  .anchor-sectie {
+    background: linear-gradient(180deg, #FAFBFD 0%, var(--wit) 100%);
+    padding: 80px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .anchor-sectie::before {
+    content: ''; position: absolute; inset: 0;
+    background: var(--gradient-mesh); pointer-events: none;
+  }
+  .anchor-sectie .container { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; text-align: center; }
+  .anchor-sectie h2 em {
+    font-style: normal; color: var(--accent); font-weight: 800;
+    background: linear-gradient(180deg, transparent 80%, rgba(46,196,182,.22) 80%);
+  }
+  .anchor-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin: 36px 0 18px;
+  }
+  .anchor-card {
+    background: var(--wit);
+    border: 1px solid var(--rand);
+    border-radius: var(--radius-l);
+    padding: 28px 24px;
+    text-align: left;
+    box-shadow: var(--shadow-soft);
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+    position: relative;
+  }
+  .anchor-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-card); }
+  .anchor-card--ons {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, var(--wit) 0%, rgba(46,196,182,.04) 100%);
+    box-shadow: var(--shadow-glow);
+  }
+  .anchor-card--ons::before {
+    content: 'JIJ KIEST DIT';
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #0A4744;
+    font-size: 10px; font-weight: 800; letter-spacing: 1.2px;
+    padding: 4px 12px; border-radius: var(--radius-pill);
+  }
+  .anchor-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--grijs); margin-bottom: 8px;
+  }
+  .anchor-card--ons .anchor-tag { color: var(--accent); }
+  .anchor-bedrag {
+    font-size: 44px; font-weight: 800; color: var(--blauw);
+    line-height: 1; letter-spacing: -0.025em; margin-bottom: 4px;
+  }
+  .anchor-bedrag--muted { color: var(--grijs); text-decoration: line-through; text-decoration-color: rgba(225,29,72,.4); text-decoration-thickness: 2px; }
+  .anchor-bedrag-suffix {
+    display: inline-block; margin-left: 6px; font-size: 14px; font-weight: 600;
+    color: var(--grijs); letter-spacing: 0; vertical-align: middle;
+    text-decoration: none;
+  }
+  .anchor-vs {
+    font-size: 13px; color: var(--blauw); font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .anchor-vs--muted { color: var(--rood); }
+  .anchor-vs strong { font-weight: 800; }
+  .anchor-feat {
+    font-size: 13px; color: var(--grijs); line-height: 1.5;
+    padding-top: 14px; border-top: 1px dashed var(--rand);
+  }
+  .anchor-besparing {
+    background: rgba(46,196,182,.10);
+    color: #0A4744;
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 13px; font-weight: 700;
+    text-align: center;
+  }
+  .anchor-besparing strong { font-weight: 800; }
+  .anchor-disclaimer {
+    text-align: center; font-size: 12px; color: var(--grijs-licht); margin-top: 22px;
+  }
+  .anchor-disclaimer a { color: var(--blauw); text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ── STICKY CTA — verschijnt na hero scroll ── */
+  .sticky-cta {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(13,27,78,.96);
+    backdrop-filter: saturate(140%) blur(10px);
+    color: var(--wit);
+    padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px;
+    box-shadow: 0 -8px 24px rgba(13,27,78,.18);
+    z-index: 90;
+    transform: translateY(110%);
+    transition: transform .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .sticky-cta.actief { transform: translateY(0); }
+  .sticky-cta-tekst { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; }
+  .sticky-cta-tekst strong { color: var(--accent); }
+  .sticky-cta-prijs { font-size: 11px; color: rgba(255,255,255,.7); display: block; font-weight: 500; }
+  .sticky-cta-knop {
+    background: var(--accent); color: #0A4744;
+    padding: 10px 18px; border-radius: var(--radius-pill);
+    font-weight: 700; font-size: 14px; text-decoration: none;
+    flex-shrink: 0; white-space: nowrap;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .sticky-cta-knop:hover { transform: scale(1.04); box-shadow: 0 8px 20px var(--accent-glow); }
+  @media (max-width: 720px) {
+    .anchor-grid { grid-template-columns: 1fr; }
+    .anchor-card--ons { order: -1; }
+    .sticky-cta-tekst { font-size: 13px; }
+    .sticky-cta-tekst-extra { display: none; }
+  }
 
   /* ── INTERACTIEVE DEMO ── */
   .demo-sectie { background: var(--wit); padding: 80px 24px; }
@@ -865,6 +1066,16 @@
   }
   .btn-koop:active { transform: scale(.97); transition-duration: .08s; }
   .garantie { font-size: 13px; color: var(--grijs); margin-top: 14px; }
+  .garantie-bord {
+    display: flex; align-items: flex-start; gap: 14px;
+    margin-top: 22px; padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(46,196,182,.08) 0%, rgba(46,196,182,.03) 100%);
+    border: 1px solid rgba(46,196,182,.32);
+    border-radius: var(--radius);
+    text-align: left; font-size: 13.5px; color: var(--blauw); line-height: 1.55;
+  }
+  .garantie-bord-icon { font-size: 28px; line-height: 1; flex-shrink: 0; }
+  .garantie-bord strong { color: var(--blauw); font-weight: 700; }
 
   /* ── FAQ ── */
   .faq-grid { margin-top: 40px; max-width: 760px; }
@@ -1172,7 +1383,10 @@
   </div>
   <div class="hero-grid">
     <div class="hero-content">
-      <div class="hero-badge">Eenmalig €49 · Geen abonnement, nooit</div>
+      <div class="hero-badge">
+        <span class="hero-badge-dot" aria-hidden="true"></span>
+        Eenmalig €49 · Geen abonnement, nooit
+      </div>
       <h1 id="hero-heading">Doe je boekhouding in <em>15 minuten</em> per maand.</h1>
       <p class="hero-sub">
         Facturen, BTW-aangifte en overzicht — geregeld in één Google Sheet op jouw eigen Drive. Eenmalig €49. Geen abonnement, geen boekhoudsoftware die je elke maand opnieuw moet leren.
@@ -1182,7 +1396,7 @@
           <span>Koop voor €49 →</span>
         </a>
         <a href="/functies/" class="btn-secundair">
-          Bekijk alle functies →
+          Bekijk alle 12 functies →
         </a>
       </div>
       <div>
@@ -1192,7 +1406,7 @@
         <li><span aria-hidden="true">✓</span> Jouw data blijft in jóuw Drive</li>
         <li><span aria-hidden="true">✓</span> Geen abonnement — eenmalig</li>
         <li><span aria-hidden="true">✓</span> Boekhouder gratis meekijken</li>
-        <li><span aria-hidden="true">✓</span> 14 dagen geld terug</li>
+        <li><span aria-hidden="true">✓</span> <strong>30 dagen geld terug</strong></li>
       </ul>
     </div>
     <div class="hero-product" aria-hidden="true">
@@ -1204,6 +1418,42 @@
 </header>
 
 <main id="main" tabindex="-1">
+
+<!-- ── ANCHORED PRICING — visualiseert besparing tov concurrenten ── -->
+<section class="anchor-sectie" aria-labelledby="anchor-heading">
+  <div class="container">
+    <p class="section-label">Wat je niet betaalt</p>
+    <h2 id="anchor-heading">€49 nu. Bespaar tot <em>€2.310</em> over 5 jaar.</h2>
+    <p class="sub-tekst">Eerlijke vergelijking tegen abonnementsprijs van marktleiders.</p>
+
+    <div class="anchor-grid" role="list">
+      <article class="anchor-card anchor-card--ons" role="listitem">
+        <div class="anchor-tag">Boekhoudbaar</div>
+        <div class="anchor-bedrag">€49<span class="anchor-bedrag-suffix">eenmalig</span></div>
+        <div class="anchor-vs">€<span data-anchor-jaar>49</span> over 5 jaar</div>
+        <div class="anchor-feat">12 functies · jouw data · 30 dagen geld terug</div>
+      </article>
+
+      <article class="anchor-card anchor-card--mb" role="listitem">
+        <div class="anchor-tag">Moneybird Premium</div>
+        <div class="anchor-bedrag anchor-bedrag--muted">€39<span class="anchor-bedrag-suffix">/maand</span></div>
+        <div class="anchor-vs anchor-vs--muted">€<strong>2.340</strong> over 5 jaar</div>
+        <div class="anchor-besparing">Bespaar <strong>€2.291</strong></div>
+      </article>
+
+      <article class="anchor-card anchor-card--eb" role="listitem">
+        <div class="anchor-tag">e-Boekhouden Plus</div>
+        <div class="anchor-bedrag anchor-bedrag--muted">€19<span class="anchor-bedrag-suffix">/maand</span></div>
+        <div class="anchor-vs anchor-vs--muted">€<strong>1.140</strong> over 5 jaar</div>
+        <div class="anchor-besparing">Bespaar <strong>€1.091</strong></div>
+      </article>
+    </div>
+    <p class="anchor-disclaimer">
+      Officiële tarieven mei 2026. Vergelijkbare functies (facturatie + BTW + boekhouder-toegang).
+      Zie <a href="/vergelijking/">de complete vergelijking</a>.
+    </p>
+  </div>
+</section>
 
 <!-- ── INTERACTIEVE DEMO — voel het systeem ── -->
 <section class="demo-sectie" aria-labelledby="demo-heading">
@@ -1298,6 +1548,47 @@
   </div>
 </section>
 
+<!-- ── COMPARE-INLINE — kort visueel verschil tov concurrenten ── -->
+<section id="vergelijking" class="compare-inline-sectie" aria-labelledby="compare-heading">
+  <div class="container">
+    <p class="section-label">Hoe het verschilt</p>
+    <h2 id="compare-heading">Wat krijg je voor je geld?</h2>
+    <p class="sub-tekst">De feature-vergelijking die concurrenten liever niet laten zien.</p>
+
+    <div class="compare-tabel-wrap">
+      <table class="compare-tabel">
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col" class="col-ons"><span class="col-label">Boekhoudbaar</span><span class="col-prijs">€49 eenmalig</span></th>
+            <th scope="col" class="col-ander"><span class="col-label">Moneybird</span><span class="col-prijs">€39/mnd</span></th>
+            <th scope="col" class="col-ander"><span class="col-label">e-Boekhouden</span><span class="col-prijs">€19/mnd</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Eigenaar van je data</th><td class="ja">✓</td><td class="nee">×</td><td class="nee">×</td></tr>
+          <tr><th scope="row">Geen abonnement</th><td class="ja">✓</td><td class="nee">×</td><td class="nee">×</td></tr>
+          <tr><th scope="row">iDEAL-betaal-link op factuur</th><td class="ja">✓</td><td class="ja-warm">betaalt extra</td><td class="ja-warm">betaalt extra</td></tr>
+          <tr><th scope="row">AI bonnen-scan inbegrepen</th><td class="ja">✓</td><td class="ja-warm">in duurder pakket</td><td class="nee">×</td></tr>
+          <tr><th scope="row">Persoonlijk fiscaal advies</th><td class="ja">✓</td><td class="nee">×</td><td class="nee">×</td></tr>
+          <tr><th scope="row">Accountant read-only deelflow</th><td class="ja">✓</td><td class="ja-warm">extra zetwerk</td><td class="ja-warm">extra zetwerk</td></tr>
+          <tr><th scope="row">Werkt zonder internet (offline edits)</th><td class="ja">✓</td><td class="nee">×</td><td class="nee">×</td></tr>
+          <tr><th scope="row">Vendor-lock-in</th><td class="ja">geen</td><td class="nee">data in hun cloud</td><td class="nee">data in hun cloud</td></tr>
+          <tr class="totaal-rij">
+            <th scope="row">Totaal over 5 jaar</th>
+            <td class="prijs-totaal-ons">€49</td>
+            <td class="prijs-totaal-ander">€2.340</td>
+            <td class="prijs-totaal-ander">€1.140</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="compare-cta-tekst">
+      <a href="/vergelijking/" class="compare-cta-link">→ Lees de complete eerlijke vergelijking</a>
+    </p>
+  </div>
+</section>
+
 <!-- ── EXPLORE — drie routes ── -->
 <section class="explore-sectie" aria-labelledby="explore-heading">
   <div class="container">
@@ -1308,7 +1599,7 @@
       <a href="/functies/" class="explore-kaart" data-reveal data-reveal-stagger="0">
         <div class="explore-icon" aria-hidden="true">📋</div>
         <h3>Wat zit erin?</h3>
-        <p>Alle 6 kernfuncties: facturen, BTW, dashboard, rapportages, herhalende kosten, data-eigenaarschap.</p>
+        <p>12 functies — facturen met iDEAL-betaal-link, AI bonnen-scan, KvK-autofill, fiscaal advies, accountant read-only delen, BTW, dashboard, herhalende kosten en meer.</p>
         <span class="explore-link">Bekijk functies →</span>
       </a>
       <a href="/vergelijking/" class="explore-kaart" data-reveal data-reveal-stagger="90">
@@ -1350,26 +1641,35 @@
   <div class="container">
     <p class="section-label">Wat het kost</p>
     <h2>€49. Eén keer. Klaar.</h2>
-    <p class="sub-tekst">Over 5 jaar bespaart dit ~€1.400 vs een abonnement van €25/mnd. Eén keer kopen, voor altijd houden.</p>
+    <p class="sub-tekst">Over 5 jaar bespaart dit tot €2.291 vs een abonnement van €39/mnd. Eén keer kopen, voor altijd houden.</p>
     <div class="pricing-kaart" role="region" aria-labelledby="prijs-heading" data-reveal>
       <div class="pricing-badge">Eenmalige aankoop · geen abonnement</div>
       <div class="prijs-groot" id="prijs-heading"><sup>€</sup>49</div>
       <p class="prijs-sub">Eén keer betalen — prijs is inclusief BTW — nooit meer</p>
       <ul class="prijs-lijst" role="list">
-        <li><span class="vink" aria-hidden="true">✓</span> Complete boekhouding voor ZZP en eenmanszaak</li>
-        <li><span class="vink" aria-hidden="true">✓</span> PDF-facturen maken en per mail versturen</li>
+        <li><span class="vink" aria-hidden="true">✓</span> Complete boekhouding voor ZZP en eenmanszaak (12 functies)</li>
+        <li><span class="vink" aria-hidden="true">✓</span> PDF-facturen met <strong>iDEAL-betaal-link</strong> via Mollie</li>
+        <li><span class="vink" aria-hidden="true">✓</span> AI-bonnen-scan: foto → automatisch ingevuld</li>
+        <li><span class="vink" aria-hidden="true">✓</span> KvK auto-fill bij nieuwe klanten</li>
         <li><span class="vink" aria-hidden="true">✓</span> BTW-aangifte automatisch berekend, per kwartaal klaar</li>
+        <li><span class="vink" aria-hidden="true">✓</span> Persoonlijk fiscaal advies (heffingskorting, lijfrente, KIA)</li>
         <li><span class="vink" aria-hidden="true">✓</span> Dashboard met live KPI's, balans, W&amp;V en cashflow</li>
         <li><span class="vink" aria-hidden="true">✓</span> Herhalende kosten en betalingsherinneringen op de automaat</li>
+        <li><span class="vink" aria-hidden="true">✓</span> Read-only delen met accountant — auto-verloopt na 30 dagen</li>
         <li><span class="vink" aria-hidden="true">✓</span> Je data in je eigen Google Drive — niet op mijn servers</li>
-        <li><span class="vink" aria-hidden="true">✓</span> Je boekhouder kijkt gratis mee via een gewone deellink</li>
         <li><span class="vink" aria-hidden="true">✓</span> Updates zolang ik ze maak — voor bestaande klanten gratis</li>
       </ul>
       <a href="/kopen" class="btn-koop">
         Koop nu voor €49 →
       </a>
       <p class="garantie">Betalen via Mollie (iDEAL, bancontact, creditcard) · licentie direct in je inbox</p>
-      <p class="garantie" style="margin-top:4px;"><strong style="color:var(--blauw)">Werkt het niet voor jou? Mail me binnen 14 dagen</strong> — ik stort je €49 terug, geen vragen.</p>
+      <div class="garantie-bord" role="note">
+        <span class="garantie-bord-icon" aria-hidden="true">🛡️</span>
+        <div>
+          <strong>30 dagen niet-goed-geld-terug</strong><br>
+          Werkt het niet voor jou? Mail me binnen 30 dagen, ik stort je €49 terug. Geen vragen, geen formulieren — gewoon mail.
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -1467,6 +1767,55 @@
     <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
   </div>
 </footer>
+
+<!-- Scroll-progress indicator — toont voortgang door pagina -->
+<div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+
+<!-- Sticky CTA — verschijnt na hero-scroll, blijft onderin -->
+<div class="sticky-cta" id="stickyCta" aria-hidden="true">
+  <div class="sticky-cta-tekst">
+    <strong>€49 eenmalig</strong> · 12 functies <span class="sticky-cta-tekst-extra">· 30 dagen geld terug</span>
+    <span class="sticky-cta-prijs">Bespaar tot €2.291 over 5 jaar t.o.v. abonnement</span>
+  </div>
+  <a href="/kopen" class="sticky-cta-knop">Koop nu →</a>
+</div>
+
+<script>
+  // Sticky CTA verschijnt zodra hero buiten viewport is
+  (function() {
+    var hero = document.querySelector('.hero');
+    var cta = document.getElementById('stickyCta');
+    if (!hero || !cta || !('IntersectionObserver' in window)) return;
+    var io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) {
+          cta.classList.remove('actief'); cta.setAttribute('aria-hidden', 'true');
+        } else {
+          cta.classList.add('actief'); cta.setAttribute('aria-hidden', 'false');
+        }
+      });
+    }, { rootMargin: '-50% 0px 0px 0px' });
+    io.observe(hero);
+  })();
+
+  // Scroll-progress bar — toont % door pagina (subtiele premium polish)
+  (function() {
+    var bar = document.getElementById('scrollProgress');
+    if (!bar) return;
+    var ticking = false;
+    function update() {
+      var doc = document.documentElement;
+      var top = window.pageYOffset || doc.scrollTop;
+      var max = doc.scrollHeight - doc.clientHeight;
+      bar.style.width = max > 0 ? (top / max * 100) + '%' : '0%';
+      ticking = false;
+    }
+    window.addEventListener('scroll', function() {
+      if (!ticking) { window.requestAnimationFrame(update); ticking = true; }
+    }, { passive: true });
+    update();
+  })();
+</script>
 
 <script>
   (function() {

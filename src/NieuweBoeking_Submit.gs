@@ -13,12 +13,21 @@
  * Retourneert {ok, bericht, factuurnummer?, emailVerzonden?, bonUrl?}
  */
 function submitNieuweBoeking(type, formData) {
+  // Rate-limit: max 30 boekingen/min/user. Voorkomt dialog-bombing of
+  // geknoeide google.script.run-flood. Normale klant haalt dit nooit.
+  rateLimit_('submitBoeking', 30);
+
+  // Recursieve sanitize op alle string-velden in formData. Voorheen werd
+  // saniteer_ alleen op individuele bekende velden toegepast — geneste
+  // arrays/objects (bv. factuur-regels) konden formule-injectie bevatten.
+  const veiligData = saniteerObject_(formData);
+
   // Dubbele server-side validatie (ook als client-side wordt omzeild)
-  const v = valideerBoeking(type, formData);
+  const v = valideerBoeking(type, veiligData);
   if (!v.ok) {
     throw new Error(v.fouten.map(function(f){ return f.bericht; }).join('\n'));
   }
-  return verwerkNieuweBoeking(type, formData);
+  return verwerkNieuweBoeking(type, veiligData);
 }
 
 /**

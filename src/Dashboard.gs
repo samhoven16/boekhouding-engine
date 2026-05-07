@@ -1220,6 +1220,14 @@ function schrijfBelastingvoordeelWidget_(sheet, ss, startRij) {
 }
 
 function berekenKpiData_(ss) {
+  // Cache-wrapper: KPI-berekening duurt 1-3s op grote sheets. Cache 5 min;
+  // invalidatie via bustCache_('kpi') na elke factuur/kosten-write.
+  const jaar = getBoekjaar_();
+  const cacheKey = 'kpi_' + jaar + '_v' + cacheVersie_('kpi');
+  return cacheBerekening_(cacheKey, 300, function() { return _berekenKpiDataRaw_(ss); });
+}
+
+function _berekenKpiDataRaw_(ss) {
   const kg = berekenKengetallen_(ss);
   // Boekjaar ipv kalenderjaar — voorkomt KPI-mismatch bij afwijkend boekjaar
   const jaar = getBoekjaar_();

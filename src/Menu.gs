@@ -26,6 +26,11 @@ function onOpen() {
   // Onboarding wizard bij eerste gebruik + update-melding bij terugkerende gebruikers
   try { controleerOnboarding_(); } catch (e) { Logger.log('Onboarding check fout: ' + e.message); }
 
+  // Trigger-watchdog: detecteert "valse start" (klant heeft scopes niet geaccepteerd
+  // → triggers draaien niet). Geeft toast met diagnose-instructie.
+  try { if (typeof controleerTriggerWatchdog_ === 'function') controleerTriggerWatchdog_(); }
+  catch (e) { Logger.log('Trigger-watchdog overgeslagen: ' + e.message); }
+
   // Eénmalig welkom-modal na geslaagde setup — 3 quick-start acties
   try { toonPostSetupWelkomModal_(); } catch (e) { Logger.log('Welkom-modal overgeslagen: ' + e.message); }
 
@@ -105,9 +110,18 @@ function onOpen() {
       .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
       .addItem('Accountantspakket exporteren', 'exporteerAccountantsPakket')
       .addItem('Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
+      .addItem('👤 Read-only delen met accountant', 'deelMetAccountant')
+      .addItem('👤 Actieve accountant-shares', 'toonAccountantShares')
       .addItem('Maandrapport nu versturen', 'mailMaandrapport')
       .addSeparator()
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
+      .addItem('🔧 Systeemstatus (voor support)', 'toonSysteemStatus')
+      .addItem('🩺 Diagnostiek — autorisatie-check', 'controleerAutorisaties')
+      .addItem('📋 Geïnstalleerde triggers tonen', 'toonTriggers')
+      .addItem('📈 Apps Script executions openen', 'openExecutionsDashboard')
+      .addItem('🚩 Feature flags overzicht', 'toonFeatures')
+      .addItem('📨 Mislukte taken (DLQ) tonen', 'toonDlqOverzicht')
+      .addItem('🔁 Forceer DLQ-retry nu', 'forceerDlqRetry')
       .addItem('Gesloten periodes beheren', 'beheerGeslotenPeriodes')
     )
 
@@ -161,6 +175,7 @@ function onOpen() {
       .addItem('Google Drive mappen', 'toonDriveStructuur')
       .addItem('Website / webshop koppelen (API)', 'toonZapierInstructies')
       .addItem('KvK API-key (voor auto-fill bedrijfsgegevens)', 'zetKvkApiKey')
+      .addItem('Mollie API-key (voor iDEAL-betaal-link op factuur)', 'zetMollieApiKey')
       .addSeparator()
       .addItem('Jaarafsluiting wizard', 'sluitJaarAf')
       .addItem('Nieuw boekjaar starten (alleen Drive)', 'maakNieuwBoekjaar')

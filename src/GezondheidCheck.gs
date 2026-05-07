@@ -54,6 +54,15 @@ function voerGezondheidCheckUit() {
     else aantalWaarsch++;
   });
 
+  // ── Check 2b: Referentiële integriteit (verweesde facturen) ───────────
+  const refChecks = controleerReferentiele_(ss);
+  refChecks.forEach(c => {
+    resultaten.push(c);
+    if (c.status === 'FOUT') aantalFouten++;
+    else if (c.status === 'OK') aantalOk++;
+    else aantalWaarsch++;
+  });
+
   // ── Check 3: Verkoopfacturen ──────────────────────────────────────────
   const vfChecks = controleerVerkoopfacturen_(ss);
   vfChecks.forEach(c => {
@@ -164,6 +173,79 @@ function controleerBalans_(ss) {
   } catch (e) {
     return { check: 'Balans', status: 'FOUT', bericht: 'Kon balans niet controleren: ' + e.message };
   }
+}
+
+// ─────────────────────────────────────────────
+//  CHECK: REFERENTIËLE INTEGRITEIT
+// ─────────────────────────────────────────────
+//
+// Controleert of alle factuur-verwijzingen naar Relaties geldig zijn.
+// Verweesde facturen (klantId niet in Relaties) ontstaan als klant een
+// rij uit Relaties verwijdert zonder de factuur eerst te updaten.
+
+function controleerReferentiele_(ss) {
+  const resultaten = [];
+  try {
+    const relSheet = ss.getSheetByName(SHEETS.RELATIES);
+    const vfSheet  = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+    const ifSheet  = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+    if (!relSheet || (!vfSheet && !ifSheet)) {
+      return [{ check: 'Referenties – Relaties', status: 'OK',
+        bericht: 'Geen factuur-tabbladen om te controleren.' }];
+    }
+
+    // Verzamel alle bestaande relatie-IDs (kolom 0)
+    const relData = relSheet.getDataRange().getValues();
+    const relIds = new Set();
+    for (let i = 1; i < relData.length; i++) {
+      const id = String(relData[i][0] || '').trim();
+      if (id) relIds.add(id);
+    }
+
+    let verweesdVf = 0;
+    let verweesdIf = 0;
+    const voorbeeldVf = [];
+    const voorbeeldIf = [];
+
+    if (vfSheet) {
+      const vfData = vfSheet.getDataRange().getValues();
+      for (let i = 1; i < vfData.length; i++) {
+        const klantId = String(vfData[i][4] || '').trim();
+        if (klantId && !relIds.has(klantId)) {
+          verweesdVf++;
+          if (voorbeeldVf.length < 3) voorbeeldVf.push(String(vfData[i][1] || '?'));
+        }
+      }
+    }
+    if (ifSheet) {
+      const ifData = ifSheet.getDataRange().getValues();
+      for (let i = 1; i < ifData.length; i++) {
+        const levId = String(ifData[i][4] || '').trim();
+        if (levId && !relIds.has(levId)) {
+          verweesdIf++;
+          if (voorbeeldIf.length < 3) voorbeeldIf.push(String(ifData[i][1] || '?'));
+        }
+      }
+    }
+
+    if (verweesdVf > 0 || verweesdIf > 0) {
+      const delen = [];
+      if (verweesdVf) delen.push(verweesdVf + ' verkoopfactuur/facturen verwijst naar verwijderde klant (' + voorbeeldVf.join(', ') + ')');
+      if (verweesdIf) delen.push(verweesdIf + ' inkoopfactuur/facturen verwijst naar verwijderde leverancier (' + voorbeeldIf.join(', ') + ')');
+      resultaten.push({
+        check:   'Referenties – Verweesde facturen',
+        status:  'WAARSCHUWING',
+        bericht: delen.join('; ') + '. Voeg de relatie opnieuw toe in tabblad Relaties of werk de factuur bij.',
+      });
+    } else {
+      resultaten.push({ check: 'Referenties – Verweesde facturen',
+        status: 'OK', bericht: 'Alle factuur-verwijzingen zijn intact.' });
+    }
+  } catch (e) {
+    resultaten.push({ check: 'Referenties – Verweesde facturen',
+      status: 'FOUT', bericht: 'Check mislukt: ' + e.message });
+  }
+  return resultaten;
 }
 
 // ─────────────────────────────────────────────

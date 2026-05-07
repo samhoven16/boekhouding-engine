@@ -181,12 +181,12 @@ function boekPriveCorrectie() {
 
 function verwerkPriveCorrectie(data) {
   const ss = getSpreadsheet_();
-  const bedrag = parseBedrag_(data.bedrag);
-  const datum = parseDatum_(data.datum);
+  // Strict parsing — geen silent fallback; klant ziet exact wat fout is
+  const bedrag = parseBedragStrict_(data.bedrag, 'Bedrag');
+  const datum  = parseDatumStrict_(data.datum, 'Datum');
   const isStorting = data.type === 'storting';
 
   if (!(bedrag > 0)) throw new Error('Bedrag moet groter zijn dan €0,00.');
-  if (!datum || isNaN(datum.getTime())) throw new Error('Vul een geldige datum in.');
 
   // Storting: Bank debet | Privéstortingen credit
   // Onttrekking: Privéonttrekkingen debet | Bank credit
@@ -209,7 +209,7 @@ function verwerkPriveCorrectie(data) {
 function boekDgaTransactie(isOpname, bedrag, omschr) {
   const ss = getSpreadsheet_();
   const datum = new Date();
-  const bedragNum = parseBedrag_(bedrag);
+  const bedragNum = parseBedragStrict_(bedrag, 'DGA-bedrag');
   if (!(bedragNum > 0)) throw new Error('DGA-bedrag moet groter zijn dan €0,00.');
 
   // Opname: RC DGA debet | Bank credit

@@ -16,6 +16,21 @@
  * Beide stappen lopen onafhankelijk: één fout blokkeert de andere niet.
  */
 function onEdit(e) {
+  // Dedup: GAS fires onEdit 2× wanneer er ZOWEL een simple-trigger
+  // (= deze functienaam onEdit) ALS een installable trigger ('onEdit' in
+  // installeelTriggers_) bestaat. Zonder check krijg je dubbele audit-log
+  // entries en bij side-effects (mail) dubbele acties.
+  // Cache-key per range+timestamp; ttl 5s.
+  try {
+    const a1 = e && e.range ? e.range.getA1Notation() : '';
+    if (a1) {
+      const key = 'onEditDedup_' + a1 + '_' + Math.floor(Date.now() / 5000);
+      const cache = CacheService.getScriptCache();
+      if (cache.get(key)) return;  // tweede fire binnen 5s op zelfde cel → skip
+      cache.put(key, '1', 5);
+    }
+  } catch (_) { /* dedup-fail: laat door (better duplicaat dan miss) */ }
+
   // ── Audit trail: log alle edits op gevoelige sheets ───────────
   try {
     schrijfAuditEdit_(e);
@@ -246,10 +261,25 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   const overgeslagenRegels = [];
   for (let i = 1; i <= 5; i++) {
     const omschr = String(data[`Regel ${i} – Omschrijving`] || '').trim();
-    const aantal = parseBedrag_(data[`Regel ${i} – Aantal`] || '0');
-    const prijs  = parseBedrag_(data[`Regel ${i} – Prijs per eenheid (excl. BTW)`] || '0');
-    if (!omschr && aantal === 0 && prijs === 0) continue;   // volledig leeg → stille skip
+    const ruwAantal = data[`Regel ${i} – Aantal`];
+    const ruwPrijs  = data[`Regel ${i} – Prijs per eenheid (excl. BTW)`];
+
+    // Volledig lege regel → stille skip (klant heeft regel niet ingevuld)
+    const leeg = !omschr &&
+      (ruwAantal === undefined || ruwAantal === null || ruwAantal === '' || String(ruwAantal) === '0') &&
+      (ruwPrijs  === undefined || ruwPrijs  === null || ruwPrijs  === '' || String(ruwPrijs)  === '0');
+    if (leeg) continue;
+
     if (!omschr) { overgeslagenRegels.push(`Regel ${i}: omschrijving leeg`); continue; }
+
+    // Strict parsing — bij niet-numeriek werpt parseBedragStrict_ direct.
+    // Voorkomt corrupt journaalpost-bedrag door tekstinvoer.
+    let aantal, prijs;
+    try { aantal = parseBedragStrict_(ruwAantal, `Regel ${i} aantal`); }
+    catch (e) { overgeslagenRegels.push(e.message); continue; }
+    try { prijs  = parseBedragStrict_(ruwPrijs,  `Regel ${i} prijs`); }
+    catch (e) { overgeslagenRegels.push(e.message); continue; }
+
     if (aantal <= 0) { overgeslagenRegels.push(`Regel ${i} (${omschr}): aantal moet > 0 zijn`); continue; }
     if (prijs <= 0) { overgeslagenRegels.push(`Regel ${i} (${omschr}): prijs moet > €0 zijn`); continue; }
     const totaal = rondBedrag_(aantal * prijs);
@@ -369,9 +399,21 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     try { if (typeof rapporteerAnomalie_ === 'function') rapporteerAnomalie_('factuur_mogelijk_dubbel', 'similar to ' + recenteDuplicate); } catch (_) {}
   }
 
-  vfSheet.appendRow(factuurData);
+  // Critical write — beschermd door dubbel-logging: appendRow + noodLog_.
+  // Als sheet locked/quota: noodLog_ is laatste-redmiddel in ScriptProperty.
+  try {
+    vfSheet.appendRow(factuurData);
+  } catch (writeErr) {
+    noodLog_('FACTUUR_SHEET_WRITE_FOUT', factuurNummerOpgemaakt + ' | ' + klantnaam + ' | ' + totalIncl + ' | ' + writeErr.message);
+    try { meldFataalAanOwner_('DATA_LOSS', 'appendRow factuur faalde', { factuurnummer: factuurNummerOpgemaakt, fout: writeErr.message }); } catch (_) {}
+    throw writeErr;  // factuurnummer is reeds geclaimd; user moet dit weten
+  }
   const nieuweRij = vfSheet.getLastRow();
+  // Invalideer KPI + Belastingadvies cache — anders ziet klant op Dashboard
+  // de nieuwe factuur pas na 5 min als de cache verloopt.
+  try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
   schrijfAuditLog_('Factuur in sheet', factuurNummerOpgemaakt + ' | klant: ' + klantnaam + ' | excl: ' + totalExcl + ' | incl: ' + totalIncl);
+  noodLog_('Factuur opgeslagen', factuurNummerOpgemaakt + ' | ' + totalIncl);
 
   // Journaalposten
   const omschr = `Verkoopfactuur ${factuurNummerOpgemaakt} – ${klantnaam}`;
@@ -390,14 +432,19 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     });
   }
 
-  // PDF genereren
-  Utilities.sleep(500);
+  // PDF genereren — eerst flush() forceren zodat appendRow + journaalposten
+  // ALLEMAAL gepersistereerd zijn vóór de export-URL aangeroepen wordt.
+  // Zonder flush kan PDF stale data bevatten (Google Sheets schrijft async).
+  // Utilities.sleep(500) was eerder de fragiele oplossing — flush() is contractueel.
+  SpreadsheetApp.flush();
+  Utilities.sleep(200);
   const formData = {
     'Factuuradres klant': klantAdres,
     'BTW-nummer klant': data['BTW-nummer klant'] || '',
     'BTW tarief': data['BTW tarief'] || '21% (hoog)',
     'Projectcode / Referentie': data['Projectcode / Referentie'] || '',
     'Notities / bijzonderheden': data['Notities op factuur'] || '',
+    'Klant e-mailadres': klantEmail,
   };
   const pdfUrl = genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regels, totalExcl, totalBtw, totalIncl, formData);
 
@@ -421,14 +468,58 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     Logger.log('WAARSCHUWING: PDF niet gegenereerd voor ' + factuurNummerOpgemaakt);
   }
 
-  // Automatisch mailen naar klant — alleen als PDF aanwezig
+  // ── GHOST-SUCCESS BESCHERMING ─────────────────────────────────
+  // Idempotency-key tegen het scenario "stroom valt uit ná email maar
+  // VÓÓR sheet-update". Zonder deze guard zou klant op retry een tweede
+  // factuur-mail krijgen.
+  //
+  // Strategie: registreer "EMAIL_PENDING" status in ScriptProperty + sheet
+  // VÓÓR GmailApp.sendEmail. Als email succeeds maar status-write crasht,
+  // ziet volgende run 'PENDING' en weet: NIET opnieuw versturen, alleen
+  // status repareren.
   let emailVerzonden = false;
+  const emailIdemKey = 'emailVerzonden_' + factuurNummerOpgemaakt;
   if (directMailen && klantEmail && pdfUrl) {
-    emailVerzonden = stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummerOpgemaakt, totalIncl, vervaldatum, pdfUrl, ublUrl) === true;
-    if (emailVerzonden) {
-      schrijfAuditLog_('Email verstuurd', factuurNummerOpgemaakt + ' → ' + klantEmail);
+    const propsEmail = PropertiesService.getScriptProperties();
+    const reedsVerzonden = propsEmail.getProperty(emailIdemKey);
+    if (reedsVerzonden === 'DONE') {
+      // Klant probeert opnieuw — email is al de deur uit, alleen sheet-status repareren
+      schrijfAuditLog_('Email DUBBEL geblokkeerd', factuurNummerOpgemaakt + ' — al verzonden, skip');
+      emailVerzonden = true;
     } else {
-      schrijfAuditLog_('Email MISLUKT', factuurNummerOpgemaakt + ' → ' + klantEmail + ' – versturen mislukt');
+      // Markeer PENDING vóór versturen — als crash hierna, weet retry: niet 2× versturen
+      try {
+        propsEmail.setProperty(emailIdemKey, 'PENDING:' + Date.now());
+        if (pdfUrl) vfSheet.getRange(nieuweRij, 15).setValue('Verzendt…');
+        SpreadsheetApp.flush();
+      } catch (_) {}
+
+      try {
+        emailVerzonden = stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummerOpgemaakt, totalIncl, vervaldatum, pdfUrl, ublUrl) === true;
+      } catch (sendErr) {
+        emailVerzonden = false;
+        Logger.log('stuurFactuurEmailNaarKlant_ throw: ' + sendErr.message);
+      }
+
+      // Markeer DONE direct na succes — atomair sneller dan sheet-write
+      if (emailVerzonden) {
+        try { propsEmail.setProperty(emailIdemKey, 'DONE'); } catch (_) {}
+        schrijfAuditLog_('Email verstuurd', factuurNummerOpgemaakt + ' → ' + klantEmail);
+      } else {
+        // Reset PENDING — retry mag opnieuw proberen
+        try { propsEmail.deleteProperty(emailIdemKey); } catch (_) {}
+        schrijfAuditLog_('Email MISLUKT', factuurNummerOpgemaakt + ' → ' + klantEmail + ' – versturen mislukt');
+        try {
+          if (typeof dlqVoegToe_ === 'function') {
+            dlqVoegToe_('EMAIL_FACTUUR', {
+              email: klantEmail, klantnaam: klantnaam,
+              factuurnummer: factuurNummerOpgemaakt,
+              bedragIncl: totalIncl, vervaldatum: vervaldatum,
+              pdfUrl: pdfUrl, ublUrl: ublUrl,
+            }, 'Initiële email mislukt — auto-retry binnen 1 uur');
+          }
+        } catch (_) {}
+      }
     }
   } else if (directMailen && !klantEmail) {
     schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen klant e-mailadres bekend. Vul het e-mailadres in bij de klant-relatie en verstuur handmatig via Boekhouding → Verkoopfacturen.');
@@ -440,6 +531,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   if (pdfUrl) {
     const nieuweStatus = emailVerzonden ? FACTUUR_STATUS.VERZONDEN : FACTUUR_STATUS.CONCEPT;
     vfSheet.getRange(nieuweRij, 15).setValue(nieuweStatus);
+    SpreadsheetApp.flush();  // garandeer status-persist vóór return
   }
 
   Logger.log(`Verkoopfactuur ${factuurNummerOpgemaakt} aangemaakt voor ${klantnaam}`);
@@ -483,13 +575,17 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 // ─────────────────────────────────────────────
 function verwerkUitgavenUitHoofdformulier_(ss, data) {
   const leverancier = String(data['Leveranciernaam'] || '').trim();
-  const datum       = parseDatum_(data['Factuurdatum uitgave']) || new Date();
-  const bedragExcl  = parseBedrag_(data['Bedrag excl. BTW'] || '0');
-  // Validatie EERST — voorkom gap in inkoopnummer-reeks
+  // Strict parsing: bij invalid datum/bedrag → throw met klant-vriendelijke melding
+  // i.p.v. silent fallback naar today/0 → factuur met €0,00 voorkomen.
   if (!leverancier) {
     schrijfAuditLog_('Uitgave geweigerd', 'leverancier ontbreekt');
     throw new Error('Leveranciernaam is verplicht.');
   }
+  let datum, bedragExcl;
+  try { datum = parseDatumStrict_(data['Factuurdatum uitgave'], 'Factuurdatum uitgave'); }
+  catch (e) { schrijfAuditLog_('Uitgave geweigerd', 'datum: ' + e.message); throw e; }
+  try { bedragExcl = parseBedragStrict_(data['Bedrag excl. BTW'], 'Bedrag excl. BTW'); }
+  catch (e) { schrijfAuditLog_('Uitgave geweigerd', 'bedrag: ' + e.message); throw e; }
   if (bedragExcl <= 0) {
     schrijfAuditLog_('Uitgave geweigerd', 'bedragExcl ≤ 0');
     throw new Error('Vul een bedrag in groter dan €0,00');
@@ -522,7 +618,19 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
     '', data['Notities uitgave'] || '', '', new Date(),
   ];
 
-  ss.getSheetByName(SHEETS.INKOOPFACTUREN).appendRow(inkoopData);
+  // Critical write — dubbel-loggen tegen sheet-failure
+  const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (!ifSheet) throw new Error('Tabblad Inkoopfacturen niet gevonden — run setup() eerst.');
+  try {
+    ifSheet.appendRow(inkoopData);
+  } catch (writeErr) {
+    noodLog_('INKOOPFACTUUR_SHEET_FOUT', 'IK' + inkoopNr + ' | ' + leverancier + ' | ' + bedragIncl + ' | ' + writeErr.message);
+    try { meldFataalAanOwner_('DATA_LOSS', 'appendRow inkoopfactuur faalde', { ref: 'IK' + inkoopNr, fout: writeErr.message }); } catch (_) {}
+    throw writeErr;
+  }
+  noodLog_('Inkoopfactuur opgeslagen', 'IK' + inkoopNr + ' | ' + bedragIncl);
+  SpreadsheetApp.flush();  // garandeer write vóór journaalposten
+  try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
 
   const omschr = `Inkoopfactuur ${data['Factuurnummer leverancier'] || inkoopNr} – ${leverancier}`;
   maakJournaalpost_(ss, {
@@ -643,9 +751,12 @@ function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
 //  DECLARATIE (privé voorgeschoten)
 // ─────────────────────────────────────────────
 function verwerkDeclaratieUitHoofdformulier_(ss, data) {
-  const datum      = parseDatum_(data['Datum declaratie']) || new Date();
-  const bedragExcl = parseBedrag_(data['Bedrag excl. BTW declaratie'] || '0');
-  // Validatie EERST — voorkom gap in inkoopnummer-reeks bij lege submit
+  // Strict parsing voor financiële integriteit — bij ongeldig direct throw
+  let datum, bedragExcl;
+  try { datum = parseDatumStrict_(data['Datum declaratie'], 'Datum declaratie'); }
+  catch (e) { schrijfAuditLog_('Declaratie geweigerd', 'datum: ' + e.message); throw e; }
+  try { bedragExcl = parseBedragStrict_(data['Bedrag excl. BTW declaratie'], 'Bedrag declaratie'); }
+  catch (e) { schrijfAuditLog_('Declaratie geweigerd', 'bedrag: ' + e.message); throw e; }
   if (bedragExcl <= 0) {
     schrijfAuditLog_('Declaratie geweigerd', 'bedragExcl ≤ 0 — geen inkoopnummer geclaimd');
     throw new Error('Vul een bedrag in groter dan €0,00');
@@ -675,7 +786,19 @@ function verwerkDeclaratieUitHoofdformulier_(ss, data) {
     kostenRek, 'Declaratie', '', '', new Date(),
   ];
 
-  ss.getSheetByName(SHEETS.INKOOPFACTUREN).appendRow(inkoopData);
+  // Critical write — dubbel-loggen
+  const ifSheetD = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (!ifSheetD) throw new Error('Tabblad Inkoopfacturen niet gevonden — run setup() eerst.');
+  try {
+    ifSheetD.appendRow(inkoopData);
+  } catch (writeErr) {
+    noodLog_('DECLARATIE_SHEET_FOUT', 'IK' + inkoopNr + ' | ' + writeErr.message);
+    try { meldFataalAanOwner_('DATA_LOSS', 'appendRow declaratie faalde', { ref: 'IK' + inkoopNr }); } catch (_) {}
+    throw writeErr;
+  }
+  noodLog_('Declaratie opgeslagen', 'IK' + inkoopNr);
+  SpreadsheetApp.flush();
+  try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
 
   // Privé-voorgeschoten kosten: kostenrekening (excl) + BTW-voorbelasting → 4500 (incl).
   // Eerdere versie boekte alleen excl. waardoor BTW niet als voorbelasting werd
@@ -941,6 +1064,7 @@ function verwerkInkoopfactuurFormulier(e) {
     ];
 
     ss.getSheetByName(SHEETS.INKOOPFACTUREN).appendRow(inkoopData);
+  try { bustCache_('kpi'); bustCache_('advies'); } catch (_) {}
 
     // Journaalpost: Kosten + BTW voorbelasting | Credit: Crediteuren
     const omschr = `Inkoopfactuur ${data['Factuurnummer leverancier'] || inkoopNr} – ${leverancier}`;
@@ -1134,50 +1258,93 @@ function verwerkJournaalpostFormulier(e) {
 // ─────────────────────────────────────────────
 function dagelijkseTaken() {
   const ss = getSpreadsheet_();
+  const dagelijksTotaal0 = Date.now();
 
   // Elke taak in eigen try-catch: één falende taak stopt de rest niet.
-  try {
-    markeerVervallenFacturen_(ss);
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT markeerVervallen: ' + e.message);
-    try { schrijfAuditLog_('FOUT dagelijkse taak', 'markeerVervallen: ' + e.message); } catch (_) {}
-  }
-
-  try {
-    stuurAutomatischeBetalingsherinneringen_(ss);
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT herinneringen: ' + e.message);
-    try { schrijfAuditLog_('FOUT dagelijkse taak', 'herinneringen: ' + e.message); } catch (_) {}
-  }
-
-  try {
+  // Wrap in _runTaak_ voor automatische metrics + status-logging.
+  _runTaak_('markeerVervallen', function() { markeerVervallenFacturen_(ss); });
+  _runTaak_('herinneringen',    function() { stuurAutomatischeBetalingsherinneringen_(ss); });
+  _runTaak_('btwDeadline',      function() {
     if (getInstelling_('BTW aangifte herinnering') === 'Ja') controleerBtwDeadlines_();
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT BTW deadline: ' + e.message);
-  }
+  });
+  _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
+  _runTaak_('dashboard',        function() { vernieuwDashboard(); });
+  _runTaak_('groottecheck',     function() { controleerSheetGrootte_(ss); });
+  _runTaak_('verlopenShares',   function() { if (typeof ruimVerlopenShares_ === 'function') ruimVerlopenShares_(); });
+  _runTaak_('autoBackup',       function() {
+    if (typeof featureAan_ === 'function' && !featureAan_('auto_backup')) return;
+    if (typeof maakAutomatischeBackup_ === 'function') maakAutomatischeBackup_();
+  });
+  _runTaak_('dlqRetry',         function() {
+    if (typeof featureAan_ === 'function' && !featureAan_('dlq_retry')) return;
+    if (typeof dlqVerwerkRetries_ === 'function') dlqVerwerkRetries_();
+  });
 
-  try {
-    voerGezondheidCheckStil_();
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT gezondheidscheck: ' + e.message);
-  }
-
-  try {
-    vernieuwDashboard();
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT dashboard: ' + e.message);
-    try { schrijfAuditLog_('FOUT dagelijkse taak', 'dashboard/herhalende kosten: ' + e.message); } catch (_) {}
-  }
-
-
-
-  try {
-    controleerSheetGrootte_(ss);
-  } catch (e) {
-    Logger.log('dagelijkse taak FOUT groottecheck: ' + e.message);
-  }
-
+  // Aggregaat: totale duur dagelijkseTaken
+  try { metricsLog_('dagelijkseTaken.totaal', Date.now() - dagelijksTotaal0, true); } catch (_) {}
   Logger.log('Dagelijkse taken uitgevoerd: ' + new Date());
+}
+
+/**
+ * Runt een sub-taak met automatische:
+ *  - try/catch isolation (een fout stopt de keten niet)
+ *  - duur-meting → metricsLog_
+ *  - status-tracking → taakStatus-sheet (laatste run + status)
+ *  - audit-log bij fout
+ */
+function _runTaak_(naam, fn) {
+  const t0 = Date.now();
+  let status = 'OK';
+  let foutBericht = '';
+  try {
+    fn();
+  } catch (e) {
+    status = 'FOUT';
+    foutBericht = e.message;
+    Logger.log('dagelijkse taak FOUT ' + naam + ': ' + e.message);
+    try { schrijfAuditLog_('FOUT dagelijkse taak', naam + ': ' + e.message); } catch (_) {}
+  } finally {
+    const durMs = Date.now() - t0;
+    try { metricsLog_('taak.' + naam, durMs, status === 'OK', { fout: foutBericht || undefined }); } catch (_) {}
+    try { _updateTaakStatus_(naam, status, durMs, foutBericht); } catch (_) {}
+  }
+}
+
+/**
+ * Verborgen tabblad 'Taakstatus' toont per achtergrond-taak: laatste run,
+ * duur, status, eventueel laatste fout. Klant-vriendelijk overzicht via
+ * Boekhouding → Controle → Taakstatus tonen.
+ */
+function _updateTaakStatus_(naam, status, durMs, fout) {
+  const ss = getSpreadsheet_();
+  if (!ss) return;
+  const SHEET = 'Taakstatus';
+  let sheet = ss.getSheetByName(SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET);
+    sheet.getRange(1, 1, 1, 5)
+      .setValues([['Taak', 'Laatste run', 'Duur (ms)', 'Status', 'Laatste fout']])
+      .setFontWeight('bold').setBackground('#0D1B4E').setFontColor('#FFFFFF');
+    sheet.setFrozenRows(1);
+    sheet.hideSheet();
+  }
+  // Zoek bestaande rij voor deze taak (één rij per taak — geen historie hier;
+  // historie staat in Metrics-tab).
+  const data = sheet.getDataRange().getValues();
+  let rij = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === naam) { rij = i + 1; break; }
+  }
+  const waarden = [naam, new Date(), durMs, status, fout || ''];
+  if (rij === -1) {
+    sheet.appendRow(waarden);
+  } else {
+    sheet.getRange(rij, 1, 1, 5).setValues([waarden]);
+  }
+  // Kleur status-cel
+  if (rij === -1) rij = sheet.getLastRow();
+  sheet.getRange(rij, 4).setBackground(status === 'OK' ? '#E8F5E9' : '#FFEBEE')
+    .setFontColor(status === 'OK' ? '#1B5E20' : '#B71C1C');
 }
 
 // ─────────────────────────────────────────────
@@ -1368,13 +1535,49 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
   const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
   if (!sheet || sheet.getLastRow() < 2) return;
 
+  // Pre-flight quota-check — voorkomt dat dagelijkse trigger 50 herinneringen
+  // probeert maar bij rij 30 stopt door quota-uitputting (consumer Apps Script
+  // = 100/dag). Lokale veiligheidsmarge: stop met 5 buffer-emails over voor
+  // factuurversturen + accountantsmail.
+  let resterendQuota = 100;
+  try {
+    resterendQuota = MailApp.getRemainingDailyQuota();
+    if (resterendQuota <= 5) {
+      Logger.log('Dunning OVERGESLAGEN: quota bijna op (' + resterendQuota + ' over). Reserveer voor handmatige acties.');
+      try { schrijfAuditLog_('Dunning overgeslagen', 'Quota bijna op: ' + resterendQuota + ' over'); } catch (_) {}
+      try { meldFataalAanOwner_('QUOTA', 'Email-quota bijna op (' + resterendQuota + ' over)', { module: 'dunning' }); } catch (_) {}
+      return;
+    }
+  } catch (_) { /* quota-API down? laat door */ }
+
   const data = sheet.getDataRange().getValues();
   const vandaag = new Date();
   const bedrijf = getInstelling_('Bedrijfsnaam') || '';
   const props = PropertiesService.getScriptProperties();
   const STAP_DAGEN = [1, 7, 14];
 
-  for (let i = 1; i < data.length; i++) {
+  // Resume-cursor: bij crash halverwege wordt dunningCursor opgeslagen, bij
+  // volgende run hervatten we vanaf die rij. Voorkomt dat eerste 50 rijen 2x
+  // herinnering krijgen na een 6-min timeout halverwege rij 51.
+  // Reset naar 1 zodra alle rijen langs zijn gegaan (einde van loop).
+  const CURSOR_KEY = 'dunningCursor';
+  const startRij = parseInt(props.getProperty(CURSOR_KEY) || '1');
+  const MAX_PER_RUN = 100;  // batch-grootte voor 6-min execution-limit
+  const startTs = Date.now();
+  let verwerkt = 0;
+  let i = startRij;
+
+  for (; i < data.length; i++) {
+    // Dual-cap: count-based EN time-based. guillotineCheck_ schedule self-trigger
+    // bij >4.5min — vangt corner-cases af waar individuele email-versturen lang duurt.
+    if (verwerkt >= MAX_PER_RUN ||
+        guillotineCheck_(startTs, 'stuurAutomatischeBetalingsherinneringen_', { rij: i }, 270000)) {
+      // Pauzeer hier — volgende run hervat
+      props.setProperty(CURSOR_KEY, String(i));
+      Logger.log('Dunning batch-pauze bij rij ' + i + ' (max ' + MAX_PER_RUN + ' per run)');
+      try { schrijfAuditLog_('Dunning batch-pauze', 'rij ' + i + ' van ' + data.length); } catch (_) {}
+      return;
+    }
     const status = data[i][14];
     if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
 
@@ -1428,12 +1631,27 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       }
       GmailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
       props.setProperty(stapKey, String(volgendeStap));
+      verwerkt++;  // tel alleen werkelijk verstuurde mails — voorkomt batch-skip bij scrolling
       Logger.log(`Herinnering stap ${volgendeStap}/3 verstuurd voor ${factuurnummer} naar ${klantEmail}`);
     } catch (err) {
       Logger.log(`Herinnering fout voor ${factuurnummer}: ${err.message}`);
       try { schrijfAuditLog_('Herinnering MISLUKT', factuurnummer + ' – ' + err.message); } catch (_) {}
+      // DLQ: voeg toe voor auto-retry. Opzettelijk geen pdfUrl-attachment in
+      // payload — die kan groter zijn dan cell-limit. Retry-handler haalt PDF
+      // opnieuw op via factuurnummer.
+      try {
+        if (typeof dlqVoegToe_ === 'function') {
+          dlqVoegToe_('EMAIL_HERINNERING', {
+            email: klantEmail, onderwerp: onderwerp, tekst: tekst,
+            opties: { name: bedrijf },
+          }, err.message);
+        }
+      } catch (_) {}
     }
   }
+
+  // Volledige sweep voltooid — reset cursor zodat volgende run weer vanaf rij 1 begint
+  props.deleteProperty(CURSOR_KEY);
 }
 
 // ─────────────────────────────────────────────
