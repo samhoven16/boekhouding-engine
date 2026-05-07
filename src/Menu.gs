@@ -31,6 +31,14 @@ function onOpen() {
   try { if (typeof controleerTriggerWatchdog_ === 'function') controleerTriggerWatchdog_(); }
   catch (e) { Logger.log('Trigger-watchdog overgeslagen: ' + e.message); }
 
+  // Year-end jaaroverzicht (1-15 jan, één keer per jaar)
+  try { if (typeof checkJaaroverzichtTrigger_ === 'function') checkJaaroverzichtTrigger_(); }
+  catch (_) {}
+
+  // NPS-trigger op gepaste momenten (niet-blokkerende toast)
+  try { if (typeof checkNpsTrigger_ === 'function') checkNpsTrigger_(); }
+  catch (_) {}
+
   // Eénmalig welkom-modal na geslaagde setup — 3 quick-start acties
   try { toonPostSetupWelkomModal_(); } catch (e) { Logger.log('Welkom-modal overgeslagen: ' + e.message); }
 
@@ -116,6 +124,8 @@ function onOpen() {
       .addSeparator()
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
       .addItem('🔧 Systeemstatus (voor support)', 'toonSysteemStatus')
+      .addItem('📁 Audit-log naar JSON exporteren (90 dgn)', 'exporteerAuditLogJson')
+      .addItem('📧 Ongeldige email-adressen tonen', 'toonOngeldigeEmailRelaties')
       .addItem('🩺 Diagnostiek — autorisatie-check', 'controleerAutorisaties')
       .addItem('📋 Geïnstalleerde triggers tonen', 'toonTriggers')
       .addItem('📈 Apps Script executions openen', 'openExecutionsDashboard')
@@ -136,6 +146,12 @@ function onOpen() {
     .addItem('🏦 Lijfrente: hoeveel mag ik storten?', 'toonLijfrenteJaarruimte')
     .addItem('💰 BTW-spaarpot: heb ik genoeg apart staan?', 'toonBtwSpaarpot')
     .addItem('💼 Voorlopige belasting: hoeveel reserveren per maand?', 'toonVoorlopigeAanslagTip')
+    .addItem('💎 KIA + MIA + EIA stapeling berekenen', 'toonInvesteringsAftrekStapeling')
+    .addItem('🏁 Bedrijf staken: stakingsaftrek + FOR + lijfrente', 'toonStakingsWizard')
+    .addItem('🔄 Suppletie-aangifte controle', 'genereerSuppletieRapport')
+    .addItem('🏆 Achievements bekijken', 'toonAchievementsOverzicht')
+    .addItem('📊 Geef feedback (NPS-survey)', 'toonNpsSurvey')
+    .addItem('🎬 Jaaroverzicht (vorig jaar in cijfers)', 'toonJaaroverzicht')
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────
@@ -148,6 +164,9 @@ function onOpen() {
       .addSeparator()
       .addItem('BTW-aangifte berekenen', 'genereerBtwAangifte')
       .addItem('Jaarrekening', 'genereerJaarrekening')
+      .addSeparator()
+      .addItem('🏢 Holding-overzicht (multi-admin)', 'vernieuwHoldingOverzicht')
+      .addItem('🇪🇺 ICP-rapport (EU B2B-leveringen)', 'genereerIcpRapport')
       .addSeparator()
       .addItem('Detailoverzicht per rekening', 'exporteerGrootboekkaart')
     )

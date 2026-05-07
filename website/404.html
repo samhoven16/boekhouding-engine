@@ -244,9 +244,17 @@
 
     <p style="margin-top:24px;font-size:13px;color:#64748b">
       Klopt er iets niet? Mail naar
-      <a href="mailto:hallo@boekhoudbaar.nl?subject=404%20gevonden" style="color:#1A237E">hallo@boekhoudbaar.nl</a>
+      <a href="mailto:hallo@boekhoudbaar.nl?subject=404%20gevonden" id="report-link" style="color:#1A237E">hallo@boekhoudbaar.nl</a>
       — ik fix de link.
     </p>
+    <script>
+      // Dynamic 404-rapport: voeg URL toe aan mailto-subject zodat owner direct
+      // ziet welke pad ontbrak (geen klant-gegoochel met locatie)
+      (function() {
+        var l = document.getElementById('report-link');
+        if (l) l.href = 'mailto:hallo@boekhoudbaar.nl?subject=' + encodeURIComponent('404 op ' + location.pathname + location.search);
+      })();
+    </script>
   </div>
 </main>
 

@@ -17,6 +17,18 @@ function vernieuwDashboard() {
   }
   // Progressie-indicator (verdwijnt na 30s als code vastloopt)
   try { ss.toast('Dashboard wordt bijgewerkt…', 'Boekhoudbaar', 30); } catch (_) {}
+
+  // Achievement-check: na refresh evt. nieuwe achievements tonen als toast
+  try {
+    if (typeof checkAchievements_ === 'function') {
+      const nieuwe = checkAchievements_();
+      if (nieuwe && nieuwe.length) {
+        // Vertraagd om niet conflicteren met dashboard-toast
+        Utilities.sleep(500);
+        toonAchievementToast_(nieuwe);
+      }
+    }
+  } catch (_) {}
   sheet.clearContents();
   sheet.clearFormats();
 

@@ -597,6 +597,13 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
   if (btwBedrag === 0 && btwTarief !== null) {
     btwBedrag = rondBedrag_(bedragExcl * btwTarief);
   }
+  // Pro-rata BTW: bij mixed-use (privé+zakelijk) is alleen het zakelijke
+  // deel BTW-aftrekbaar. Klant geeft 'Zakelijk %' op (default 100%).
+  // Bv. laptop voor 70% zakelijk → 70% BTW-aftrekbaar in voorbelasting.
+  const zakelijkPct = Math.max(0, Math.min(100,
+    parseFloat(data['Zakelijk %'] || '100') || 100));
+  const btwAftrekbaar = rondBedrag_(btwBedrag * (zakelijkPct / 100));
+  const btwPriveDeel  = rondBedrag_(btwBedrag - btwAftrekbaar);
   const bedragIncl = rondBedrag_(bedragExcl + btwBedrag);
 
   // Kostenrekening bepalen op basis van categorie
@@ -639,12 +646,26 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
     bedrag: bedragExcl, ref: 'IK' + inkoopNr,
     type: BOEKING_TYPE.INKOOPFACTUUR,
   });
-  if (btwBedrag > 0) {
+  if (btwAftrekbaar > 0) {
+    // Pro-rata: alleen het zakelijke BTW-deel naar voorbelasting.
+    // Privé-deel komt op kostenrekening (kan niet worden teruggevorderd).
     maakJournaalpost_(ss, {
-      datum, omschr: omschr + ' (BTW voorbelasting)', dagboek: 'Inkoopboek',
+      datum, omschr: omschr + ' (BTW voorbelasting' + (zakelijkPct < 100 ? ' ' + zakelijkPct + '%' : '') + ')',
+      dagboek: 'Inkoopboek',
       debet: bepaalBtwVoorbelastingRekening_(data['BTW tarief uitgave']),
-      credit: '4000', bedrag: btwBedrag, btwBedrag,
+      credit: '4000', bedrag: btwAftrekbaar, btwBedrag: btwAftrekbaar,
       ref: 'IK' + inkoopNr, type: BOEKING_TYPE.INKOOPFACTUUR,
+    });
+  }
+  if (btwPriveDeel > 0) {
+    // Niet-aftrekbare BTW (privé-deel) → naar kostenrekening i.p.v. voorbelasting
+    maakJournaalpost_(ss, {
+      datum, omschr: omschr + ' (BTW privé-deel ' + (100 - zakelijkPct) + '% — niet-aftrekbaar)',
+      dagboek: 'Inkoopboek',
+      debet: kostenRek || '7990', credit: '4000',
+      bedrag: btwPriveDeel,
+      ref: 'IK' + inkoopNr, type: BOEKING_TYPE.INKOOPFACTUUR,
+      notities: 'Pro-rata BTW: ' + zakelijkPct + '% zakelijk',
     });
   }
 
