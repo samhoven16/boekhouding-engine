@@ -32,6 +32,14 @@ function genereerNotificaties_() {
   const nu = new Date();
   const maand = nu.getMonth() + 1;
   const dag = nu.getDate();
+
+  // OSS / EU B2C-drempel monitor
+  try {
+    if (typeof ossNotificatie_ === 'function') {
+      const oss = ossNotificatie_();
+      if (oss) lijst.push(oss);
+    }
+  } catch (_) {}
   let kpi, advies, B;
   try { kpi = berekenKpiData_(ss); } catch (_) { kpi = {}; }
   try { advies = berekenBelastingadvies_(ss); } catch (_) { advies = { adviezen: [], aftrekken: [] }; }

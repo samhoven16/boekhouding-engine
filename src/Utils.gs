@@ -461,10 +461,32 @@ function isInPeriode_(datum, vanDatum, totDatum) {
 function getBoekjaarPeriode_() {
   const startStr = getInstelling_('Boekjaar start');
   const eindeStr = getInstelling_('Boekjaar einde');
+  // Rolling boekjaar: instelling "Boekjaar start-maand" (1-12) overschrijft
+  // standaard kalenderjaar. Bv. start-maand=4 → boekjaar = april–maart.
+  const startMaand = parseInt(getInstelling_('Boekjaar start-maand') || '1');
+  if (!startStr && !eindeStr && startMaand > 1 && startMaand <= 12) {
+    const nu = new Date();
+    const huidigJaar = nu.getFullYear();
+    const startJaar = (nu.getMonth() + 1) >= startMaand ? huidigJaar : huidigJaar - 1;
+    return {
+      van: new Date(startJaar, startMaand - 1, 1),
+      tot: new Date(startJaar + 1, startMaand - 1, 0, 23, 59, 59, 999),
+    };
+  }
   return {
     van: parseDatum_(startStr) || new Date(new Date().getFullYear(), 0, 1),
     tot: parseDatum_(eindeStr) || new Date(new Date().getFullYear(), 11, 31, 23, 59, 59, 999),
   };
+}
+
+/**
+ * Bepaalt of een datum in het huidige boekjaar valt.
+ * Gebruikt rolling boekjaar als ingesteld.
+ */
+function isInBoekjaar_(datum) {
+  if (!datum || !(datum instanceof Date) || isNaN(datum.getTime())) return false;
+  const p = getBoekjaarPeriode_();
+  return datum >= p.van && datum <= p.tot;
 }
 
 /**

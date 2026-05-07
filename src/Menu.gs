@@ -149,6 +149,9 @@ function onOpen() {
       .addItem('BTW-aangifte berekenen', 'genereerBtwAangifte')
       .addItem('Jaarrekening', 'genereerJaarrekening')
       .addSeparator()
+      .addItem('🏢 Holding-overzicht (multi-admin)', 'vernieuwHoldingOverzicht')
+      .addItem('🇪🇺 ICP-rapport (EU B2B-leveringen)', 'genereerIcpRapport')
+      .addSeparator()
       .addItem('Detailoverzicht per rekening', 'exporteerGrootboekkaart')
     )
 
