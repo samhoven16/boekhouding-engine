@@ -112,14 +112,13 @@ function onOpen() {
 
     // ── Kwaliteit & Controle ──────────────────
     .addSubMenu(ui.createMenu('Controle & Export')
+      .addItem('✅ Werkt-alles-test (eerste-klant-readiness)', 'controleerEersteKlantReady')
       .addItem('Gezondheidscheck uitvoeren', 'voerGezondheidCheckUit')
       .addItem('✨ Tabbladen opnieuw opmaken (kleuren + format)', 'verfraaiTabbladen')
       .addSeparator()
       .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
       .addItem('Accountantspakket exporteren', 'exporteerAccountantsPakket')
       .addItem('Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
-      .addItem('👤 Read-only delen met accountant', 'deelMetAccountant')
-      .addItem('👤 Actieve accountant-shares', 'toonAccountantShares')
       .addItem('Maandrapport nu versturen', 'mailMaandrapport')
       .addSeparator()
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')

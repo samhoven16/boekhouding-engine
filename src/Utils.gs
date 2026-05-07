@@ -1,6 +1,11 @@
 /**
  * Utils.gs
  * Hulpfuncties voor datumopmaak, getalopmaak, parsing en validatie.
+ *
+ * @OnlyCurrentDoc Beperkt spreadsheets-scope tot bound document. Klant
+ *   ziet `spreadsheets.currentonly` i.p.v. volledige `spreadsheets`-scope.
+ *   App opent ALLEEN haar eigen sheet (via getActiveSpreadsheet of
+ *   openById van de eigen SS-ID die in ScriptProperties staat).
  */
 
 // ─────────────────────────────────────────────
