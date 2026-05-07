@@ -973,22 +973,67 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const privacyUrl  = props.getProperty('PRIVACY_URL')     || 'https://www.boekhoudbaar.nl/privacy';
 
   // Guard — zonder TEMPLATE_SS_ID kan de klant de copy-link niet gebruiken.
-  // Stuur een alert naar de eigenaar en markeer de licentie-rij zichtbaar.
+  // VOORHEEN: alleen alert naar eigenaar, klant kreeg NIETS → uren/dagen wachten.
+  // NU: klant krijgt OOK een mail met:
+  //   - duidelijke uitleg dat licentie actief is
+  //   - hun licentiesleutel (zodat ze niets verliezen)
+  //   - belofte: copy-link binnen 24u
+  //   - support-email om sneller te reageren
   if (!templateId) {
     Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' (' + sleutel.substring(0, 8) + '…) wacht op activatielink.');
     try { markeerTemplateOntbreekt_(sleutel); } catch (_) {}
+
+    // 1. Alert naar eigenaar (urgent)
     try {
       MailApp.sendEmail({
         to: vanEmail,
-        subject: '⚠ Boekhoudbaar — TEMPLATE_SS_ID ontbreekt (' + email + ' wacht)',
-        htmlBody: '<p>Nieuwe klant <strong>' + escHtml_(naam) + '</strong> (' + escHtml_(email) + ') heeft betaald ' +
+        subject: '🚨 URGENT: Klant ' + email + ' wacht — TEMPLATE_SS_ID ontbreekt',
+        htmlBody: '<p>Nieuwe klant <strong>' + escHtml_(naam) + '</strong> (' + escHtml_(email) + ') heeft betaald, ' +
                   'maar de copy-link kan niet worden opgebouwd omdat <code>TEMPLATE_SS_ID</code> ' +
                   'ontbreekt in Script Properties.</p>' +
-                  '<p>Licentiesleutel: <code>' + escHtml_(sleutel) + '</code></p>' +
-                  '<p>Vul <code>TEMPLATE_SS_ID</code> en run <code>herstuurLicentiemailHandmatig(&quot;' +
-                  escHtml_(sleutel) + '&quot;)</code> in de editor.</p>',
+                  '<p><strong>De klant heeft zojuist een uitleg-mail ontvangen</strong> met hun licentiesleutel ' +
+                  'en de belofte dat de copy-link binnen 24 uur volgt. Reageer A.S.A.P.:</p>' +
+                  '<ol><li>Vul <code>TEMPLATE_SS_ID</code> in Script Properties</li>' +
+                  '<li>Run <code>herstuurLicentiemailHandmatig("' + escHtml_(sleutel) + '")</code> in de editor</li></ol>' +
+                  '<p>Licentiesleutel: <code>' + escHtml_(sleutel) + '</code><br>' +
+                  'Klant-email: <a href="mailto:' + escHtml_(email) + '">' + escHtml_(email) + '</a></p>',
       });
     } catch (_) {}
+
+    // 2. KLANT KRIJGT OOK EEN MAIL (cruciaal — geen radio-stilte)
+    try {
+      const klantHtml =
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff">' +
+        '<div style="background:#0D1B4E;color:#fff;padding:24px;border-radius:8px 8px 0 0">' +
+        '<h1 style="margin:0;font-size:22px">✅ Bedankt voor je bestelling, ' + escHtml_(naam || 'klant') + '!</h1>' +
+        '</div>' +
+        '<div style="padding:24px;border:1px solid #E5EAF2;border-top:0;border-radius:0 0 8px 8px">' +
+        '<p>Je betaling is verwerkt en je licentie is geactiveerd.</p>' +
+        '<div style="background:#F7F9FC;border:1px solid #E5EAF2;border-radius:8px;padding:16px;margin:16px 0">' +
+        '<p style="margin:0 0 4px;font-size:13px;color:#5F6B7A">Je licentiesleutel:</p>' +
+        '<code style="font-size:18px;color:#0D1B4E;font-weight:600">' + escHtml_(sleutel) + '</code>' +
+        '<p style="margin:8px 0 0;font-size:12px;color:#5F6B7A">Bewaar deze code — je hebt hem straks nodig om je boekhouding te activeren.</p>' +
+        '</div>' +
+        '<p><strong>Wat nu?</strong></p>' +
+        '<p>We sturen je <strong>binnen 24 uur</strong> de installatie-link waarmee je je eigen kopie van Boekhoudbaar krijgt. ' +
+        'We zorgen dat je vandaag of morgen kunt starten.</p>' +
+        '<p style="margin-top:24px">Heb je vragen of wil je sneller starten? Reageer op deze e-mail of stuur een bericht naar ' +
+        '<a href="mailto:' + escHtml_(vanEmail) + '" style="color:#2EC4B6">' + escHtml_(vanEmail) + '</a>. ' +
+        'Ik (Sam) lees mijn mail meerdere keren per dag.</p>' +
+        '<p style="margin-top:32px;color:#5F6B7A;font-size:13px">— ' + escHtml_(vanNaam) + '<br>' +
+        escHtml_(productnm) + (kvk ? ' · KvK ' + escHtml_(kvk) : '') + (btw ? ' · BTW ' + escHtml_(btw) : '') + '</p>' +
+        '</div></div>';
+      MailApp.sendEmail({
+        to: email,
+        subject: '✅ Boekhoudbaar — bestelling ontvangen, installatie-link volgt binnen 24u',
+        htmlBody: klantHtml,
+        replyTo: vanEmail,
+        name: vanNaam,
+      });
+      Logger.log('Klant-fallback-mail verstuurd naar ' + email);
+    } catch (klantMailErr) {
+      Logger.log('::error:: Kon ook geen klant-fallback-mail sturen naar ' + email + ': ' + klantMailErr.message);
+    }
     return;
   }
 

@@ -438,7 +438,7 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 /* ── STATE ── */
 var ACTIEF_TAB = 'factuur';
 var REGEL_TELLER = 1;
-var MAX_REGELS = 5;
+var MAX_REGELS = 20;
 var BON_B64 = null;
 var BON_MIME = null;
 var HERKENNER = null;
@@ -648,7 +648,14 @@ function wisselTab(type) {
 
 /* ── FACTUUR: REGELS ── */
 function voegRegelToe() {
-  if(REGEL_TELLER >= MAX_REGELS) return;
+  if(REGEL_TELLER >= MAX_REGELS) {
+    var fs = document.getElementById('footer-status');
+    if (fs) {
+      fs.style.color = '#c62828';
+      fs.textContent = '⚠️ Maximaal ' + MAX_REGELS + ' regels per factuur. Voor meer: maak een tweede factuur of contact support.';
+    }
+    return;
+  }
   REGEL_TELLER++;
   var n = REGEL_TELLER;
   var tr = document.createElement('tr');

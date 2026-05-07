@@ -394,3 +394,61 @@ function sluitJaarAf() {
     ui.ButtonSet.OK
   );
 }
+
+/**
+ * Auto-detect of jaarafsluiting nodig is.
+ * Aangeroepen vanuit onOpen — als huidig kalenderjaar niet meer matcht met
+ * het jaar in factuurprefix (bv. F2026- terwijl het 2027 is), toont prominent
+ * banner met "klik hier voor jaarafsluiting".
+ *
+ * Throttle: max 1× per dag waarschuwen (anders dialoog-spam).
+ */
+function checkJaarwisselingNodig_() {
+  try {
+    const huidigJaar = new Date().getFullYear();
+    // Alleen waarschuwen in januari–februari (vroeg in nieuw jaar) en bij
+    // mismatch — voorkomt onnodige paniek midden in jaar bij prefix-typo.
+    const maand = new Date().getMonth() + 1; // 1-12
+    if (maand > 3) return;
+
+    const props = PropertiesService.getScriptProperties();
+    const KEY = 'jaarwisselingWaarschuwingTs';
+    const last = parseInt(props.getProperty(KEY) || '0');
+    if (Date.now() - last < 24 * 3600 * 1000) return;
+
+    // Lees huidige factuurprefix uit Instellingen
+    let prefix = '';
+    try { prefix = String(getInstelling_('Factuurprefix') || '').trim(); } catch (_) {}
+    const prefixJaarMatch = prefix.match(/(\d{4})/);
+    if (!prefixJaarMatch) return;
+    const prefixJaar = parseInt(prefixJaarMatch[1]);
+
+    if (prefixJaar < huidigJaar) {
+      props.setProperty(KEY, String(Date.now()));
+      const ui = SpreadsheetApp.getUi();
+      const resp = ui.alert(
+        '🗓️ Jaarafsluiting ' + prefixJaar + ' nog te doen',
+        'Het is nu ' + huidigJaar + ', maar je factuurprefix staat nog op ' +
+        prefix + ' (boekjaar ' + prefixJaar + ').\n\n' +
+        'Wat dit betekent:\n' +
+        '• Nieuwe facturen krijgen nog een ' + prefixJaar + '-nummer\n' +
+        '• BTW-rapporten kloppen niet meer voor het nieuwe jaar\n\n' +
+        'JAARAFSLUITING DOEN?\n\n' +
+        'Dit doet automatisch:\n' +
+        '✓ Archief maken van ' + prefixJaar + '-data in Drive\n' +
+        '✓ Factuurprefix bijwerken naar F' + huidigJaar + '-\n' +
+        '✓ Nummering opnieuw starten vanaf 1\n' +
+        '✓ Drive-mappen voor ' + huidigJaar + ' klaarzetten\n\n' +
+        'Ja → start nu | Nee → uitstellen (waarschuwing morgen weer)',
+        ui.ButtonSet.YES_NO
+      );
+      if (resp === ui.Button.YES) {
+        sluitJaarAf();
+      } else {
+        try { schrijfAuditLog_('Jaarwisseling uitgesteld door klant', prefix + ' → ' + huidigJaar); } catch (_) {}
+      }
+    }
+  } catch (e) {
+    Logger.log('checkJaarwisselingNodig_ silent fail: ' + e.message);
+  }
+}

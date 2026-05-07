@@ -244,8 +244,8 @@ function _verwerkFactuur_(ss, s) {
   formData['KvK-nummer klant']              = s.kvkKlant || '';
   formData['BTW-nummer klant']              = s.btwNrKlant || '';
 
-  // Regels 1-5
-  for (let i = 1; i <= 5; i++) {
+  // Regels 1-20 (was 5; klant kan tot 20 regels per factuur opvoeren)
+  for (let i = 1; i <= 20; i++) {
     const omschr = s['r' + i + 'omschr'];
     const aantal = s['r' + i + 'aantal'];
     const prijs  = s['r' + i + 'prijs'];

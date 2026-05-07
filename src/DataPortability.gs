@@ -146,18 +146,60 @@ function exporteerAlleData() {
     }
   } catch (e) { fouten.push('Belastingadvies: ' + e.message); }
 
-  // 5. PDF-facturen — link-lijst (PDFs zelf staan al in /Boekhoudbaar/Verkoopfacturen)
+  // 5. PDF-facturen — link-lijst MET resolve-check.
+  // Voorheen alleen URL opgeslagen. Als klant Drive-map verplaatst was URL stil
+  // dood. Nu: extract fileId, probeer file op te halen, marker dood/levend +
+  // verse URL als file nog bestaat. Compliance-grond voor 7-jaars bewaarplicht.
   try {
     const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
     if (vfSheet && vfSheet.getLastRow() > 1) {
       const data = vfSheet.getDataRange().getValues();
       const pdfs = [];
+      let ontbrekend = 0;
       for (let i = 1; i < data.length; i++) {
         const url = String(data[i][19] || '').trim();
-        if (url) pdfs.push({ factuurnummer: String(data[i][1] || ''), datum: data[i][2], pdfUrl: url });
+        if (!url) continue;
+        const factuurnr = String(data[i][1] || '');
+        const fileId = (typeof extractFileId_ === 'function') ? extractFileId_(url) : '';
+        let status = 'onbekend';
+        let verseUrl = url;
+        let bestandsnaam = '';
+        if (fileId) {
+          try {
+            const file = DriveApp.getFileById(fileId);
+            verseUrl = file.getUrl();
+            bestandsnaam = file.getName();
+            status = 'aanwezig';
+          } catch (resolveErr) {
+            status = 'verloren';
+            ontbrekend++;
+          }
+        }
+        pdfs.push({
+          factuurnummer: factuurnr,
+          datum: data[i][2],
+          fileId: fileId,
+          pdfUrl: verseUrl,
+          originelePdfUrl: url,
+          bestandsnaam: bestandsnaam,
+          status: status,
+        });
       }
-      exportMap.createFile('factuur-pdf-index.json', JSON.stringify(pdfs, null, 2), 'application/json');
+      const indexFile = {
+        gegenereerd: new Date().toISOString(),
+        totaalFacturen: pdfs.length,
+        statusOverzicht: {
+          aanwezig: pdfs.filter(function(p){ return p.status === 'aanwezig'; }).length,
+          verloren: ontbrekend,
+        },
+        bewaarplicht: 'AWR art. 52 — 7 jaar. Verloren PDFs moeten opnieuw gegenereerd worden.',
+        pdfs: pdfs,
+      };
+      exportMap.createFile('factuur-pdf-index.json', JSON.stringify(indexFile, null, 2), 'application/json');
       aantalBestanden++;
+      if (ontbrekend > 0) {
+        fouten.push('PDF: ' + ontbrekend + ' factuur-PDF(s) niet meer vindbaar in Drive');
+      }
     }
   } catch (e) { fouten.push('PDF-index: ' + e.message); }
 

@@ -31,6 +31,11 @@ function onOpen() {
   try { if (typeof controleerTriggerWatchdog_ === 'function') controleerTriggerWatchdog_(); }
   catch (e) { Logger.log('Trigger-watchdog overgeslagen: ' + e.message); }
 
+  // Jaarwisseling-check: in jan-mrt waarschuwen als factuurprefix nog op
+  // vorig jaar staat. Aanbieding om jaarafsluiting nu te doen.
+  try { if (typeof checkJaarwisselingNodig_ === 'function') checkJaarwisselingNodig_(); }
+  catch (e) { Logger.log('Jaarwisseling-check overgeslagen: ' + e.message); }
+
   // Tabblad-herstel-melding: als dagelijkseTaken een verplicht tabblad opnieuw
   // aanmaakte (klant had per ongeluk verwijderd), klant moet weten dat data
   // weg is en hoe te herstellen via Versiegeschiedenis.

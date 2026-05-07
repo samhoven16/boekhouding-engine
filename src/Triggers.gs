@@ -259,7 +259,9 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   // negatieve regels (refund-risk). Negatieve aantal/prijs wordt bovendien gelogd.
   const regels = [];
   const overgeslagenRegels = [];
-  for (let i = 1; i <= 5; i++) {
+  // Loopt 1-20 (was 5). Lege regels worden via skip-check overgeslagen.
+  // Dialog kan tot 20 regels; Google-formulier-pad heeft 5 (vult de rest niet).
+  for (let i = 1; i <= 20; i++) {
     const omschr = String(data[`Regel ${i} – Omschrijving`] || '').trim();
     const ruwAantal = data[`Regel ${i} – Aantal`];
     const ruwPrijs  = data[`Regel ${i} – Prijs per eenheid (excl. BTW)`];
