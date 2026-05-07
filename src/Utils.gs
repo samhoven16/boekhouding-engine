@@ -1277,6 +1277,13 @@ function haalDataKvK_(kvkNummer) {
     if (cached) return JSON.parse(cached);
   } catch (_) {}
 
+  // Circuit-breaker: na 5 fouten in 60s → schakel KvK-feature 5 min uit.
+  // Voorkomt dat we KvK API blijven hameren als hun service down is.
+  try {
+    const breakerKey = '_kvk_breaker_open';
+    if (cache && cache.get(breakerKey)) return null;  // circuit open → silent skip
+  } catch (_) {}
+
   // API-key uit UserProperties (per-user, niet gedeeld). Versleuteld
   // via versleutelString_ — clear-text blijft backward-compat werken.
   let apiKey = '';
@@ -1298,6 +1305,7 @@ function haalDataKvK_(kvkNummer) {
     });
     if (resp.getResponseCode() !== 200) {
       Logger.log('haalDataKvK_ status ' + resp.getResponseCode() + ': ' + resp.getContentText().slice(0, 200));
+      _kvkBreakerTrip_();
       return null;
     }
     const json = JSON.parse(resp.getContentText());
@@ -1321,8 +1329,26 @@ function haalDataKvK_(kvkNummer) {
     return result;
   } catch (e) {
     Logger.log('haalDataKvK_ fout: ' + e.message);
+    _kvkBreakerTrip_();
     return null;
   }
+}
+
+/**
+ * Circuit-breaker accounting voor KvK API: tel fouten in 60s window.
+ * Bij ≥5 fouten → open circuit voor 5 minuten (cache-vlag).
+ */
+function _kvkBreakerTrip_() {
+  try {
+    const cache = CacheService.getScriptCache();
+    const counterKey = '_kvk_fout_count';
+    const huidig = parseInt(cache.get(counterKey) || '0') + 1;
+    cache.put(counterKey, String(huidig), 60);  // 60s window
+    if (huidig >= 5) {
+      cache.put('_kvk_breaker_open', '1', 300);  // 5 min open
+      try { schrijfAuditLog_('KvK circuit-breaker', 'Open na ' + huidig + ' fouten in 60s — KvK uit voor 5 min'); } catch (_) {}
+    }
+  } catch (_) {}
 }
 
 /**

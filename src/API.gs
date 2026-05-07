@@ -53,9 +53,29 @@ function doPost(e) {
     const hmacModus = String(getInstelling_('Webhook HMAC-modus') || '').toLowerCase() === 'ja';
 
     if (hmacModus && hmacSecret) {
-      // HMAC-pad: client stuurt ?signature=hex(hmac-sha256(body))
+      // HMAC-pad: client stuurt ?signature=hex(hmac-sha256(timestamp + body))
+      // + ?ts=<unix-seconds> voor replay-protection (5 min window)
       const sig = String((e.parameter && e.parameter.signature) || '');
-      const verwacht = _hmacSha256Hex_(rawBody, hmacSecret);
+      const ts  = parseInt((e.parameter && e.parameter.ts) || '0');
+
+      // Replay-protection: timestamp moet binnen 5 min zijn
+      const nu = Math.floor(Date.now() / 1000);
+      if (!ts || Math.abs(nu - ts) > 300) {
+        try { schrijfAuditLog_('API replay-block', 'ts=' + ts + ' (now=' + nu + ')'); } catch (_) {}
+        return jsonResponse_({ succes: false, fout: 'Ongeldige of verlopen timestamp (max 5 min skew). Stuur ?ts=<unix-seconds> mee.' });
+      }
+      // Nonce-protection: zelfde signature mag niet 2× binnen 10 min
+      const nonceKey = 'webhook_nonce_' + sig.slice(0, 32);
+      try {
+        const cache = CacheService.getScriptCache();
+        if (cache.get(nonceKey)) {
+          try { schrijfAuditLog_('API replay-detected', 'nonce reuse sig=' + sig.slice(0, 12)); } catch (_) {}
+          return jsonResponse_({ succes: false, fout: 'Replay detected — deze signature is al verwerkt.' });
+        }
+        cache.put(nonceKey, '1', 600);  // 10 min
+      } catch (_) {}
+
+      const verwacht = _hmacSha256Hex_(ts + '.' + rawBody, hmacSecret);
       if (!sig || !veiligVergelijkApi_(sig, verwacht)) {
         try { schrijfAuditLog_('API HMAC mismatch', 'sig=' + sig.slice(0, 12) + '... bodyLen=' + rawBody.length); } catch (_) {}
         return jsonResponse_({ succes: false, fout: 'Ongeldige of ontbrekende handtekening' });
@@ -95,6 +115,12 @@ function doPost(e) {
 
       case 'status':
         return statusResponse_(ss);
+
+      case 'mollie_webhook':
+        if (typeof verwerkMollieWebhook_ === 'function') {
+          return jsonResponse_(verwerkMollieWebhook_(payload));
+        }
+        return jsonResponse_({ succes: false, fout: 'Mollie-webhook handler niet beschikbaar' });
 
       case 'klant_opslaan':
         return slaKlantOpViaApi_(ss, payload);
