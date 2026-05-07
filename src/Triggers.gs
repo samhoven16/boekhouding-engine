@@ -1291,6 +1291,7 @@ function dagelijkseTaken() {
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   _runTaak_('groottecheck',     function() { controleerSheetGrootte_(ss); });
+  _runTaak_('tabbladenIntact',  function() { controleerEnHerstelTabbladen_(ss); });
   _runTaak_('autoBackup',       function() {
     if (typeof featureAan_ === 'function' && !featureAan_('auto_backup')) return;
     if (typeof maakAutomatischeBackup_ === 'function') maakAutomatischeBackup_();

@@ -68,27 +68,47 @@ function exporteerAlleData() {
     }
   } catch (e) { fouten.push('XLSX: ' + e.message); }
 
-  // 2. Audit-log JSONL (laatste 90 dagen)
+  // 2. Audit-log JSONL — VOLLEDIG (AWR art. 52: bewaarplicht 7 jaar).
+  // Voorheen 90 dagen → faillissement-curador kon geen 5-jaars audit krijgen.
+  // Nu: ALLE rijen. Splitst per jaar in aparte files als log >50.000 rijen
+  // (Drive file-size limit). Compliance-grond gelegd voor de hele bewaartermijn.
   try {
     const auditSheet = ss.getSheetByName('Audit Log');
     if (auditSheet && auditSheet.getLastRow() > 1) {
       const data = auditSheet.getDataRange().getValues();
       const headers = data[0];
-      const grens = Date.now() - 90 * 86400000;
-      const events = [];
+      const eventsPerJaar = {};   // {2024: [...], 2025: [...], ...}
+      let totaalEvents = 0;
       for (let i = 1; i < data.length; i++) {
-        const tsRow = data[i][0] instanceof Date ? data[i][0].getTime() : 0;
-        if (tsRow < grens) continue;
+        const ts = data[i][0];
+        const jaar = ts instanceof Date ? ts.getFullYear() : 'onbekend';
         const event = {};
         headers.forEach(function(h, idx) {
           event[String(h).toLowerCase().replace(/\s+/g, '_')] = data[i][idx] instanceof Date
             ? data[i][idx].toISOString()
             : data[i][idx];
         });
-        events.push(event);
+        if (!eventsPerJaar[jaar]) eventsPerJaar[jaar] = [];
+        eventsPerJaar[jaar].push(event);
+        totaalEvents++;
       }
-      const jsonl = events.map(function(e) { return JSON.stringify(e); }).join('\n');
-      exportMap.createFile('audit-log-90d.jsonl', jsonl, 'application/x-ndjson');
+      // Eén bestand per jaar — ook makkelijk voor curador/accountant
+      Object.keys(eventsPerJaar).sort().forEach(function(jaar) {
+        const lijst = eventsPerJaar[jaar];
+        const jsonl = lijst.map(function(e) { return JSON.stringify(e); }).join('\n');
+        exportMap.createFile('audit-log-' + jaar + '.jsonl', jsonl, 'application/x-ndjson');
+        aantalBestanden++;
+      });
+      // Index-bestand met overzicht
+      const index = {
+        totaalEvents: totaalEvents,
+        perJaar: Object.keys(eventsPerJaar).reduce(function(acc, j) {
+          acc[j] = eventsPerJaar[j].length; return acc;
+        }, {}),
+        bewaarplicht: 'AWR art. 52 — boekhoudkundige stukken 7 jaar',
+        exportTijdstip: new Date().toISOString(),
+      };
+      exportMap.createFile('audit-log-index.json', JSON.stringify(index, null, 2), 'application/json');
       aantalBestanden++;
     }
   } catch (e) { fouten.push('Audit: ' + e.message); }

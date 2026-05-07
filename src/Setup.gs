@@ -23,6 +23,31 @@ function setup() {
   }
   // ──────────────────────────────────────────────────────────────────────
 
+  // ── Drive-quota pre-check ──────────────────────────────────────────────
+  // Voorheen: setup() probeerde createFolder/createFile zonder quota-check.
+  // Bij 0 MB vrij faalde stap 8 silent → klant zat met half-werkende installatie.
+  // Nu: hard fail vooraf met duidelijke fix-instructie.
+  try {
+    if (typeof DriveApp !== 'undefined' && DriveApp.getStorageLimit && DriveApp.getStorageUsed) {
+      const limiet = DriveApp.getStorageLimit();
+      const gebruikt = DriveApp.getStorageUsed();
+      const vrij = limiet - gebruikt;
+      // 50 MB minimum: PDFs, backups, formulier-templates passen ruim
+      if (vrij > 0 && vrij < 50 * 1024 * 1024) {
+        const vrijMb = Math.round(vrij / (1024 * 1024));
+        alertOfLog_(ui, '⚠️ Te weinig Drive-opslag',
+          'Setup heeft minimaal 50 MB Drive-opslag nodig voor PDFs + backups.\n' +
+          'Je hebt nu ' + vrijMb + ' MB vrij.\n\n' +
+          'Fix: maak ruimte vrij in Google Drive (drive.google.com) of upgrade ' +
+          'naar Google One. Run setup() opnieuw zodra je ruimte hebt.');
+        return;
+      }
+    }
+  } catch (e) {
+    Logger.log('Drive-quota check overgeslagen: ' + e.message);
+  }
+  // ──────────────────────────────────────────────────────────────────────
+
   // ── Licentiecontrole ───────────────────────────────────────────────────
   // Als er een licentieserver geconfigureerd is, verplicht de gebruiker
   // een geldige sleutel in te voeren vóór de setup verder gaat.
@@ -275,23 +300,94 @@ function herorganiseerWerkruimteSilent_(ss) {
  * @param {Spreadsheet} ss
  */
 function beschermCellen_(ss) {
-  const teProtecteren = [
-    { naam: SHEETS.DASHBOARD,    omschr: 'Dashboard — automatisch gegenereerd, niet handmatig bewerken' },
-    { naam: SHEETS.JOURNAALPOSTEN, omschr: 'Journaalposten — alleen via het menu toevoegen' },
+  // Twee niveaus van bescherming:
+  //   HARD: editor wordt geblokkeerd (alleen eigenaar kan bewerken). Voor
+  //         tabbladen waarvan formula-edit = catastrofe (Dashboard KPI's
+  //         doorbreken alle metrics; Journaalposten = boekhouding-bron).
+  //   ZACHT: warning-popup bij bewerken. Voor tabbladen waar handmatige
+  //          bewerking soms nodig is (Instellingen, Grootboek).
+  const HARD = [
+    { naam: SHEETS.DASHBOARD,      omschr: 'Dashboard — automatisch gegenereerd. Bewerken breekt KPI-formules en alle rapporten daarna.' },
+    { naam: SHEETS.JOURNAALPOSTEN, omschr: 'Journaalposten — boekhoudkundige bron. Bewerken corrumpeert balans + BTW-aangifte. Voeg toe via Boekhouding-menu.' },
   ];
-  teProtecteren.forEach(function(def) {
+  const ZACHT = [
+    { naam: SHEETS.GROOTBOEK,    omschr: 'Grootboek — categorisatie. Bewerken alleen na consult.' },
+    { naam: SHEETS.INSTELLINGEN, omschr: 'Instellingen — wijziging beïnvloedt PDF-template + email-flow.' },
+  ];
+
+  function _herstelEnZet_(def, hard) {
     const sheet = ss.getSheetByName(def.naam);
     if (!sheet) return;
-    // Verwijder eventuele bestaande beschermingen op dit blad
     sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET)
       .forEach(function(p) { try { p.remove(); } catch (e) {} });
-    // Voeg nieuwe bescherming toe (alleen waarschuwing — niet geblokkeerd)
     try {
-      sheet.protect().setWarningOnly(true).setDescription(def.omschr);
+      const prot = sheet.protect().setDescription(def.omschr);
+      if (hard) {
+        // Hard: alleen huidige user (= eigenaar) mag bewerken
+        try {
+          const me = Session.getEffectiveUser();
+          prot.removeEditors(prot.getEditors());
+          prot.addEditor(me);
+          // setDomainEdit(false) blokkeert non-eigenaars effectief
+          if (prot.canDomainEdit && prot.canDomainEdit()) prot.setDomainEdit(false);
+        } catch (e) { /* fallback naar warning */ prot.setWarningOnly(true); }
+      } else {
+        prot.setWarningOnly(true);
+      }
     } catch (e) {
       Logger.log('Bescherming mislukt voor ' + def.naam + ': ' + e.message);
     }
+  }
+  HARD.forEach(function(d) { _herstelEnZet_(d, true); });
+  ZACHT.forEach(function(d) { _herstelEnZet_(d, false); });
+}
+
+/**
+ * Tabblad-recovery: herstel verplichte tabbladen die ontbreken.
+ * Wordt door dagelijkseTaken aangeroepen — als klant per ongeluk een tab
+ * verwijdert (right-click → Delete), maakt deze functie hem opnieuw aan
+ * met juiste headers + alert naar owner. Data is verloren — klant moet
+ * Versiegeschiedenis (Bestand → Versiegeschiedenis) gebruiken voor recovery.
+ *
+ * @param {Spreadsheet} ss
+ */
+function controleerEnHerstelTabbladen_(ss) {
+  if (!ss) return;
+  const verplicht = [
+    SHEETS.VERKOOPFACTUREN, SHEETS.INKOOPFACTUREN, SHEETS.JOURNAALPOSTEN,
+    SHEETS.GROOTBOEK, SHEETS.RELATIES, SHEETS.INSTELLINGEN, SHEETS.DASHBOARD,
+  ];
+  const ontbreken = [];
+  verplicht.forEach(function(naam) {
+    if (!ss.getSheetByName(naam)) ontbreken.push(naam);
   });
+  if (ontbreken.length === 0) return;
+
+  // KRITIEK: tab is per ongeluk verwijderd.
+  ontbreken.forEach(function(naam) {
+    try {
+      // Recreate met headers (uit maakTabbladen_ gedefinieerde structuur).
+      // We runnen maakTabbladen_(ss) nog eens — die is idempotent en maakt
+      // alleen ontbrekende tabbladen.
+      if (typeof maakTabbladen_ === 'function') maakTabbladen_(ss);
+      try { schrijfAuditLog_('TABBLAD HERSTELD',
+        'Tabblad "' + naam + '" was verwijderd — opnieuw aangemaakt zonder data. ' +
+        'Klant: gebruik Bestand → Versiegeschiedenis om vorige versie terug te zetten.'); } catch (_) {}
+      try { meldFataalAanOwner_('TAB_DELETED',
+        'Verplicht tabblad "' + naam + '" was verwijderd door klant',
+        { tabblad: naam, ssUrl: ss.getUrl(), advies: 'Adviseer klant Versiegeschiedenis te openen voor recovery van data' }); } catch (_) {}
+    } catch (e) {
+      Logger.log('Tabblad-herstel mislukt voor ' + naam + ': ' + e.message);
+    }
+  });
+
+  // Toon klant bij eerstvolgende open een alert via property-flag
+  try {
+    PropertiesService.getScriptProperties().setProperty(
+      'tabbladenHersteldBericht',
+      JSON.stringify({ tabbladen: ontbreken, ts: Date.now() })
+    );
+  } catch (_) {}
 }
 
 /**

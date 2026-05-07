@@ -31,6 +31,27 @@ function onOpen() {
   try { if (typeof controleerTriggerWatchdog_ === 'function') controleerTriggerWatchdog_(); }
   catch (e) { Logger.log('Trigger-watchdog overgeslagen: ' + e.message); }
 
+  // Tabblad-herstel-melding: als dagelijkseTaken een verplicht tabblad opnieuw
+  // aanmaakte (klant had per ongeluk verwijderd), klant moet weten dat data
+  // weg is en hoe te herstellen via Versiegeschiedenis.
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const raw = props.getProperty('tabbladenHersteldBericht');
+    if (raw) {
+      const info = JSON.parse(raw);
+      ui.alert(
+        '⚠️ Tabblad opnieuw aangemaakt',
+        'Het volgende tabblad was verwijderd en is opnieuw leeg aangemaakt:\n\n' +
+        '• ' + (info.tabbladen || []).join('\n• ') + '\n\n' +
+        'BELANGRIJK: de data is niet automatisch hersteld. Open ' +
+        'Bestand → Versiegeschiedenis om een eerdere versie terug te zetten.\n\n' +
+        '(Google bewaart 30 dagen versiegeschiedenis.)',
+        ui.ButtonSet.OK
+      );
+      props.deleteProperty('tabbladenHersteldBericht');
+    }
+  } catch (e) { Logger.log('Tabblad-herstel-melding: ' + e.message); }
+
   // Year-end jaaroverzicht (1-15 jan, één keer per jaar)
   try { if (typeof checkJaaroverzichtTrigger_ === 'function') checkJaaroverzichtTrigger_(); }
   catch (_) {}
