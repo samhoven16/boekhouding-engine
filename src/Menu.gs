@@ -31,6 +31,14 @@ function onOpen() {
   try { if (typeof controleerTriggerWatchdog_ === 'function') controleerTriggerWatchdog_(); }
   catch (e) { Logger.log('Trigger-watchdog overgeslagen: ' + e.message); }
 
+  // Year-end jaaroverzicht (1-15 jan, één keer per jaar)
+  try { if (typeof checkJaaroverzichtTrigger_ === 'function') checkJaaroverzichtTrigger_(); }
+  catch (_) {}
+
+  // NPS-trigger op gepaste momenten (niet-blokkerende toast)
+  try { if (typeof checkNpsTrigger_ === 'function') checkNpsTrigger_(); }
+  catch (_) {}
+
   // Eénmalig welkom-modal na geslaagde setup — 3 quick-start acties
   try { toonPostSetupWelkomModal_(); } catch (e) { Logger.log('Welkom-modal overgeslagen: ' + e.message); }
 
@@ -140,6 +148,9 @@ function onOpen() {
     .addItem('💎 KIA + MIA + EIA stapeling berekenen', 'toonInvesteringsAftrekStapeling')
     .addItem('🏁 Bedrijf staken: stakingsaftrek + FOR + lijfrente', 'toonStakingsWizard')
     .addItem('🔄 Suppletie-aangifte controle', 'genereerSuppletieRapport')
+    .addItem('🏆 Achievements bekijken', 'toonAchievementsOverzicht')
+    .addItem('📊 Geef feedback (NPS-survey)', 'toonNpsSurvey')
+    .addItem('🎬 Jaaroverzicht (vorig jaar in cijfers)', 'toonJaaroverzicht')
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────
