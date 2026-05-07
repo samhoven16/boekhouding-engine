@@ -104,6 +104,11 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
   };
 
   // ── Verkoopfacturen analyseren ─────────────
+  // Onbekende BTW-labels worden geteld + gelogd zodat klant ziet welke
+  // facturen (en €) niet in een rubriek vallen — voorkomt stille €0-bug
+  // bij typo of nieuw label dat we niet kennen.
+  const onbekendeLabels = {};
+  let onbekendeOmzet = 0;
   for (let i = 1; i < vfData.length; i++) {
     // Skip lege rijen en rijen zonder datum eerst — voorheen gaf
     // parseDatum_(null) een Date(today) waardoor verwijderde rijen
@@ -121,20 +126,37 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     const btwBedrag = parseFloat(vfData[i][11]) || 0;
     const btwLabel  = String(vfData[i][10] || '');
 
-    // Strikte tarief-detectie: '21%' substring (niet los '21' want 212 = ook match)
+    // Case-INsensitive tarief-detectie. Voorheen miste 'verlegd' (kleine v)
+    // en 'VRIJGESTELD' de buckets → totaal verdween uit r5a.
     if (btwLabel.includes('21%') || /\bhoog\b/i.test(btwLabel)) {
       aangifte.r1a_grondslag += grondslag;
       aangifte.r1a_btw += btwBedrag;
     } else if (btwLabel.includes('9%') || /\blaag\b/i.test(btwLabel)) {
       aangifte.r1b_grondslag += grondslag;
       aangifte.r1b_btw += btwBedrag;
-    } else if (btwLabel.includes('Vrijgesteld')) {
+    } else if (/vrijgesteld/i.test(btwLabel)) {
       aangifte.r1d += grondslag;
-    } else if (btwLabel.includes('0%') || btwLabel.includes('nultarief')) {
+    } else if (btwLabel.includes('0%') || /nultarief/i.test(btwLabel)) {
       aangifte.r1d += grondslag;
-    } else if (btwLabel.includes('Verlegd')) {
+    } else if (/verlegd/i.test(btwLabel)) {
       aangifte.r1e_grondslag += grondslag;
+      aangifte.r1e_btw += btwBedrag;
+    } else if (grondslag !== 0) {
+      // Onbekend label én niet-nul grondslag → kritieke detectie
+      onbekendeLabels[btwLabel || '(leeg)'] = (onbekendeLabels[btwLabel || '(leeg)'] || 0) + 1;
+      onbekendeOmzet += grondslag;
     }
+  }
+
+  // Onbekende labels altijd loggen — klant moet WETEN dat ze ontbreken
+  if (onbekendeOmzet !== 0) {
+    aangifte._onbekendeLabels = onbekendeLabels;
+    aangifte._onbekendeOmzet = rondBedrag_(onbekendeOmzet);
+    try {
+      schrijfAuditLog_('BTW-aangifte ONBEKENDE LABELS',
+        'r5a mist mogelijk € ' + rondBedrag_(onbekendeOmzet) + ' — labels: ' +
+        Object.keys(onbekendeLabels).join(', '));
+    } catch (_) {}
   }
 
   // ── Inkoopfacturen – voorbelasting ─────────
@@ -164,8 +186,10 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
   aangifte.r5c = rondBedrag_(Math.max(0, aangifte.r5b - aangifte.r5a));
   aangifte.saldo = rondBedrag_(aangifte.r5a - aangifte.r5b);
 
-  // Afronden alle bedragen
+  // Afronden alle bedragen — skip metadata-keys (beginnen met _)
+  // anders wordt _onbekendeLabels-object met rondBedrag_ tot 0 vermalen.
   Object.keys(aangifte).forEach(k => {
+    if (k.charAt(0) === '_') return;
     aangifte[k] = rondBedrag_(aangifte[k]);
   });
 
