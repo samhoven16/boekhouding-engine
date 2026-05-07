@@ -125,6 +125,7 @@ function onOpen() {
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
       .addItem('🔧 Systeemstatus (voor support)', 'toonSysteemStatus')
       .addItem('📁 Audit-log naar JSON exporteren (90 dgn)', 'exporteerAuditLogJson')
+      .addItem('📧 Ongeldige email-adressen tonen', 'toonOngeldigeEmailRelaties')
       .addItem('🩺 Diagnostiek — autorisatie-check', 'controleerAutorisaties')
       .addItem('📋 Geïnstalleerde triggers tonen', 'toonTriggers')
       .addItem('📈 Apps Script executions openen', 'openExecutionsDashboard')

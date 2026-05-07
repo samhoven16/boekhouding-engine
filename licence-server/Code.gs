@@ -35,13 +35,15 @@ function doGet(e) {
 
   if (actie === 'health')        return healthEndpoint_();
   if (actie === 'valideer')      return valideerEndpoint_(e);
-  if (actie === 'aanvraag-otp')  return aanvraagOtpEndpoint_(e);
-  if (actie === 'activeer-otp')  return activeerOtpEndpoint_(e);
+  if (actie === 'aanvraag-otp')  return rateLimit_(e, 10, 60) || aanvraagOtpEndpoint_(e);
+  if (actie === 'activeer-otp')  return rateLimit_(e, 10, 60) || activeerOtpEndpoint_(e);
   if (actie === 'onboarded')     return onboardedEndpoint_(e);
   if (actie === 'config')        return configEndpoint_(e);
   if (actie === 'telemetry')     return telemetryEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   if (actie === 'admin')         return adminPaneel_(e);
+  if (actie === 'roteer')        return roteerEndpoint_(e);
+  if (actie === 'revoke')        return revokeEndpoint_(e);
 
   // Standaard: betaalpagina tonen
   return betaalPagina_(e);
@@ -1481,4 +1483,178 @@ function installeelFollowUpTrigger_() {
     .atHour(9)
     .create();
   Logger.log('Follow-up trigger aangemaakt: dagelijks 09:00.');
+}
+
+// ─────────────────────────────────────────────
+//  RATE-LIMITING + UITGEBREIDE LICENTIE-ENDPOINTS
+// ─────────────────────────────────────────────
+
+/**
+ * Rate-limit per IP (best-effort via X-Forwarded-For). Apps Script Web Apps
+ * leveren niet altijd IP — fallback op user-email.
+ *
+ * @param {Object} e          doGet event
+ * @param {number} maxPerUur  max calls per uur
+ * @param {number} ttlMin     window in minuten
+ * @returns {ContentService.TextOutput|null}  output bij blokkering, null bij OK
+ */
+function rateLimit_(e, maxPerUur, ttlMin) {
+  try {
+    const ip = (e && e.parameter && e.parameter.ip) || '';
+    let key = 'rl_';
+    if (ip) {
+      key += 'ip_' + Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, ip)
+        .map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); })
+        .join('').slice(0, 12);
+    } else {
+      try { key += 'user_' + (Session.getActiveUser().getEmail() || 'anon').slice(0, 30); }
+      catch (_) { key += 'anon_' + Math.floor(Date.now() / 60000); }
+    }
+    const cache = CacheService.getScriptCache();
+    const huidig = parseInt(cache.get(key) || '0');
+    if (huidig >= maxPerUur) {
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: false,
+        fout: 'Te veel verzoeken — wacht ' + ttlMin + ' minuten.',
+        retryAfterSec: ttlMin * 60,
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    cache.put(key, String(huidig + 1), (ttlMin || 60) * 60);
+    return null;  // OK, ga door
+  } catch (e) {
+    Logger.log('rateLimit_ fout: ' + e.message);
+    return null;  // fail-open
+  }
+}
+
+/**
+ * /api/licentie/roteer — klant kan eigen sleutel rotaten bij verdacht gebruik.
+ * Vereist: oude sleutel + email van klant. Output: nieuwe sleutel + revoke oude.
+ */
+function roteerEndpoint_(e) {
+  try {
+    const oudeSleutel = String((e.parameter && e.parameter.sleutel) || '').trim();
+    const email = String((e.parameter && e.parameter.email) || '').trim().toLowerCase();
+    if (!oudeSleutel || !email) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Geef sleutel en email mee.' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    const sheet = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID'))
+      .getSheetByName('Licenties');
+    if (!sheet) throw new Error('Licenties-sheet niet gevonden');
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const sleutelCol = headers.indexOf('Licentiesleutel');
+    const emailCol = headers.indexOf('Email');
+    const statusCol = headers.indexOf('Status');
+    if (sleutelCol < 0 || emailCol < 0 || statusCol < 0) throw new Error('Sheet-format onjuist');
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][sleutelCol]) === oudeSleutel && String(data[i][emailCol]).toLowerCase() === email) {
+        if (data[i][statusCol] === 'Revoked') {
+          return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Sleutel is al gerevoked.' }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+        // Genereer nieuwe sleutel
+        const nieuweSleutel = 'BHB-' + Utilities.getUuid().slice(0, 12).toUpperCase();
+        // Markeer oud als revoked + voeg nieuwe rij toe (audit-trail)
+        sheet.getRange(i + 1, statusCol + 1).setValue('Revoked-rotatie');
+        sheet.appendRow([
+          new Date(), email, nieuweSleutel, 'Active', 'Rotatie van rij ' + (i + 1),
+        ]);
+        return ContentService.createTextOutput(JSON.stringify({
+          ok: true, nieuweSleutel: nieuweSleutel,
+          bericht: 'Oude sleutel gerevoked. Nieuwe is direct actief.',
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Sleutel + email combinatie niet gevonden.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * /api/licentie/revoke — admin-only revocation (bij refund of misbruik).
+ * Vereist admin-token in query: ?actie=revoke&sleutel=...&token=ADMIN_TOKEN
+ */
+function revokeEndpoint_(e) {
+  try {
+    const sleutel = String((e.parameter && e.parameter.sleutel) || '').trim();
+    const token = String((e.parameter && e.parameter.token) || '').trim();
+    const adminToken = PropertiesService.getScriptProperties().getProperty('ADMIN_REVOKE_TOKEN');
+    if (!adminToken || !veiligVergelijk_(token, adminToken)) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Ongeldig admin-token.' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    const sheet = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID'))
+      .getSheetByName('Licenties');
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const sleutelCol = headers.indexOf('Licentiesleutel');
+    const statusCol = headers.indexOf('Status');
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][sleutelCol]) === sleutel) {
+        sheet.getRange(i + 1, statusCol + 1).setValue('Revoked');
+        return ContentService.createTextOutput(JSON.stringify({ ok: true, bericht: 'Sleutel gerevoked.' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Sleutel niet gevonden.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Activation-throttling: max N actieve SS-bindingen per licentie.
+ * Voeg aan valideerEndpoint_ toe: bij Nde activatie → blokkeer.
+ *
+ * Implementatie: bij elke valideer-call, log SS-id in 'Bindings'-tab van
+ * licence-sheet. Tel unieke SS-ids per sleutel. Boven max → 'Te veel
+ * activaties' melding.
+ *
+ * Roep aan: const blok = checkActivationCap_(sleutel, ssId, 3);
+ *           if (blok) return error-output;
+ */
+function checkActivationCap_(sleutel, ssId, maxBindings) {
+  if (!sleutel || !ssId) return null;
+  try {
+    const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID'));
+    let bindings = ss.getSheetByName('Bindings');
+    if (!bindings) {
+      bindings = ss.insertSheet('Bindings');
+      bindings.getRange(1, 1, 1, 4).setValues([['Sleutel', 'SS-ID', 'EersteCheck', 'LaatsteCheck']]);
+    }
+    const data = bindings.getDataRange().getValues();
+    const ssIdsVoorSleutel = new Set();
+    let bestaandeRij = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === sleutel) {
+        ssIdsVoorSleutel.add(String(data[i][1]));
+        if (String(data[i][1]) === ssId) bestaandeRij = i + 1;
+      }
+    }
+    // Update LaatsteCheck of voeg nieuwe binding toe
+    if (bestaandeRij > 0) {
+      bindings.getRange(bestaandeRij, 4).setValue(new Date());
+      return null;  // OK — bestaande binding
+    }
+    if (ssIdsVoorSleutel.size >= maxBindings) {
+      return {
+        ok: false,
+        fout: 'Deze licentie is al ' + ssIdsVoorSleutel.size + 'x geactiveerd (max ' + maxBindings + ').',
+        actie: 'Vraag een nieuwe sleutel aan via /api/licentie/roteer of mail hallo@boekhoudbaar.nl',
+      };
+    }
+    bindings.appendRow([sleutel, ssId, new Date(), new Date()]);
+    return null;
+  } catch (e) {
+    Logger.log('checkActivationCap_ fout: ' + e.message);
+    return null;  // fail-open
+  }
 }
