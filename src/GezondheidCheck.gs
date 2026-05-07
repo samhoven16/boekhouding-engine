@@ -63,6 +63,13 @@ function voerGezondheidCheckUit() {
     else aantalWaarsch++;
   });
 
+  // ── Check 2c: Betalings-integriteit (BETAALD zonder journaalpost) ─────
+  const betCheck = controleerBetalingsIntegriteit_(ss);
+  resultaten.push(betCheck);
+  if (betCheck.status === 'FOUT') aantalFouten++;
+  else if (betCheck.status === 'OK') aantalOk++;
+  else aantalWaarsch++;
+
   // ── Check 3: Verkoopfacturen ──────────────────────────────────────────
   const vfChecks = controleerVerkoopfacturen_(ss);
   vfChecks.forEach(c => {
@@ -246,6 +253,68 @@ function controleerReferentiele_(ss) {
       status: 'FOUT', bericht: 'Check mislukt: ' + e.message });
   }
   return resultaten;
+}
+
+// ─────────────────────────────────────────────
+//  CHECK 2c: BETALINGS-INTEGRITEIT
+// ─────────────────────────────────────────────
+//
+// Detecteert facturen die als BETAALD gemarkeerd staan zonder bijbehorende
+// journaalpost (1200 → 1100). Deze toestand kan ontstaan als
+// `markeerVerkoopfactuurBetaald` halverwege crasht — de compensating rollback
+// vangt het meeste op, maar als ÓÓK rollback faalt blijft de factuur scheef.
+// Owner moet handmatig journaalpost aanvullen of betaling rollback'en.
+
+function controleerBetalingsIntegriteit_(ss) {
+  try {
+    const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+    const jpSheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+    if (!vfSheet || !jpSheet) {
+      return { check: 'Betalings-integriteit', status: 'OK',
+        bericht: 'Tabbladen ontbreken — check overgeslagen.' };
+    }
+
+    // Verzamel ref-veld van alle bankontvangst-journaalposten (kolom 9 = ref)
+    const jpData = jpSheet.getDataRange().getValues();
+    const bankRefs = new Set();
+    for (let i = 1; i < jpData.length; i++) {
+      const debet  = String(jpData[i][4] || '');
+      const credit = String(jpData[i][6] || '');
+      if (debet === '1200' && credit === '1100') {
+        const ref = String(jpData[i][9] || '').trim();
+        if (ref) bankRefs.add(ref);
+      }
+    }
+
+    // Loop alle BETAALD-facturen, check of ref aanwezig
+    const vfData = vfSheet.getDataRange().getValues();
+    const ontbrekend = [];
+    for (let i = 1; i < vfData.length; i++) {
+      const status = String(vfData[i][14] || '');
+      if (status !== FACTUUR_STATUS.BETAALD) continue;
+      const factuurnr = String(vfData[i][1] || '').trim();
+      if (factuurnr && !bankRefs.has(factuurnr)) {
+        ontbrekend.push(factuurnr);
+        if (ontbrekend.length > 10) break; // cap voor performance
+      }
+    }
+
+    if (ontbrekend.length === 0) {
+      return { check: 'Betalings-integriteit', status: 'OK',
+        bericht: 'Alle BETAALD-facturen hebben journaalpost 1200 → 1100.' };
+    }
+    return {
+      check:   'Betalings-integriteit',
+      status:  'FOUT',
+      bericht: ontbrekend.length + ' factuur/facturen staan op BETAALD zonder ' +
+               'journaalpost: ' + ontbrekend.slice(0, 5).join(', ') +
+               (ontbrekend.length > 5 ? ' (+meer)' : '') +
+               '. Maak journaalpost aan of zet status terug op OPEN.',
+    };
+  } catch (e) {
+    return { check: 'Betalings-integriteit', status: 'FOUT',
+      bericht: 'Check mislukt: ' + e.message };
+  }
 }
 
 // ─────────────────────────────────────────────
