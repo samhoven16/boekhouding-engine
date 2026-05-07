@@ -908,17 +908,32 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
       sheet.getRange(i + 1, 16).setValue(datum);                   // Betaaldatum
       SpreadsheetApp.flush();                                       // Forceer write vóór journaalpost
 
-      // Journaalpost: Debiteuren → Bank (exact 1x per aanroep dankzij idempotentie-check)
-      maakJournaalpost_(ss, {
-        datum,
-        omschr:  'Ontvangst factuur ' + factuurnr,
-        dagboek: 'Bankboek',
-        debet:   '1200',
-        credit:  '1100',
-        bedrag:  bedragIncl,
-        ref:     factuurnr,
-        type:    BOEKING_TYPE.BANKONTVANGST,
-      });
+      // Journaalpost: Debiteuren → Bank (exact 1x per aanroep dankzij idempotentie-check).
+      // Compensating rollback: als journaalpost faalt, draai factuur-status terug
+      // anders staat factuur als BETAALD zonder tegenboeking → balans loopt scheef.
+      try {
+        maakJournaalpost_(ss, {
+          datum,
+          omschr:  'Ontvangst factuur ' + factuurnr,
+          dagboek: 'Bankboek',
+          debet:   '1200',
+          credit:  '1100',
+          bedrag:  bedragIncl,
+          ref:     factuurnr,
+          type:    BOEKING_TYPE.BANKONTVANGST,
+        });
+      } catch (jpFout) {
+        try {
+          sheet.getRange(i + 1, 14).setValue('');
+          sheet.getRange(i + 1, 15).setValue(huidigStatus || FACTUUR_STATUS.OPEN);
+          sheet.getRange(i + 1, 16).setValue('');
+          SpreadsheetApp.flush();
+        } catch (rollbackFout) {
+          try { schrijfAuditLog_('FATAAL: rollback factuur-betaald faalde', factuurnr + ' — ' + (rollbackFout && rollbackFout.message || rollbackFout)); } catch (_) {}
+        }
+        try { schrijfAuditLog_('Factuur betaald → journaalpost FAALDE, rollback uitgevoerd', factuurnr + ' — ' + (jpFout && jpFout.message || jpFout)); } catch (_) {}
+        throw new Error('Markeer-betaald faalde tijdens journaalpost: ' + (jpFout && jpFout.message || jpFout) + ' — factuur-status teruggezet.');
+      }
 
       schrijfAuditLog_('Factuur betaald', factuurnr + ' via factuurlijst dialog');
       // Invalidate snapshot: debiteurenOpen and aantalOpenFacturen have changed.
