@@ -39,6 +39,31 @@
 // Voor backwards-compat behouden we IB_SCHIJF_1_PCT/IB_SCHIJF_2_PCT als
 // snelle besparing-benadering (= schijf 1 voor de meeste ZZP'ers).
 // Voor de geschatteIB-berekening gebruiken we nu IB_SCHIJVEN array.
+
+// Tax-tabel-meta: versienummer + bron-URL + bevestigd-datum per jaar.
+// Bij jaarlijkse Prinsjesdag-update: bump versie + datum + URL.
+// Klanten kunnen hash compute van inputs+meta voor reproduceerbare advies-snapshot.
+const BELASTING_META = {
+  2025: {
+    versie: '2025.1',
+    bevestigd: '2025-09-21',
+    bron: 'https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/prive/inkomstenbelasting/heffingskortingen_en_belastingtarieven/belastingtarieven/',
+    bron_omschrijving: 'Belastingplan 2025 — Prinsjesdag 21 september 2024',
+  },
+  2026: {
+    versie: '2026.1',
+    bevestigd: '2026-04-15',
+    bron: 'https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/prive/inkomstenbelasting/heffingskortingen_en_belastingtarieven/belastingtarieven/',
+    bron_omschrijving: 'Belastingplan 2026 — Prinsjesdag 16 september 2025',
+  },
+  2027: {
+    versie: '2027.0-prelim',
+    bevestigd: null,  // nog niet bevestigd; placeholder waarden
+    bron: 'https://www.belastingdienst.nl/',
+    bron_omschrijving: 'Voorlopige inschatting — wacht op Belastingplan 2027 (september 2026)',
+  },
+};
+
 const BELASTING_PER_JAAR = {
   2025: {
     ZELFSTANDIGENAFTREK:    2470,
@@ -944,6 +969,19 @@ function _berekenBelastingadviesRaw_(ss) {
   }
   const totaleFiscaleLast = rondBedrag_(geschatteIB + zvwBijdrage);
 
+  // Reproduceerbare snapshot — klant kan jaar later compute en compare hash
+  const meta = (typeof BELASTING_META !== 'undefined' && BELASTING_META[jaar]) || null;
+  const hashInput = {
+    jaar: jaar,
+    winst: winst,
+    totaalAftrek: rondBedrag_(totaalAftrek),
+    geschatteIB: geschatteIB,
+    zvwBijdrage: zvwBijdrage,
+    isAow: isZzp ? isAowGerechtigd_(BELASTING) : false,
+    taxVersie: meta ? meta.versie : '?',
+  };
+  const inputHash = (typeof hashBerekeningInput_ === 'function') ? hashBerekeningInput_(hashInput) : null;
+
   return {
     adviezen,
     aftrekken,
@@ -957,6 +995,12 @@ function _berekenBelastingadviesRaw_(ss) {
     totaleFiscaleLast,
     isAowGerechtigd: isZzp ? isAowGerechtigd_(BELASTING) : false,
     isZzp,
+    // Audit-bestendige metadata
+    berekendOp: new Date().toISOString(),
+    inputHash: inputHash,
+    taxVersie: meta ? meta.versie : null,
+    taxBevestigd: meta ? meta.bevestigd : null,
+    taxBron: meta ? meta.bron : null,
   };
 }
 

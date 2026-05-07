@@ -278,6 +278,65 @@ function _genereerRequestId_() {
   catch (_) { return 'req' + Date.now().toString(36).slice(-6); }
 }
 
+/**
+ * Compute deterministic hash voor reproduceerbare berekeningen.
+ * Klant kan jaren later input recompute en compare hash → audit-bestendig.
+ *
+ * @param {Object} input  alle input-keys (winst, jaartal, aftrek-flags)
+ * @returns {string}      8-char hex hash
+ */
+function hashBerekeningInput_(input) {
+  try {
+    const json = JSON.stringify(input, Object.keys(input).sort());  // gesorteerde keys
+    const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, json);
+    return raw.slice(0, 4).map(function(b) {
+      return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0');
+    }).join('');
+  } catch (_) { return 'hash-?'; }
+}
+
+/**
+ * Audit-log JSON-export naar Drive — voor SIEM-integratie / extern monitoring.
+ * Schrijft laatste N dagen events naar JSON-bestand in Drive.
+ */
+function exporteerAuditLogJson() {
+  if (typeof controleerSetupGedaan_ === 'function' && !controleerSetupGedaan_()) return;
+  const ui = SpreadsheetApp.getUi();
+  const ss = getSpreadsheet_();
+  const auditSheet = ss.getSheetByName('Audit Log');
+  if (!auditSheet || auditSheet.getLastRow() < 2) {
+    ui.alert('Geen audit-log entries om te exporteren.');
+    return;
+  }
+  const data = auditSheet.getDataRange().getValues();
+  const headers = data[0];
+  const events = [];
+  const grens = Date.now() - 90 * 86400000;  // laatste 90 dagen
+  for (let i = 1; i < data.length; i++) {
+    const ts = data[i][0] instanceof Date ? data[i][0].getTime() : 0;
+    if (ts < grens) continue;
+    const event = {};
+    headers.forEach(function(h, idx) {
+      event[String(h).toLowerCase().replace(/\s+/g, '_')] = data[i][idx] instanceof Date
+        ? data[i][idx].toISOString()
+        : data[i][idx];
+    });
+    events.push(event);
+  }
+  const jsonl = events.map(function(e) { return JSON.stringify(e); }).join('\n');
+  const huidigJaar = new Date().getFullYear();
+  let map = null;
+  try {
+    const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
+    if (hoofdId) map = DriveApp.getFolderById(hoofdId);
+  } catch (_) {}
+  if (!map) map = DriveApp.getRootFolder();
+  const naam = 'audit-log_' + new Date().toISOString().slice(0, 10) + '.jsonl';
+  const file = map.createFile(naam, jsonl, 'application/x-ndjson');
+  ui.alert('📁 Audit-log geëxporteerd', events.length + ' events naar ' + naam + '\n\nLocatie: ' + file.getUrl(), ui.ButtonSet.OK);
+  try { schrijfAuditLog_('Audit-log JSON-export', naam + ' (' + events.length + ' events)'); } catch (_) {}
+}
+
 // ─────────────────────────────────────────────
 //  VALIDATIE FUNCTIES
 // ─────────────────────────────────────────────
