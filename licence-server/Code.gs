@@ -533,7 +533,7 @@ function activeerOtpEndpoint_(e) {
       if (!huidigSsId) {
         sheet.getRange(i + 1, 7).setValue(ssId); // Eerste activatie — bind spreadsheet-ID
       } else if (huidigSsId !== ssId) {
-        return jsonResp_({ ok: false, fout: 'Licentie is al actief op een andere spreadsheet. Neem contact op via hallo@boekhoudbaar.nl' });
+        return jsonResp_({ ok: false, fout: 'Licentie is al actief op een andere spreadsheet. Neem contact op via support@boekhoudbaar.nl' });
       }
     }
     sheet.getRange(i + 1, 10).setValue(new Date());
@@ -548,7 +548,7 @@ function activeerOtpEndpoint_(e) {
 function stuurOtpMail_(email, otp) {
   const props    = PropertiesService.getScriptProperties();
   const brevoKey = props.getProperty('BREVO_API_KEY') || '';
-  const vanEmail = props.getProperty('VAN_EMAIL')     || 'hallo@boekhoudbaar.nl';
+  const vanEmail = props.getProperty('VAN_EMAIL')     || 'info@boekhoudbaar.nl';
   const vanNaam  = props.getProperty('VAN_NAAM')      || 'Boekhoudbaar';
 
   const html = `<!DOCTYPE html><html lang="nl"><body style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:20px;background:#f8fafc">
@@ -966,7 +966,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const productnm   = props.getProperty('PRODUCT_NAAM')    || 'Boekhoudbaar';
   const templateId  = props.getProperty('TEMPLATE_SS_ID')  || '';
   const brevoKey    = props.getProperty('BREVO_API_KEY')   || '';
-  const vanEmail    = props.getProperty('VAN_EMAIL')       || 'hallo@boekhoudbaar.nl';
+  const vanEmail    = props.getProperty('VAN_EMAIL')       || 'info@boekhoudbaar.nl';
   const vanNaam     = props.getProperty('VAN_NAAM')        || 'Sam van Boekhoudbaar';
   const kvk         = props.getProperty('KVK_NUMMER')      || '';
   const btw         = props.getProperty('BTW_NUMMER')      || '';
@@ -1085,8 +1085,15 @@ function stuurLicentiemail_(naam, email, sleutel) {
     Vragen? Mail naar <a href="mailto:${vanEmail}" style="color:#0D1B4E">${vanEmail}</a>.</p>
   `;
 
-  const htmlBody = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>
+  const htmlBody = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
+<title>${productnm} — Bestelling bevestigd</title>
+<meta name="x-apple-disable-message-reformatting">
+</head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#1a1a2e;background:#f8fafc">
+  <!-- Preheader: zichtbaar in inbox-preview, vergroot open-rate -->
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">
+    Je licentie is klaar. In 3 stappen heb je je eigen boekhouding draaiend — werkt met élk emailadres.
+  </div>
   <div style="background:#0D1B4E;padding:28px 24px;border-radius:10px 10px 0 0;text-align:center">
     <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800;letter-spacing:-0.01em">${productnm}</h1>
     <p style="color:#B8C2D1;margin:6px 0 0;font-size:14px">Bestelling bevestigd — je boekhouding staat klaar</p>
@@ -1459,7 +1466,7 @@ function wrapFollowUpHtml_(onderwerp, bodyHtml, vanEmail) {
 function verwerkFollowUpEmails() {
   const props = PropertiesService.getScriptProperties();
   const brevoKey = props.getProperty('BREVO_API_KEY') || '';
-  const vanEmail = props.getProperty('VAN_EMAIL') || 'hallo@boekhoudbaar.nl';
+  const vanEmail = props.getProperty('VAN_EMAIL') || 'info@boekhoudbaar.nl';
   const vanNaam  = props.getProperty('VAN_NAAM')  || 'Sam van Boekhoudbaar';
 
   if (!brevoKey) {
@@ -1708,7 +1715,7 @@ function checkActivationCap_(sleutel, ssId, maxBindings) {
       return {
         ok: false,
         fout: 'Deze licentie is al ' + ssIdsVoorSleutel.size + 'x geactiveerd (max ' + maxBindings + ').',
-        actie: 'Vraag een nieuwe sleutel aan via /api/licentie/roteer of mail hallo@boekhoudbaar.nl',
+        actie: 'Vraag een nieuwe sleutel aan via /api/licentie/roteer of mail support@boekhoudbaar.nl',
       };
     }
     bindings.appendRow([sleutel, ssId, new Date(), new Date()]);

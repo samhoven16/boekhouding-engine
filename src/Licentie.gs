@@ -249,7 +249,7 @@ function vergrendelKopie_() {
           </a>
         </div>
         <p style="color:#94a3b8;font-size:12px;margin-top:18px;text-align:center">
-          Al gekocht? Mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.
+          Al gekocht? Mail <a href="mailto:support@boekhoudbaar.nl" style="color:#0D1B4E">support@boekhoudbaar.nl</a>.
         </p>
       </body></html>
     `).setWidth(460).setHeight(380).setSandboxMode(HtmlService.SandboxMode.IFRAME);
@@ -343,7 +343,7 @@ function toonActivatieDialog_() {
         <input type="email" id="email" placeholder="jan@uwbedrijf.nl" autocomplete="email">
         <div class="fout" id="fout1"></div>
         <button class="btn" id="btn1" data-actie="stuurCode">Stuur activeringscode</button>
-        <p class="hint">Geen mail ontvangen? Check je spam-map of mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.</p>
+        <p class="hint">Geen mail ontvangen? Check je spam-map of mail <a href="mailto:support@boekhoudbaar.nl" style="color:#0D1B4E">support@boekhoudbaar.nl</a>.</p>
         ${ownerBlock}
       </div>
 
@@ -819,7 +819,7 @@ function toonLicentieInfo() {
     'Versie: '         + versie    + '\n' +
     'Sleutel: '        + sleutel   + '\n' +
     'Spreadsheet-ID: ' + ssId      + '\n\n' +
-    'Vragen? hallo@boekhoudbaar.nl',
+    'Vragen? info@boekhoudbaar.nl',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }

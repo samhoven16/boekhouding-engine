@@ -142,7 +142,7 @@ function setup() {
   } catch (e) {
     Logger.log('FOUT bij setup: ' + e.message + '\n' + e.stack);
     alertOfLog_(ui, 'Fout bij setup', e.message +
-      '\n\nStuur dit bericht door aan hallo@boekhoudbaar.nl — het stap-nummer helpt ons snel te weten waar te kijken.');
+      '\n\nStuur dit bericht door aan support@boekhoudbaar.nl — het stap-nummer helpt ons snel te weten waar te kijken.');
   }
 }
 

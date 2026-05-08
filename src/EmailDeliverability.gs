@@ -103,7 +103,7 @@ function stuurEmailVeilig_(naar, onderwerp, body, opties) {
   // List-Unsubscribe header (RFC 8058) — anti-spam
   const opts = opties || {};
   if (!opts.headers) opts.headers = {};
-  opts.headers['List-Unsubscribe'] = '<mailto:hallo@boekhoudbaar.nl?subject=Unsubscribe>';
+  opts.headers['List-Unsubscribe'] = '<mailto:support@boekhoudbaar.nl?subject=Unsubscribe>';
   opts.headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
 
   try {
