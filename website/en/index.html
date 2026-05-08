@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Boekhoudbaar — Dutch ZZP bookkeeping in Google Sheets · €49 one-time</title>
+<meta name="description" content="Self-employed in the Netherlands? Boekhoudbaar is the simplest bookkeeping for ZZP'ers — invoices, VAT returns, AI receipt-scan, all in your own Google Sheet. €49 one-time, no subscription.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/en/">
+<link rel="alternate" hreflang="nl" href="https://www.boekhoudbaar.nl/">
+<link rel="alternate" hreflang="en" href="https://www.boekhoudbaar.nl/en/">
+<link rel="alternate" hreflang="x-default" href="https://www.boekhoudbaar.nl/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
+<link rel="mask-icon" href="/favicon.svg" color="#0D1B4E">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Boekhoudbaar">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Boekhoudbaar — Dutch ZZP bookkeeping for €49">
+<meta property="og:description" content="Simplest bookkeeping for self-employed in the Netherlands. Invoices, VAT, AI receipt-scan. Your own Google Sheet. No subscription.">
+<meta property="og:url" content="https://www.boekhoudbaar.nl/en/">
+<meta property="og:image" content="https://www.boekhoudbaar.nl/og-image.svg">
+<meta property="og:locale" content="en_GB">
+<meta property="og:locale:alternate" content="nl_NL">
+
+<style>
+:root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--grijs-licht:#8A95A5;--bg:#F7F9FC;--wit:#fff;--rand:#E5EAF2;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--wit);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;}
+
+body>nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid rgba(229,234,242,.8);padding:0 32px;}
+.nav-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:76px;gap:32px;}
+.logo{text-decoration:none;display:inline-flex;align-items:center;height:40px;font-weight:800;color:var(--blauw);font-size:20px;letter-spacing:-0.02em;}
+.logo::before{content:'📊';margin-right:8px;font-size:24px;}
+.nav-links{display:flex;gap:24px;list-style:none;align-items:center;}
+.nav-links a{text-decoration:none;color:#475569;font-size:15px;font-weight:500;}
+.nav-cta{background:var(--blauw);color:var(--wit)!important;padding:10px 20px;border-radius:10px;font-weight:600!important;}
+.lang-switch{font-size:13px;color:var(--grijs);}
+
+.hero{padding:80px 32px 60px;text-align:center;background:linear-gradient(180deg,var(--bg) 0%,var(--wit) 100%);}
+.hero .container{max-width:780px;margin:0 auto;}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin-bottom:16px;}
+h1{font-size:48px;font-weight:800;color:var(--blauw);letter-spacing:-0.025em;line-height:1.1;margin-bottom:18px;}
+.lede{font-size:20px;color:var(--grijs);line-height:1.6;margin-bottom:32px;}
+.cta-rij{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.btn{padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;transition:all .15s;display:inline-flex;align-items:center;gap:8px;}
+.btn-pri{background:var(--blauw);color:#fff;}
+.btn-pri:hover{background:var(--blauw-licht);transform:translateY(-1px);box-shadow:0 8px 20px rgba(13,27,78,.22);}
+.btn-sec{background:var(--wit);color:var(--blauw);border:1px solid var(--rand);}
+.btn-sec:hover{border-color:var(--accent);color:var(--accent);}
+
+main{max-width:880px;margin:0 auto;padding:40px 32px 80px;}
+h2{font-size:28px;font-weight:800;color:var(--blauw);letter-spacing:-0.01em;margin:48px 0 18px;}
+h3{font-size:18px;font-weight:700;color:var(--blauw);margin:24px 0 10px;}
+p{margin-bottom:14px;color:var(--tekst);font-size:16px;line-height:1.7;}
+a{color:var(--blauw);text-decoration:underline;text-underline-offset:3px;}
+
+.feature-rij{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin:24px 0;}
+@media (max-width:720px){.feature-rij{grid-template-columns:1fr;}}
+.feature{background:var(--bg);border:1px solid var(--rand);border-radius:14px;padding:22px;}
+.feature .ic{font-size:24px;margin-bottom:6px;}
+.feature h3{margin:0 0 6px;font-size:16px;}
+.feature p{margin:0;font-size:14px;color:var(--grijs);line-height:1.6;}
+
+.compare{background:var(--bg);border:1px solid var(--rand);border-radius:14px;padding:0;overflow:hidden;margin:24px 0;}
+.compare-rij{display:flex;padding:14px 18px;border-bottom:1px solid var(--rand);font-size:14px;align-items:center;}
+.compare-rij:last-child{border-bottom:none;}
+.compare-rij.head{background:#fff;font-weight:700;color:var(--blauw);}
+.compare-rij .col1{flex:1;}
+.compare-rij .col2{flex:0 0 110px;text-align:center;}
+.ja{color:#1B5E20;font-weight:700;}
+.nee{color:#B91C1C;}
+
+.box-info{background:#FFF8E1;border:1px solid #FFECB3;border-radius:12px;padding:18px 22px;margin:24px 0;color:#5A3F00;font-size:14px;line-height:1.65;}
+.box-info strong{color:#3a2700;}
+
+.cta-box{background:linear-gradient(135deg,#0D1B4E 0%,#1A2A6B 100%);color:#fff;padding:32px;border-radius:16px;text-align:center;margin:48px 0;}
+.cta-box h2{color:#fff;margin:0 0 12px;font-size:24px;}
+.cta-box p{color:rgba(255,255,255,.85);margin-bottom:18px;font-size:15px;}
+.cta-box a{display:inline-block;background:var(--accent);color:#0D1B4E;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;}
+
+footer{background:var(--blauw);color:#fff;padding:40px 32px;margin-top:60px;}
+footer .inner{max-width:1180px;margin:0 auto;text-align:center;}
+footer .disc{margin-top:16px;font-size:12px;color:rgba(255,255,255,.5);max-width:780px;line-height:1.6;margin-left:auto;margin-right:auto;}
+footer a{color:rgba(255,255,255,.7);}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="/en/">Boekhoudbaar</a>
+    <ul class="nav-links">
+      <li class="lang-switch"><a href="/">🇳🇱 NL</a> · <strong>🇬🇧 EN</strong></li>
+      <li><a href="/kopen" class="nav-cta">Buy · €49</a></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <p class="eyebrow">For self-employed (ZZP) in the Netherlands</p>
+    <h1>Dutch bookkeeping that actually fits you</h1>
+    <p class="lede">An entire ZZP bookkeeping system in your own Google Sheet. Invoices with iDEAL payment links, automatic VAT calculations, AI receipt scanning, year-end reports — €49 once, no subscription.</p>
+    <div class="cta-rij">
+      <a href="/kopen" class="btn btn-pri">Buy now for €49 →</a>
+      <a href="#how" class="btn btn-sec">See how it works</a>
+    </div>
+    <p style="margin-top:20px;font-size:13px;color:var(--grijs);">
+      Works with any email — Gmail, Outlook, iCloud, Proton. <a href="/faq/#gmail" style="color:var(--blauw)">No Gmail? No problem →</a>
+    </p>
+  </div>
+</section>
+
+<main>
+
+<h2 id="how">Why Boekhoudbaar?</h2>
+
+<p>If you're a freelancer (ZZP'er) in the Netherlands, your bookkeeping has three problems: it's <strong>complicated</strong>, it's <strong>expensive</strong> (€20-30/month for life), and your <strong>data lives on someone else's server</strong>. Boekhoudbaar fixes all three.</p>
+
+<div class="feature-rij">
+  <div class="feature">
+    <div class="ic">📋</div>
+    <h3>Complete Dutch ZZP bookkeeping</h3>
+    <p>Invoices, expenses, VAT returns (BTW-aangifte), bank reconciliation, P&amp;L, balance sheet — everything you need for the Belastingdienst.</p>
+  </div>
+  <div class="feature">
+    <div class="ic">💰</div>
+    <h3>One-time €49 — no subscription</h3>
+    <p>Pay once, use forever. Compare €49 with €25/month × 5 years = €1,500. Math is simple.</p>
+  </div>
+  <div class="feature">
+    <div class="ic">📊</div>
+    <h3>Your data, your Drive</h3>
+    <p>Lives in your own Google Drive. We can't access it. No vendor lock-in, no migration when you leave.</p>
+  </div>
+  <div class="feature">
+    <div class="ic">⚡</div>
+    <h3>iDEAL payment links via Mollie</h3>
+    <p>Every invoice has a 1-click payment button. Customer pays in 5 seconds, you get paid faster.</p>
+  </div>
+  <div class="feature">
+    <div class="ic">🤖</div>
+    <h3>AI receipt-scan</h3>
+    <p>Photo of receipt → vendor, date, amount, VAT auto-extracted via Gemini Vision. Just verify and save.</p>
+  </div>
+  <div class="feature">
+    <div class="ic">📅</div>
+    <h3>VAT deadlines in your calendar</h3>
+    <p>Subscribe to our free .ics feed and never miss a quarterly deadline again.</p>
+  </div>
+</div>
+
+<h2>Compared to Moneybird, e-Boekhouden, Snelstart</h2>
+
+<div class="compare">
+  <div class="compare-rij head"><div class="col1">Feature</div><div class="col2">Boekhoudbaar</div><div class="col2">Moneybird ~€22/mo</div></div>
+  <div class="compare-rij"><div class="col1">Pricing model</div><div class="col2 ja">€49 once</div><div class="col2 nee">€264+/year</div></div>
+  <div class="compare-rij"><div class="col1">Data ownership</div><div class="col2 ja">Your Drive</div><div class="col2 nee">Their server</div></div>
+  <div class="compare-rij"><div class="col1">VAT (BTW) automation</div><div class="col2 ja">✓</div><div class="col2 ja">✓</div></div>
+  <div class="compare-rij"><div class="col1">iDEAL payment links</div><div class="col2 ja">✓</div><div class="col2 ja">✓</div></div>
+  <div class="compare-rij"><div class="col1">AI receipt-scan</div><div class="col2 ja">✓</div><div class="col2">add-on</div></div>
+  <div class="compare-rij"><div class="col1">5-year cost</div><div class="col2 ja">€49</div><div class="col2 nee">~€1,300</div></div>
+</div>
+
+<h2>Are you eligible? (Yes, almost certainly)</h2>
+
+<p>Boekhoudbaar is designed for the Dutch ZZP market. You qualify if:</p>
+
+<ul style="margin-left:24px;font-size:15px;line-height:1.8;color:var(--tekst);">
+  <li>You're registered at the KvK as <strong>Eenmanszaak</strong> (sole proprietorship), <strong>VOF</strong> (general partnership), or solo professional</li>
+  <li>You file VAT returns to the Dutch Belastingdienst (BTW-aangifte)</li>
+  <li>Your annual revenue is below ~€500K (above that, an accountant is more cost-effective anyway)</li>
+  <li>You have a Google account (or can create one with your existing email — even Outlook/iCloud/Proton works)</li>
+</ul>
+
+<p>It does <strong>not</strong> work well if you have:</p>
+
+<ul style="margin-left:24px;font-size:15px;line-height:1.8;color:var(--tekst);">
+  <li>A BV (besloten vennootschap) — too complex for a single sheet</li>
+  <li>Personnel/payroll — that's a different product category (Loket, Nmbrs)</li>
+  <li>International VAT in 3+ countries — wait until our multi-country update</li>
+</ul>
+
+<div class="box-info">
+  <strong>Expat ZZP'er?</strong> If you're freelancing in the Netherlands as an expat (e.g. on a DAFT visa for US citizens, EU freedom-of-movement, or kennismigrant residence), Boekhoudbaar works perfectly. The Dutch tax system applies regardless of nationality. Many of our early adopters are expats. Have a question? Mail us in English: <a href="mailto:info@boekhoudbaar.nl">info@boekhoudbaar.nl</a> — we reply same-day.
+</div>
+
+<h2>What's included for €49</h2>
+
+<ul style="margin-left:24px;font-size:15px;line-height:1.8;color:var(--tekst);">
+  <li>Complete bookkeeping system (invoices, expenses, bank, journal entries)</li>
+  <li>Dutch VAT calculations (21% / 9% / 0% / exempt / reverse-charge) — auto-generated quarterly returns</li>
+  <li>Mollie iDEAL payment integration on invoices</li>
+  <li>AI receipt scanning (Gemini Vision)</li>
+  <li>KvK auto-fill for new customers (you type a KvK number, the rest is filled in)</li>
+  <li>Tax-saving signaling (KIA, MIA, EIA, MKB exemption, lijfrente)</li>
+  <li>Year-end reports for your accountant (PDF + XLSX + JSONL)</li>
+  <li>Read-only sharing with your accountant (auto-expires after 30 days)</li>
+  <li>iCal feed of all VAT deadlines (Google/Apple/Outlook calendar)</li>
+  <li>All future updates — for life, free</li>
+</ul>
+
+<div class="cta-box">
+  <h2>30-day money-back guarantee</h2>
+  <p>Try it. Doesn't work for you? Mail within 30 days, full refund — no forms, no questions.</p>
+  <a href="/kopen">Buy now for €49 →</a>
+</div>
+
+<h2>FAQ</h2>
+
+<details style="margin-bottom:12px;background:var(--bg);border:1px solid var(--rand);border-radius:10px;padding:16px 20px">
+  <summary style="cursor:pointer;font-weight:600;color:var(--blauw)">I don't speak Dutch — can I still use Boekhoudbaar?</summary>
+  <p style="margin-top:10px;font-size:14px;color:var(--grijs)">The product UI is in Dutch (because it produces Dutch invoices and VAT returns). However: most labels are obvious to English speakers (Datum=Date, Factuur=Invoice, BTW=VAT). Use Google Translate's auto-translate for the spreadsheet itself. Email support is in English.</p>
+</details>
+
+<details style="margin-bottom:12px;background:var(--bg);border:1px solid var(--rand);border-radius:10px;padding:16px 20px">
+  <summary style="cursor:pointer;font-weight:600;color:var(--blauw)">Can my customers pay in foreign currency?</summary>
+  <p style="margin-top:10px;font-size:14px;color:var(--grijs)">Currently EUR only. Multi-currency is on the <a href="/roadmap/">roadmap</a> for late 2026. Workaround: invoice in EUR, your customer's bank handles conversion.</p>
+</details>
+
+<details style="margin-bottom:12px;background:var(--bg);border:1px solid var(--rand);border-radius:10px;padding:16px 20px">
+  <summary style="cursor:pointer;font-weight:600;color:var(--blauw)">What if I leave the Netherlands?</summary>
+  <p style="margin-top:10px;font-size:14px;color:var(--grijs)">Your data is in your Google Drive. Export to XLSX (built-in feature, GDPR Article 20). No lock-in. The product itself is NL-tax-specific so won't help you in another country, but your historical data is yours forever.</p>
+</details>
+
+<details style="margin-bottom:12px;background:var(--bg);border:1px solid var(--rand);border-radius:10px;padding:16px 20px">
+  <summary style="cursor:pointer;font-weight:600;color:var(--blauw)">Do you have an English version of the product?</summary>
+  <p style="margin-top:10px;font-size:14px;color:var(--grijs)">Not yet. The Belastingdienst itself is Dutch-only, so any output (invoices, VAT returns) needs to be in Dutch anyway. We may add an English UI overlay in 2027. Meantime: 95% of buttons are emoji + universal terms (date, amount, VAT) — works fine for English speakers.</p>
+</details>
+
+<p style="text-align:center;margin-top:48px;">
+  <a href="/" style="color:var(--grijs);font-size:14px;">← Back to Dutch site (boekhoudbaar.nl)</a>
+</p>
+
+</main>
+
+<footer>
+  <div class="inner">
+    <p>© 2026 Boekhoudbaar — made in the Netherlands</p>
+    <p style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.7);">
+      <a href="/">🇳🇱 Nederlands</a> · <a href="/en/">🇬🇧 English</a> · <a href="/voorwaarden/">Terms</a> · <a href="/privacy/">Privacy</a> · <a href="mailto:info@boekhoudbaar.nl">Contact</a>
+    </p>
+    <p class="disc"><strong>Disclaimer:</strong> Boekhoudbaar is a software tool for bookkeeping and tax calculations. Tax signals are informational, based on public sources (Belastingdienst.nl, overheid.nl). Boekhoudbaar is not a registered accountant or tax advisor under Dutch Wet WFR / NBA regulations. Consult a qualified advisor for definitive tax decisions. Liability: see <a href="/voorwaarden/">terms</a>.</p>
+  </div>
+</footer>
+
+</body></html>
