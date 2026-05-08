@@ -316,6 +316,38 @@ function berekenIBProgressief_(belastbaarInkomen, B, isAowGerechtigd) {
 }
 
 /**
+ * Marginaal IB-tarief op het inkomen — het tarief dat geldt voor de
+ * "laatste euro". Cruciaal voor besparing-berekeningen bij aftrekposten:
+ * elke euro aftrek bespaart het marginale tarief, niet schijf 1.
+ *
+ * Voorheen werd IB_SCHIJF_1_PCT (35,7%) gebruikt voor alle besparing-
+ * berekeningen. Resultaat: middeninkomen (€38k-€79k) zag besparing -2,86 pp
+ * te laag (echte tarief 37,56%); hoog-inkomen (>€79k) zag -14 pp te laag
+ * (echte tarief 49,5%). Klant zag dus ondergewaardeerde besparing → product
+ * leek minder voordelig dan het is.
+ *
+ * @param {number} inkomen          Belastbaar inkomen Box 1
+ * @param {Object} B                BELASTING-config met IB_SCHIJVEN array
+ * @param {boolean} [isAowGerechtigd]
+ * @return {number} Marginale tarief (0.357, 0.3756, 0.495 voor 2026)
+ */
+function marginaalIbTarief_(inkomen, B, isAowGerechtigd) {
+  const i = parseFloat(inkomen) || 0;
+  const schijven = (isAowGerechtigd && Array.isArray(B.IB_SCHIJVEN_AOW))
+    ? B.IB_SCHIJVEN_AOW
+    : B.IB_SCHIJVEN;
+  if (!Array.isArray(schijven)) {
+    // Legacy fallback
+    return i <= (B.IB_SCHIJF_1_MAX || 38883) ? (B.IB_SCHIJF_1_PCT || 0.357) : (B.IB_SCHIJF_2_PCT || 0.495);
+  }
+  for (const schijf of schijven) {
+    if (i <= schijf.tot) return schijf.pct;
+  }
+  // Boven hoogste schijf-grens → hoogste tarief
+  return schijven[schijven.length - 1].pct;
+}
+
+/**
  * Zvw inkomensafhankelijke bijdrage voor ZZP-ondernemer.
  * Wordt geheven over winst tot maximum bijdrage-inkomen.
  * Voorbeeld 2025: 5,26% × min(winst, €75.864) = max €3.991.
@@ -510,7 +542,7 @@ function _berekenBelastingadviesRaw_(ss) {
       titel: '✅ Zelfstandigenaftrek: ' + formatBedrag_(aftrek),
       tekst: `Als ZZP-er met ≥1.225 werkuren mag u €${BELASTING.ZELFSTANDIGENAFTREK.toLocaleString('nl-NL')} aftrekken van uw winst. ` +
              `Houd uw uren bij om dit te onderbouwen (bijv. in een urenregistratie).`,
-      besparing: rondBedrag_(aftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(aftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   }
 
@@ -540,7 +572,7 @@ function _berekenBelastingadviesRaw_(ss) {
         titel: '✅ Startersaftrek: ' + formatBedrag_(aftrek),
         tekst: `U bent nog geen ${jaar - startjaar + 1} jaar ondernemer. De startersaftrek van €${BELASTING.STARTERSAFTREK.toLocaleString('nl-NL')} ` +
                `bovenop de zelfstandigenaftrek is van toepassing.`,
-        besparing: rondBedrag_(aftrek * BELASTING.IB_SCHIJF_1_PCT),
+        besparing: rondBedrag_(aftrek * marginaalIbTarief_(winst, BELASTING)),
       });
     }
   }
@@ -560,7 +592,7 @@ function _berekenBelastingadviesRaw_(ss) {
       titel: '✅ MKB-winstvrijstelling: ' + formatBedrag_(mkbAftrek),
       tekst: `${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
              `Dit wordt automatisch meegenomen in uw aangifte.`,
-      besparing: rondBedrag_(mkbAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(mkbAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
     totaalAftrek += mkbAftrek;
   }
@@ -602,7 +634,7 @@ function _berekenBelastingadviesRaw_(ss) {
       titel: '✅ KIA Investeringsaftrek: ' + formatBedrag_(kiaAftrek),
       tekst: `U heeft ${formatBedrag_(investeringen)} geïnvesteerd → ${kiaToelichting}. ` +
              `Zorg dat investeringen ≥ €450 zijn en voor bedrijfsmatig gebruik.`,
-      besparing: rondBedrag_(kiaAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(kiaAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   } else if (investeringen > 0 && investeringen < BELASTING.KIA_MIN) {
     adviezen.push({
@@ -648,7 +680,7 @@ function _berekenBelastingadviesRaw_(ss) {
              `${Math.round((BELASTING.EIA_PCT || 0.40) * 100)}% extra aftrek = ${formatBedrag_(eiaAftrek)}. ` +
              `Voorwaarde: bedrijfsmiddel staat op RVO Energielijst + aanmelden binnen 3 maanden na opdracht via rvo.nl. ` +
              `EIA is naast KIA mogelijk (geen dubbel-aftrek-verbod, maar wel anti-cumulatie met MIA).`,
-      besparing: rondBedrag_(eiaAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(eiaAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   }
 
@@ -674,7 +706,7 @@ function _berekenBelastingadviesRaw_(ss) {
              `De WBSO geeft een vaste aftrek van ${formatBedrag_(BELASTING.WBSO_AFTREK || 15979)}` +
              (isStarter ? ` + ${formatBedrag_(BELASTING.WBSO_STARTERSBONUS || 7996)} starterbonus (eerste 5 jaar)` : '') +
              `. Vraag de S&O-verklaring aan via rvo.nl (minimaal 1 maand vóór projectstart).`,
-      besparing: rondBedrag_(wbsoAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(wbsoAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   }
 
@@ -705,7 +737,7 @@ function _berekenBelastingadviesRaw_(ss) {
              `als "uitgaven voor inkomensvoorzieningen" — mits uw AOV een periodieke ` +
              `uitkering biedt (geen lump sum). Aangeven bij IB-aangifte. Netto ` +
              `voordeel: 35-49,5% afhankelijk van uw schijf.`,
-      besparing: rondBedrag_(aovBetaald * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(aovBetaald * marginaalIbTarief_(winst, BELASTING)),
     });
   } else if (isZzp && winst > 5000 && !heeftAov) {
     adviezen.push({
@@ -741,7 +773,7 @@ function _berekenBelastingadviesRaw_(ss) {
              `U heeft recht op de stakingsaftrek van €${stakingsaftrek.toLocaleString('nl-NL')} ` +
              `(eenmalig per leven). Daarnaast: stakingslijfrente — extra premieaftrek voor ` +
              `pensioenopbouw bij staking. Bespreek met uw accountant.`,
-      besparing: rondBedrag_(stakingsaftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(stakingsaftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   }
 
@@ -838,7 +870,7 @@ function _berekenBelastingadviesRaw_(ss) {
       titel: '✅ MIA – Milieu-investeringsaftrek: ' + formatBedrag_(miaAftrek),
       tekst: `${formatBedrag_(milieu)} aan milieu-investeringen gedetecteerd. MIA geeft 45,5% extra aftrek: ${formatBedrag_(miaAftrek)}. ` +
              `Investeringen moeten op de RVO-milieulijst staan én vóór aanschaf gemeld bij RVO. Combineerbaar met KIA.`,
-      besparing: rondBedrag_(miaAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(miaAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   } else if (milieu === 0) {
     adviezen.push({
@@ -867,7 +899,7 @@ function _berekenBelastingadviesRaw_(ss) {
       titel: '✅ Thuiswerkaftrek: ' + formatBedrag_(thuiswerkAftrek),
       tekst: `Op basis van ${thuiswerkDagen} thuiswerkdagen à €${BELASTING.THUISWERK_PER_DAG}/dag: ${formatBedrag_(thuiswerkAftrek)}. ` +
              `Pas het aantal dagen aan via Instellingen → "Thuiswerk dagen per jaar".`,
-      besparing: rondBedrag_(thuiswerkAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(thuiswerkAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   } else {
     adviezen.push({
@@ -1337,7 +1369,7 @@ function berekenPriveBelastingvoordelen_(winst) {
              `lijfrente en dit aftrekken van uw IB: maximaal ${formatBedrag_(lijfrenteMax)} dit jaar. ` +
              `Sluit een bancaire lijfrente of lijfrenteverzekering af. Vervangt deels de FOR. ` +
              `Vraag uw bank of verzekeraar om de jaarnota voor uw aangifte.`,
-      besparing: rondBedrag_(lijfrenteMax * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(lijfrenteMax * marginaalIbTarief_(winst, BELASTING)),
     });
   }
 

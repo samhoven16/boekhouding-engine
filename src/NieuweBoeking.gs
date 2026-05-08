@@ -147,6 +147,31 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 /* ── KLEIN HULPTEKST ── */
 .tip{background:#FFF8E1;border-left:3px solid #FFC107;padding:7px 10px;
       font-size:11px;border-radius:0 4px 4px 0;margin:6px 0;line-height:1.5}
+
+/* ── MOBILE RESPONSIVENESS ──
+   Sheets-app op telefoon (<480px): voorheen vielen dialogs uit scherm.
+   Nu: full-width, grotere tap-targets (48px min), kleinere fontsizen waar
+   nodig, hide ruimte-vretende elementen op heel kleine schermen. */
+@media (max-width: 640px) {
+  body{padding:14px 12px;font-size:13px}
+  h1,h2{font-size:18px}
+  .container,.tab-content{max-width:100%;padding:0}
+  .tabbar{flex-wrap:wrap;gap:4px}
+  .tabbar button{flex:1 1 45%;min-height:44px;padding:10px 8px;font-size:12px}
+  input,select,textarea{font-size:16px;min-height:44px;padding:10px 12px}
+  /* iOS: input font-size 16px+ voorkomt zoom-on-focus */
+  button{min-height:48px;padding:12px 16px;font-size:14px}
+  .footer{flex-direction:column;gap:8px;align-items:stretch}
+  .footer button{width:100%}
+  table{font-size:12px}
+  table th,table td{padding:6px 4px}
+  /* Verwijder hover-effecten op touch */
+  *:hover{transform:none!important}
+}
+@media (max-width: 380px) {
+  body{padding:10px 8px}
+  .tabbar button{flex:1 1 100%}
+}
 </style>
 </head>
 <body>

@@ -550,8 +550,12 @@ function stuurOtpMail_(email, otp) {
   const brevoKey = props.getProperty('BREVO_API_KEY') || '';
   const vanEmail = props.getProperty('VAN_EMAIL')     || 'info@boekhoudbaar.nl';
   const vanNaam  = props.getProperty('VAN_NAAM')      || 'Boekhoudbaar';
+  const replyTo  = props.getProperty('SUPPORT_EMAIL') || 'support@boekhoudbaar.nl';
+  const kvk      = props.getProperty('KVK_NUMMER')    || '';
+  const btw      = props.getProperty('BTW_NUMMER')    || '';
 
   const html = `<!DOCTYPE html><html lang="nl"><body style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:20px;background:#f8fafc">
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden">Je 6-cijferige activeringscode is ${otp} — geldig 15 minuten.</div>
   <div style="background:#0D1B4E;padding:24px;border-radius:10px 10px 0 0;text-align:center">
     <h2 style="color:#fff;margin:0;font-size:18px;font-weight:700;letter-spacing:-0.01em">Boekhoudbaar — Activeringscode</h2>
   </div>
@@ -562,7 +566,18 @@ function stuurOtpMail_(email, otp) {
     </div>
     <p style="color:#666;font-size:13px">Geldig voor <strong>15 minuten</strong>. Voer de code in de spreadsheet in.</p>
     <p style="color:#999;font-size:11px;margin-top:12px">Heb je geen code aangevraagd? Negeer dit bericht.</p>
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:18px 0 12px">
+    <p style="color:#94a3b8;font-size:11px;line-height:1.5;margin:0">
+      Vragen? <a href="mailto:${replyTo}" style="color:#0D1B4E">${replyTo}</a><br>
+      Hoven Strategy &amp; Solutions${kvk ? ' · KvK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''}
+    </p>
   </div></body></html>`;
+
+  const textBody = 'Je activeringscode Boekhoudbaar: ' + otp + '\n\n' +
+    'Geldig 15 minuten. Voer in via de spreadsheet.\n\n' +
+    'Geen code aangevraagd? Negeer dit bericht.\n\n' +
+    '— Vragen? ' + replyTo + '\n' +
+    'Hoven Strategy & Solutions' + (kvk ? ' · KvK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') + '\n';
 
   if (brevoKey) {
     try {
@@ -571,9 +586,14 @@ function stuurOtpMail_(email, otp) {
         headers: { 'api-key': brevoKey, 'accept': 'application/json' },
         payload: JSON.stringify({
           sender: { name: vanNaam, email: vanEmail },
+          replyTo: { email: replyTo, name: vanNaam },
           to: [{ email }],
           subject: 'Je activeringscode Boekhoudbaar: ' + otp,
           htmlContent: html,
+          textContent: textBody,
+          headers: {
+            'List-Unsubscribe': '<mailto:' + replyTo + '?subject=Unsubscribe>',
+          },
         }),
         muteHttpExceptions: true,
       });
@@ -585,8 +605,14 @@ function stuurOtpMail_(email, otp) {
     }
   }
   // Fallback: MailApp via Google Workspace (lager limiet maar reliable).
-  MailApp.sendEmail(email, 'Activeringscode Boekhoudbaar: ' + otp,
-    'Code: ' + otp + '\n\nGeldig 15 minuten. Voer in via de spreadsheet.', { htmlBody: html });
+  MailApp.sendEmail({
+    to: email,
+    subject: 'Activeringscode Boekhoudbaar: ' + otp,
+    body: textBody,
+    htmlBody: html,
+    replyTo: replyTo,
+    name: vanNaam,
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -1103,11 +1129,14 @@ function stuurLicentiemail_(naam, email, sleutel) {
     <p>Gefeliciteerd met je aankoop van ${productnm}! Je boekhouding staat klaar om te activeren.</p>
     ${stappenHtml}
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
-    <p style="font-size:13px;color:#94a3b8">
-      Vragen? Stuur een e-mail naar <a href="mailto:${vanEmail}" style="color:#0D1B4E">${vanEmail}</a>.
+    <p style="font-size:13px;color:#94a3b8;line-height:1.6">
+      Vragen of feedback? <a href="mailto:${vanEmail}" style="color:#0D1B4E">${vanEmail}</a><br>
+      Lukt iets niet? <a href="mailto:support@boekhoudbaar.nl" style="color:#0D1B4E">support@boekhoudbaar.nl</a>
     </p>
-    <p style="font-size:12px;color:#cbd5e1">
-      ${productnm}${kvk ? ' · KVK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''} · <a href="${privacyUrl}" style="color:#94a3b8">Privacybeleid</a>
+    <p style="font-size:12px;color:#cbd5e1;line-height:1.5">
+      ${productnm} — een product van Hoven Strategy &amp; Solutions${kvk ? ' · KvK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''}<br>
+      <a href="${privacyUrl}" style="color:#94a3b8">Privacybeleid</a> ·
+      <a href="mailto:support@boekhoudbaar.nl?subject=Unsubscribe" style="color:#94a3b8">Uitschrijven</a>
     </p>
   </div>
 </body></html>`;
@@ -1131,6 +1160,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
     '\nPrivacybeleid: ' + privacyUrl + '\n';
 
   let brevoOk = false;
+  const supportEmail = props.getProperty('SUPPORT_EMAIL') || 'support@boekhoudbaar.nl';
   if (brevoKey) {
     try {
       const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
@@ -1139,12 +1169,16 @@ function stuurLicentiemail_(naam, email, sleutel) {
         headers: { 'api-key': brevoKey },
         payload: JSON.stringify({
           sender:      { name: vanNaam, email: vanEmail },
+          replyTo:     { email: supportEmail, name: vanNaam },
           to:          [{ email: email, name: naam }],
           subject:     'Je ' + productnm + ' is klaar — activeer nu 🚀',
           htmlContent: htmlBody,
           textContent: textBody,
           tags:        ['licentie', 'dag0'],
           params:      { naam: naam },
+          headers:     {
+            'List-Unsubscribe': '<mailto:' + supportEmail + '?subject=Unsubscribe>',
+          },
         }),
         muteHttpExceptions: true,
       });
@@ -1163,6 +1197,8 @@ function stuurLicentiemail_(naam, email, sleutel) {
       subject: 'Je ' + productnm + ' is klaar — activeer nu',
       body: textBody,
       htmlBody: htmlBody,
+      replyTo: supportEmail,
+      name: vanNaam,
     });
   }
 
