@@ -533,7 +533,7 @@ function activeerOtpEndpoint_(e) {
       if (!huidigSsId) {
         sheet.getRange(i + 1, 7).setValue(ssId); // Eerste activatie — bind spreadsheet-ID
       } else if (huidigSsId !== ssId) {
-        return jsonResp_({ ok: false, fout: 'Licentie is al actief op een andere spreadsheet. Neem contact op via hallo@boekhoudbaar.nl' });
+        return jsonResp_({ ok: false, fout: 'Licentie is al actief op een andere spreadsheet. Neem contact op via support@boekhoudbaar.nl' });
       }
     }
     sheet.getRange(i + 1, 10).setValue(new Date());
@@ -548,10 +548,14 @@ function activeerOtpEndpoint_(e) {
 function stuurOtpMail_(email, otp) {
   const props    = PropertiesService.getScriptProperties();
   const brevoKey = props.getProperty('BREVO_API_KEY') || '';
-  const vanEmail = props.getProperty('VAN_EMAIL')     || 'hallo@boekhoudbaar.nl';
+  const vanEmail = props.getProperty('VAN_EMAIL')     || 'info@boekhoudbaar.nl';
   const vanNaam  = props.getProperty('VAN_NAAM')      || 'Boekhoudbaar';
+  const replyTo  = props.getProperty('SUPPORT_EMAIL') || 'support@boekhoudbaar.nl';
+  const kvk      = props.getProperty('KVK_NUMMER')    || '';
+  const btw      = props.getProperty('BTW_NUMMER')    || '';
 
   const html = `<!DOCTYPE html><html lang="nl"><body style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:20px;background:#f8fafc">
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden">Je 6-cijferige activeringscode is ${otp} — geldig 15 minuten.</div>
   <div style="background:#0D1B4E;padding:24px;border-radius:10px 10px 0 0;text-align:center">
     <h2 style="color:#fff;margin:0;font-size:18px;font-weight:700;letter-spacing:-0.01em">Boekhoudbaar — Activeringscode</h2>
   </div>
@@ -562,7 +566,18 @@ function stuurOtpMail_(email, otp) {
     </div>
     <p style="color:#666;font-size:13px">Geldig voor <strong>15 minuten</strong>. Voer de code in de spreadsheet in.</p>
     <p style="color:#999;font-size:11px;margin-top:12px">Heb je geen code aangevraagd? Negeer dit bericht.</p>
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:18px 0 12px">
+    <p style="color:#94a3b8;font-size:11px;line-height:1.5;margin:0">
+      Vragen? <a href="mailto:${replyTo}" style="color:#0D1B4E">${replyTo}</a><br>
+      Hoven Strategy &amp; Solutions${kvk ? ' · KvK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''}
+    </p>
   </div></body></html>`;
+
+  const textBody = 'Je activeringscode Boekhoudbaar: ' + otp + '\n\n' +
+    'Geldig 15 minuten. Voer in via de spreadsheet.\n\n' +
+    'Geen code aangevraagd? Negeer dit bericht.\n\n' +
+    '— Vragen? ' + replyTo + '\n' +
+    'Hoven Strategy & Solutions' + (kvk ? ' · KvK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') + '\n';
 
   if (brevoKey) {
     try {
@@ -571,9 +586,14 @@ function stuurOtpMail_(email, otp) {
         headers: { 'api-key': brevoKey, 'accept': 'application/json' },
         payload: JSON.stringify({
           sender: { name: vanNaam, email: vanEmail },
+          replyTo: { email: replyTo, name: vanNaam },
           to: [{ email }],
           subject: 'Je activeringscode Boekhoudbaar: ' + otp,
           htmlContent: html,
+          textContent: textBody,
+          headers: {
+            'List-Unsubscribe': '<mailto:' + replyTo + '?subject=Unsubscribe>',
+          },
         }),
         muteHttpExceptions: true,
       });
@@ -585,8 +605,14 @@ function stuurOtpMail_(email, otp) {
     }
   }
   // Fallback: MailApp via Google Workspace (lager limiet maar reliable).
-  MailApp.sendEmail(email, 'Activeringscode Boekhoudbaar: ' + otp,
-    'Code: ' + otp + '\n\nGeldig 15 minuten. Voer in via de spreadsheet.', { htmlBody: html });
+  MailApp.sendEmail({
+    to: email,
+    subject: 'Activeringscode Boekhoudbaar: ' + otp,
+    body: textBody,
+    htmlBody: html,
+    replyTo: replyTo,
+    name: vanNaam,
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -966,29 +992,74 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const productnm   = props.getProperty('PRODUCT_NAAM')    || 'Boekhoudbaar';
   const templateId  = props.getProperty('TEMPLATE_SS_ID')  || '';
   const brevoKey    = props.getProperty('BREVO_API_KEY')   || '';
-  const vanEmail    = props.getProperty('VAN_EMAIL')       || 'hallo@boekhoudbaar.nl';
+  const vanEmail    = props.getProperty('VAN_EMAIL')       || 'info@boekhoudbaar.nl';
   const vanNaam     = props.getProperty('VAN_NAAM')        || 'Sam van Boekhoudbaar';
   const kvk         = props.getProperty('KVK_NUMMER')      || '';
   const btw         = props.getProperty('BTW_NUMMER')      || '';
   const privacyUrl  = props.getProperty('PRIVACY_URL')     || 'https://www.boekhoudbaar.nl/privacy';
 
   // Guard — zonder TEMPLATE_SS_ID kan de klant de copy-link niet gebruiken.
-  // Stuur een alert naar de eigenaar en markeer de licentie-rij zichtbaar.
+  // VOORHEEN: alleen alert naar eigenaar, klant kreeg NIETS → uren/dagen wachten.
+  // NU: klant krijgt OOK een mail met:
+  //   - duidelijke uitleg dat licentie actief is
+  //   - hun licentiesleutel (zodat ze niets verliezen)
+  //   - belofte: copy-link binnen 24u
+  //   - support-email om sneller te reageren
   if (!templateId) {
     Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' (' + sleutel.substring(0, 8) + '…) wacht op activatielink.');
     try { markeerTemplateOntbreekt_(sleutel); } catch (_) {}
+
+    // 1. Alert naar eigenaar (urgent)
     try {
       MailApp.sendEmail({
         to: vanEmail,
-        subject: '⚠ Boekhoudbaar — TEMPLATE_SS_ID ontbreekt (' + email + ' wacht)',
-        htmlBody: '<p>Nieuwe klant <strong>' + escHtml_(naam) + '</strong> (' + escHtml_(email) + ') heeft betaald ' +
+        subject: '🚨 URGENT: Klant ' + email + ' wacht — TEMPLATE_SS_ID ontbreekt',
+        htmlBody: '<p>Nieuwe klant <strong>' + escHtml_(naam) + '</strong> (' + escHtml_(email) + ') heeft betaald, ' +
                   'maar de copy-link kan niet worden opgebouwd omdat <code>TEMPLATE_SS_ID</code> ' +
                   'ontbreekt in Script Properties.</p>' +
-                  '<p>Licentiesleutel: <code>' + escHtml_(sleutel) + '</code></p>' +
-                  '<p>Vul <code>TEMPLATE_SS_ID</code> en run <code>herstuurLicentiemailHandmatig(&quot;' +
-                  escHtml_(sleutel) + '&quot;)</code> in de editor.</p>',
+                  '<p><strong>De klant heeft zojuist een uitleg-mail ontvangen</strong> met hun licentiesleutel ' +
+                  'en de belofte dat de copy-link binnen 24 uur volgt. Reageer A.S.A.P.:</p>' +
+                  '<ol><li>Vul <code>TEMPLATE_SS_ID</code> in Script Properties</li>' +
+                  '<li>Run <code>herstuurLicentiemailHandmatig("' + escHtml_(sleutel) + '")</code> in de editor</li></ol>' +
+                  '<p>Licentiesleutel: <code>' + escHtml_(sleutel) + '</code><br>' +
+                  'Klant-email: <a href="mailto:' + escHtml_(email) + '">' + escHtml_(email) + '</a></p>',
       });
     } catch (_) {}
+
+    // 2. KLANT KRIJGT OOK EEN MAIL (cruciaal — geen radio-stilte)
+    try {
+      const klantHtml =
+        '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff">' +
+        '<div style="background:#0D1B4E;color:#fff;padding:24px;border-radius:8px 8px 0 0">' +
+        '<h1 style="margin:0;font-size:22px">✅ Bedankt voor je bestelling, ' + escHtml_(naam || 'klant') + '!</h1>' +
+        '</div>' +
+        '<div style="padding:24px;border:1px solid #E5EAF2;border-top:0;border-radius:0 0 8px 8px">' +
+        '<p>Je betaling is verwerkt en je licentie is geactiveerd.</p>' +
+        '<div style="background:#F7F9FC;border:1px solid #E5EAF2;border-radius:8px;padding:16px;margin:16px 0">' +
+        '<p style="margin:0 0 4px;font-size:13px;color:#5F6B7A">Je licentiesleutel:</p>' +
+        '<code style="font-size:18px;color:#0D1B4E;font-weight:600">' + escHtml_(sleutel) + '</code>' +
+        '<p style="margin:8px 0 0;font-size:12px;color:#5F6B7A">Bewaar deze code — je hebt hem straks nodig om je boekhouding te activeren.</p>' +
+        '</div>' +
+        '<p><strong>Wat nu?</strong></p>' +
+        '<p>We sturen je <strong>binnen 24 uur</strong> de installatie-link waarmee je je eigen kopie van Boekhoudbaar krijgt. ' +
+        'We zorgen dat je vandaag of morgen kunt starten.</p>' +
+        '<p style="margin-top:24px">Heb je vragen of wil je sneller starten? Reageer op deze e-mail of stuur een bericht naar ' +
+        '<a href="mailto:' + escHtml_(vanEmail) + '" style="color:#2EC4B6">' + escHtml_(vanEmail) + '</a>. ' +
+        'Ik (Sam) lees mijn mail meerdere keren per dag.</p>' +
+        '<p style="margin-top:32px;color:#5F6B7A;font-size:13px">— ' + escHtml_(vanNaam) + '<br>' +
+        escHtml_(productnm) + (kvk ? ' · KvK ' + escHtml_(kvk) : '') + (btw ? ' · BTW ' + escHtml_(btw) : '') + '</p>' +
+        '</div></div>';
+      MailApp.sendEmail({
+        to: email,
+        subject: '✅ Boekhoudbaar — bestelling ontvangen, installatie-link volgt binnen 24u',
+        htmlBody: klantHtml,
+        replyTo: vanEmail,
+        name: vanNaam,
+      });
+      Logger.log('Klant-fallback-mail verstuurd naar ' + email);
+    } catch (klantMailErr) {
+      Logger.log('::error:: Kon ook geen klant-fallback-mail sturen naar ' + email + ': ' + klantMailErr.message);
+    }
     return;
   }
 
@@ -1004,6 +1075,16 @@ function stuurLicentiemail_(naam, email, sleutel) {
       <p style="margin:0 0 8px;font-size:14px;color:#1A1A1A">① Klik op de knop hieronder om je spreadsheet te openen</p>
       <p style="margin:0 0 8px;font-size:14px;color:#1A1A1A">② Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode</p>
       <p style="margin:0;font-size:14px;color:#1A1A1A">③ Voer de code in en je boekhouding is direct klaar voor gebruik</p>
+    </div>
+
+    <div style="background:#E6F7F4;border:1px solid #2EC4B6;border-radius:10px;padding:16px 20px;margin:20px 0;font-size:13px;line-height:1.7;color:#0D4F47">
+      <p style="margin:0 0 8px;font-weight:700;color:#0D1B4E">📌 Heb je geen Gmail? Geen probleem.</p>
+      <p style="margin:0 0 8px">Boekhoudbaar draait op Google Sheets — daarom heb je een <strong>Google-account</strong> nodig om je spreadsheet te openen. Maar je hoeft <strong>geen Gmail-adres</strong> te gebruiken: je kunt een gratis Google-account aanmaken met je huidige email (Outlook, iCloud, Proton, eigen domein, etc.) in 2 minuten.</p>
+      <p style="margin:0">
+        Stappen: ga naar <a href="https://accounts.google.com/signup" style="color:#0D1B4E;text-decoration:underline">accounts.google.com/signup</a> →
+        kies <strong>"Use my existing email"</strong> → vul ${escHtml_(email)} in → bevestig via verificatiecode in je inbox.
+        Daarna log je hier op in.
+      </p>
     </div>
 
     <div style="background:#FFF8E1;border:1px solid #FFECB3;border-radius:10px;padding:16px 20px;margin:20px 0;font-size:13px;line-height:1.7;color:#5f4b14">
@@ -1030,8 +1111,15 @@ function stuurLicentiemail_(naam, email, sleutel) {
     Vragen? Mail naar <a href="mailto:${vanEmail}" style="color:#0D1B4E">${vanEmail}</a>.</p>
   `;
 
-  const htmlBody = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>
+  const htmlBody = `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8">
+<title>${productnm} — Bestelling bevestigd</title>
+<meta name="x-apple-disable-message-reformatting">
+</head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#1a1a2e;background:#f8fafc">
+  <!-- Preheader: zichtbaar in inbox-preview, vergroot open-rate -->
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">
+    Je licentie is klaar. In 3 stappen heb je je eigen boekhouding draaiend — werkt met élk emailadres.
+  </div>
   <div style="background:#0D1B4E;padding:28px 24px;border-radius:10px 10px 0 0;text-align:center">
     <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800;letter-spacing:-0.01em">${productnm}</h1>
     <p style="color:#B8C2D1;margin:6px 0 0;font-size:14px">Bestelling bevestigd — je boekhouding staat klaar</p>
@@ -1041,11 +1129,14 @@ function stuurLicentiemail_(naam, email, sleutel) {
     <p>Gefeliciteerd met je aankoop van ${productnm}! Je boekhouding staat klaar om te activeren.</p>
     ${stappenHtml}
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
-    <p style="font-size:13px;color:#94a3b8">
-      Vragen? Stuur een e-mail naar <a href="mailto:${vanEmail}" style="color:#0D1B4E">${vanEmail}</a>.
+    <p style="font-size:13px;color:#94a3b8;line-height:1.6">
+      Vragen of feedback? <a href="mailto:${vanEmail}" style="color:#0D1B4E">${vanEmail}</a><br>
+      Lukt iets niet? <a href="mailto:support@boekhoudbaar.nl" style="color:#0D1B4E">support@boekhoudbaar.nl</a>
     </p>
-    <p style="font-size:12px;color:#cbd5e1">
-      ${productnm}${kvk ? ' · KVK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''} · <a href="${privacyUrl}" style="color:#94a3b8">Privacybeleid</a>
+    <p style="font-size:12px;color:#cbd5e1;line-height:1.5">
+      ${productnm} — een product van Hoven Strategy &amp; Solutions${kvk ? ' · KvK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''}<br>
+      <a href="${privacyUrl}" style="color:#94a3b8">Privacybeleid</a> ·
+      <a href="mailto:support@boekhoudbaar.nl?subject=Unsubscribe" style="color:#94a3b8">Uitschrijven</a>
     </p>
   </div>
 </body></html>`;
@@ -1058,12 +1149,18 @@ function stuurLicentiemail_(naam, email, sleutel) {
     (kopieerLink ? 'In 3 stappen aan de slag:\n' +
       '1. Open je spreadsheet via: ' + kopieerLink + '\n' +
       '2. Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode\n' +
-      '3. Voer de code in en je boekhouding is direct klaar voor gebruik\n\n' : '') +
+      '3. Voer de code in en je boekhouding is direct klaar voor gebruik\n\n' +
+      'GEEN GMAIL? GEEN PROBLEEM.\n' +
+      'Boekhoudbaar draait op Google Sheets, dus je hebt een Google-account nodig.\n' +
+      'Maar je kunt gratis een Google-account aanmaken met je huidige email\n' +
+      '(Outlook, iCloud, Proton, eigen domein, etc.).\n' +
+      'Stappen: accounts.google.com/signup → "Use my existing email" → vul ' + email + ' in.\n\n' : '') +
     'Vragen? Stuur een e-mail naar ' + vanEmail + '.\n\n' +
     productnm + (kvk ? ' · KVK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') +
     '\nPrivacybeleid: ' + privacyUrl + '\n';
 
   let brevoOk = false;
+  const supportEmail = props.getProperty('SUPPORT_EMAIL') || 'support@boekhoudbaar.nl';
   if (brevoKey) {
     try {
       const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
@@ -1072,12 +1169,16 @@ function stuurLicentiemail_(naam, email, sleutel) {
         headers: { 'api-key': brevoKey },
         payload: JSON.stringify({
           sender:      { name: vanNaam, email: vanEmail },
+          replyTo:     { email: supportEmail, name: vanNaam },
           to:          [{ email: email, name: naam }],
           subject:     'Je ' + productnm + ' is klaar — activeer nu 🚀',
           htmlContent: htmlBody,
           textContent: textBody,
           tags:        ['licentie', 'dag0'],
           params:      { naam: naam },
+          headers:     {
+            'List-Unsubscribe': '<mailto:' + supportEmail + '?subject=Unsubscribe>',
+          },
         }),
         muteHttpExceptions: true,
       });
@@ -1096,6 +1197,8 @@ function stuurLicentiemail_(naam, email, sleutel) {
       subject: 'Je ' + productnm + ' is klaar — activeer nu',
       body: textBody,
       htmlBody: htmlBody,
+      replyTo: supportEmail,
+      name: vanNaam,
     });
   }
 
@@ -1399,7 +1502,7 @@ function wrapFollowUpHtml_(onderwerp, bodyHtml, vanEmail) {
 function verwerkFollowUpEmails() {
   const props = PropertiesService.getScriptProperties();
   const brevoKey = props.getProperty('BREVO_API_KEY') || '';
-  const vanEmail = props.getProperty('VAN_EMAIL') || 'hallo@boekhoudbaar.nl';
+  const vanEmail = props.getProperty('VAN_EMAIL') || 'info@boekhoudbaar.nl';
   const vanNaam  = props.getProperty('VAN_NAAM')  || 'Sam van Boekhoudbaar';
 
   if (!brevoKey) {
@@ -1648,7 +1751,7 @@ function checkActivationCap_(sleutel, ssId, maxBindings) {
       return {
         ok: false,
         fout: 'Deze licentie is al ' + ssIdsVoorSleutel.size + 'x geactiveerd (max ' + maxBindings + ').',
-        actie: 'Vraag een nieuwe sleutel aan via /api/licentie/roteer of mail hallo@boekhoudbaar.nl',
+        actie: 'Vraag een nieuwe sleutel aan via /api/licentie/roteer of mail support@boekhoudbaar.nl',
       };
     }
     bindings.appendRow([sleutel, ssId, new Date(), new Date()]);
@@ -1657,4 +1760,222 @@ function checkActivationCap_(sleutel, ssId, maxBindings) {
     Logger.log('checkActivationCap_ fout: ' + e.message);
     return null;  // fail-open
   }
+}
+
+// ─────────────────────────────────────────────
+//  DRIP EMAIL CAMPAIGN — dag 3, 7, 14, 30
+// ─────────────────────────────────────────────
+//
+// Doel: klant bij eerste paar weken niet kwijtraken. Standaard verliest 60%
+// van de SaaS-klanten interesse na dag-0; drips bouwen engagement én tonen
+// dat product écht werkt.
+//
+// Schedule per drip:
+//   dag 3:  "Hoe gaat het? — eerste-factuur tip"
+//   dag 7:  "BTW-deadline weet je al?" (als kwartaal-eind nadert)
+//   dag 14: "Klaar voor je accountant?" (zachte upgrade-prompt)
+//   dag 30: "Eén maand boekhouden — feedback?" (NPS + review-vraag)
+//
+// Trigger: dagelijks 09:00 via time-based trigger 'verstuurDripsDagelijks_'.
+// State: kolom 5 ('Drip-status') in licentie-sheet — bevat csv "d3,d7,d14,d30"
+// van verstuurde dagen. Idempotent — kan veilig 2x draaien.
+
+const DRIP_SCHEDULE = [
+  { dag: 3,  vlag: 'd3',  onderwerp: 'Hoe gaat het met je eerste factuur? 💼' },
+  { dag: 7,  vlag: 'd7',  onderwerp: 'BTW-aangifte deadline — wist je dat?' },
+  { dag: 14, vlag: 'd14', onderwerp: 'Boekhoudbaar voor je accountant — handig?' },
+  { dag: 30, vlag: 'd30', onderwerp: 'Eén maand Boekhoudbaar — wat vind je?' },
+];
+
+/**
+ * Dagelijkse trigger — scan licentie-sheet voor klanten die een drip
+ * verdienen op basis van aanmaakdatum + nog-niet-verzonden status.
+ *
+ * Installeren via editor: run installeerDripTrigger_() éénmalig.
+ */
+function verstuurDripsDagelijks_() {
+  try {
+    const sheet = getLicentieSheet_();
+    if (!sheet || sheet.getLastRow() < 2) return;
+    const data = sheet.getDataRange().getValues();
+    const nu = Date.now();
+    let verstuurd = 0;
+
+    for (let i = 1; i < data.length; i++) {
+      const sleutel       = String(data[i][0] || '').trim();
+      const naam          = String(data[i][1] || '').trim();
+      const email         = String(data[i][2] || '').trim();
+      const status        = String(data[i][4] || '').trim();
+      const dripStatus    = String(data[i][5] || '');
+      const aanmaakDatum  = data[i][7];
+
+      if (!email || !sleutel) continue;
+      if (status && status.toLowerCase() === 'gestopt') continue;
+      if (!aanmaakDatum || !(aanmaakDatum instanceof Date)) continue;
+
+      const dagenSinds = Math.floor((nu - aanmaakDatum.getTime()) / 86400000);
+      if (dagenSinds < 3) continue;  // eerste drip is dag 3
+
+      DRIP_SCHEDULE.forEach(function(drip) {
+        if (dagenSinds >= drip.dag && dripStatus.indexOf(drip.vlag) === -1) {
+          // Niet eerder verstuurd → versturen
+          try {
+            verstuurDripMail_(naam, email, sleutel, drip);
+            const nieuweStatus = (dripStatus ? dripStatus + ',' : '') + drip.vlag;
+            sheet.getRange(i + 1, 6).setValue(nieuweStatus);
+            verstuurd++;
+          } catch (mailErr) {
+            Logger.log('Drip ' + drip.vlag + ' faalde voor ' + email + ': ' + mailErr.message);
+          }
+        }
+      });
+    }
+    if (verstuurd > 0) Logger.log('Drip-batch: ' + verstuurd + ' mails verstuurd.');
+  } catch (e) {
+    Logger.log('::error:: verstuurDripsDagelijks_ fout: ' + e.message);
+  }
+}
+
+function verstuurDripMail_(naam, email, sleutel, drip) {
+  const props        = PropertiesService.getScriptProperties();
+  const brevoKey     = props.getProperty('BREVO_API_KEY')   || '';
+  const vanEmail     = props.getProperty('VAN_EMAIL')       || 'info@boekhoudbaar.nl';
+  const vanNaam      = props.getProperty('VAN_NAAM')        || 'Sam van Boekhoudbaar';
+  const supportEmail = props.getProperty('SUPPORT_EMAIL')   || 'support@boekhoudbaar.nl';
+  const productnm    = props.getProperty('PRODUCT_NAAM')    || 'Boekhoudbaar';
+  const kvk          = props.getProperty('KVK_NUMMER')      || '';
+  const btw          = props.getProperty('BTW_NUMMER')      || '';
+  const privacyUrl   = props.getProperty('PRIVACY_URL')     || 'https://www.boekhoudbaar.nl/privacy';
+
+  const inhoud = dripInhoud_(drip.dag, naam, productnm);
+  const html = `<!DOCTYPE html><html lang="nl"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#1a1a2e;background:#f8fafc">
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden">${inhoud.preheader}</div>
+  <div style="background:#0D1B4E;padding:20px;border-radius:10px 10px 0 0;text-align:center">
+    <h1 style="color:#fff;margin:0;font-size:18px;font-weight:700">${productnm}</h1>
+  </div>
+  <div style="background:#fff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;line-height:1.6;font-size:14px">
+    <p style="margin:0 0 12px">Hoi ${escHtml_(naam || 'daar')},</p>
+    ${inhoud.body}
+    <p style="margin:18px 0 0">Veel succes,<br>${escHtml_(vanNaam)}</p>
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0 12px">
+    <p style="font-size:12px;color:#94a3b8;line-height:1.5;margin:0">
+      Vragen of feedback? Reageer op deze mail of stuur naar
+      <a href="mailto:${supportEmail}" style="color:#0D1B4E">${supportEmail}</a><br>
+      Hoven Strategy &amp; Solutions${kvk ? ' · KvK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''}<br>
+      <a href="${privacyUrl}" style="color:#94a3b8">Privacy</a> ·
+      <a href="mailto:${supportEmail}?subject=Unsubscribe%20drip" style="color:#94a3b8">Geen drip-mails meer</a>
+    </p>
+  </div>
+</body></html>`;
+  const text = (inhoud.preheader || '') + '\n\n' +
+    'Hoi ' + (naam || 'daar') + ',\n\n' +
+    inhoud.bodyTekst + '\n\n' +
+    'Veel succes,\n' + vanNaam + '\n\n' +
+    '---\n' +
+    'Reageer op deze mail of: ' + supportEmail + '\n' +
+    'Hoven Strategy & Solutions' + (kvk ? ' · KvK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') + '\n' +
+    'Geen drip-mails meer? mail: ' + supportEmail + ' subject: Unsubscribe drip\n';
+
+  if (brevoKey) {
+    try {
+      const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'post', contentType: 'application/json',
+        headers: { 'api-key': brevoKey },
+        payload: JSON.stringify({
+          sender:  { name: vanNaam, email: vanEmail },
+          replyTo: { email: supportEmail, name: vanNaam },
+          to:      [{ email: email, name: naam }],
+          subject: drip.onderwerp,
+          htmlContent: html,
+          textContent: text,
+          tags: ['drip', drip.vlag],
+          headers: { 'List-Unsubscribe': '<mailto:' + supportEmail + '?subject=Unsubscribe drip>' },
+        }),
+        muteHttpExceptions: true,
+      });
+      if (resp.getResponseCode() < 300) return;
+      Logger.log('Brevo drip ' + drip.vlag + ' faalde HTTP ' + resp.getResponseCode());
+    } catch (e) { Logger.log('Brevo drip exception: ' + e.message); }
+  }
+  // Fallback MailApp
+  MailApp.sendEmail({
+    to: email, subject: drip.onderwerp, body: text, htmlBody: html,
+    replyTo: supportEmail, name: vanNaam,
+  });
+}
+
+function dripInhoud_(dag, naam, productnm) {
+  const naamSafe = naam || 'daar';
+  if (dag === 3) {
+    return {
+      preheader: 'Hoe gaat het? Tip voor je eerste factuur.',
+      body:
+        '<p>Drie dagen geleden activeerde je ' + escHtml_(productnm) + ' — hopelijk loopt alles soepel.</p>' +
+        '<p><strong>Tip voor je eerste factuur:</strong> houd het simpel. Eén regel, juiste BTW (21% standaard, 9% voor specifieke diensten zoals catering of fysiotherapie). De PDF wordt automatisch opgemaakt — geen Word nodig.</p>' +
+        '<p>Vastgelopen? Open Boekhouding → Controle → ✅ Werkt-alles-test (12 punts gezondheidscheck).</p>',
+      bodyTekst:
+        'Drie dagen geleden activeerde je ' + productnm + ' — hopelijk loopt alles soepel.\n\n' +
+        'Tip voor je eerste factuur: houd het simpel. Eén regel, juiste BTW (21% standaard, 9% specifiek). De PDF wordt automatisch opgemaakt.\n\n' +
+        'Vastgelopen? Open Boekhouding → Controle → ✅ Werkt-alles-test.',
+    };
+  }
+  if (dag === 7) {
+    return {
+      preheader: 'BTW-deadline volgende week of binnen 1 maand?',
+      body:
+        '<p>Een week ' + escHtml_(productnm) + ' achter de rug. Goede gewoonte ingebouwd?</p>' +
+        '<p><strong>BTW-aangifte:</strong> NL-ZZP\'ers doen kwartaalaangifte. Deadlines:<br>' +
+        '<strong>Q1</strong>: vóór 30 april · <strong>Q2</strong>: vóór 31 juli · <strong>Q3</strong>: vóór 31 oktober · <strong>Q4</strong>: vóór 31 januari.</p>' +
+        '<p>Boekhoudbaar berekent automatisch — open <strong>Boekhouding → BTW → BTW-aangifte (kwartaal)</strong> en je hebt de cijfers in 30 seconden.</p>',
+      bodyTekst:
+        'Een week ' + productnm + ' achter de rug.\n\n' +
+        'BTW-aangifte deadlines: Q1=30/4, Q2=31/7, Q3=31/10, Q4=31/1.\n' +
+        'Boekhoudbaar berekent automatisch via Boekhouding → BTW.',
+    };
+  }
+  if (dag === 14) {
+    return {
+      preheader: 'Je boekhouder mee laten kijken in 1 klik.',
+      body:
+        '<p>Twee weken ' + escHtml_(productnm) + '. Heb je al gedacht aan je accountant?</p>' +
+        '<p><strong>Boekhouder mee laten kijken:</strong> in Google Sheets klik je op <strong>Delen</strong> rechtsboven, typ je het mailadres, en kies je rechten (alleen-lezen of bewerken). Geen extra licentie, geen tweede account.</p>' +
+        '<p>Of: <strong>Boekhouding → Accountantspakket exporteren</strong> maakt een ZIP met PDF + XLSX + JSONL die je accountant kan inlezen in elk pakket (Snelstart, Exact, Twinfield).</p>',
+      bodyTekst:
+        'Twee weken ' + productnm + '.\n\n' +
+        'Boekhouder mee laten kijken: klik Delen in Google Sheets en typ mailadres.\n' +
+        'Of: Boekhouding → Accountantspakket exporteren = ZIP voor elk pakket.',
+    };
+  }
+  if (dag === 30) {
+    return {
+      preheader: 'Hoe is je eerste maand? — 1-min feedback maakt me blij.',
+      body:
+        '<p>Een maand <strong>' + escHtml_(productnm) + '</strong> achter de rug. Ik ben benieuwd hoe het is gegaan.</p>' +
+        '<p>Als je 30 seconden hebt: reageer op deze mail met antwoord op één van deze:</p>' +
+        '<ul><li>Wat werkt goed?</li><li>Wat zou ik moeten verbeteren?</li><li>Zou je het aanraden? (1-10)</li></ul>' +
+        '<p>Echte feedback maakt het product beter voor de volgende ZZP\'er. En als ik iets specifieks voor jou kan oplossen — zeg het.</p>',
+      bodyTekst:
+        'Een maand ' + productnm + '. Hoe is het gegaan?\n\n' +
+        '30 seconden voor feedback?\n' +
+        '- Wat werkt goed?\n' +
+        '- Wat zou ik moeten verbeteren?\n' +
+        '- Zou je het aanraden? (1-10)\n\n' +
+        'Reageer op deze mail.',
+    };
+  }
+  return { preheader: '', body: '<p>—</p>', bodyTekst: '—' };
+}
+
+/**
+ * Eenmalig installeren in editor: run installeerDripTrigger_() handmatig.
+ * Maakt time-based trigger 09:00 dagelijks. Idempotent — bestaande triggers
+ * voor verstuurDripsDagelijks_ worden eerst verwijderd.
+ */
+function installeerDripTrigger_() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'verstuurDripsDagelijks_') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('verstuurDripsDagelijks_')
+    .timeBased().everyDays(1).atHour(9).create();
+  Logger.log('Drip-trigger geïnstalleerd: 09:00 dagelijks');
 }

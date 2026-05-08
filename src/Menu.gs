@@ -31,6 +31,37 @@ function onOpen() {
   try { if (typeof controleerTriggerWatchdog_ === 'function') controleerTriggerWatchdog_(); }
   catch (e) { Logger.log('Trigger-watchdog overgeslagen: ' + e.message); }
 
+  // Jaarwisseling-check: in jan-mrt waarschuwen als factuurprefix nog op
+  // vorig jaar staat. Aanbieding om jaarafsluiting nu te doen.
+  try { if (typeof checkJaarwisselingNodig_ === 'function') checkJaarwisselingNodig_(); }
+  catch (e) { Logger.log('Jaarwisseling-check overgeslagen: ' + e.message); }
+
+  // Changelog-check: bij eerste open na product-update toon "wat is nieuw".
+  // Maakt gratis updates zichtbaar — klant voelt actief onderhoud.
+  try { if (typeof checkEnToonChangelog_ === 'function') checkEnToonChangelog_(); }
+  catch (e) { Logger.log('Changelog-check overgeslagen: ' + e.message); }
+
+  // Tabblad-herstel-melding: als dagelijkseTaken een verplicht tabblad opnieuw
+  // aanmaakte (klant had per ongeluk verwijderd), klant moet weten dat data
+  // weg is en hoe te herstellen via Versiegeschiedenis.
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const raw = props.getProperty('tabbladenHersteldBericht');
+    if (raw) {
+      const info = JSON.parse(raw);
+      ui.alert(
+        '⚠️ Tabblad opnieuw aangemaakt',
+        'Het volgende tabblad was verwijderd en is opnieuw leeg aangemaakt:\n\n' +
+        '• ' + (info.tabbladen || []).join('\n• ') + '\n\n' +
+        'BELANGRIJK: de data is niet automatisch hersteld. Open ' +
+        'Bestand → Versiegeschiedenis om een eerdere versie terug te zetten.\n\n' +
+        '(Google bewaart 30 dagen versiegeschiedenis.)',
+        ui.ButtonSet.OK
+      );
+      props.deleteProperty('tabbladenHersteldBericht');
+    }
+  } catch (e) { Logger.log('Tabblad-herstel-melding: ' + e.message); }
+
   // Year-end jaaroverzicht (1-15 jan, één keer per jaar)
   try { if (typeof checkJaaroverzichtTrigger_ === 'function') checkJaaroverzichtTrigger_(); }
   catch (_) {}
@@ -138,9 +169,11 @@ function onOpen() {
     // ── Hulp & advies ─────────────────────────
     .addItem('🔔 Wat moet ik nu doen? (notificaties)', 'toonNotificaties')
     .addItem('Hulp & uitleg', 'openAssistent')
-    .addItem('Fiscaal advies & belastingbesparing', 'genereerBelastingadvies')
+    .addItem('🎁 Verwijs een vriend — jullie krijgen beide €5', 'toonReferralDialog')
+    .addItem('📰 Wat is er nieuw? (changelog)', 'toonChangelogVolledig')
+    .addItem('Fiscaal overzicht & besparingstips', 'genereerBelastingadvies')
     .addItem('💡 Wat-als-rekenmachine (extra omzet of investering)', 'toonWatAlsSimulator')
-    .addItem('📋 Vul je profiel in voor persoonlijk advies', 'toonFiscaalProfielWizard')
+    .addItem('📋 Vul je profiel in voor persoonlijke berekening', 'toonFiscaalProfielWizard')
     .addItem('🚗 Zakelijke kilometers registreren', 'toonReiskostenTracker')
     .addItem('🚗 Hele week kilometers tegelijk', 'toonReiskostenWeek')
     .addItem('🏦 Lijfrente: hoeveel mag ik storten?', 'toonLijfrenteJaarruimte')

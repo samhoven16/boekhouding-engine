@@ -23,14 +23,22 @@
 <meta name="keywords" content="boekhouding zzp, boekhoudprogramma, btw aangifte, factuur maken, google sheets boekhouding, boekhouden zelf doen, eenmalig betalen boekhoudpakket">
 <link rel="canonical" href="https://www.boekhoudbaar.nl/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
+<link rel="mask-icon" href="/favicon.svg" color="#0D1B4E">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="Boekhoudbaar">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <!-- Critical preloads (hero + fonts) — minimaliseer FCP/LCP -->
 <link rel="preload" as="image" href="/preview.svg" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<!-- Lazy-load Google Fonts via media-trick: print → all on load. Voorkomt
+     render-blocking → +0.5-1s LCP-winst op slow connections. Fallback:
+     systeem-font tot Inter geladen is. -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
 
 <!-- Open Graph -->
 <meta property="og:title" content="Boekhoudbaar — ZZP-boekhouding in Google Sheets">
@@ -151,6 +159,14 @@
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "Ja. Boekhoudbaar werkt in Google Chrome, Safari, Firefox en Edge — op Mac, Windows, Linux en tablet. Geen installatie nodig."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Heb ik een Gmail-adres nodig?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Nee. Je hebt wel een Google-account nodig (omdat Boekhoudbaar in Google Sheets draait), maar dat hoeft geen Gmail te zijn. Je kunt een gratis Google-account aanmaken met je bestaande email — Outlook, iCloud, Proton, eigen domein, etc. Ga naar accounts.google.com/signup en kies 'Use my existing email'. Duurt 2 minuten."
           }
         },
         {
@@ -1467,8 +1483,8 @@
         <a href="/kopen" class="btn-primair">
           <span>Koop voor €49 →</span>
         </a>
-        <a href="/functies/" class="btn-secundair">
-          Bekijk alle 12 functies →
+        <a href="/demo/" class="btn-secundair">
+          🔍 Live demo bekijken
         </a>
       </div>
       <div>
@@ -1642,7 +1658,7 @@
           <tr><th scope="row">Geen abonnement</th><td class="ja">✓</td><td class="nee">×</td><td class="nee">×</td></tr>
           <tr><th scope="row">iDEAL-betaal-link op factuur</th><td class="ja">✓</td><td class="ja-warm">betaalt extra</td><td class="ja-warm">betaalt extra</td></tr>
           <tr><th scope="row">AI bonnen-scan inbegrepen</th><td class="ja">✓</td><td class="ja-warm">in duurder pakket</td><td class="nee">×</td></tr>
-          <tr><th scope="row">Persoonlijk fiscaal advies</th><td class="ja">✓</td><td class="nee">×</td><td class="nee">×</td></tr>
+          <tr><th scope="row">Persoonlijke fiscale signalering</th><td class="ja">✓</td><td class="nee">×</td><td class="nee">×</td></tr>
           <tr><th scope="row">Accountant read-only deelflow</th><td class="ja">✓</td><td class="ja-warm">extra zetwerk</td><td class="ja-warm">extra zetwerk</td></tr>
           <tr><th scope="row">Werkt zonder internet (offline edits)</th><td class="ja">✓</td><td class="nee">×</td><td class="nee">×</td></tr>
           <tr><th scope="row">Vendor-lock-in</th><td class="ja">geen</td><td class="nee">data in hun cloud</td><td class="nee">data in hun cloud</td></tr>
@@ -1671,7 +1687,7 @@
       <a href="/functies/" class="explore-kaart" data-reveal data-reveal-stagger="0">
         <div class="explore-icon" aria-hidden="true">📋</div>
         <h3>Wat zit erin?</h3>
-        <p>12 functies — facturen met iDEAL-betaal-link, AI bonnen-scan, KvK-autofill, fiscaal advies, accountant read-only delen, BTW, dashboard, herhalende kosten en meer.</p>
+        <p>12 functies — facturen met iDEAL-betaal-link, AI bonnen-scan, KvK-autofill, fiscale signalering, accountant read-only delen, BTW, dashboard, herhalende kosten en meer.</p>
         <span class="explore-link">Bekijk functies →</span>
       </a>
       <a href="/vergelijking/" class="explore-kaart" data-reveal data-reveal-stagger="90">
@@ -1715,16 +1731,16 @@
     <h2>€49. Eén keer. Klaar.</h2>
     <p class="sub-tekst">Over 5 jaar bespaart dit tot €2.291 vs een abonnement van €39/mnd. Eén keer kopen, voor altijd houden.</p>
     <div class="pricing-kaart" role="region" aria-labelledby="prijs-heading" data-reveal>
-      <div class="pricing-badge">Eenmalige aankoop · geen abonnement</div>
+      <div class="pricing-badge">Early bird · eerste 100 klanten</div>
       <div class="prijs-groot" id="prijs-heading"><sup>€</sup>49</div>
-      <p class="prijs-sub">Eén keer betalen — prijs is inclusief BTW — nooit meer</p>
+      <p class="prijs-sub">Eén keer betalen — prijs is inclusief BTW — nooit meer.<br><span style="color:#5F6B7A;font-size:13px">Voor de eerste 100 klanten. Daarna €79.</span></p>
       <ul class="prijs-lijst" role="list">
         <li><span class="vink" aria-hidden="true">✓</span> Complete boekhouding voor ZZP en eenmanszaak (12 functies)</li>
         <li><span class="vink" aria-hidden="true">✓</span> PDF-facturen met <strong>iDEAL-betaal-link</strong> via Mollie</li>
         <li><span class="vink" aria-hidden="true">✓</span> AI-bonnen-scan: foto → automatisch ingevuld</li>
         <li><span class="vink" aria-hidden="true">✓</span> KvK auto-fill bij nieuwe klanten</li>
         <li><span class="vink" aria-hidden="true">✓</span> BTW-aangifte automatisch berekend, per kwartaal klaar</li>
-        <li><span class="vink" aria-hidden="true">✓</span> Persoonlijk fiscaal advies (heffingskorting, lijfrente, KIA)</li>
+        <li><span class="vink" aria-hidden="true">✓</span> Persoonlijke fiscale signalering (heffingskorting, lijfrente, KIA — informatief)</li>
         <li><span class="vink" aria-hidden="true">✓</span> Dashboard met live KPI's, balans, W&amp;V en cashflow</li>
         <li><span class="vink" aria-hidden="true">✓</span> Herhalende kosten en betalingsherinneringen op de automaat</li>
         <li><span class="vink" aria-hidden="true">✓</span> Read-only delen met accountant — auto-verloopt na 30 dagen</li>
@@ -1735,6 +1751,9 @@
         Koop nu voor €49 →
       </a>
       <p class="garantie">Betalen via Mollie (iDEAL, bancontact, creditcard) · licentie direct in je inbox</p>
+      <p class="garantie" style="margin-top:6px;font-size:13px;color:var(--grijs)">
+        Werkt met élk emailadres — @gmail, @outlook, @icloud, @proton, eigen domein. <a href="/faq/#gmail" style="color:var(--blauw);text-decoration:underline;text-underline-offset:2px">Geen Gmail? Lees hoe →</a>
+      </p>
 
       <!-- Persona-rij: één tier, eerlijke uitleg waarom geen pakket-onderscheid -->
       <div class="persona-rij" role="note">
@@ -1768,6 +1787,133 @@
   </div>
 </section>
 
+<!-- ── BESPARINGSCALCULATOR ── -->
+<section id="calculator" style="background:#F7F9FC;padding:60px 32px;border-top:1px solid #E5EAF2;border-bottom:1px solid #E5EAF2">
+  <div class="container" style="max-width:780px;text-align:center">
+    <p class="section-label">Reken zelf uit</p>
+    <h2>Wat bespaar je over 5 jaar?</h2>
+    <p class="sub-tekst" style="margin-bottom:32px">Vergelijk Boekhoudbaar (eenmalig €49) met een gemiddeld boekhoud-abonnement.</p>
+
+    <div style="background:#fff;border:1px solid #E5EAF2;border-radius:14px;padding:32px;text-align:left;box-shadow:0 1px 3px rgba(13,27,78,.04)">
+      <div style="display:grid;grid-template-columns:1fr;gap:18px">
+        <label style="display:block">
+          <span style="font-size:13px;font-weight:600;color:#0D1B4E;display:block;margin-bottom:6px">Maandprijs van je huidige boekhoudtool</span>
+          <div style="position:relative">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#5F6B7A;font-weight:600">€</span>
+            <input id="calc-prijs" type="number" min="0" step="0.01" value="25" inputmode="decimal" style="width:100%;padding:12px 14px 12px 30px;border:1px solid #E5EAF2;border-radius:10px;font-size:16px;font-family:inherit;color:#1A1A1A">
+          </div>
+          <span style="font-size:12px;color:#5F6B7A;display:block;margin-top:4px">Moneybird ~€20-30 · e-Boekhouden ~€18-25 · Snelstart ~€20</span>
+        </label>
+
+        <label style="display:block">
+          <span style="font-size:13px;font-weight:600;color:#0D1B4E;display:block;margin-bottom:6px">Aantal jaar dat je ZZP'er bent</span>
+          <input id="calc-jaren" type="range" min="1" max="20" step="1" value="5" style="width:100%;accent-color:#2EC4B6">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#5F6B7A;margin-top:4px">
+            <span>1 jaar</span><span id="calc-jaren-label" style="font-weight:700;color:#0D1B4E">5 jaar</span><span>20 jaar</span>
+          </div>
+        </label>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #E5EAF2;margin:24px 0">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+        <div style="text-align:center;padding:18px;background:#FDECEC;border-radius:10px">
+          <div style="font-size:11px;font-weight:700;color:#B91C1C;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Abonnement</div>
+          <div id="calc-abonnement" style="font-size:24px;font-weight:800;color:#1A1A1A">€1.500</div>
+          <div style="font-size:11px;color:#5F6B7A;margin-top:4px">over <span id="calc-jaren-tekst-1">5 jaar</span></div>
+        </div>
+        <div style="text-align:center;padding:18px;background:#E6F7F4;border-radius:10px">
+          <div style="font-size:11px;font-weight:700;color:#0D4F47;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Boekhoudbaar</div>
+          <div style="font-size:24px;font-weight:800;color:#1A1A1A">€49</div>
+          <div style="font-size:11px;color:#5F6B7A;margin-top:4px">eenmalig</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:24px;background:linear-gradient(135deg,#0D1B4E 0%,#1A2A6B 100%);border-radius:12px;color:#fff">
+        <div style="font-size:11px;font-weight:700;color:#2EC4B6;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Jouw besparing</div>
+        <div id="calc-besparing" style="font-size:38px;font-weight:800;letter-spacing:-0.02em">€1.451</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:6px">over <span id="calc-jaren-tekst-2">5 jaar</span> — geld dat in jouw zak blijft</div>
+      </div>
+    </div>
+
+    <p style="font-size:12px;color:#8A95A5;margin-top:16px;line-height:1.6">
+      ℹ️ Indicatieve berekening. Werkelijke besparing hangt af van je abonnementsprijs en gebruikstermijn. Boekhoudbaar is een eenmalige aankoop zonder verplichte updates of verlenging.
+    </p>
+  </div>
+</section>
+
+<script>
+(function() {
+  var prijsEl = document.getElementById('calc-prijs');
+  var jarenEl = document.getElementById('calc-jaren');
+  var jarenLabelEl = document.getElementById('calc-jaren-label');
+  var abonnementEl = document.getElementById('calc-abonnement');
+  var besparingEl = document.getElementById('calc-besparing');
+  var jarenTekst1 = document.getElementById('calc-jaren-tekst-1');
+  var jarenTekst2 = document.getElementById('calc-jaren-tekst-2');
+
+  function fmt(n) {
+    return '€' + Math.round(n).toLocaleString('nl-NL');
+  }
+
+  function herbereken() {
+    var prijs = parseFloat(String(prijsEl.value || '0').replace(',', '.')) || 0;
+    var jaren = parseInt(jarenEl.value) || 5;
+    var maandelijks = prijs * 12 * jaren;
+    var bespaar = Math.max(0, maandelijks - 49);
+
+    abonnementEl.textContent = fmt(maandelijks);
+    besparingEl.textContent = fmt(bespaar);
+    jarenLabelEl.textContent = jaren + ' jaar';
+    jarenTekst1.textContent = jaren + ' jaar';
+    jarenTekst2.textContent = jaren + ' jaar';
+  }
+
+  if (prijsEl && jarenEl) {
+    ['input', 'change'].forEach(function(ev) {
+      prijsEl.addEventListener(ev, herbereken);
+      jarenEl.addEventListener(ev, herbereken);
+    });
+    herbereken();
+  }
+})();
+</script>
+
+<!-- ── BONUS: Gratis BTW-deadline-agenda (iCal feed) ── -->
+<section id="agenda-feed" style="background:linear-gradient(135deg,#0D1B4E 0%,#1A2A6B 100%);color:#fff;padding:60px 32px">
+  <div class="container" style="max-width:780px;text-align:center">
+    <p class="section-label" style="color:#2EC4B6">Bonus · gratis voor iedereen</p>
+    <h2 style="color:#fff;margin-bottom:16px">📅 BTW-deadlines automatisch in je agenda</h2>
+    <p style="color:#B8C2D1;font-size:16px;line-height:1.65;margin-bottom:32px">
+      Nooit meer een BTW-aangifte vergeten. Abonneer op deze agenda-feed en alle
+      kwartaaldeadlines, IB-aangiftes en jaarafsluiting verschijnen automatisch
+      in je Google Calendar, Apple Calendar of Outlook — met herinneringen 7 en 14 dagen vooraf.
+    </p>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-bottom:24px">
+      <a href="webcal://www.boekhoudbaar.nl/zzp-deadlines.ics"
+         style="background:#2EC4B6;color:#0D1B4E;padding:14px 26px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block;letter-spacing:.1px">
+        📲 Abonneer in agenda
+      </a>
+      <a href="/zzp-deadlines.ics" download="boekhoudbaar-zzp-deadlines.ics"
+         style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3);padding:14px 26px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
+        ⬇ Download .ics bestand
+      </a>
+    </div>
+    <details style="max-width:560px;margin:0 auto;text-align:left;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px 20px">
+      <summary style="cursor:pointer;font-weight:600;color:#fff;font-size:14px">Hoe abonneren in Google / Apple / Outlook?</summary>
+      <div style="color:#B8C2D1;font-size:13px;line-height:1.7;margin-top:12px">
+        <p style="margin-bottom:10px"><strong style="color:#fff">📱 iPhone / iPad:</strong> klik bovenstaande "Abonneer"-knop → Calendar opent → Bevestig.</p>
+        <p style="margin-bottom:10px"><strong style="color:#fff">🖥️ Mac:</strong> idem — webcal:// opent automatisch in Calendar-app.</p>
+        <p style="margin-bottom:10px"><strong style="color:#fff">📅 Google Calendar:</strong> open <a href="https://calendar.google.com/calendar/r/settings/addbyurl" target="_blank" rel="noopener" style="color:#2EC4B6">calendar.google.com/calendar/r/settings/addbyurl</a> → plak <code style="background:rgba(255,255,255,.1);padding:2px 6px;border-radius:4px;font-size:12px">https://www.boekhoudbaar.nl/zzp-deadlines.ics</code> → "Kalender toevoegen".</p>
+        <p style="margin-bottom:0"><strong style="color:#fff">📨 Outlook:</strong> Bestand → Account-instellingen → Internet-agenda's → Nieuw → plak URL.</p>
+      </div>
+    </details>
+    <p style="color:rgba(255,255,255,.5);font-size:12px;margin-top:24px">
+      Auto-update: agenda krijgt nieuwe deadlines vanzelf zodra ze worden toegevoegd. Geen Boekhoudbaar-account nodig.
+    </p>
+  </div>
+</section>
+
 <!-- ── FAQ — top 5 inline, rest op /faq/ ── -->
 <section id="faq">
   <div class="container">
@@ -1783,7 +1929,7 @@
 
       <details>
         <summary>Wat als het niet werkt voor mij?</summary>
-        <p>Mail me binnen <strong>14 dagen</strong> na aankoop op <a href="mailto:hallo@boekhoudbaar.nl">hallo@boekhoudbaar.nl</a> en ik stort je €49 volledig terug. Geen formulier, gewoon terug op je rekening.</p>
+        <p>Mail me binnen <strong>14 dagen</strong> na aankoop op <a href="mailto:info@boekhoudbaar.nl">info@boekhoudbaar.nl</a> en ik stort je €49 volledig terug. Geen formulier, gewoon terug op je rekening.</p>
       </details>
 
       <details>
@@ -1799,6 +1945,11 @@
       <details>
         <summary>Werkt het ook op een Mac of tablet?</summary>
         <p>Ja. Boekhoudbaar draait in je browser, dus je kunt het openen op Mac, Windows, Linux, iPad, zelfs je telefoon. Geen installatie nodig.</p>
+      </details>
+
+      <details id="gmail">
+        <summary>Heb ik een Gmail-adres nodig?</summary>
+        <p><strong>Nee.</strong> Je hebt wel een Google-account nodig (Boekhoudbaar draait op Google Sheets), maar dat hoeft <strong>geen Gmail</strong> te zijn. Je kunt gratis een Google-account aanmaken met je bestaande email — Outlook, iCloud, Proton, KPN, eigen domein. Ga naar <a href="https://accounts.google.com/signup" target="_blank" rel="noopener">accounts.google.com/signup</a>, kies <em>"Use my existing email"</em>. Duurt 2 minuten. Daarna log je in op Boekhoudbaar met dat account.</p>
       </details>
 
     </div>
@@ -1850,8 +2001,10 @@
       <ul>
         <li><a href="/over/">Over Sam</a></li>
         <li><a href="/transparantie">Transparantie</a></li>
+        <li><a href="/bronnen/">Bronnen &amp; verifieerbaarheid</a></li>
+        <li><a href="/roadmap/">Roadmap</a></li>
         <li><a href="/faq/">FAQ</a></li>
-        <li><a href="mailto:hallo@boekhoudbaar.nl">Contact</a></li>
+        <li><a href="mailto:info@boekhoudbaar.nl">Contact</a></li>
         <li><a href="/privacy">Privacybeleid</a></li>
         <li><a href="/voorwaarden">Voorwaarden</a></li>
       </ul>
@@ -1859,6 +2012,16 @@
   </div>
   <div class="footer-bottom">
     <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
+    <p style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.5);max-width:780px;line-height:1.6">
+      <strong style="color:rgba(255,255,255,.7)">Disclaimer:</strong> Boekhoudbaar is een softwarematige tool voor boekhouding en fiscale berekeningen.
+      De fiscale signaleringen en kengetallen zijn informatief, gebaseerd op publieke bronnen
+      (<a href="https://www.belastingdienst.nl" target="_blank" rel="noopener" style="color:rgba(255,255,255,.7);text-decoration:underline">Belastingdienst.nl</a>,
+      <a href="https://www.overheid.nl" target="_blank" rel="noopener" style="color:rgba(255,255,255,.7);text-decoration:underline">overheid.nl</a>,
+      <a href="https://www.kvk.nl" target="_blank" rel="noopener" style="color:rgba(255,255,255,.7);text-decoration:underline">KvK.nl</a>).
+      Boekhoudbaar is geen registeraccountant of belastingadviseur in de zin van de Wet WFR / NBA-regelgeving.
+      Raadpleeg bij twijfel een gekwalificeerde belastingadviseur, accountant of fiscaal jurist.
+      Aansprakelijkheid is beperkt zoals beschreven in de <a href="/voorwaarden/" style="color:rgba(255,255,255,.7);text-decoration:underline">voorwaarden</a>.
+    </p>
   </div>
 </footer>
 

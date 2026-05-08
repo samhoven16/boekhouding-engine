@@ -249,7 +249,7 @@ function vergrendelKopie_() {
           </a>
         </div>
         <p style="color:#94a3b8;font-size:12px;margin-top:18px;text-align:center">
-          Al gekocht? Mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.
+          Al gekocht? Mail <a href="mailto:support@boekhoudbaar.nl" style="color:#0D1B4E">support@boekhoudbaar.nl</a>.
         </p>
       </body></html>
     `).setWidth(460).setHeight(380).setSandboxMode(HtmlService.SandboxMode.IFRAME);
@@ -335,11 +335,15 @@ function toonActivatieDialog_() {
 
       <!-- Stap 1: e-mail -->
       <div class="stap actief" id="stap1">
+        <div class="banner" style="background:#E6F7F4;border:1px solid rgba(46,196,182,.35);padding:12px 14px;font-size:12px;line-height:1.55;margin-bottom:16px">
+          <strong style="color:#0D1B4E">Welkom! Je bent er bijna.</strong><br>
+          Vul het e-mailadres in waarmee je hebt betaald. We sturen direct een 6-cijferige code naar die inbox. Werkt met élk emailadres — Gmail, Outlook, iCloud, eigen domein.
+        </div>
         <label class="veld">E-mailadres</label>
         <input type="email" id="email" placeholder="jan@uwbedrijf.nl" autocomplete="email">
         <div class="fout" id="fout1"></div>
         <button class="btn" id="btn1" data-actie="stuurCode">Stuur activeringscode</button>
-        <p class="hint">Geen mail ontvangen? Check je spam-map of mail <a href="mailto:hallo@boekhoudbaar.nl" style="color:#0D1B4E">hallo@boekhoudbaar.nl</a>.</p>
+        <p class="hint">Geen mail ontvangen? Check je spam-map of mail <a href="mailto:support@boekhoudbaar.nl" style="color:#0D1B4E">support@boekhoudbaar.nl</a>.</p>
         ${ownerBlock}
       </div>
 
@@ -815,7 +819,7 @@ function toonLicentieInfo() {
     'Versie: '         + versie    + '\n' +
     'Sleutel: '        + sleutel   + '\n' +
     'Spreadsheet-ID: ' + ssId      + '\n\n' +
-    'Vragen? hallo@boekhoudbaar.nl',
+    'Vragen? info@boekhoudbaar.nl',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }

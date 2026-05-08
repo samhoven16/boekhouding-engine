@@ -316,6 +316,38 @@ function berekenIBProgressief_(belastbaarInkomen, B, isAowGerechtigd) {
 }
 
 /**
+ * Marginaal IB-tarief op het inkomen — het tarief dat geldt voor de
+ * "laatste euro". Cruciaal voor besparing-berekeningen bij aftrekposten:
+ * elke euro aftrek bespaart het marginale tarief, niet schijf 1.
+ *
+ * Voorheen werd IB_SCHIJF_1_PCT (35,7%) gebruikt voor alle besparing-
+ * berekeningen. Resultaat: middeninkomen (€38k-€79k) zag besparing -2,86 pp
+ * te laag (echte tarief 37,56%); hoog-inkomen (>€79k) zag -14 pp te laag
+ * (echte tarief 49,5%). Klant zag dus ondergewaardeerde besparing → product
+ * leek minder voordelig dan het is.
+ *
+ * @param {number} inkomen          Belastbaar inkomen Box 1
+ * @param {Object} B                BELASTING-config met IB_SCHIJVEN array
+ * @param {boolean} [isAowGerechtigd]
+ * @return {number} Marginale tarief (0.357, 0.3756, 0.495 voor 2026)
+ */
+function marginaalIbTarief_(inkomen, B, isAowGerechtigd) {
+  const i = parseFloat(inkomen) || 0;
+  const schijven = (isAowGerechtigd && Array.isArray(B.IB_SCHIJVEN_AOW))
+    ? B.IB_SCHIJVEN_AOW
+    : B.IB_SCHIJVEN;
+  if (!Array.isArray(schijven)) {
+    // Legacy fallback
+    return i <= (B.IB_SCHIJF_1_MAX || 38883) ? (B.IB_SCHIJF_1_PCT || 0.357) : (B.IB_SCHIJF_2_PCT || 0.495);
+  }
+  for (const schijf of schijven) {
+    if (i <= schijf.tot) return schijf.pct;
+  }
+  // Boven hoogste schijf-grens → hoogste tarief
+  return schijven[schijven.length - 1].pct;
+}
+
+/**
  * Zvw inkomensafhankelijke bijdrage voor ZZP-ondernemer.
  * Wordt geheven over winst tot maximum bijdrage-inkomen.
  * Voorbeeld 2025: 5,26% × min(winst, €75.864) = max €3.991.
@@ -445,14 +477,27 @@ function _berekenBelastingadviesRaw_(ss) {
   const aftrekken = [];
   let totaalAftrek = 0;
 
-  // Waarschuw als belastingtarieven voor dit jaar nog niet bijgewerkt zijn
-  if (!BELASTING_PER_JAAR[jaar]) {
+  // Waarschuw als belastingtarieven voor dit jaar nog niet (definitief)
+  // bijgewerkt zijn. Twee scenarios:
+  //   A) Geen entry in BELASTING_PER_JAAR voor dit jaar → fallback naar 2026
+  //   B) Wel een entry MAAR -prelim suffix in versie / bevestigd === null
+  //      (bv. 2027-placeholder bij ontbreken Belastingplan 2027)
+  const tariefMeta = BELASTING_META[jaar] || null;
+  const tariefIsPreliminair = !!(tariefMeta && (
+    !tariefMeta.bevestigd ||
+    (tariefMeta.versie && /-prelim/i.test(tariefMeta.versie))
+  ));
+  if (!BELASTING_PER_JAAR[jaar] || tariefIsPreliminair) {
+    const reden = !BELASTING_PER_JAAR[jaar]
+      ? `Voor ${jaar} zijn nog geen tarieven gedefinieerd — er wordt teruggevallen op ${BELASTING.TARIEFSJAAR}.`
+      : `De tarieven voor ${jaar} zijn nog PRELIMINAIR (${tariefMeta && tariefMeta.bron_omschrijving || 'wacht op Belastingplan'}).`;
     adviezen.push({
       type: 'WAARSCHUWING',
-      titel: `⚠️ Belastingtarieven ${jaar} nog niet bijgewerkt`,
-      tekst: `De belastingberekeningen gebruiken de tarieven van ${BELASTING.TARIEFSJAAR}. ` +
-             `Controleer na Prinsjesdag of de zelfstandigenaftrek, MKB-vrijstelling en ` +
-             `schijfgrenzen voor ${jaar} zijn bijgewerkt in Belastingadvies.gs.`,
+      titel: `⚠️ Belastingtarieven ${jaar} ${tariefIsPreliminair ? 'preliminair' : 'nog niet bijgewerkt'}`,
+      tekst: reden +
+             ` Schattingen van zelfstandigenaftrek, MKB-vrijstelling en schijfgrenzen zijn voorlopig. ` +
+             `Officiële cijfers volgen na Prinsjesdag (3e dinsdag september). ` +
+             `Boekhoudbaar wordt dan automatisch bijgewerkt.`,
       besparing: 0,
     });
   }
@@ -510,7 +555,7 @@ function _berekenBelastingadviesRaw_(ss) {
       titel: '✅ Zelfstandigenaftrek: ' + formatBedrag_(aftrek),
       tekst: `Als ZZP-er met ≥1.225 werkuren mag u €${BELASTING.ZELFSTANDIGENAFTREK.toLocaleString('nl-NL')} aftrekken van uw winst. ` +
              `Houd uw uren bij om dit te onderbouwen (bijv. in een urenregistratie).`,
-      besparing: rondBedrag_(aftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(aftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   }
 
@@ -540,7 +585,7 @@ function _berekenBelastingadviesRaw_(ss) {
         titel: '✅ Startersaftrek: ' + formatBedrag_(aftrek),
         tekst: `U bent nog geen ${jaar - startjaar + 1} jaar ondernemer. De startersaftrek van €${BELASTING.STARTERSAFTREK.toLocaleString('nl-NL')} ` +
                `bovenop de zelfstandigenaftrek is van toepassing.`,
-        besparing: rondBedrag_(aftrek * BELASTING.IB_SCHIJF_1_PCT),
+        besparing: rondBedrag_(aftrek * marginaalIbTarief_(winst, BELASTING)),
       });
     }
   }
@@ -560,7 +605,7 @@ function _berekenBelastingadviesRaw_(ss) {
       titel: '✅ MKB-winstvrijstelling: ' + formatBedrag_(mkbAftrek),
       tekst: `${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
              `Dit wordt automatisch meegenomen in uw aangifte.`,
-      besparing: rondBedrag_(mkbAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(mkbAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
     totaalAftrek += mkbAftrek;
   }
@@ -602,7 +647,7 @@ function _berekenBelastingadviesRaw_(ss) {
       titel: '✅ KIA Investeringsaftrek: ' + formatBedrag_(kiaAftrek),
       tekst: `U heeft ${formatBedrag_(investeringen)} geïnvesteerd → ${kiaToelichting}. ` +
              `Zorg dat investeringen ≥ €450 zijn en voor bedrijfsmatig gebruik.`,
-      besparing: rondBedrag_(kiaAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(kiaAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   } else if (investeringen > 0 && investeringen < BELASTING.KIA_MIN) {
     adviezen.push({
@@ -648,7 +693,7 @@ function _berekenBelastingadviesRaw_(ss) {
              `${Math.round((BELASTING.EIA_PCT || 0.40) * 100)}% extra aftrek = ${formatBedrag_(eiaAftrek)}. ` +
              `Voorwaarde: bedrijfsmiddel staat op RVO Energielijst + aanmelden binnen 3 maanden na opdracht via rvo.nl. ` +
              `EIA is naast KIA mogelijk (geen dubbel-aftrek-verbod, maar wel anti-cumulatie met MIA).`,
-      besparing: rondBedrag_(eiaAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(eiaAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   }
 
@@ -674,7 +719,7 @@ function _berekenBelastingadviesRaw_(ss) {
              `De WBSO geeft een vaste aftrek van ${formatBedrag_(BELASTING.WBSO_AFTREK || 15979)}` +
              (isStarter ? ` + ${formatBedrag_(BELASTING.WBSO_STARTERSBONUS || 7996)} starterbonus (eerste 5 jaar)` : '') +
              `. Vraag de S&O-verklaring aan via rvo.nl (minimaal 1 maand vóór projectstart).`,
-      besparing: rondBedrag_(wbsoAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(wbsoAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   }
 
@@ -705,7 +750,7 @@ function _berekenBelastingadviesRaw_(ss) {
              `als "uitgaven voor inkomensvoorzieningen" — mits uw AOV een periodieke ` +
              `uitkering biedt (geen lump sum). Aangeven bij IB-aangifte. Netto ` +
              `voordeel: 35-49,5% afhankelijk van uw schijf.`,
-      besparing: rondBedrag_(aovBetaald * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(aovBetaald * marginaalIbTarief_(winst, BELASTING)),
     });
   } else if (isZzp && winst > 5000 && !heeftAov) {
     adviezen.push({
@@ -741,7 +786,7 @@ function _berekenBelastingadviesRaw_(ss) {
              `U heeft recht op de stakingsaftrek van €${stakingsaftrek.toLocaleString('nl-NL')} ` +
              `(eenmalig per leven). Daarnaast: stakingslijfrente — extra premieaftrek voor ` +
              `pensioenopbouw bij staking. Bespreek met uw accountant.`,
-      besparing: rondBedrag_(stakingsaftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(stakingsaftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   }
 
@@ -838,7 +883,7 @@ function _berekenBelastingadviesRaw_(ss) {
       titel: '✅ MIA – Milieu-investeringsaftrek: ' + formatBedrag_(miaAftrek),
       tekst: `${formatBedrag_(milieu)} aan milieu-investeringen gedetecteerd. MIA geeft 45,5% extra aftrek: ${formatBedrag_(miaAftrek)}. ` +
              `Investeringen moeten op de RVO-milieulijst staan én vóór aanschaf gemeld bij RVO. Combineerbaar met KIA.`,
-      besparing: rondBedrag_(miaAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(miaAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   } else if (milieu === 0) {
     adviezen.push({
@@ -867,7 +912,7 @@ function _berekenBelastingadviesRaw_(ss) {
       titel: '✅ Thuiswerkaftrek: ' + formatBedrag_(thuiswerkAftrek),
       tekst: `Op basis van ${thuiswerkDagen} thuiswerkdagen à €${BELASTING.THUISWERK_PER_DAG}/dag: ${formatBedrag_(thuiswerkAftrek)}. ` +
              `Pas het aantal dagen aan via Instellingen → "Thuiswerk dagen per jaar".`,
-      besparing: rondBedrag_(thuiswerkAftrek * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(thuiswerkAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   } else {
     adviezen.push({
@@ -1023,13 +1068,26 @@ function genereerBelastingadvies() {
 
   // Koptekst
   sheet.getRange(1, 1, 1, 3).merge()
-    .setValue('BELASTINGADVIES & AFTREKPOSTEN – ' + jaar)
+    .setValue('FISCAAL OVERZICHT & AFTREKPOSTEN – ' + jaar)
     .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
     .setFontWeight('bold').setFontSize(14).setHorizontalAlignment('center');
   sheet.getRange(2, 1, 1, 3).merge()
     .setValue(bedrijf + '  |  Bijgewerkt: ' + formatDatumTijd_(new Date()))
     .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#B8C2D1')
     .setFontSize(10).setHorizontalAlignment('center');
+
+  // Juridische disclaimer + bronnen — VERPLICHT op elke fiscale output.
+  // Voorkomt dat klant Boekhoudbaar als 'fiscaal adviseur' interpreteert
+  // wat een gereguleerde activiteit is (Wet WFR / AFM-regels). Boekhoudbaar
+  // is een tool voor fiscale berekeningen op basis van publieke bronnen,
+  // geen erkende belastingadviseur.
+  sheet.getRange(3, 1, 1, 3).merge()
+    .setValue('ℹ️ Informatieve berekeningen op basis van Belastingdienst.nl — geen formeel belastingadvies. ' +
+              'Raadpleeg bij twijfel een gekwalificeerde belastingadviseur of accountant.')
+    .setBackground('#FFF8E1').setFontColor('#5A3F00')
+    .setFontSize(10).setFontStyle('italic').setHorizontalAlignment('center')
+    .setWrap(true);
+  sheet.setRowHeight(3, 30);
 
   // Empty-state: nog geen omzet → tonen wat te doen, geen "lege" rijen advies.
   // Detectie via winstVoorAftrek + omzet — als beide 0 is er nog niets te
@@ -1046,12 +1104,13 @@ function genereerBelastingadvies() {
     sheet.setRowHeight(4, 38);
     sheet.getRange(5, 1, 1, 3).merge()
       .setValue('Voer eerst een paar facturen of kostenposten in via Boekhouding → "Nieuwe boeking". ' +
-        'Zodra er omzet of kosten staan, krijg je hier persoonlijk belastingadvies met:\n\n' +
-        '• Geschatte IB + Zvw voor dit jaar\n' +
-        '• Aftrekposten waar je recht op hebt (KIA, MIA, EIA)\n' +
+        'Zodra er omzet of kosten staan, krijg je hier een persoonlijke fiscale signalering met:\n\n' +
+        '• Geschatte IB + Zvw voor dit jaar (informatief)\n' +
+        '• Aftrekposten waar je mogelijk recht op hebt (KIA, MIA, EIA)\n' +
         '• Reiskosten, lijfrente-jaarruimte, BTW-spaarpot\n' +
-        '• Tips op basis van je boekjaar\n\n' +
-        'Je kunt ook eerst je fiscaal profiel invullen: Boekhouding → "Vul je profiel in voor persoonlijk advies".')
+        '• Signaleringen op basis van je boekjaar\n\n' +
+        'Je kunt ook eerst je fiscaal profiel invullen: Boekhouding → "Vul je profiel in voor persoonlijke berekening".\n\n' +
+        '⚠️ Boekhoudbaar geeft informatieve berekeningen, geen formeel belastingadvies. Bron: Belastingdienst.nl.')
       .setBackground('#FFFFFF').setFontColor('#5F6B7A')
       .setFontSize(11).setWrap(true)
       .setHorizontalAlignment('left').setVerticalAlignment('top');
@@ -1117,7 +1176,7 @@ function genereerBelastingadvies() {
   });
   if (ontbrekend.length > 0) {
     sheet.getRange(rij, 1, 1, 3).merge()
-      .setValue('📋 Vul uw fiscaal profiel in voor persoonlijk advies (60 sec) — ' +
+      .setValue('📋 Vul uw fiscaal profiel in voor persoonlijke berekening (60 sec) — ' +
                 ontbrekend.length + ' velden ontbreken: ' + ontbrekend.join(', '))
       .setBackground('#FFF8E1').setFontColor('#5A3F00')
       .setFontWeight('bold').setFontSize(11).setWrap(true);
@@ -1252,16 +1311,43 @@ function genereerBelastingadvies() {
   sheet.setColumnWidth(1, 220);
   sheet.setColumnWidth(2, 140);
   sheet.setColumnWidth(3, 350);
-  sheet.setFrozenRows(2);
+  sheet.setFrozenRows(3);
+
+  // ── BRONNEN-VOETNOOT — verplicht voor compliance ──────────────────────
+  // Toont aan klant + auditeur welke publieke bronnen gebruikt zijn voor
+  // tarieven en regels. Compliance-grond bij eventuele juridische vragen.
+  rij += 2;
+  sheet.getRange(rij, 1, 1, 3).merge()
+    .setValue('📚 Bronnen & disclaimer')
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
+    .setFontWeight('bold').setFontSize(12);
+  rij++;
+  const bronnenTekst =
+    'Tarieven, regels en grenzen voor ' + jaar + ' zijn gebaseerd op publieke bronnen:\n\n' +
+    '• Belastingdienst.nl — IB-tarieven, schijven, heffingskorting, ZVW, KOR, BTW: belastingdienst.nl\n' +
+    '• Overheid.nl — Wet IB 2001, Wet OB 1968, AWR: wetten.overheid.nl\n' +
+    '• KvK.nl — Ondernemersregelingen, MKB-vrijstelling, KIA/MIA/EIA: kvk.nl\n' +
+    '• Belastingplan ' + jaar + ' (Prinsjesdag-stukken)\n\n' +
+    'DISCLAIMER: Boekhoudbaar geeft informatieve berekeningen, signaleringen en schattingen. ' +
+    'Boekhoudbaar is geen registeraccountant of belastingadviseur in de zin van Wet WFR / NBA-regelgeving. ' +
+    'Raadpleeg bij twijfel of voor definitieve fiscale beslissingen een gekwalificeerde belastingadviseur, ' +
+    'accountant of fiscaal jurist. Aansprakelijkheid is beperkt zoals beschreven in de gebruiksvoorwaarden.';
+  sheet.getRange(rij, 1, 1, 3).merge()
+    .setValue(bronnenTekst)
+    .setBackground('#F7F9FC').setFontColor('#5F6B7A')
+    .setFontSize(10).setWrap(true)
+    .setHorizontalAlignment('left').setVerticalAlignment('top');
+  sheet.setRowHeight(rij, 180);
 
   ss.setActiveSheet(sheet);
 
   const ibPct1 = getBelasting_().IB_SCHIJF_1_PCT;
   const totaalBesparing = advies.aftrekken.reduce((s, a) => s + rondBedrag_(a.bedrag * ibPct1), 0);
   SpreadsheetApp.getUi().alert(
-    'Belastingadvies bijgewerkt',
-    `${advies.adviezen.length + prive.length} adviezen / ${advies.aftrekken.length} aftrekposten gevonden.\n\n` +
-    `Geschatte belastingbesparing via zakelijke aftrekken: ${formatBedrag_(totaalBesparing)}`,
+    'Fiscaal overzicht bijgewerkt',
+    `${advies.adviezen.length + prive.length} signaleringen / ${advies.aftrekken.length} aftrekposten gevonden.\n\n` +
+    `Geschatte belastingbesparing via zakelijke aftrekken: ${formatBedrag_(totaalBesparing)}\n\n` +
+    `ℹ️ Informatief — geen formeel belastingadvies. Bron: Belastingdienst.nl. Zie voetnoot in tabblad voor details.`,
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
@@ -1337,7 +1423,7 @@ function berekenPriveBelastingvoordelen_(winst) {
              `lijfrente en dit aftrekken van uw IB: maximaal ${formatBedrag_(lijfrenteMax)} dit jaar. ` +
              `Sluit een bancaire lijfrente of lijfrenteverzekering af. Vervangt deels de FOR. ` +
              `Vraag uw bank of verzekeraar om de jaarnota voor uw aangifte.`,
-      besparing: rondBedrag_(lijfrenteMax * BELASTING.IB_SCHIJF_1_PCT),
+      besparing: rondBedrag_(lijfrenteMax * marginaalIbTarief_(winst, BELASTING)),
     });
   }
 

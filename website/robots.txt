@@ -1,4 +1,27 @@
+# Boekhoudbaar — robots.txt
+# Toegestaan: alle zoekmachines mogen alle pagina's indexeren
+
 User-agent: *
 Allow: /
 
+# Disallow duplicates en niet-relevante paths
+Disallow: /404.html
+
+# AI-crawlers expliciet toestaan voor zichtbaarheid in ChatGPT, Claude, Perplexity
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+# Sitemap
 Sitemap: https://www.boekhoudbaar.nl/sitemap.xml

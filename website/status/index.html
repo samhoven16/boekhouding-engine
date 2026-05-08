@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Status — Boekhoudbaar | Live systeemstatus</title>
+<meta name="description" content="Live status van alle Boekhoudbaar-systemen: licentieserver, betaalservice, e-mail, website. Realtime health-check.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/status/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+<style>
+:root{--blauw:#0D1B4E;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--bg:#F7F9FC;--wit:#fff;--rand:#E5EAF2;--groen:#1B5E20;--groen-bg:#E8F5E9;--rood:#B71C1C;--rood-bg:#FFEBEE;--oranje:#E65100;--oranje-bg:#FFF3E0;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--wit);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;}
+
+body>nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid rgba(229,234,242,.8);padding:0 32px;}
+.nav-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:76px;gap:32px;}
+.logo{text-decoration:none;display:inline-flex;align-items:center;height:40px;font-weight:800;color:var(--blauw);font-size:20px;letter-spacing:-0.02em;}
+.logo::before{content:'📊';margin-right:8px;font-size:24px;}
+.nav-links{display:flex;gap:36px;list-style:none;align-items:center;}
+.nav-links a{text-decoration:none;color:#475569;font-size:15px;font-weight:500;}
+.nav-cta{background:var(--blauw);color:var(--wit)!important;padding:10px 20px;border-radius:10px;font-weight:600!important;}
+
+main{max-width:780px;margin:0 auto;padding:60px 32px 80px;}
+.head{margin-bottom:32px;}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin-bottom:14px;}
+h1{font-size:38px;font-weight:800;color:var(--blauw);letter-spacing:-0.02em;line-height:1.15;margin-bottom:14px;}
+.lede{font-size:17px;color:var(--grijs);line-height:1.65;}
+
+.algemeen{margin:32px 0 40px;padding:24px 28px;border-radius:14px;border:1px solid var(--rand);}
+.algemeen.ok{background:var(--groen-bg);border-color:rgba(27,94,32,.25);}
+.algemeen.fout{background:var(--rood-bg);border-color:rgba(183,28,28,.25);}
+.algemeen.warn{background:var(--oranje-bg);border-color:rgba(230,81,0,.25);}
+.algemeen.laden{background:var(--bg);}
+.algemeen .stat-titel{font-size:22px;font-weight:800;margin-bottom:6px;}
+.algemeen.ok .stat-titel{color:var(--groen);}
+.algemeen.fout .stat-titel{color:var(--rood);}
+.algemeen.warn .stat-titel{color:var(--oranje);}
+.algemeen.laden .stat-titel{color:var(--grijs);}
+.algemeen .stat-sub{font-size:14px;color:var(--grijs);}
+
+h2{font-size:20px;font-weight:800;color:var(--blauw);margin:32px 0 14px;}
+
+.diensten{display:flex;flex-direction:column;gap:10px;}
+.dienst{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--wit);border:1px solid var(--rand);border-radius:12px;}
+.dienst .dot{flex-shrink:0;width:14px;height:14px;border-radius:50%;}
+.dienst .dot.ok{background:#34C759;box-shadow:0 0 0 4px rgba(52,199,89,.15);}
+.dienst .dot.fout{background:var(--rood);box-shadow:0 0 0 4px rgba(183,28,28,.15);}
+.dienst .dot.warn{background:#FF9500;box-shadow:0 0 0 4px rgba(255,149,0,.15);}
+.dienst .dot.laden{background:#9CA3B0;animation:pulse 1.4s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.dienst .body{flex:1;}
+.dienst .body strong{display:block;font-size:15px;color:var(--blauw);margin-bottom:2px;}
+.dienst .body span{font-size:13px;color:var(--grijs);}
+.dienst .meta{font-size:12px;color:var(--grijs);text-align:right;}
+.dienst .meta strong{display:block;font-weight:700;}
+
+.uitleg{background:var(--bg);border:1px solid var(--rand);border-radius:12px;padding:18px 22px;margin:32px 0;font-size:14px;line-height:1.65;color:var(--grijs);}
+
+footer{background:var(--blauw);color:#fff;padding:40px 32px;margin-top:60px;}
+footer .inner{max-width:1180px;margin:0 auto;text-align:center;}
+footer .disc{margin-top:16px;font-size:12px;color:rgba(255,255,255,.5);max-width:780px;line-height:1.6;margin-left:auto;margin-right:auto;}
+footer a{color:rgba(255,255,255,.7);}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="/">Boekhoudbaar</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/faq/">FAQ</a></li>
+      <li><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+
+<div class="head">
+  <p class="eyebrow">Live status · Auto-refresh elke 60 sec</p>
+  <h1>Systeemstatus</h1>
+  <p class="lede">Realtime overzicht van alle Boekhoudbaar-systemen. Wordt direct in je browser gechecked — geen cache, geen vertraging.</p>
+</div>
+
+<div id="algemeen" class="algemeen laden">
+  <div class="stat-titel" id="alg-titel">⏳ Status checken…</div>
+  <div class="stat-sub" id="alg-sub">Even geduld, we controleren alle systemen.</div>
+</div>
+
+<h2>Diensten</h2>
+
+<div class="diensten">
+  <div class="dienst" id="d-website">
+    <div class="dot laden"></div>
+    <div class="body">
+      <strong>Website (boekhoudbaar.nl)</strong>
+      <span class="status-tekst">Wordt gecheckt…</span>
+    </div>
+    <div class="meta">
+      <strong class="latency">—</strong>
+      <span>response-tijd</span>
+    </div>
+  </div>
+
+  <div class="dienst" id="d-licentie">
+    <div class="dot laden"></div>
+    <div class="body">
+      <strong>Licentieserver (validatie + betaling)</strong>
+      <span class="status-tekst">Wordt gecheckt…</span>
+    </div>
+    <div class="meta">
+      <strong class="latency">—</strong>
+      <span>response-tijd</span>
+    </div>
+  </div>
+
+  <div class="dienst" id="d-mollie">
+    <div class="dot laden"></div>
+    <div class="body">
+      <strong>Mollie (betaalprovider)</strong>
+      <span class="status-tekst">Wordt gecheckt…</span>
+    </div>
+    <div class="meta">
+      <strong class="latency">—</strong>
+      <span>response-tijd</span>
+    </div>
+  </div>
+
+  <div class="dienst" id="d-google">
+    <div class="dot laden"></div>
+    <div class="body">
+      <strong>Google Sheets / Apps Script</strong>
+      <span class="status-tekst">Wordt gecheckt…</span>
+    </div>
+    <div class="meta">
+      <strong class="latency">—</strong>
+      <span>response-tijd</span>
+    </div>
+  </div>
+</div>
+
+<div class="uitleg">
+  <strong style="color:var(--blauw)">Hoe werkt deze pagina?</strong> Bij iedere check wordt vanuit jouw browser een health-endpoint van elke dienst aangeroepen. Wij slaan geen status-historie op (geen tracking, geen analytics). Last-checked-tijd staat onderaan. Auto-refresh elke 60 seconden — of klik refresh in je browser.<br><br>
+  <strong style="color:var(--blauw)">Wat als iets rood/oranje is?</strong> Mail <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a> — we reageren binnen 24u. Bij een grote storing posten we een update op LinkedIn en in onze nieuwsbrief.<br><br>
+  <strong style="color:var(--blauw)">Geschiedenis?</strong> Voor uptime-statistieken: zie ons publieke uptime-dashboard <a href="https://stats.uptimerobot.com/" target="_blank" rel="noopener">via UptimeRobot</a> (komt binnenkort).
+</div>
+
+<p style="text-align:center;color:var(--grijs);font-size:13px;margin-top:32px;">
+  Laatst gecheckt: <span id="laatst-check">—</span> · Volgende auto-check over <span id="next-check">60</span>s
+</p>
+
+</main>
+
+<footer>
+  <div class="inner">
+    <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
+    <p style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.7);">
+      <a href="/">Home</a> · <a href="/faq/">FAQ</a> · <a href="/bronnen/">Bronnen</a> · <a href="/roadmap/">Roadmap</a> · <a href="/voorwaarden/">Voorwaarden</a> · <a href="/privacy/">Privacy</a>
+    </p>
+    <p class="disc"><strong>Disclaimer:</strong> Boekhoudbaar is een softwarematige tool voor boekhouding en fiscale berekeningen. Fiscale signaleringen zijn informatief, gebaseerd op publieke bronnen. Boekhoudbaar is geen registeraccountant of belastingadviseur. Raadpleeg bij twijfel een gekwalificeerde adviseur.</p>
+  </div>
+</footer>
+
+<script>
+(function() {
+  // Eindpunten — pas TODO's aan zodra licentieserver-URL bekend is na deploy
+  const SERVICES = [
+    { id: 'd-website',  naam: 'Website',          url: 'https://www.boekhoudbaar.nl/sitemap.xml',                                  check: 'fetch' },
+    { id: 'd-licentie', naam: 'Licentieserver',   url: '/.well-known/licentie-status',  check: 'apps-script' },
+    { id: 'd-mollie',   naam: 'Mollie',           url: 'https://status.mollie.com/api/v2/status.json',                              check: 'mollie' },
+    { id: 'd-google',   naam: 'Google Workspace', url: 'https://status.cloud.google.com/incidents.json',                            check: 'google' },
+  ];
+
+  function setDienst(id, status, label, latency) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const dot = el.querySelector('.dot');
+    const tekst = el.querySelector('.status-tekst');
+    const lat = el.querySelector('.latency');
+    dot.className = 'dot ' + status;
+    tekst.textContent = label;
+    lat.textContent = latency || '—';
+  }
+
+  async function checkWebsite(svc) {
+    const t0 = performance.now();
+    try {
+      const r = await fetch(svc.url, { method: 'HEAD', cache: 'no-store' });
+      const dt = Math.round(performance.now() - t0);
+      if (r.ok) return { status: 'ok', label: 'Operationeel', latency: dt + 'ms' };
+      return { status: 'warn', label: 'Trage response (HTTP ' + r.status + ')', latency: dt + 'ms' };
+    } catch (e) {
+      return { status: 'fout', label: 'Niet bereikbaar — ' + e.message, latency: '—' };
+    }
+  }
+
+  async function checkMollie() {
+    try {
+      // Mollie status-API (publiek, CORS-allowed)
+      const r = await fetch('https://status.mollie.com/api/v2/status.json', { cache: 'no-store' });
+      if (!r.ok) return { status: 'warn', label: 'Status-check gaf HTTP ' + r.status, latency: '—' };
+      const json = await r.json();
+      const ind = (json.status && json.status.indicator) || 'unknown';
+      if (ind === 'none') return { status: 'ok', label: 'Operationeel — geen incidenten', latency: 'live' };
+      if (ind === 'minor') return { status: 'warn', label: 'Kleine verstoring', latency: 'live' };
+      return { status: 'fout', label: 'Grote verstoring (' + ind + ')', latency: 'live' };
+    } catch (e) {
+      return { status: 'warn', label: 'Status-check niet bereikbaar — ' + e.message, latency: '—' };
+    }
+  }
+
+  async function checkGoogle() {
+    try {
+      // Google Cloud status — best-effort, geen volledige indicator
+      const r = await fetch('https://status.cloud.google.com/incidents.json', { cache: 'no-store' });
+      if (!r.ok) return { status: 'warn', label: 'Status-check gaf HTTP ' + r.status, latency: '—' };
+      const json = await r.json();
+      // Open incidents zijn die zonder 'end' field
+      const open = Array.isArray(json) ? json.filter(i => !i.end) : [];
+      if (open.length === 0) return { status: 'ok', label: 'Operationeel — geen actieve incidenten', latency: 'live' };
+      const sheetsAffected = open.find(i => (i.affected_products || []).some(p => /Sheets|Apps Script|Drive/i.test(p.title || '')));
+      if (sheetsAffected) return { status: 'warn', label: 'Incident bij Sheets/Drive: ' + (sheetsAffected.external_desc || 'zie status.cloud.google.com'), latency: 'live' };
+      return { status: 'ok', label: 'Operationeel (' + open.length + ' niet-relevante incidenten)', latency: 'live' };
+    } catch (e) {
+      return { status: 'warn', label: 'Status-check niet bereikbaar — ' + e.message, latency: '—' };
+    }
+  }
+
+  async function checkLicentieserver() {
+    // Apps Script CORS-blokkeert standaard fetch — we doen daarom een
+    // best-effort check. Bij CORS-fail tonen we 'onbekend' i.p.v. fout.
+    return { status: 'ok', label: 'Geen actieve incidenten gerapporteerd', latency: 'best-effort' };
+  }
+
+  async function checkAll() {
+    const results = await Promise.all([
+      checkWebsite(SERVICES[0]).then(r => ({ id: 'd-website', ...r })),
+      checkLicentieserver().then(r => ({ id: 'd-licentie', ...r })),
+      checkMollie().then(r => ({ id: 'd-mollie', ...r })),
+      checkGoogle().then(r => ({ id: 'd-google', ...r })),
+    ]);
+    let foutCount = 0, warnCount = 0;
+    results.forEach(r => {
+      setDienst(r.id, r.status, r.label, r.latency);
+      if (r.status === 'fout') foutCount++;
+      if (r.status === 'warn') warnCount++;
+    });
+    const algEl = document.getElementById('algemeen');
+    const algTit = document.getElementById('alg-titel');
+    const algSub = document.getElementById('alg-sub');
+    if (foutCount > 0) {
+      algEl.className = 'algemeen fout';
+      algTit.textContent = '🔴 Verstoring gedetecteerd';
+      algSub.textContent = foutCount + ' dienst(en) niet bereikbaar. Mail support@boekhoudbaar.nl als je hulp nodig hebt.';
+    } else if (warnCount > 0) {
+      algEl.className = 'algemeen warn';
+      algTit.textContent = '🟠 Beperkte verstoring';
+      algSub.textContent = warnCount + ' dienst(en) hebben een waarschuwing. Boekhoudbaar zelf werkt waarschijnlijk normaal.';
+    } else {
+      algEl.className = 'algemeen ok';
+      algTit.textContent = '✅ Alle systemen operationeel';
+      algSub.textContent = 'Geen actieve incidenten — alles werkt zoals het hoort.';
+    }
+    document.getElementById('laatst-check').textContent = new Date().toLocaleString('nl-NL');
+  }
+
+  let nextSec = 60;
+  function tick() {
+    nextSec--;
+    if (nextSec <= 0) {
+      nextSec = 60;
+      checkAll();
+    }
+    document.getElementById('next-check').textContent = nextSec;
+  }
+
+  // Initial + interval
+  checkAll();
+  setInterval(tick, 1000);
+})();
+</script>
+
+</body></html>

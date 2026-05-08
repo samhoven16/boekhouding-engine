@@ -68,27 +68,47 @@ function exporteerAlleData() {
     }
   } catch (e) { fouten.push('XLSX: ' + e.message); }
 
-  // 2. Audit-log JSONL (laatste 90 dagen)
+  // 2. Audit-log JSONL — VOLLEDIG (AWR art. 52: bewaarplicht 7 jaar).
+  // Voorheen 90 dagen → faillissement-curador kon geen 5-jaars audit krijgen.
+  // Nu: ALLE rijen. Splitst per jaar in aparte files als log >50.000 rijen
+  // (Drive file-size limit). Compliance-grond gelegd voor de hele bewaartermijn.
   try {
     const auditSheet = ss.getSheetByName('Audit Log');
     if (auditSheet && auditSheet.getLastRow() > 1) {
       const data = auditSheet.getDataRange().getValues();
       const headers = data[0];
-      const grens = Date.now() - 90 * 86400000;
-      const events = [];
+      const eventsPerJaar = {};   // {2024: [...], 2025: [...], ...}
+      let totaalEvents = 0;
       for (let i = 1; i < data.length; i++) {
-        const tsRow = data[i][0] instanceof Date ? data[i][0].getTime() : 0;
-        if (tsRow < grens) continue;
+        const ts = data[i][0];
+        const jaar = ts instanceof Date ? ts.getFullYear() : 'onbekend';
         const event = {};
         headers.forEach(function(h, idx) {
           event[String(h).toLowerCase().replace(/\s+/g, '_')] = data[i][idx] instanceof Date
             ? data[i][idx].toISOString()
             : data[i][idx];
         });
-        events.push(event);
+        if (!eventsPerJaar[jaar]) eventsPerJaar[jaar] = [];
+        eventsPerJaar[jaar].push(event);
+        totaalEvents++;
       }
-      const jsonl = events.map(function(e) { return JSON.stringify(e); }).join('\n');
-      exportMap.createFile('audit-log-90d.jsonl', jsonl, 'application/x-ndjson');
+      // Eén bestand per jaar — ook makkelijk voor curador/accountant
+      Object.keys(eventsPerJaar).sort().forEach(function(jaar) {
+        const lijst = eventsPerJaar[jaar];
+        const jsonl = lijst.map(function(e) { return JSON.stringify(e); }).join('\n');
+        exportMap.createFile('audit-log-' + jaar + '.jsonl', jsonl, 'application/x-ndjson');
+        aantalBestanden++;
+      });
+      // Index-bestand met overzicht
+      const index = {
+        totaalEvents: totaalEvents,
+        perJaar: Object.keys(eventsPerJaar).reduce(function(acc, j) {
+          acc[j] = eventsPerJaar[j].length; return acc;
+        }, {}),
+        bewaarplicht: 'AWR art. 52 — boekhoudkundige stukken 7 jaar',
+        exportTijdstip: new Date().toISOString(),
+      };
+      exportMap.createFile('audit-log-index.json', JSON.stringify(index, null, 2), 'application/json');
       aantalBestanden++;
     }
   } catch (e) { fouten.push('Audit: ' + e.message); }
@@ -126,18 +146,60 @@ function exporteerAlleData() {
     }
   } catch (e) { fouten.push('Belastingadvies: ' + e.message); }
 
-  // 5. PDF-facturen — link-lijst (PDFs zelf staan al in /Boekhoudbaar/Verkoopfacturen)
+  // 5. PDF-facturen — link-lijst MET resolve-check.
+  // Voorheen alleen URL opgeslagen. Als klant Drive-map verplaatst was URL stil
+  // dood. Nu: extract fileId, probeer file op te halen, marker dood/levend +
+  // verse URL als file nog bestaat. Compliance-grond voor 7-jaars bewaarplicht.
   try {
     const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
     if (vfSheet && vfSheet.getLastRow() > 1) {
       const data = vfSheet.getDataRange().getValues();
       const pdfs = [];
+      let ontbrekend = 0;
       for (let i = 1; i < data.length; i++) {
         const url = String(data[i][19] || '').trim();
-        if (url) pdfs.push({ factuurnummer: String(data[i][1] || ''), datum: data[i][2], pdfUrl: url });
+        if (!url) continue;
+        const factuurnr = String(data[i][1] || '');
+        const fileId = (typeof extractFileId_ === 'function') ? extractFileId_(url) : '';
+        let status = 'onbekend';
+        let verseUrl = url;
+        let bestandsnaam = '';
+        if (fileId) {
+          try {
+            const file = DriveApp.getFileById(fileId);
+            verseUrl = file.getUrl();
+            bestandsnaam = file.getName();
+            status = 'aanwezig';
+          } catch (resolveErr) {
+            status = 'verloren';
+            ontbrekend++;
+          }
+        }
+        pdfs.push({
+          factuurnummer: factuurnr,
+          datum: data[i][2],
+          fileId: fileId,
+          pdfUrl: verseUrl,
+          originelePdfUrl: url,
+          bestandsnaam: bestandsnaam,
+          status: status,
+        });
       }
-      exportMap.createFile('factuur-pdf-index.json', JSON.stringify(pdfs, null, 2), 'application/json');
+      const indexFile = {
+        gegenereerd: new Date().toISOString(),
+        totaalFacturen: pdfs.length,
+        statusOverzicht: {
+          aanwezig: pdfs.filter(function(p){ return p.status === 'aanwezig'; }).length,
+          verloren: ontbrekend,
+        },
+        bewaarplicht: 'AWR art. 52 — 7 jaar. Verloren PDFs moeten opnieuw gegenereerd worden.',
+        pdfs: pdfs,
+      };
+      exportMap.createFile('factuur-pdf-index.json', JSON.stringify(indexFile, null, 2), 'application/json');
       aantalBestanden++;
+      if (ontbrekend > 0) {
+        fouten.push('PDF: ' + ontbrekend + ' factuur-PDF(s) niet meer vindbaar in Drive');
+      }
     }
   } catch (e) { fouten.push('PDF-index: ' + e.message); }
 

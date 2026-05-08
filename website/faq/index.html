@@ -9,7 +9,10 @@
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://www.boekhoudbaar.nl/faq/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
+<link rel="mask-icon" href="/favicon.svg" color="#0D1B4E">
 <link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Boekhoudbaar">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,7 +35,7 @@
   ]},
   {"@type":"FAQPage","mainEntity":[
     {"@type":"Question","name":"Moet ik elk jaar opnieuw betalen?","acceptedAnswer":{"@type":"Answer","text":"Nee. Je betaalt één keer €49 en daarna nooit meer. Geen jaarlijkse licentie, geen verlengingsmail, geen verborgen kosten."}},
-    {"@type":"Question","name":"Wat als het niet werkt voor mij?","acceptedAnswer":{"@type":"Answer","text":"Mail binnen 30 dagen na aankoop op hallo@boekhoudbaar.nl en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening."}},
+    {"@type":"Question","name":"Wat als het niet werkt voor mij?","acceptedAnswer":{"@type":"Answer","text":"Mail binnen 30 dagen na aankoop op support@boekhoudbaar.nl en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening."}},
     {"@type":"Question","name":"Waar staan mijn gegevens precies?","acceptedAnswer":{"@type":"Answer","text":"In één Google Spreadsheet, in jouw eigen Google Drive. Alleen jij — en wie jij expliciet toegang geeft — kan erbij. Ik kan er niet bij, Google gebruikt de inhoud niet voor advertenties."}},
     {"@type":"Question","name":"Kan mijn boekhouder meekijken?","acceptedAnswer":{"@type":"Answer","text":"Ja, gratis. Je klikt op Delen in Google Sheets, typt het mailadres van je boekhouder, en klaar. Geen extra licentie."}},
     {"@type":"Question","name":"Werkt het ook op een Mac of tablet?","acceptedAnswer":{"@type":"Answer","text":"Ja. Boekhoudbaar draait in je browser, dus je kunt het openen op Mac, Windows, Linux, iPad, zelfs je telefoon."}},
@@ -189,7 +192,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
 
   <div class="hero-faq">
     <h1>Veelgestelde vragen</h1>
-    <p>30+ antwoorden over Boekhoudbaar — over prijs, data, BTW, KOR, boekhouder-toegang en meer. Staat je vraag er niet tussen? <a href="mailto:hallo@boekhoudbaar.nl">Mail me</a>, meestal antwoord ik dezelfde dag.</p>
+    <p>30+ antwoorden over Boekhoudbaar — over prijs, data, BTW, KOR, boekhouder-toegang en meer. Staat je vraag er niet tussen? <a href="mailto:info@boekhoudbaar.nl">Mail me</a>, meestal antwoord ik dezelfde dag.</p>
   </div>
 
   <div class="faq-search">
@@ -206,7 +209,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
     <button type="button" class="faq-cat" data-cat="techniek">Techniek</button>
   </div>
 
-  <p class="geen-resultaat" id="geen-resultaat">Geen vragen gevonden. <a href="mailto:hallo@boekhoudbaar.nl">Stel je vraag direct →</a></p>
+  <p class="geen-resultaat" id="geen-resultaat">Geen vragen gevonden. <a href="mailto:info@boekhoudbaar.nl">Stel je vraag direct →</a></p>
 
   <!-- PRIJS -->
   <div class="faq-categorie">
@@ -219,7 +222,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
 
     <details data-cat="prijs">
       <summary>Wat als het niet werkt voor mij?</summary>
-      <p>Mail me binnen <strong>30 dagen</strong> na aankoop op <a href="mailto:hallo@boekhoudbaar.nl">hallo@boekhoudbaar.nl</a> en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening.</p>
+      <p>Mail me binnen <strong>30 dagen</strong> na aankoop op <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a> en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening.</p>
     </details>
 
     <details data-cat="prijs">
@@ -402,6 +405,16 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
   <div class="faq-categorie">
     <h2 class="faq-categorie-titel">Techniek &amp; problemen</h2>
 
+    <details data-cat="techniek" id="gmail">
+      <summary>Heb ik per se een Gmail-adres nodig?</summary>
+      <p><strong>Nee.</strong> Je hebt wél een Google-account nodig (omdat Boekhoudbaar op Google Sheets draait), maar dat Google-account hoeft <strong>geen Gmail</strong> te zijn. Je kunt een gratis Google-account aanmaken met je <strong>bestaande email</strong> — Outlook, iCloud, Proton, KPN, Ziggo, eigen domein, what­ever. Ga naar <a href="https://accounts.google.com/signup" target="_blank" rel="noopener">accounts.google.com/signup</a> → kies <em>"Use my existing email"</em> → vul je adres in → bevestig via verificatiecode in je inbox. Klaar in 2 minuten. Daarna log je in op Boekhoudbaar met dat Google-account.</p>
+    </details>
+
+    <details data-cat="techniek">
+      <summary>Werkt Boekhoudbaar met @outlook.com / @icloud.com / @proton.me / mijn eigen domein?</summary>
+      <p>Ja, alle email-providers werken. Boekhoudbaar zelf maakt geen onderscheid — je betaalt op de website met élk emailadres, krijgt de licentie-mail in elke inbox, en activeert met élk adres. De enige voorwaarde is dat het Google-account waarmee je inlogt op Sheets aan je email gekoppeld is (zie de vorige vraag voor hoe). Tip: als je domein al via Google Workspace draait (`info@bedrijf.nl`), heb je het Google-account al automatisch — gewoon inloggen.</p>
+    </details>
+
     <details data-cat="techniek">
       <summary>Werkt het ook op een Mac of tablet?</summary>
       <p>Ja. Boekhoudbaar draait in je browser, dus je kunt het openen op Mac, Windows, Linux, iPad, zelfs je telefoon. Geen installatie, geen app-store. Openen, inloggen met Google, werken.</p>
@@ -437,7 +450,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
   <div class="page-cta">
     <h2>Nog vragen?</h2>
     <p>Mail me direct — meestal antwoord ik dezelfde dag, persoonlijk.</p>
-    <a href="mailto:hallo@boekhoudbaar.nl" class="btn-koop">Stel je vraag →</a>
+    <a href="mailto:info@boekhoudbaar.nl" class="btn-koop">Stel je vraag →</a>
   </div>
 
   <!-- RELATED -->
@@ -487,7 +500,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
         <li><a href="/over/">Over Sam</a></li>
         <li><a href="/transparantie">Transparantie</a></li>
         <li><a href="/faq/">FAQ</a></li>
-        <li><a href="mailto:hallo@boekhoudbaar.nl">Contact</a></li>
+        <li><a href="mailto:info@boekhoudbaar.nl">Contact</a></li>
         <li><a href="/privacy">Privacybeleid</a></li>
         <li><a href="/voorwaarden">Voorwaarden</a></li>
       </ul>
@@ -495,6 +508,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
   </div>
   <div class="footer-bottom">
     <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
+    <p style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.5);max-width:780px;line-height:1.6"><strong style="color:rgba(255,255,255,.7)">Disclaimer:</strong> Boekhoudbaar is een softwarematige tool voor boekhouding en fiscale berekeningen. Fiscale signaleringen zijn informatief, gebaseerd op publieke bronnen (<a href="https://www.belastingdienst.nl" target="_blank" rel="noopener" style="color:rgba(255,255,255,.7);text-decoration:underline">Belastingdienst.nl</a>, <a href="https://www.overheid.nl" target="_blank" rel="noopener" style="color:rgba(255,255,255,.7);text-decoration:underline">overheid.nl</a>). Boekhoudbaar is geen registeraccountant of belastingadviseur. Raadpleeg bij twijfel een gekwalificeerde adviseur. Aansprakelijkheid: zie <a href="/voorwaarden/" style="color:rgba(255,255,255,.7);text-decoration:underline">voorwaarden</a>.</p>
   </div>
 </footer>
 

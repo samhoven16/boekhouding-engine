@@ -259,7 +259,9 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   // negatieve regels (refund-risk). Negatieve aantal/prijs wordt bovendien gelogd.
   const regels = [];
   const overgeslagenRegels = [];
-  for (let i = 1; i <= 5; i++) {
+  // Loopt 1-20 (was 5). Lege regels worden via skip-check overgeslagen.
+  // Dialog kan tot 20 regels; Google-formulier-pad heeft 5 (vult de rest niet).
+  for (let i = 1; i <= 20; i++) {
     const omschr = String(data[`Regel ${i} – Omschrijving`] || '').trim();
     const ruwAantal = data[`Regel ${i} – Aantal`];
     const ruwPrijs  = data[`Regel ${i} – Prijs per eenheid (excl. BTW)`];
@@ -1291,6 +1293,7 @@ function dagelijkseTaken() {
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   _runTaak_('groottecheck',     function() { controleerSheetGrootte_(ss); });
+  _runTaak_('tabbladenIntact',  function() { controleerEnHerstelTabbladen_(ss); });
   _runTaak_('autoBackup',       function() {
     if (typeof featureAan_ === 'function' && !featureAan_('auto_backup')) return;
     if (typeof maakAutomatischeBackup_ === 'function') maakAutomatischeBackup_();

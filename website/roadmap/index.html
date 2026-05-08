@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Roadmap — Boekhoudbaar | Wat komt eraan?</title>
+<meta name="description" content="Open roadmap: wat is af, waar werken we aan, en wat komt later. Eerlijke planning zonder fake-belofte. ZZP-boekhouding in Google Sheets.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/roadmap/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
+<link rel="mask-icon" href="/favicon.svg" color="#0D1B4E">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Boekhoudbaar">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+<meta property="og:type" content="article">
+<meta property="og:title" content="Roadmap — Boekhoudbaar">
+<meta property="og:description" content="Open roadmap. Wat is klaar, waar werken we aan, wat komt later.">
+<meta property="og:url" content="https://www.boekhoudbaar.nl/roadmap/">
+<meta property="og:image" content="https://www.boekhoudbaar.nl/og-image.svg">
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+  {"@type":"BreadcrumbList","itemListElement":[
+    {"@type":"ListItem","position":1,"name":"Boekhoudbaar","item":"https://www.boekhoudbaar.nl/"},
+    {"@type":"ListItem","position":2,"name":"Roadmap","item":"https://www.boekhoudbaar.nl/roadmap/"}
+  ]}
+]}
+</script>
+
+<style>
+:root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--grijs-licht:#8A95A5;--bg:#F7F9FC;--wit:#fff;--rand:#E5EAF2;--groen:#1B5E20;--oranje:#E65100;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--wit);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;}
+
+body>nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid rgba(229,234,242,.8);padding:0 32px;}
+.nav-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:76px;gap:32px;}
+.logo{text-decoration:none;display:inline-flex;align-items:center;height:40px;font-weight:800;color:var(--blauw);font-size:20px;letter-spacing:-0.02em;}
+.logo::before{content:'📊';margin-right:8px;font-size:24px;}
+.nav-links{display:flex;gap:36px;list-style:none;align-items:center;}
+.nav-links a{text-decoration:none;color:#475569;font-size:15px;font-weight:500;}
+.nav-cta{background:var(--blauw);color:var(--wit)!important;padding:10px 20px;border-radius:10px;font-weight:600!important;}
+
+main{max-width:880px;margin:0 auto;padding:60px 32px 80px;}
+.head{margin-bottom:48px;}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin-bottom:14px;}
+h1{font-size:42px;font-weight:800;color:var(--blauw);letter-spacing:-0.02em;line-height:1.15;margin-bottom:20px;}
+.lede{font-size:19px;color:var(--grijs);line-height:1.65;max-width:680px;}
+
+h2{font-size:26px;font-weight:800;color:var(--blauw);letter-spacing:-0.01em;margin:48px 0 18px;display:flex;align-items:center;gap:12px;}
+h2 .badge{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:20px;}
+h2 .badge.af{background:rgba(27,94,32,.12);color:var(--groen);}
+h2 .badge.bezig{background:rgba(230,81,0,.12);color:var(--oranje);}
+h2 .badge.later{background:var(--bg);color:var(--grijs);border:1px solid var(--rand);}
+
+p{margin-bottom:14px;color:var(--tekst);}
+a{color:var(--blauw);text-decoration:underline;text-underline-offset:3px;}
+a:hover{color:var(--accent);}
+
+.item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--rand);align-items:flex-start;}
+.item:last-child{border-bottom:none;}
+.item .icon{flex-shrink:0;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
+.item.done .icon{background:rgba(27,94,32,.12);color:var(--groen);}
+.item.bezig .icon{background:rgba(230,81,0,.12);color:var(--oranje);}
+.item.toek .icon{background:var(--bg);color:var(--grijs-licht);border:1px solid var(--rand);}
+.item .body strong{display:block;color:var(--blauw);font-size:15px;margin-bottom:3px;}
+.item .body span{color:var(--grijs);font-size:13.5px;line-height:1.6;display:block;}
+.item .meta{font-size:11px;font-weight:600;color:var(--grijs-licht);text-transform:uppercase;letter-spacing:0.5px;}
+
+.intro-box{background:linear-gradient(135deg,#0D1B4E 0%,#1A2A6B 100%);color:#fff;padding:28px 32px;border-radius:14px;margin:32px 0 48px;}
+.intro-box h3{margin:0 0 10px;color:#fff;font-size:18px;font-weight:700;}
+.intro-box p{margin:0;color:rgba(255,255,255,.8);font-size:14px;line-height:1.65;}
+
+.feedback-box{background:var(--bg);border:1px solid var(--rand);border-radius:14px;padding:24px 28px;margin:48px 0;text-align:center;}
+.feedback-box h3{color:var(--blauw);margin-bottom:8px;}
+.feedback-box p{color:var(--grijs);font-size:14px;margin-bottom:14px;}
+.feedback-box a{display:inline-block;background:var(--blauw);color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;}
+.feedback-box a:hover{background:var(--blauw-licht);color:#fff;}
+
+.terug{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--grijs);text-decoration:none;margin-top:48px;}
+
+footer{background:var(--blauw);color:#fff;padding:40px 32px;margin-top:80px;}
+footer .inner{max-width:1180px;margin:0 auto;text-align:center;}
+footer .disc{margin-top:16px;font-size:12px;color:rgba(255,255,255,.5);max-width:780px;line-height:1.6;margin-left:auto;margin-right:auto;}
+footer a{color:rgba(255,255,255,.7);}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="/">Boekhoudbaar</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/functies/">Functies</a></li>
+      <li><a href="/faq/">FAQ</a></li>
+      <li><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+
+<div class="head">
+  <p class="eyebrow">Open roadmap · Eerlijke planning</p>
+  <h1>Wat is af, waar werken we aan, wat komt later</h1>
+  <p class="lede">Geen marketing-belofte van features die er nooit komen. Hier staat eerlijk wat klaar is, waar nu aan gewerkt wordt, en wat op het wensenlijstje staat. Mis je iets? Mail het — dat is hoe deze lijst groeit.</p>
+</div>
+
+<div class="intro-box">
+  <h3>📅 Onze update-frequentie</h3>
+  <p>Boekhoudbaar wordt actief onderhouden. Bug-fixes binnen 1-7 dagen, kleine verbeteringen elke 1-2 weken, grotere features ~1× per maand. Klanten krijgen automatisch alle updates — geen hand­matige acties. Wijzigingen komen mee bij de eerstvolgende sheet-open via het migratie­framework.</p>
+</div>
+
+<h2>✅ Klaar <span class="badge af">In productie · 2026</span></h2>
+
+<div class="item done">
+  <span class="icon">✓</span>
+  <div class="body">
+    <strong>Volledige boekhouding</strong>
+    <span>Facturen, kosten, bonnetjes, declaraties, bankboek, journaalposten, BTW-aangifte, jaarrekening, dashboard.</span>
+  </div>
+</div>
+
+<div class="item done">
+  <span class="icon">✓</span>
+  <div class="body">
+    <strong>Mollie iDEAL betaal-link op factuur</strong>
+    <span>Klant scant of klikt — direct betaald. Eerste 100 transacties gratis bij Mollie.</span>
+  </div>
+</div>
+
+<div class="item done">
+  <span class="icon">✓</span>
+  <div class="body">
+    <strong>AI bonnen-scan via Gemini Vision</strong>
+    <span>Foto van bon → leverancier, datum, bedrag, BTW automatisch ingevuld.</span>
+  </div>
+</div>
+
+<div class="item done">
+  <span class="icon">✓</span>
+  <div class="body">
+    <strong>KvK auto-fill</strong>
+    <span>Bedrijfsnaam, adres, BTW-nummer worden auto-ingevuld op basis van KvK-nummer.</span>
+  </div>
+</div>
+
+<div class="item done">
+  <span class="icon">✓</span>
+  <div class="body">
+    <strong>Persoonlijke fiscale signalering</strong>
+    <span>Heffingskorting, lijfrente-jaarruimte, KIA/MIA/EIA, MKB-vrijstelling. Met bronvermelding.</span>
+  </div>
+</div>
+
+<div class="item done">
+  <span class="icon">✓</span>
+  <div class="body">
+    <strong>Bank-CSV import + auto-match</strong>
+    <span>ING, Bunq, Rabo, ABN — alle Nederlandse banken. Automatische factuurmatching.</span>
+  </div>
+</div>
+
+<div class="item done">
+  <span class="icon">✓</span>
+  <div class="body">
+    <strong>Accountantspakket export</strong>
+    <span>PDF + XLSX + JSONL voor accountant. Werkt met Snelstart, Exact, Twinfield.</span>
+  </div>
+</div>
+
+<div class="item done">
+  <span class="icon">✓</span>
+  <div class="body">
+    <strong>iCal feed BTW-deadlines</strong>
+    <span>Abonneer in Google/Apple/Outlook agenda. Auto-herinneringen 7 + 14 dagen vooraf.</span>
+  </div>
+</div>
+
+<div class="item done">
+  <span class="icon">✓</span>
+  <div class="body">
+    <strong>Mobile responsive dialogs</strong>
+    <span>Werkt op iPad, telefoon, Mac, Windows. Touch-friendly tap-targets.</span>
+  </div>
+</div>
+
+<div class="item done">
+  <span class="icon">✓</span>
+  <div class="body">
+    <strong>Audit-trail 7 jaar (AWR-compliant)</strong>
+    <span>Volledige export per jaar, traceerbaar voor accountant of curator.</span>
+  </div>
+</div>
+
+<h2>🔨 Bezig <span class="badge bezig">Q2-Q3 2026</span></h2>
+
+<div class="item bezig">
+  <span class="icon">●</span>
+  <div class="body">
+    <strong>Stripe checkout naast Mollie</strong>
+    <span>Voor klanten met internationale klanten of die liever creditcard ontvangen.</span>
+    <p class="meta" style="margin-top:6px">Verwacht: zomer 2026</p>
+  </div>
+</div>
+
+<div class="item bezig">
+  <span class="icon">●</span>
+  <div class="body">
+    <strong>Bank-PSD2 koppeling (Tink/Plaid)</strong>
+    <span>Automatisch bankafschrift inlezen i.p.v. handmatige CSV-import. Vereist AISP-licentie.</span>
+    <p class="meta" style="margin-top:6px">Verwacht: najaar 2026 · pricing TBD</p>
+  </div>
+</div>
+
+<div class="item bezig">
+  <span class="icon">●</span>
+  <div class="body">
+    <strong>Drip onboarding-mails verfijnen</strong>
+    <span>Dag 3, 7, 14, 30 - personalisatie op basis van of klant al een factuur heeft gemaakt.</span>
+    <p class="meta" style="margin-top:6px">Verwacht: Q2 2026</p>
+  </div>
+</div>
+
+<h2>💡 Op wensenlijst <span class="badge later">Nog niet gepland</span></h2>
+
+<div class="item toek">
+  <span class="icon">○</span>
+  <div class="body">
+    <strong>SBR / XBRL export</strong>
+    <span>Voor accountants die digitaal willen aanleveren bij Belastingdienst / KvK.</span>
+  </div>
+</div>
+
+<div class="item toek">
+  <span class="icon">○</span>
+  <div class="body">
+    <strong>Multi-currency (EUR + USD + GBP)</strong>
+    <span>Voor ZZP'ers met internationale klanten. Wisselkoers via ECB-feed.</span>
+  </div>
+</div>
+
+<div class="item toek">
+  <span class="icon">○</span>
+  <div class="body">
+    <strong>Multi-country BTW (België, Duitsland)</strong>
+    <span>Voor expat-ZZP'ers. Belgische TVA en Duitse Umsatzsteuer.</span>
+  </div>
+</div>
+
+<div class="item toek">
+  <span class="icon">○</span>
+  <div class="body">
+    <strong>Affiliate / partner programma voor accountants</strong>
+    <span>30% commissie per verwijzing. Voor accountants die Boekhoudbaar aan klanten aanraden.</span>
+  </div>
+</div>
+
+<div class="item toek">
+  <span class="icon">○</span>
+  <div class="body">
+    <strong>Klant-portaal voor je klanten</strong>
+    <span>Aparte web-pagina waar jouw klanten hun openstaande facturen kunnen zien + betalen.</span>
+  </div>
+</div>
+
+<div class="item toek">
+  <span class="icon">○</span>
+  <div class="body">
+    <strong>2FA + anomalie-detectie</strong>
+    <span>Voor klanten die strenger willen beveiligen. TOTP-token + alert bij verdacht gedrag.</span>
+  </div>
+</div>
+
+<div class="item toek">
+  <span class="icon">○</span>
+  <div class="body">
+    <strong>Live demo / sandbox</strong>
+    <span>Try-before-buy demo-spreadsheet met test-data zodat prospects kunnen klikken.</span>
+  </div>
+</div>
+
+<h2>🚫 Bewust niet <span class="badge later">Geen plannen</span></h2>
+
+<p>Eerlijk over wat we <em>niet</em> gaan doen — dat houdt het product scherp:</p>
+
+<div class="item toek">
+  <span class="icon">×</span>
+  <div class="body">
+    <strong>Eigen mobiele app</strong>
+    <span>Google Sheets werkt prima in mobile-browser. Dubbel werk, geen meerwaarde voor de prijs.</span>
+  </div>
+</div>
+
+<div class="item toek">
+  <span class="icon">×</span>
+  <div class="body">
+    <strong>BV / DGA-functionaliteit</strong>
+    <span>Boekhoudbaar focust op solo-ondernemers. Voor BV-structuren raden we Snelstart of e-Boekhouden aan.</span>
+  </div>
+</div>
+
+<div class="item toek">
+  <span class="icon">×</span>
+  <div class="body">
+    <strong>Loonadministratie / personeelszaken</strong>
+    <span>Andere productcategorie. Voor ZZP'ers met personeel: Loket of Nmbrs.</span>
+  </div>
+</div>
+
+<div class="item toek">
+  <span class="icon">×</span>
+  <div class="body">
+    <strong>Abonnement i.p.v. eenmalig €49</strong>
+    <span>Het hele punt is geen abonnement. Eenmalig €49 blijft.</span>
+  </div>
+</div>
+
+<div class="feedback-box">
+  <h3>Mis je iets dat hier niet staat?</h3>
+  <p>Heb je een feature-wens? Een use-case die we niet ondersteunen? Mail me persoonlijk — Sam.</p>
+  <a href="mailto:info@boekhoudbaar.nl?subject=Roadmap%20wens">info@boekhoudbaar.nl</a>
+</div>
+
+<a href="/" class="terug">← Terug naar home</a>
+
+</main>
+
+<footer>
+  <div class="inner">
+    <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
+    <p style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.7);">
+      <a href="/">Home</a> ·
+      <a href="/functies/">Functies</a> ·
+      <a href="/faq/">FAQ</a> ·
+      <a href="/bronnen/">Bronnen</a> ·
+      <a href="/voorwaarden/">Voorwaarden</a> ·
+      <a href="/privacy/">Privacy</a>
+    </p>
+    <p class="disc"><strong>Disclaimer:</strong> Boekhoudbaar is een softwarematige tool voor boekhouding en fiscale berekeningen. Fiscale signaleringen zijn informatief, gebaseerd op publieke bronnen. Boekhoudbaar is geen registeraccountant of belastingadviseur. Raadpleeg bij twijfel een gekwalificeerde adviseur. Aansprakelijkheid: zie <a href="/voorwaarden/">voorwaarden</a>.</p>
+  </div>
+</footer>
+
+</body></html>

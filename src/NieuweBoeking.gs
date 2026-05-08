@@ -147,6 +147,31 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 /* ── KLEIN HULPTEKST ── */
 .tip{background:#FFF8E1;border-left:3px solid #FFC107;padding:7px 10px;
       font-size:11px;border-radius:0 4px 4px 0;margin:6px 0;line-height:1.5}
+
+/* ── MOBILE RESPONSIVENESS ──
+   Sheets-app op telefoon (<480px): voorheen vielen dialogs uit scherm.
+   Nu: full-width, grotere tap-targets (48px min), kleinere fontsizen waar
+   nodig, hide ruimte-vretende elementen op heel kleine schermen. */
+@media (max-width: 640px) {
+  body{padding:14px 12px;font-size:13px}
+  h1,h2{font-size:18px}
+  .container,.tab-content{max-width:100%;padding:0}
+  .tabbar{flex-wrap:wrap;gap:4px}
+  .tabbar button{flex:1 1 45%;min-height:44px;padding:10px 8px;font-size:12px}
+  input,select,textarea{font-size:16px;min-height:44px;padding:10px 12px}
+  /* iOS: input font-size 16px+ voorkomt zoom-on-focus */
+  button{min-height:48px;padding:12px 16px;font-size:14px}
+  .footer{flex-direction:column;gap:8px;align-items:stretch}
+  .footer button{width:100%}
+  table{font-size:12px}
+  table th,table td{padding:6px 4px}
+  /* Verwijder hover-effecten op touch */
+  *:hover{transform:none!important}
+}
+@media (max-width: 380px) {
+  body{padding:10px 8px}
+  .tabbar button{flex:1 1 100%}
+}
 </style>
 </head>
 <body>
@@ -438,7 +463,7 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 /* ── STATE ── */
 var ACTIEF_TAB = 'factuur';
 var REGEL_TELLER = 1;
-var MAX_REGELS = 5;
+var MAX_REGELS = 20;
 var BON_B64 = null;
 var BON_MIME = null;
 var HERKENNER = null;
@@ -648,7 +673,14 @@ function wisselTab(type) {
 
 /* ── FACTUUR: REGELS ── */
 function voegRegelToe() {
-  if(REGEL_TELLER >= MAX_REGELS) return;
+  if(REGEL_TELLER >= MAX_REGELS) {
+    var fs = document.getElementById('footer-status');
+    if (fs) {
+      fs.style.color = '#c62828';
+      fs.textContent = '⚠️ Maximaal ' + MAX_REGELS + ' regels per factuur. Voor meer: maak een tweede factuur of contact support.';
+    }
+    return;
+  }
   REGEL_TELLER++;
   var n = REGEL_TELLER;
   var tr = document.createElement('tr');
@@ -684,14 +716,37 @@ function btwPct(sel){
   return 0;
 }
 
+// EU-formaat parser: "€75", "75,00", "75.00", "1.234,56", "1,234.56" → number.
+// Voorheen alleen parseFloat → "75,00" werd 75 (komma weggegooid) of NaN.
+// NL-klanten typen meestal komma als decimaal — dit is essentieel.
+function parseEU(v) {
+  if (v === null || v === undefined) return 0;
+  var s = String(v).replace(/€/g, '').replace(/\s+/g, '').trim();
+  if (!s) return 0;
+  var hasDot = s.indexOf('.') >= 0;
+  var hasComma = s.indexOf(',') >= 0;
+  if (hasDot && hasComma) {
+    // Beide aanwezig: laatste = decimaal, andere = duizenden
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+      s = s.replace(/\./g, '').replace(',', '.');     // 1.234,56 → 1234.56
+    } else {
+      s = s.replace(/,/g, '');                          // 1,234.56 → 1234.56
+    }
+  } else if (hasComma) {
+    s = s.replace(',', '.');                            // 75,00 → 75.00
+  }
+  var n = parseFloat(s);
+  return isFinite(n) ? n : 0;
+}
+
 function herbereken() {
   try {
     var excl = 0;
     for(var i=1;i<=REGEL_TELLER;i++){
       var omEl = document.getElementById('f-r'+i+'omschr');
       if(!omEl) continue;
-      var a = parseFloat((document.getElementById('f-r'+i+'aantal')||{}).value||0);
-      var p = parseFloat((document.getElementById('f-r'+i+'prijs')||{}).value||0);
+      var a = parseEU((document.getElementById('f-r'+i+'aantal')||{}).value);
+      var p = parseEU((document.getElementById('f-r'+i+'prijs')||{}).value);
       if (!isFinite(a) || a < 0) a = 0;
       if (!isFinite(p) || p < 0) p = 0;
       var tot = Math.round(a*p*100)/100;
@@ -719,7 +774,7 @@ function herbereken() {
 
 /* ── BTW BEREKENING KOSTEN ── */
 function berekenKosten() {
-  var incl = parseFloat(document.getElementById('k-incl').value||0);
+  var incl = parseEU(document.getElementById('k-incl').value);
   var pct  = btwPct('k-btw');
   var excl = pct>0 ? Math.round(incl/(1+pct)*100)/100 : incl;
   document.getElementById('k-excl').value = incl>0 ? fmt(excl) : '';
@@ -727,8 +782,8 @@ function berekenKosten() {
 
 /* ── REALTIME VALIDATIE ── */
 var REGELS = {
-  factuur:    { klant: function(v){return v.trim().length>=2;}, datum: function(v){return /\d{4}-\d{2}-\d{2}/.test(v);}, r1omschr: function(v){return v.trim().length>=2;}, r1prijs: function(v){return parseFloat(v)>0;} },
-  kosten:     { leverancier: function(v){return v.trim().length>=2;}, datum: function(v){return /\d{4}-\d{2}-\d{2}/.test(v);}, omschr: function(v){return v.trim().length>=3;}, bedragIncl: function(v){return parseFloat(v)>0;} },
+  factuur:    { klant: function(v){return v.trim().length>=2;}, datum: function(v){return /\d{4}-\d{2}-\d{2}/.test(v);}, r1omschr: function(v){return v.trim().length>=2;}, r1prijs: function(v){return parseEU(v)>0;} },
+  kosten:     { leverancier: function(v){return v.trim().length>=2;}, datum: function(v){return /\d{4}-\d{2}-\d{2}/.test(v);}, omschr: function(v){return v.trim().length>=3;}, bedragIncl: function(v){return parseEU(v)>0;} },
   declaratie: { omschr: function(v){return v.trim().length>=3;}, datum: function(v){return /\d{4}-\d{2}-\d{2}/.test(v);}, bedrag: function(v){return parseFloat(v)>0;} },
 };
 var BERICHTEN = {
@@ -775,8 +830,15 @@ function bevestig() {
 
   if (type === 'factuur') {
     if (!valideerTab('factuur')) { btn.disabled=false; btn.textContent='\u2705 Opslaan'; return; }
+    // Email validatie \u2014 voorheen werd typo's stilzwijgend doorgestuurd \u2192 bounce
+    var emailRaw = String(val('f-email') || '').trim();
+    if (emailRaw && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailRaw)) {
+      toonStatus('\u26a0\ufe0f E-mail klant lijkt niet correct: "' + emailRaw + '" \u2014 controleer typo of laat leeg.', '#c62828');
+      btn.disabled=false; btn.textContent='\u2705 Opslaan';
+      return;
+    }
     data = {
-      klant: val('f-klant'), datum: val('f-datum'), email: val('f-email'),
+      klant: val('f-klant'), datum: val('f-datum'), email: emailRaw,
       termijn: val('f-termijn'), btw: val('f-btw'), referentie: val('f-ref'),
       notities: val('f-notities'),
       klantAdres: val('f-klantadres'), kvkKlant: val('f-kvk'), btwNrKlant: val('f-btwnr'),
@@ -784,7 +846,7 @@ function bevestig() {
     var ongeldigeExtraRegels = [];
     for(var i=1;i<=REGEL_TELLER;i++){
       var o=val('f-r'+i+'omschr'), p=val('f-r'+i+'prijs'), a=val('f-r'+i+'aantal');
-      var oTrim=(o||'').trim(), pNum=parseFloat(p)||0, aNum=parseFloat(a)||0;
+      var oTrim=(o||'').trim(), pNum=parseEU(p), aNum=parseEU(a);
       if(!oTrim && pNum===0 && aNum===0) continue;
       if(!oTrim){ ongeldigeExtraRegels.push('Regel '+i+': omschrijving ontbreekt'); continue; }
       if(aNum<=0){ ongeldigeExtraRegels.push('Regel '+i+' ('+oTrim+'): aantal moet > 0'); continue; }
@@ -808,7 +870,7 @@ function bevestig() {
     if (!valideerTab('kosten')) { btn.disabled=false; btn.textContent='\u2705 Opslaan'; return; }
     data = {
       leverancier: val('k-leverancier'), datum: val('k-datum'), omschr: val('k-omschr'),
-      categorie: val('k-cat'), bedragIncl: parseFloat(val('k-incl'))||0,
+      categorie: val('k-cat'), bedragIncl: parseEU(val('k-incl')),
       btw: val('k-btw'), factuurnrLev: val('k-factnr'),
     };
 
@@ -816,7 +878,7 @@ function bevestig() {
     if (!valideerTab('declaratie')) { btn.disabled=false; btn.textContent='\u2705 Opslaan'; return; }
     data = {
       omschr: val('d-omschr'), datum: val('d-datum'),
-      bedrag: parseFloat(val('d-bedrag'))||0,
+      bedrag: parseEU(val('d-bedrag')),
       btw: val('d-btw'), betaaldDoor: val('d-door'), toelichting: val('d-toelichting'),
     };
 
@@ -826,7 +888,7 @@ function bevestig() {
     var subType = val('u-type');
     data = {
       leverancier: val('u-leverancier'), datum: val('u-datum'), omschr: val('u-omschr'),
-      categorie: val('u-cat'), bedragIncl: parseFloat(val('u-incl'))||0,
+      categorie: val('u-cat'), bedragIncl: parseEU(val('u-incl')),
       btw: val('u-btw'), bonBase64: BON_B64, bonMime: BON_MIME,
     };
     if (subType === 'declaratie') {
@@ -837,11 +899,26 @@ function bevestig() {
   }
 
   var emailKlantVoorKlaar = (type === 'factuur') ? (data.email || '') : '';
+
+  // \u2500\u2500 Submit-timeout: 60s \u2014 voorkomt eindeloos "Bezig..." als server hangt.
+  // Zonder timeout: klant forceert F5 \u2192 mogelijk dubbele factuur in DB.
+  // Met timeout: klant ziet duidelijke fout, kan opnieuw klikken.
+  var afgehandeld = false;
+  var timeoutId = setTimeout(function() {
+    if (afgehandeld) return;
+    afgehandeld = true;
+    toonStatus('\u26a0\ufe0f Server reageert niet binnen 60s. Verbinding traag? Wacht 30s en probeer opnieuw \u2014 we voorkomen dubbele facturen via factuurnummer-check.', '#c62828');
+    btn.disabled = false;
+    btn.textContent = (ACTIEF_TAB === 'upload') ? '\u2705 Bon opslaan' : '\u2705 Opslaan';
+  }, 60000);
+
   google.script.run
     .withSuccessHandler(function(r) {
+      if (afgehandeld) return; afgehandeld = true; clearTimeout(timeoutId);
       toonKlaar(r, emailKlantVoorKlaar);
     })
     .withFailureHandler(function(e) {
+      if (afgehandeld) return; afgehandeld = true; clearTimeout(timeoutId);
       // Toon de feitelijke foutmelding van de server; val terug op generieke tekst
       var serverMsg = (e && e.message) ? e.message : '';
       var toon = serverMsg.length > 3
@@ -929,6 +1006,10 @@ function stuurFactuurUitKlaar(factuurnummer) {
   var statusEl = document.getElementById('email-status');
   var email = emailEl ? emailEl.value.trim() : '';
   if (!email) { if (statusEl) statusEl.textContent = 'Vul een e-mailadres in.'; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    if (statusEl) statusEl.textContent = '\u26a0\ufe0f E-mail formaat onjuist: "' + email + '"';
+    return;
+  }
   if (statusEl) statusEl.textContent = 'Verzenden\u2026';
   google.script.run
     .withSuccessHandler(function(ok) {

@@ -1,0 +1,193 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Boekhoudbaar//ZZP Deadlines NL//NL
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Boekhoudbaar — ZZP Belastingdeadlines NL
+X-WR-CALDESC:BTW-aangiftes (kwartaal), Inkomstenbelasting jaaraangifte\, en eindjaar-deadlines voor Nederlandse ZZP'ers. Bron: belastingdienst.nl. Onderhouden door boekhoudbaar.nl.
+X-WR-TIMEZONE:Europe/Amsterdam
+X-PUBLISHED-TTL:PT24H
+REFRESH-INTERVAL;VALUE=DURATION:PT24H
+
+BEGIN:VEVENT
+UID:btw-q1-2026@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20260430
+DTEND;VALUE=DATE:20260501
+SUMMARY:📋 BTW-aangifte Q1 2026 deadline
+DESCRIPTION:Aangifte + betaling Q1 2026 (jan-mrt) moet vóór 30 april bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhouding → BTW → BTW-aangifte (kwartaal).
+URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
+CATEGORIES:Belasting,BTW
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:BTW-aangifte Q1 deadline over 7 dagen
+TRIGGER:-P7D
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:BTW-aangifte Q1 deadline morgen
+TRIGGER:-P1D
+END:VALARM
+END:VEVENT
+
+BEGIN:VEVENT
+UID:btw-q2-2026@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20260731
+DTEND;VALUE=DATE:20260801
+SUMMARY:📋 BTW-aangifte Q2 2026 deadline
+DESCRIPTION:Aangifte + betaling Q2 2026 (apr-jun) moet vóór 31 juli bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhouding → BTW → BTW-aangifte (kwartaal).
+URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
+CATEGORIES:Belasting,BTW
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:BTW-aangifte Q2 deadline over 7 dagen
+TRIGGER:-P7D
+END:VALARM
+END:VEVENT
+
+BEGIN:VEVENT
+UID:btw-q3-2026@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20261031
+DTEND;VALUE=DATE:20261101
+SUMMARY:📋 BTW-aangifte Q3 2026 deadline
+DESCRIPTION:Aangifte + betaling Q3 2026 (jul-sep) moet vóór 31 oktober bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhouding → BTW → BTW-aangifte (kwartaal).
+URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
+CATEGORIES:Belasting,BTW
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:BTW-aangifte Q3 deadline over 7 dagen
+TRIGGER:-P7D
+END:VALARM
+END:VEVENT
+
+BEGIN:VEVENT
+UID:btw-q4-2026@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20270131
+DTEND;VALUE=DATE:20270201
+SUMMARY:📋 BTW-aangifte Q4 2026 deadline
+DESCRIPTION:Aangifte + betaling Q4 2026 (okt-dec) moet vóór 31 januari 2027 bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhouding → BTW → BTW-aangifte (kwartaal).
+URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
+CATEGORIES:Belasting,BTW
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:BTW-aangifte Q4 deadline over 7 dagen
+TRIGGER:-P7D
+END:VALARM
+END:VEVENT
+
+BEGIN:VEVENT
+UID:ib-aangifte-2025@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20260501
+DTEND;VALUE=DATE:20260502
+SUMMARY:📊 IB-aangifte 2025 deadline (zonder uitstel)
+DESCRIPTION:Inkomstenbelasting + ZVW-aangifte 2025 moet vóór 1 mei 2026 bij de Belastingdienst zijn — TENZIJ je vóór 1 mei uitstel hebt aangevraagd (max 1 september).\n\nIn Boekhoudbaar: Boekhouding → Belastingadvies voor schatting van te betalen IB.
+URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
+CATEGORIES:Belasting,IB
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:IB-aangifte 2025 deadline over 14 dagen
+TRIGGER:-P14D
+END:VALARM
+END:VEVENT
+
+BEGIN:VEVENT
+UID:jaarafsluiting-2026@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20261231
+DTEND;VALUE=DATE:20270101
+SUMMARY:🎄 Jaarafsluiting 2026 — boekhouding klaarmaken
+DESCRIPTION:Eind boekjaar. Tijd om: 1) laatste facturen ingediend\, 2) bankafschrift ingelezen tot 31 dec\, 3) jaarafsluiting uitvoeren in Boekhoudbaar (Boekhouding → Instellingen → Sluit jaar af). Dit archiveert 2026 + zet factuurnummering klaar voor 2027.
+URL:https://www.boekhoudbaar.nl/gids/
+CATEGORIES:Boekhouding
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Jaarafsluiting 2026 over 14 dagen
+TRIGGER:-P14D
+END:VALARM
+END:VEVENT
+
+BEGIN:VEVENT
+UID:btw-q1-2027@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20270430
+DTEND;VALUE=DATE:20270501
+SUMMARY:📋 BTW-aangifte Q1 2027 deadline
+DESCRIPTION:Aangifte + betaling Q1 2027 (jan-mrt) moet vóór 30 april 2027 bij de Belastingdienst zijn.
+URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
+CATEGORIES:Belasting,BTW
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:BTW-aangifte Q1 2027 deadline over 7 dagen
+TRIGGER:-P7D
+END:VALARM
+END:VEVENT
+
+BEGIN:VEVENT
+UID:btw-q2-2027@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20270731
+DTEND;VALUE=DATE:20270801
+SUMMARY:📋 BTW-aangifte Q2 2027 deadline
+DESCRIPTION:Aangifte + betaling Q2 2027 (apr-jun) moet vóór 31 juli 2027 bij de Belastingdienst zijn.
+URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
+CATEGORIES:Belasting,BTW
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:BTW-aangifte Q2 2027 deadline over 7 dagen
+TRIGGER:-P7D
+END:VALARM
+END:VEVENT
+
+BEGIN:VEVENT
+UID:btw-q3-2027@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20271031
+DTEND;VALUE=DATE:20271101
+SUMMARY:📋 BTW-aangifte Q3 2027 deadline
+DESCRIPTION:Aangifte + betaling Q3 2027 (jul-sep) moet vóór 31 oktober 2027 bij de Belastingdienst zijn.
+URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
+CATEGORIES:Belasting,BTW
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:BTW-aangifte Q3 2027 deadline over 7 dagen
+TRIGGER:-P7D
+END:VALARM
+END:VEVENT
+
+BEGIN:VEVENT
+UID:btw-q4-2027@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20280131
+DTEND;VALUE=DATE:20280201
+SUMMARY:📋 BTW-aangifte Q4 2027 deadline
+DESCRIPTION:Aangifte + betaling Q4 2027 (okt-dec) moet vóór 31 januari 2028 bij de Belastingdienst zijn.
+URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
+CATEGORIES:Belasting,BTW
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:BTW-aangifte Q4 2027 deadline over 7 dagen
+TRIGGER:-P7D
+END:VALARM
+END:VEVENT
+
+BEGIN:VEVENT
+UID:ib-aangifte-2026@boekhoudbaar.nl
+DTSTAMP:20260507T000000Z
+DTSTART;VALUE=DATE:20270501
+DTEND;VALUE=DATE:20270502
+SUMMARY:📊 IB-aangifte 2026 deadline (zonder uitstel)
+DESCRIPTION:Inkomstenbelasting + ZVW-aangifte 2026 moet vóór 1 mei 2027 bij de Belastingdienst zijn — TENZIJ je vóór 1 mei uitstel hebt aangevraagd (max 1 september).
+URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
+CATEGORIES:Belasting,IB
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:IB-aangifte 2026 deadline over 14 dagen
+TRIGGER:-P14D
+END:VALARM
+END:VEVENT
+
+END:VCALENDAR
