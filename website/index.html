@@ -1783,6 +1783,98 @@
   </div>
 </section>
 
+<!-- ── BESPARINGSCALCULATOR ── -->
+<section id="calculator" style="background:#F7F9FC;padding:60px 32px;border-top:1px solid #E5EAF2;border-bottom:1px solid #E5EAF2">
+  <div class="container" style="max-width:780px;text-align:center">
+    <p class="section-label">Reken zelf uit</p>
+    <h2>Wat bespaar je over 5 jaar?</h2>
+    <p class="sub-tekst" style="margin-bottom:32px">Vergelijk Boekhoudbaar (eenmalig €49) met een gemiddeld boekhoud-abonnement.</p>
+
+    <div style="background:#fff;border:1px solid #E5EAF2;border-radius:14px;padding:32px;text-align:left;box-shadow:0 1px 3px rgba(13,27,78,.04)">
+      <div style="display:grid;grid-template-columns:1fr;gap:18px">
+        <label style="display:block">
+          <span style="font-size:13px;font-weight:600;color:#0D1B4E;display:block;margin-bottom:6px">Maandprijs van je huidige boekhoudtool</span>
+          <div style="position:relative">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#5F6B7A;font-weight:600">€</span>
+            <input id="calc-prijs" type="number" min="0" step="0.01" value="25" inputmode="decimal" style="width:100%;padding:12px 14px 12px 30px;border:1px solid #E5EAF2;border-radius:10px;font-size:16px;font-family:inherit;color:#1A1A1A">
+          </div>
+          <span style="font-size:12px;color:#5F6B7A;display:block;margin-top:4px">Moneybird ~€20-30 · e-Boekhouden ~€18-25 · Snelstart ~€20</span>
+        </label>
+
+        <label style="display:block">
+          <span style="font-size:13px;font-weight:600;color:#0D1B4E;display:block;margin-bottom:6px">Aantal jaar dat je ZZP'er bent</span>
+          <input id="calc-jaren" type="range" min="1" max="20" step="1" value="5" style="width:100%;accent-color:#2EC4B6">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#5F6B7A;margin-top:4px">
+            <span>1 jaar</span><span id="calc-jaren-label" style="font-weight:700;color:#0D1B4E">5 jaar</span><span>20 jaar</span>
+          </div>
+        </label>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #E5EAF2;margin:24px 0">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+        <div style="text-align:center;padding:18px;background:#FDECEC;border-radius:10px">
+          <div style="font-size:11px;font-weight:700;color:#B91C1C;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Abonnement</div>
+          <div id="calc-abonnement" style="font-size:24px;font-weight:800;color:#1A1A1A">€1.500</div>
+          <div style="font-size:11px;color:#5F6B7A;margin-top:4px">over <span id="calc-jaren-tekst-1">5 jaar</span></div>
+        </div>
+        <div style="text-align:center;padding:18px;background:#E6F7F4;border-radius:10px">
+          <div style="font-size:11px;font-weight:700;color:#0D4F47;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Boekhoudbaar</div>
+          <div style="font-size:24px;font-weight:800;color:#1A1A1A">€49</div>
+          <div style="font-size:11px;color:#5F6B7A;margin-top:4px">eenmalig</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:24px;background:linear-gradient(135deg,#0D1B4E 0%,#1A2A6B 100%);border-radius:12px;color:#fff">
+        <div style="font-size:11px;font-weight:700;color:#2EC4B6;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Jouw besparing</div>
+        <div id="calc-besparing" style="font-size:38px;font-weight:800;letter-spacing:-0.02em">€1.451</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:6px">over <span id="calc-jaren-tekst-2">5 jaar</span> — geld dat in jouw zak blijft</div>
+      </div>
+    </div>
+
+    <p style="font-size:12px;color:#8A95A5;margin-top:16px;line-height:1.6">
+      ℹ️ Indicatieve berekening. Werkelijke besparing hangt af van je abonnementsprijs en gebruikstermijn. Boekhoudbaar is een eenmalige aankoop zonder verplichte updates of verlenging.
+    </p>
+  </div>
+</section>
+
+<script>
+(function() {
+  var prijsEl = document.getElementById('calc-prijs');
+  var jarenEl = document.getElementById('calc-jaren');
+  var jarenLabelEl = document.getElementById('calc-jaren-label');
+  var abonnementEl = document.getElementById('calc-abonnement');
+  var besparingEl = document.getElementById('calc-besparing');
+  var jarenTekst1 = document.getElementById('calc-jaren-tekst-1');
+  var jarenTekst2 = document.getElementById('calc-jaren-tekst-2');
+
+  function fmt(n) {
+    return '€' + Math.round(n).toLocaleString('nl-NL');
+  }
+
+  function herbereken() {
+    var prijs = parseFloat(String(prijsEl.value || '0').replace(',', '.')) || 0;
+    var jaren = parseInt(jarenEl.value) || 5;
+    var maandelijks = prijs * 12 * jaren;
+    var bespaar = Math.max(0, maandelijks - 49);
+
+    abonnementEl.textContent = fmt(maandelijks);
+    besparingEl.textContent = fmt(bespaar);
+    jarenLabelEl.textContent = jaren + ' jaar';
+    jarenTekst1.textContent = jaren + ' jaar';
+    jarenTekst2.textContent = jaren + ' jaar';
+  }
+
+  if (prijsEl && jarenEl) {
+    ['input', 'change'].forEach(function(ev) {
+      prijsEl.addEventListener(ev, herbereken);
+      jarenEl.addEventListener(ev, herbereken);
+    });
+    herbereken();
+  }
+})();
+</script>
+
 <!-- ── BONUS: Gratis BTW-deadline-agenda (iCal feed) ── -->
 <section id="agenda-feed" style="background:linear-gradient(135deg,#0D1B4E 0%,#1A2A6B 100%);color:#fff;padding:60px 32px">
   <div class="container" style="max-width:780px;text-align:center">
@@ -1905,6 +1997,8 @@
       <ul>
         <li><a href="/over/">Over Sam</a></li>
         <li><a href="/transparantie">Transparantie</a></li>
+        <li><a href="/bronnen/">Bronnen &amp; verifieerbaarheid</a></li>
+        <li><a href="/roadmap/">Roadmap</a></li>
         <li><a href="/faq/">FAQ</a></li>
         <li><a href="mailto:info@boekhoudbaar.nl">Contact</a></li>
         <li><a href="/privacy">Privacybeleid</a></li>
