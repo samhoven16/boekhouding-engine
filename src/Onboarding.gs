@@ -12,7 +12,7 @@ const VERSIE_PROP     = 'geinstalleerde_versie';
 // Bump bij elke deploy waarbij sheet-schema, triggers of klant-zichtbaar
 // gedrag verandert. Format: MAJOR.MINOR.PATCH (semver).
 //   2.0.0 → 2.1.0  (Fase 0-4 polish-ronde mei 2026)
-const HUIDIGE_VERSIE  = '2.1.0';
+const HUIDIGE_VERSIE  = '2.6.0';
 
 // ─────────────────────────────────────────────
 //  ONBOARDING STARTEN (automatisch bij eerste gebruik)

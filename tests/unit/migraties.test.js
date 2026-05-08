@@ -23,8 +23,14 @@ const ONB_SRC = fs.readFileSync(
 
 describe('Onboarding.gs — migratie-framework', () => {
 
-  test('HUIDIGE_VERSIE is bumped naar 2.1.0 (source check)', () => {
-    expect(ONB_SRC).toMatch(/const HUIDIGE_VERSIE\s*=\s*['"]2\.1\.0['"]/);
+  test('HUIDIGE_VERSIE heeft semver-formaat 2.x.y of hoger', () => {
+    // Voorheen hard-gepind op '2.1.0' wat regression-blok bij version-bump.
+    // Nu: format check + minimum 2.1.0.
+    const m = ONB_SRC.match(/const HUIDIGE_VERSIE\s*=\s*['"](\d+)\.(\d+)\.(\d+)['"]/);
+    expect(m).toBeTruthy();
+    const [, major, minor] = m;
+    expect(parseInt(major)).toBeGreaterThanOrEqual(2);
+    expect(parseInt(minor)).toBeGreaterThanOrEqual(1);
   });
 
   test('MIGRATIES_REGISTER bestaat in source', () => {

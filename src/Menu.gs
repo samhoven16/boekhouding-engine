@@ -36,6 +36,11 @@ function onOpen() {
   try { if (typeof checkJaarwisselingNodig_ === 'function') checkJaarwisselingNodig_(); }
   catch (e) { Logger.log('Jaarwisseling-check overgeslagen: ' + e.message); }
 
+  // Changelog-check: bij eerste open na product-update toon "wat is nieuw".
+  // Maakt gratis updates zichtbaar — klant voelt actief onderhoud.
+  try { if (typeof checkEnToonChangelog_ === 'function') checkEnToonChangelog_(); }
+  catch (e) { Logger.log('Changelog-check overgeslagen: ' + e.message); }
+
   // Tabblad-herstel-melding: als dagelijkseTaken een verplicht tabblad opnieuw
   // aanmaakte (klant had per ongeluk verwijderd), klant moet weten dat data
   // weg is en hoe te herstellen via Versiegeschiedenis.
@@ -164,6 +169,8 @@ function onOpen() {
     // ── Hulp & advies ─────────────────────────
     .addItem('🔔 Wat moet ik nu doen? (notificaties)', 'toonNotificaties')
     .addItem('Hulp & uitleg', 'openAssistent')
+    .addItem('🎁 Verwijs een vriend — jullie krijgen beide €5', 'toonReferralDialog')
+    .addItem('📰 Wat is er nieuw? (changelog)', 'toonChangelogVolledig')
     .addItem('Fiscaal overzicht & besparingstips', 'genereerBelastingadvies')
     .addItem('💡 Wat-als-rekenmachine (extra omzet of investering)', 'toonWatAlsSimulator')
     .addItem('📋 Vul je profiel in voor persoonlijke berekening', 'toonFiscaalProfielWizard')
