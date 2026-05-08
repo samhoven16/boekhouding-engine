@@ -477,14 +477,27 @@ function _berekenBelastingadviesRaw_(ss) {
   const aftrekken = [];
   let totaalAftrek = 0;
 
-  // Waarschuw als belastingtarieven voor dit jaar nog niet bijgewerkt zijn
-  if (!BELASTING_PER_JAAR[jaar]) {
+  // Waarschuw als belastingtarieven voor dit jaar nog niet (definitief)
+  // bijgewerkt zijn. Twee scenarios:
+  //   A) Geen entry in BELASTING_PER_JAAR voor dit jaar → fallback naar 2026
+  //   B) Wel een entry MAAR -prelim suffix in versie / bevestigd === null
+  //      (bv. 2027-placeholder bij ontbreken Belastingplan 2027)
+  const tariefMeta = BELASTING_META[jaar] || null;
+  const tariefIsPreliminair = !!(tariefMeta && (
+    !tariefMeta.bevestigd ||
+    (tariefMeta.versie && /-prelim/i.test(tariefMeta.versie))
+  ));
+  if (!BELASTING_PER_JAAR[jaar] || tariefIsPreliminair) {
+    const reden = !BELASTING_PER_JAAR[jaar]
+      ? `Voor ${jaar} zijn nog geen tarieven gedefinieerd — er wordt teruggevallen op ${BELASTING.TARIEFSJAAR}.`
+      : `De tarieven voor ${jaar} zijn nog PRELIMINAIR (${tariefMeta && tariefMeta.bron_omschrijving || 'wacht op Belastingplan'}).`;
     adviezen.push({
       type: 'WAARSCHUWING',
-      titel: `⚠️ Belastingtarieven ${jaar} nog niet bijgewerkt`,
-      tekst: `De belastingberekeningen gebruiken de tarieven van ${BELASTING.TARIEFSJAAR}. ` +
-             `Controleer na Prinsjesdag of de zelfstandigenaftrek, MKB-vrijstelling en ` +
-             `schijfgrenzen voor ${jaar} zijn bijgewerkt in Belastingadvies.gs.`,
+      titel: `⚠️ Belastingtarieven ${jaar} ${tariefIsPreliminair ? 'preliminair' : 'nog niet bijgewerkt'}`,
+      tekst: reden +
+             ` Schattingen van zelfstandigenaftrek, MKB-vrijstelling en schijfgrenzen zijn voorlopig. ` +
+             `Officiële cijfers volgen na Prinsjesdag (3e dinsdag september). ` +
+             `Boekhoudbaar wordt dan automatisch bijgewerkt.`,
       besparing: 0,
     });
   }

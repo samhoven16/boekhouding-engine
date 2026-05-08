@@ -1761,3 +1761,221 @@ function checkActivationCap_(sleutel, ssId, maxBindings) {
     return null;  // fail-open
   }
 }
+
+// ─────────────────────────────────────────────
+//  DRIP EMAIL CAMPAIGN — dag 3, 7, 14, 30
+// ─────────────────────────────────────────────
+//
+// Doel: klant bij eerste paar weken niet kwijtraken. Standaard verliest 60%
+// van de SaaS-klanten interesse na dag-0; drips bouwen engagement én tonen
+// dat product écht werkt.
+//
+// Schedule per drip:
+//   dag 3:  "Hoe gaat het? — eerste-factuur tip"
+//   dag 7:  "BTW-deadline weet je al?" (als kwartaal-eind nadert)
+//   dag 14: "Klaar voor je accountant?" (zachte upgrade-prompt)
+//   dag 30: "Eén maand boekhouden — feedback?" (NPS + review-vraag)
+//
+// Trigger: dagelijks 09:00 via time-based trigger 'verstuurDripsDagelijks_'.
+// State: kolom 5 ('Drip-status') in licentie-sheet — bevat csv "d3,d7,d14,d30"
+// van verstuurde dagen. Idempotent — kan veilig 2x draaien.
+
+const DRIP_SCHEDULE = [
+  { dag: 3,  vlag: 'd3',  onderwerp: 'Hoe gaat het met je eerste factuur? 💼' },
+  { dag: 7,  vlag: 'd7',  onderwerp: 'BTW-aangifte deadline — wist je dat?' },
+  { dag: 14, vlag: 'd14', onderwerp: 'Boekhoudbaar voor je accountant — handig?' },
+  { dag: 30, vlag: 'd30', onderwerp: 'Eén maand Boekhoudbaar — wat vind je?' },
+];
+
+/**
+ * Dagelijkse trigger — scan licentie-sheet voor klanten die een drip
+ * verdienen op basis van aanmaakdatum + nog-niet-verzonden status.
+ *
+ * Installeren via editor: run installeerDripTrigger_() éénmalig.
+ */
+function verstuurDripsDagelijks_() {
+  try {
+    const sheet = getLicentieSheet_();
+    if (!sheet || sheet.getLastRow() < 2) return;
+    const data = sheet.getDataRange().getValues();
+    const nu = Date.now();
+    let verstuurd = 0;
+
+    for (let i = 1; i < data.length; i++) {
+      const sleutel       = String(data[i][0] || '').trim();
+      const naam          = String(data[i][1] || '').trim();
+      const email         = String(data[i][2] || '').trim();
+      const status        = String(data[i][4] || '').trim();
+      const dripStatus    = String(data[i][5] || '');
+      const aanmaakDatum  = data[i][7];
+
+      if (!email || !sleutel) continue;
+      if (status && status.toLowerCase() === 'gestopt') continue;
+      if (!aanmaakDatum || !(aanmaakDatum instanceof Date)) continue;
+
+      const dagenSinds = Math.floor((nu - aanmaakDatum.getTime()) / 86400000);
+      if (dagenSinds < 3) continue;  // eerste drip is dag 3
+
+      DRIP_SCHEDULE.forEach(function(drip) {
+        if (dagenSinds >= drip.dag && dripStatus.indexOf(drip.vlag) === -1) {
+          // Niet eerder verstuurd → versturen
+          try {
+            verstuurDripMail_(naam, email, sleutel, drip);
+            const nieuweStatus = (dripStatus ? dripStatus + ',' : '') + drip.vlag;
+            sheet.getRange(i + 1, 6).setValue(nieuweStatus);
+            verstuurd++;
+          } catch (mailErr) {
+            Logger.log('Drip ' + drip.vlag + ' faalde voor ' + email + ': ' + mailErr.message);
+          }
+        }
+      });
+    }
+    if (verstuurd > 0) Logger.log('Drip-batch: ' + verstuurd + ' mails verstuurd.');
+  } catch (e) {
+    Logger.log('::error:: verstuurDripsDagelijks_ fout: ' + e.message);
+  }
+}
+
+function verstuurDripMail_(naam, email, sleutel, drip) {
+  const props        = PropertiesService.getScriptProperties();
+  const brevoKey     = props.getProperty('BREVO_API_KEY')   || '';
+  const vanEmail     = props.getProperty('VAN_EMAIL')       || 'info@boekhoudbaar.nl';
+  const vanNaam      = props.getProperty('VAN_NAAM')        || 'Sam van Boekhoudbaar';
+  const supportEmail = props.getProperty('SUPPORT_EMAIL')   || 'support@boekhoudbaar.nl';
+  const productnm    = props.getProperty('PRODUCT_NAAM')    || 'Boekhoudbaar';
+  const kvk          = props.getProperty('KVK_NUMMER')      || '';
+  const btw          = props.getProperty('BTW_NUMMER')      || '';
+  const privacyUrl   = props.getProperty('PRIVACY_URL')     || 'https://www.boekhoudbaar.nl/privacy';
+
+  const inhoud = dripInhoud_(drip.dag, naam, productnm);
+  const html = `<!DOCTYPE html><html lang="nl"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#1a1a2e;background:#f8fafc">
+  <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden">${inhoud.preheader}</div>
+  <div style="background:#0D1B4E;padding:20px;border-radius:10px 10px 0 0;text-align:center">
+    <h1 style="color:#fff;margin:0;font-size:18px;font-weight:700">${productnm}</h1>
+  </div>
+  <div style="background:#fff;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;line-height:1.6;font-size:14px">
+    <p style="margin:0 0 12px">Hoi ${escHtml_(naam || 'daar')},</p>
+    ${inhoud.body}
+    <p style="margin:18px 0 0">Veel succes,<br>${escHtml_(vanNaam)}</p>
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0 12px">
+    <p style="font-size:12px;color:#94a3b8;line-height:1.5;margin:0">
+      Vragen of feedback? Reageer op deze mail of stuur naar
+      <a href="mailto:${supportEmail}" style="color:#0D1B4E">${supportEmail}</a><br>
+      Hoven Strategy &amp; Solutions${kvk ? ' · KvK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''}<br>
+      <a href="${privacyUrl}" style="color:#94a3b8">Privacy</a> ·
+      <a href="mailto:${supportEmail}?subject=Unsubscribe%20drip" style="color:#94a3b8">Geen drip-mails meer</a>
+    </p>
+  </div>
+</body></html>`;
+  const text = (inhoud.preheader || '') + '\n\n' +
+    'Hoi ' + (naam || 'daar') + ',\n\n' +
+    inhoud.bodyTekst + '\n\n' +
+    'Veel succes,\n' + vanNaam + '\n\n' +
+    '---\n' +
+    'Reageer op deze mail of: ' + supportEmail + '\n' +
+    'Hoven Strategy & Solutions' + (kvk ? ' · KvK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') + '\n' +
+    'Geen drip-mails meer? mail: ' + supportEmail + ' subject: Unsubscribe drip\n';
+
+  if (brevoKey) {
+    try {
+      const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'post', contentType: 'application/json',
+        headers: { 'api-key': brevoKey },
+        payload: JSON.stringify({
+          sender:  { name: vanNaam, email: vanEmail },
+          replyTo: { email: supportEmail, name: vanNaam },
+          to:      [{ email: email, name: naam }],
+          subject: drip.onderwerp,
+          htmlContent: html,
+          textContent: text,
+          tags: ['drip', drip.vlag],
+          headers: { 'List-Unsubscribe': '<mailto:' + supportEmail + '?subject=Unsubscribe drip>' },
+        }),
+        muteHttpExceptions: true,
+      });
+      if (resp.getResponseCode() < 300) return;
+      Logger.log('Brevo drip ' + drip.vlag + ' faalde HTTP ' + resp.getResponseCode());
+    } catch (e) { Logger.log('Brevo drip exception: ' + e.message); }
+  }
+  // Fallback MailApp
+  MailApp.sendEmail({
+    to: email, subject: drip.onderwerp, body: text, htmlBody: html,
+    replyTo: supportEmail, name: vanNaam,
+  });
+}
+
+function dripInhoud_(dag, naam, productnm) {
+  const naamSafe = naam || 'daar';
+  if (dag === 3) {
+    return {
+      preheader: 'Hoe gaat het? Tip voor je eerste factuur.',
+      body:
+        '<p>Drie dagen geleden activeerde je ' + escHtml_(productnm) + ' — hopelijk loopt alles soepel.</p>' +
+        '<p><strong>Tip voor je eerste factuur:</strong> houd het simpel. Eén regel, juiste BTW (21% standaard, 9% voor specifieke diensten zoals catering of fysiotherapie). De PDF wordt automatisch opgemaakt — geen Word nodig.</p>' +
+        '<p>Vastgelopen? Open Boekhouding → Controle → ✅ Werkt-alles-test (12 punts gezondheidscheck).</p>',
+      bodyTekst:
+        'Drie dagen geleden activeerde je ' + productnm + ' — hopelijk loopt alles soepel.\n\n' +
+        'Tip voor je eerste factuur: houd het simpel. Eén regel, juiste BTW (21% standaard, 9% specifiek). De PDF wordt automatisch opgemaakt.\n\n' +
+        'Vastgelopen? Open Boekhouding → Controle → ✅ Werkt-alles-test.',
+    };
+  }
+  if (dag === 7) {
+    return {
+      preheader: 'BTW-deadline volgende week of binnen 1 maand?',
+      body:
+        '<p>Een week ' + escHtml_(productnm) + ' achter de rug. Goede gewoonte ingebouwd?</p>' +
+        '<p><strong>BTW-aangifte:</strong> NL-ZZP\'ers doen kwartaalaangifte. Deadlines:<br>' +
+        '<strong>Q1</strong>: vóór 30 april · <strong>Q2</strong>: vóór 31 juli · <strong>Q3</strong>: vóór 31 oktober · <strong>Q4</strong>: vóór 31 januari.</p>' +
+        '<p>Boekhoudbaar berekent automatisch — open <strong>Boekhouding → BTW → BTW-aangifte (kwartaal)</strong> en je hebt de cijfers in 30 seconden.</p>',
+      bodyTekst:
+        'Een week ' + productnm + ' achter de rug.\n\n' +
+        'BTW-aangifte deadlines: Q1=30/4, Q2=31/7, Q3=31/10, Q4=31/1.\n' +
+        'Boekhoudbaar berekent automatisch via Boekhouding → BTW.',
+    };
+  }
+  if (dag === 14) {
+    return {
+      preheader: 'Je boekhouder mee laten kijken in 1 klik.',
+      body:
+        '<p>Twee weken ' + escHtml_(productnm) + '. Heb je al gedacht aan je accountant?</p>' +
+        '<p><strong>Boekhouder mee laten kijken:</strong> in Google Sheets klik je op <strong>Delen</strong> rechtsboven, typ je het mailadres, en kies je rechten (alleen-lezen of bewerken). Geen extra licentie, geen tweede account.</p>' +
+        '<p>Of: <strong>Boekhouding → Accountantspakket exporteren</strong> maakt een ZIP met PDF + XLSX + JSONL die je accountant kan inlezen in elk pakket (Snelstart, Exact, Twinfield).</p>',
+      bodyTekst:
+        'Twee weken ' + productnm + '.\n\n' +
+        'Boekhouder mee laten kijken: klik Delen in Google Sheets en typ mailadres.\n' +
+        'Of: Boekhouding → Accountantspakket exporteren = ZIP voor elk pakket.',
+    };
+  }
+  if (dag === 30) {
+    return {
+      preheader: 'Hoe is je eerste maand? — 1-min feedback maakt me blij.',
+      body:
+        '<p>Een maand <strong>' + escHtml_(productnm) + '</strong> achter de rug. Ik ben benieuwd hoe het is gegaan.</p>' +
+        '<p>Als je 30 seconden hebt: reageer op deze mail met antwoord op één van deze:</p>' +
+        '<ul><li>Wat werkt goed?</li><li>Wat zou ik moeten verbeteren?</li><li>Zou je het aanraden? (1-10)</li></ul>' +
+        '<p>Echte feedback maakt het product beter voor de volgende ZZP\'er. En als ik iets specifieks voor jou kan oplossen — zeg het.</p>',
+      bodyTekst:
+        'Een maand ' + productnm + '. Hoe is het gegaan?\n\n' +
+        '30 seconden voor feedback?\n' +
+        '- Wat werkt goed?\n' +
+        '- Wat zou ik moeten verbeteren?\n' +
+        '- Zou je het aanraden? (1-10)\n\n' +
+        'Reageer op deze mail.',
+    };
+  }
+  return { preheader: '', body: '<p>—</p>', bodyTekst: '—' };
+}
+
+/**
+ * Eenmalig installeren in editor: run installeerDripTrigger_() handmatig.
+ * Maakt time-based trigger 09:00 dagelijks. Idempotent — bestaande triggers
+ * voor verstuurDripsDagelijks_ worden eerst verwijderd.
+ */
+function installeerDripTrigger_() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'verstuurDripsDagelijks_') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('verstuurDripsDagelijks_')
+    .timeBased().everyDays(1).atHour(9).create();
+  Logger.log('Drip-trigger geïnstalleerd: 09:00 dagelijks');
+}
