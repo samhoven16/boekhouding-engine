@@ -335,6 +335,10 @@ function toonActivatieDialog_() {
 
       <!-- Stap 1: e-mail -->
       <div class="stap actief" id="stap1">
+        <div class="banner" style="background:#E6F7F4;border:1px solid rgba(46,196,182,.35);padding:12px 14px;font-size:12px;line-height:1.55;margin-bottom:16px">
+          <strong style="color:#0D1B4E">Welkom! Je bent er bijna.</strong><br>
+          Vul het e-mailadres in waarmee je hebt betaald. We sturen direct een 6-cijferige code naar die inbox. Werkt met élk emailadres — Gmail, Outlook, iCloud, eigen domein.
+        </div>
         <label class="veld">E-mailadres</label>
         <input type="email" id="email" placeholder="jan@uwbedrijf.nl" autocomplete="email">
         <div class="fout" id="fout1"></div>

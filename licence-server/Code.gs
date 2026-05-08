@@ -1051,6 +1051,16 @@ function stuurLicentiemail_(naam, email, sleutel) {
       <p style="margin:0;font-size:14px;color:#1A1A1A">③ Voer de code in en je boekhouding is direct klaar voor gebruik</p>
     </div>
 
+    <div style="background:#E6F7F4;border:1px solid #2EC4B6;border-radius:10px;padding:16px 20px;margin:20px 0;font-size:13px;line-height:1.7;color:#0D4F47">
+      <p style="margin:0 0 8px;font-weight:700;color:#0D1B4E">📌 Heb je geen Gmail? Geen probleem.</p>
+      <p style="margin:0 0 8px">Boekhoudbaar draait op Google Sheets — daarom heb je een <strong>Google-account</strong> nodig om je spreadsheet te openen. Maar je hoeft <strong>geen Gmail-adres</strong> te gebruiken: je kunt een gratis Google-account aanmaken met je huidige email (Outlook, iCloud, Proton, eigen domein, etc.) in 2 minuten.</p>
+      <p style="margin:0">
+        Stappen: ga naar <a href="https://accounts.google.com/signup" style="color:#0D1B4E;text-decoration:underline">accounts.google.com/signup</a> →
+        kies <strong>"Use my existing email"</strong> → vul ${escHtml_(email)} in → bevestig via verificatiecode in je inbox.
+        Daarna log je hier op in.
+      </p>
+    </div>
+
     <div style="background:#FFF8E1;border:1px solid #FFECB3;border-radius:10px;padding:16px 20px;margin:20px 0;font-size:13px;line-height:1.7;color:#5f4b14">
       <p style="margin:0 0 8px;font-weight:700;color:#5A3F00">Wat Google je zo gaat vragen:</p>
       <p style="margin:0 0 6px"><strong>1.</strong> Toegang tot <strong>je eigen Google&nbsp;Drive</strong> — precies de bedoeling: dáár komt jouw boekhoudbestand te staan.</p>
@@ -1103,7 +1113,12 @@ function stuurLicentiemail_(naam, email, sleutel) {
     (kopieerLink ? 'In 3 stappen aan de slag:\n' +
       '1. Open je spreadsheet via: ' + kopieerLink + '\n' +
       '2. Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode\n' +
-      '3. Voer de code in en je boekhouding is direct klaar voor gebruik\n\n' : '') +
+      '3. Voer de code in en je boekhouding is direct klaar voor gebruik\n\n' +
+      'GEEN GMAIL? GEEN PROBLEEM.\n' +
+      'Boekhoudbaar draait op Google Sheets, dus je hebt een Google-account nodig.\n' +
+      'Maar je kunt gratis een Google-account aanmaken met je huidige email\n' +
+      '(Outlook, iCloud, Proton, eigen domein, etc.).\n' +
+      'Stappen: accounts.google.com/signup → "Use my existing email" → vul ' + email + ' in.\n\n' : '') +
     'Vragen? Stuur een e-mail naar ' + vanEmail + '.\n\n' +
     productnm + (kvk ? ' · KVK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') +
     '\nPrivacybeleid: ' + privacyUrl + '\n';
