@@ -164,9 +164,9 @@ function onOpen() {
     // ── Hulp & advies ─────────────────────────
     .addItem('🔔 Wat moet ik nu doen? (notificaties)', 'toonNotificaties')
     .addItem('Hulp & uitleg', 'openAssistent')
-    .addItem('Fiscaal advies & belastingbesparing', 'genereerBelastingadvies')
+    .addItem('Fiscaal overzicht & besparingstips', 'genereerBelastingadvies')
     .addItem('💡 Wat-als-rekenmachine (extra omzet of investering)', 'toonWatAlsSimulator')
-    .addItem('📋 Vul je profiel in voor persoonlijk advies', 'toonFiscaalProfielWizard')
+    .addItem('📋 Vul je profiel in voor persoonlijke berekening', 'toonFiscaalProfielWizard')
     .addItem('🚗 Zakelijke kilometers registreren', 'toonReiskostenTracker')
     .addItem('🚗 Hele week kilometers tegelijk', 'toonReiskostenWeek')
     .addItem('🏦 Lijfrente: hoeveel mag ik storten?', 'toonLijfrenteJaarruimte')

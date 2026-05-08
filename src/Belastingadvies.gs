@@ -1068,13 +1068,26 @@ function genereerBelastingadvies() {
 
   // Koptekst
   sheet.getRange(1, 1, 1, 3).merge()
-    .setValue('BELASTINGADVIES & AFTREKPOSTEN – ' + jaar)
+    .setValue('FISCAAL OVERZICHT & AFTREKPOSTEN – ' + jaar)
     .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
     .setFontWeight('bold').setFontSize(14).setHorizontalAlignment('center');
   sheet.getRange(2, 1, 1, 3).merge()
     .setValue(bedrijf + '  |  Bijgewerkt: ' + formatDatumTijd_(new Date()))
     .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#B8C2D1')
     .setFontSize(10).setHorizontalAlignment('center');
+
+  // Juridische disclaimer + bronnen — VERPLICHT op elke fiscale output.
+  // Voorkomt dat klant Boekhoudbaar als 'fiscaal adviseur' interpreteert
+  // wat een gereguleerde activiteit is (Wet WFR / AFM-regels). Boekhoudbaar
+  // is een tool voor fiscale berekeningen op basis van publieke bronnen,
+  // geen erkende belastingadviseur.
+  sheet.getRange(3, 1, 1, 3).merge()
+    .setValue('ℹ️ Informatieve berekeningen op basis van Belastingdienst.nl — geen formeel belastingadvies. ' +
+              'Raadpleeg bij twijfel een gekwalificeerde belastingadviseur of accountant.')
+    .setBackground('#FFF8E1').setFontColor('#5A3F00')
+    .setFontSize(10).setFontStyle('italic').setHorizontalAlignment('center')
+    .setWrap(true);
+  sheet.setRowHeight(3, 30);
 
   // Empty-state: nog geen omzet → tonen wat te doen, geen "lege" rijen advies.
   // Detectie via winstVoorAftrek + omzet — als beide 0 is er nog niets te
@@ -1091,12 +1104,13 @@ function genereerBelastingadvies() {
     sheet.setRowHeight(4, 38);
     sheet.getRange(5, 1, 1, 3).merge()
       .setValue('Voer eerst een paar facturen of kostenposten in via Boekhouding → "Nieuwe boeking". ' +
-        'Zodra er omzet of kosten staan, krijg je hier persoonlijk belastingadvies met:\n\n' +
-        '• Geschatte IB + Zvw voor dit jaar\n' +
-        '• Aftrekposten waar je recht op hebt (KIA, MIA, EIA)\n' +
+        'Zodra er omzet of kosten staan, krijg je hier een persoonlijke fiscale signalering met:\n\n' +
+        '• Geschatte IB + Zvw voor dit jaar (informatief)\n' +
+        '• Aftrekposten waar je mogelijk recht op hebt (KIA, MIA, EIA)\n' +
         '• Reiskosten, lijfrente-jaarruimte, BTW-spaarpot\n' +
-        '• Tips op basis van je boekjaar\n\n' +
-        'Je kunt ook eerst je fiscaal profiel invullen: Boekhouding → "Vul je profiel in voor persoonlijk advies".')
+        '• Signaleringen op basis van je boekjaar\n\n' +
+        'Je kunt ook eerst je fiscaal profiel invullen: Boekhouding → "Vul je profiel in voor persoonlijke berekening".\n\n' +
+        '⚠️ Boekhoudbaar geeft informatieve berekeningen, geen formeel belastingadvies. Bron: Belastingdienst.nl.')
       .setBackground('#FFFFFF').setFontColor('#5F6B7A')
       .setFontSize(11).setWrap(true)
       .setHorizontalAlignment('left').setVerticalAlignment('top');
@@ -1162,7 +1176,7 @@ function genereerBelastingadvies() {
   });
   if (ontbrekend.length > 0) {
     sheet.getRange(rij, 1, 1, 3).merge()
-      .setValue('📋 Vul uw fiscaal profiel in voor persoonlijk advies (60 sec) — ' +
+      .setValue('📋 Vul uw fiscaal profiel in voor persoonlijke berekening (60 sec) — ' +
                 ontbrekend.length + ' velden ontbreken: ' + ontbrekend.join(', '))
       .setBackground('#FFF8E1').setFontColor('#5A3F00')
       .setFontWeight('bold').setFontSize(11).setWrap(true);
@@ -1297,16 +1311,43 @@ function genereerBelastingadvies() {
   sheet.setColumnWidth(1, 220);
   sheet.setColumnWidth(2, 140);
   sheet.setColumnWidth(3, 350);
-  sheet.setFrozenRows(2);
+  sheet.setFrozenRows(3);
+
+  // ── BRONNEN-VOETNOOT — verplicht voor compliance ──────────────────────
+  // Toont aan klant + auditeur welke publieke bronnen gebruikt zijn voor
+  // tarieven en regels. Compliance-grond bij eventuele juridische vragen.
+  rij += 2;
+  sheet.getRange(rij, 1, 1, 3).merge()
+    .setValue('📚 Bronnen & disclaimer')
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
+    .setFontWeight('bold').setFontSize(12);
+  rij++;
+  const bronnenTekst =
+    'Tarieven, regels en grenzen voor ' + jaar + ' zijn gebaseerd op publieke bronnen:\n\n' +
+    '• Belastingdienst.nl — IB-tarieven, schijven, heffingskorting, ZVW, KOR, BTW: belastingdienst.nl\n' +
+    '• Overheid.nl — Wet IB 2001, Wet OB 1968, AWR: wetten.overheid.nl\n' +
+    '• KvK.nl — Ondernemersregelingen, MKB-vrijstelling, KIA/MIA/EIA: kvk.nl\n' +
+    '• Belastingplan ' + jaar + ' (Prinsjesdag-stukken)\n\n' +
+    'DISCLAIMER: Boekhoudbaar geeft informatieve berekeningen, signaleringen en schattingen. ' +
+    'Boekhoudbaar is geen registeraccountant of belastingadviseur in de zin van Wet WFR / NBA-regelgeving. ' +
+    'Raadpleeg bij twijfel of voor definitieve fiscale beslissingen een gekwalificeerde belastingadviseur, ' +
+    'accountant of fiscaal jurist. Aansprakelijkheid is beperkt zoals beschreven in de gebruiksvoorwaarden.';
+  sheet.getRange(rij, 1, 1, 3).merge()
+    .setValue(bronnenTekst)
+    .setBackground('#F7F9FC').setFontColor('#5F6B7A')
+    .setFontSize(10).setWrap(true)
+    .setHorizontalAlignment('left').setVerticalAlignment('top');
+  sheet.setRowHeight(rij, 180);
 
   ss.setActiveSheet(sheet);
 
   const ibPct1 = getBelasting_().IB_SCHIJF_1_PCT;
   const totaalBesparing = advies.aftrekken.reduce((s, a) => s + rondBedrag_(a.bedrag * ibPct1), 0);
   SpreadsheetApp.getUi().alert(
-    'Belastingadvies bijgewerkt',
-    `${advies.adviezen.length + prive.length} adviezen / ${advies.aftrekken.length} aftrekposten gevonden.\n\n` +
-    `Geschatte belastingbesparing via zakelijke aftrekken: ${formatBedrag_(totaalBesparing)}`,
+    'Fiscaal overzicht bijgewerkt',
+    `${advies.adviezen.length + prive.length} signaleringen / ${advies.aftrekken.length} aftrekposten gevonden.\n\n` +
+    `Geschatte belastingbesparing via zakelijke aftrekken: ${formatBedrag_(totaalBesparing)}\n\n` +
+    `ℹ️ Informatief — geen formeel belastingadvies. Bron: Belastingdienst.nl. Zie voetnoot in tabblad voor details.`,
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }

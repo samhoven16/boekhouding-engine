@@ -175,7 +175,7 @@ input:focus,select:focus{outline:none;border-color:#2EC4B6}
 <body>
 <h2>📋 Persoonlijk fiscaal profiel</h2>
 <div class="sub">
-  6 vragen → Boekhoudbaar geeft daarna automatisch persoonlijk belastingadvies
+  6 vragen → Boekhoudbaar geeft daarna automatisch persoonlijke fiscale signalering
   voor KIA, AOV, WBSO, AOW-leeftijd en alle aftrekposten waar u recht op heeft.
 </div>
 
@@ -231,7 +231,7 @@ input:focus,select:focus{outline:none;border-color:#2EC4B6}
   geeft dan minder gepersonaliseerd advies.
 </div>
 
-<button class="btn" id="btnOpslaan" data-actie="opslaan">Opslaan & persoonlijk advies activeren</button>
+<button class="btn" id="btnOpslaan" data-actie="opslaan">Opslaan & fiscale signalering activeren</button>
 <button class="btn-skip" id="btnSluiten" data-actie="sluiten">Sla over (later doen)</button>
 
 <div id="status" class="status"></div>
@@ -532,7 +532,7 @@ function toonPostSetupWelkomModal_() {
       </button>
       <button class="actie" type="button" data-actie="profiel">
         <span class="n">2</span>
-        <span class="t"><strong>Fiscaal profiel invullen (60 sec)</strong><span>Voor persoonlijk advies over KIA, AOV, WBSO &amp; AOW-leeftijd</span></span>
+        <span class="t"><strong>Fiscaal profiel invullen (60 sec)</strong><span>Voor signalering over KIA, AOV, WBSO &amp; AOW-leeftijd</span></span>
         <span class="arrow">›</span>
       </button>
       <button class="actie" type="button" data-actie="boeking">
