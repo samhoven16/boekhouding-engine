@@ -52,11 +52,9 @@ h1{font-size:42px;font-weight:800;color:var(--blauw);letter-spacing:-0.02em;line
 main{max-width:1100px;margin:0 auto;padding:32px;}
 
 .demo-frame{background:var(--wit);border:1px solid var(--rand);border-radius:14px;padding:0;overflow:hidden;box-shadow:0 4px 24px rgba(13,27,78,.08);margin-bottom:32px;}
-.demo-frame iframe{width:100%;height:720px;border:0;display:block;}
 .demo-frame .balk{background:#0D1B4E;color:#fff;padding:10px 18px;font-size:13px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
 .demo-frame .balk .titel{font-weight:600;}
-.demo-frame .balk .rechts{display:flex;gap:12px;font-size:12px;color:rgba(255,255,255,.7);}
-.demo-frame .balk a{color:#2EC4B6;text-decoration:none;font-weight:600;}
+.demo-frame .balk .rechts{font-size:12px;color:rgba(255,255,255,.7);}
 
 .uitleg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:32px 0;}
 @media (max-width:780px){.uitleg-grid{grid-template-columns:1fr;}}
@@ -118,21 +116,160 @@ footer a{color:rgba(255,255,255,.7);}
   <div class="balk">
     <span class="titel">📊 Boekhoudbaar — Demo (test-data)</span>
     <div class="rechts">
-      <span>read-only · jouw data komt in jouw eigen Drive</span>
-      <a href="https://docs.google.com/spreadsheets/d/1p9yubBhMhiQeReB8UgdCPyN2TfD2dlTwwAup0od-8zI/copy" target="_blank" rel="noopener">Open in nieuw tabblad ↗</a>
+      <span>statische voorbeeldweergave</span>
     </div>
   </div>
-  <iframe
-    src="https://docs.google.com/spreadsheets/d/1p9yubBhMhiQeReB8UgdCPyN2TfD2dlTwwAup0od-8zI/preview?widget=true&headers=false"
-    title="Boekhoudbaar demo-spreadsheet"
-    loading="lazy"
-    referrerpolicy="no-referrer">
-  </iframe>
+
+  <!-- Statische HTML-mock van het Dashboard. Geen iframe (private spreadsheet
+       kan niet embed). Dit toont prospects exact hoe het er straks uitziet.
+       Klant ziet bij aankoop een interactieve versie met eigen data. -->
+  <div class="mock">
+    <!-- Tab-rij -->
+    <div class="mock-tabs">
+      <button class="mock-tab actief" data-mock-tab="dashboard">Dashboard</button>
+      <button class="mock-tab" data-mock-tab="verkoop">Verkoopfacturen</button>
+      <button class="mock-tab" data-mock-tab="inkoop">Inkoopfacturen</button>
+      <button class="mock-tab" data-mock-tab="btw">BTW Aangifte</button>
+      <button class="mock-tab" data-mock-tab="balans">Balans</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="mock-pane actief" data-mock-pane="dashboard">
+      <div class="mock-greeting">Goedemiddag, <strong>Test BV</strong> · Boekjaar 2026</div>
+      <div class="mock-status">📈 Gezond: omzet €34.250 · winstmarge 38% · BTW Q1 voorbereid</div>
+      <div class="mock-kpi-grid">
+        <div class="mock-kpi"><span class="mock-kpi-label">OMZET (YTD)</span><span class="mock-kpi-bedrag">€34.250</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">KOSTEN (YTD)</span><span class="mock-kpi-bedrag">€7.840</span></div>
+        <div class="mock-kpi mock-kpi-positief"><span class="mock-kpi-label">NETTOWINST</span><span class="mock-kpi-bedrag">€26.410</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">BANKSALDO</span><span class="mock-kpi-bedrag">€18.920</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">OPEN DEBITEUREN</span><span class="mock-kpi-bedrag">€4.235</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">BTW SALDO Q1</span><span class="mock-kpi-bedrag">€1.872</span></div>
+      </div>
+      <div class="mock-besparing">💰 <strong>Belastingvoordeel dit jaar: €4.180</strong> · zelfstandigenaftrek + MKB-vrijstelling + KIA</div>
+    </div>
+
+    <!-- VERKOOPFACTUREN -->
+    <div class="mock-pane" data-mock-pane="verkoop">
+      <table class="mock-table">
+        <thead><tr><th>Nr</th><th>Datum</th><th>Klant</th><th>Bedrag incl.</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>F2026-007</td><td>05-05-2026</td><td>ACME BV</td><td>€2.420,00</td><td><span class="badge groen">Betaald</span></td></tr>
+          <tr><td>F2026-006</td><td>02-05-2026</td><td>Studio Noord</td><td>€1.815,00</td><td><span class="badge groen">Betaald</span></td></tr>
+          <tr><td>F2026-005</td><td>28-04-2026</td><td>Bakkerij van Dam</td><td>€605,00</td><td><span class="badge oranje">Open</span></td></tr>
+          <tr><td>F2026-004</td><td>20-04-2026</td><td>Tech Stichting</td><td>€3.630,00</td><td><span class="badge groen">Betaald</span></td></tr>
+          <tr><td>F2026-003</td><td>15-04-2026</td><td>Café De Hoek</td><td>€1.210,00</td><td><span class="badge groen">Betaald</span></td></tr>
+          <tr><td>F2026-002</td><td>08-04-2026</td><td>Praktijk Zorg+</td><td>€2.057,00</td><td><span class="badge oranje">Verzonden</span></td></tr>
+          <tr><td>F2026-001</td><td>02-04-2026</td><td>WebDev Solutions</td><td>€4.840,00</td><td><span class="badge groen">Betaald</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- INKOOPFACTUREN -->
+    <div class="mock-pane" data-mock-pane="inkoop">
+      <table class="mock-table">
+        <thead><tr><th>Datum</th><th>Leverancier</th><th>Categorie</th><th>BTW</th><th>Incl.</th></tr></thead>
+        <tbody>
+          <tr><td>05-05-2026</td><td>Google Workspace</td><td>Software</td><td>21%</td><td>€18,15</td></tr>
+          <tr><td>02-05-2026</td><td>Adobe Creative</td><td>Software</td><td>21%</td><td>€72,57</td></tr>
+          <tr><td>28-04-2026</td><td>Tankstation Shell</td><td>Auto/vervoer</td><td>21%</td><td>€78,40</td></tr>
+          <tr><td>15-04-2026</td><td>Holland Trein NS</td><td>Auto/vervoer</td><td>9%</td><td>€32,50</td></tr>
+          <tr><td>10-04-2026</td><td>BoekHorst</td><td>Studie/opleiding</td><td>9%</td><td>€42,80</td></tr>
+          <tr><td>02-04-2026</td><td>WeWork Amsterdam</td><td>Kantoor</td><td>21%</td><td>€350,00</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- BTW AANGIFTE -->
+    <div class="mock-pane" data-mock-pane="btw">
+      <h3 class="mock-h3">BTW-aangifte Q1 2026 · jan-mrt</h3>
+      <table class="mock-table">
+        <thead><tr><th>Rubriek</th><th>Omschrijving</th><th>Grondslag</th><th>BTW</th></tr></thead>
+        <tbody>
+          <tr><td>1a</td><td>Leveringen 21%</td><td>€8.500</td><td>€1.785</td></tr>
+          <tr><td>1b</td><td>Leveringen 9%</td><td>€450</td><td>€40,50</td></tr>
+          <tr><td>1d</td><td>0% / vrijgesteld</td><td>€0</td><td>—</td></tr>
+          <tr><td>1e</td><td>Verlegd</td><td>€0</td><td>—</td></tr>
+          <tr><td><strong>5a</strong></td><td><strong>Verschuldigde BTW</strong></td><td>—</td><td><strong>€1.825,50</strong></td></tr>
+          <tr><td>5b</td><td>Voorbelasting (inkoop)</td><td>—</td><td>−€124,30</td></tr>
+          <tr><td><strong>5d</strong></td><td><strong>Te betalen aan Belastingdienst</strong></td><td>—</td><td><strong>€1.701,20</strong></td></tr>
+        </tbody>
+      </table>
+      <p class="mock-note">📋 Direct overneembaar in mijn.belastingdienst.nl. Deadline Q1: 30 april.</p>
+    </div>
+
+    <!-- BALANS -->
+    <div class="mock-pane" data-mock-pane="balans">
+      <h3 class="mock-h3">Balans per 5 mei 2026</h3>
+      <div class="mock-balans-grid">
+        <div>
+          <h4>Activa</h4>
+          <table class="mock-table">
+            <tr><td>Bank</td><td>€18.920</td></tr>
+            <tr><td>Debiteuren</td><td>€4.235</td></tr>
+            <tr><td>Voorraad</td><td>€0</td></tr>
+            <tr class="mock-totaal"><td><strong>Totaal</strong></td><td><strong>€23.155</strong></td></tr>
+          </table>
+        </div>
+        <div>
+          <h4>Passiva</h4>
+          <table class="mock-table">
+            <tr><td>Eigen vermogen</td><td>€21.283</td></tr>
+            <tr><td>BTW te betalen</td><td>€1.872</td></tr>
+            <tr><td>Crediteuren</td><td>€0</td></tr>
+            <tr class="mock-totaal"><td><strong>Totaal</strong></td><td><strong>€23.155</strong></td></tr>
+          </table>
+        </div>
+      </div>
+      <p class="mock-note">✓ Activa = Passiva. Klopt altijd door dubbel boekhouden.</p>
+    </div>
+  </div>
 </div>
 
-<p style="text-align:center;color:var(--grijs);font-size:13px;margin-bottom:32px">
-  💡 De ingebed-versie hierboven is read-only. Voor de échte interactieve ervaring (klikken op menu's, dialogen openen): <a href="https://docs.google.com/spreadsheets/d/1p9yubBhMhiQeReB8UgdCPyN2TfD2dlTwwAup0od-8zI/copy" target="_blank" rel="noopener" style="color:var(--blauw);font-weight:600">maak een eigen kopie</a> — gratis te bekijken, geen account voor nodig anders dan Google-login.
-</p>
+<style>
+  .mock { background: #fff; padding: 20px 24px 24px; min-height: 480px; }
+  .mock-tabs { display: flex; gap: 4px; border-bottom: 2px solid #E5EAF2; margin-bottom: 18px; flex-wrap: wrap; }
+  .mock-tab { background: none; border: none; padding: 10px 14px; font-family: inherit; font-size: 13px; font-weight: 600; color: #5F6B7A; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color .15s, border-color .15s; }
+  .mock-tab:hover { color: #0D1B4E; }
+  .mock-tab.actief { color: #0D1B4E; border-bottom-color: #2EC4B6; }
+  .mock-pane { display: none; }
+  .mock-pane.actief { display: block; }
+  .mock-greeting { font-size: 18px; color: #0D1B4E; margin-bottom: 6px; }
+  .mock-status { font-size: 13px; color: #1B5E20; background: #E8F5E9; padding: 8px 12px; border-radius: 6px; margin-bottom: 18px; display: inline-block; }
+  .mock-kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  @media (max-width: 720px) { .mock-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  .mock-kpi { background: #F7F9FC; border: 1px solid #E5EAF2; border-radius: 8px; padding: 14px 16px; }
+  .mock-kpi-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: #5F6B7A; text-transform: uppercase; margin-bottom: 4px; }
+  .mock-kpi-bedrag { display: block; font-size: 22px; font-weight: 800; color: #0D1B4E; }
+  .mock-kpi-positief .mock-kpi-bedrag { color: #1B5E20; }
+  .mock-besparing { background: #E6F7F4; border: 1px solid #2EC4B6; padding: 12px 16px; border-radius: 8px; font-size: 14px; color: #0D4F47; }
+  .mock-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .mock-table th, .mock-table td { padding: 9px 12px; text-align: left; border-bottom: 1px solid #E5EAF2; }
+  .mock-table th { background: #F7F9FC; font-weight: 700; color: #0D1B4E; font-size: 12px; }
+  .mock-table .mock-totaal td { background: #F7F9FC; border-top: 2px solid #0D1B4E; }
+  .mock-h3 { color: #0D1B4E; font-size: 16px; margin-bottom: 12px; }
+  .mock-balans-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 14px; }
+  @media (max-width: 720px) { .mock-balans-grid { grid-template-columns: 1fr; } }
+  .mock-balans-grid h4 { color: #0D1B4E; font-size: 14px; margin-bottom: 8px; }
+  .mock-note { font-size: 12px; color: #5F6B7A; margin-top: 10px; font-style: italic; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .badge.groen { background: #E8F5E9; color: #1B5E20; }
+  .badge.oranje { background: #FFF3E0; color: #E65100; }
+</style>
+
+<script>
+  (function() {
+    document.querySelectorAll('.mock-tab').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var doel = btn.getAttribute('data-mock-tab');
+        document.querySelectorAll('.mock-tab').forEach(function(b) { b.classList.remove('actief'); });
+        document.querySelectorAll('.mock-pane').forEach(function(p) { p.classList.remove('actief'); });
+        btn.classList.add('actief');
+        var pane = document.querySelector('[data-mock-pane="' + doel + '"]');
+        if (pane) pane.classList.add('actief');
+      });
+    });
+  })();
+</script>
 
 <h2 style="font-size:24px;color:var(--blauw);margin:48px 0 18px;">Wat zie je in de demo</h2>
 
@@ -169,31 +306,26 @@ footer a{color:rgba(255,255,255,.7);}
   </div>
 </div>
 
-<h2 style="font-size:24px;color:var(--blauw);margin:48px 0 18px;">Wat kun je in 5 minuten testen?</h2>
+<h2 style="font-size:24px;color:var(--blauw);margin:48px 0 18px;">Wat zie je in deze demo?</h2>
 
 <div class="scenario-blok">
-  <h3>1. Klik door alle tabbladen</h3>
-  <p>Onderaan zie je tab-knoppen: Dashboard, Instellingen, Verkoopfacturen, Inkoopfacturen, Banktransacties, Relaties, BTW Aangifte, Grootboekschema, Balans, W&amp;V Rekening. Bekijk de structuur en kolommen.</p>
+  <h3>Dashboard</h3>
+  <p>Live KPI's: omzet, kosten, winst, banksaldo, openstaande debiteuren. Plus belastingvoordeel-banner met geschatte besparing dit jaar.</p>
 </div>
 
 <div class="scenario-blok">
-  <h3>2. Maak een eigen kopie + klik op menu</h3>
-  <ol>
-    <li>Klik <a href="https://docs.google.com/spreadsheets/d/1p9yubBhMhiQeReB8UgdCPyN2TfD2dlTwwAup0od-8zI/copy" target="_blank" rel="noopener">Maak een kopie</a></li>
-    <li>In de kopie zie je <strong>Boekhouding</strong>-menu boven (naast Hulp). Daar zit alles: Nieuwe boeking, BTW-aangifte, Dashboard refresh, etc.</li>
-    <li>Klik bv. <strong>Boekhouding → Nieuwe boeking</strong> → factuur-dialog opent</li>
-    <li>Probeer een fictieve factuur in te voeren — zie totaal automatisch berekenen</li>
-  </ol>
+  <h3>Verkoop- en inkoopfacturen</h3>
+  <p>Voorbeeld-rijen met factuurnummer, klant/leverancier, bedrag, BTW-tarief en status. In de échte versie klik je een rij voor de bijbehorende PDF.</p>
 </div>
 
 <div class="scenario-blok">
-  <h3>3. Bekijk een bestaande factuur</h3>
-  <p>Op <strong>Verkoopfacturen</strong>-tab: scroll door rijen. Klik op een PDF-link in de kolom rechts → factuur-PDF opent. Zo ziet de uitgave naar jouw klant er straks uit.</p>
+  <h3>BTW-aangifte</h3>
+  <p>Per kwartaal: rubriek 1a/1b/1d/1e/5a/5b/5d direct overneembaar in mijn.belastingdienst.nl. Geen handwerk meer.</p>
 </div>
 
 <div class="scenario-blok">
-  <h3>4. Test BTW-aangifte</h3>
-  <p>Op <strong>BTW Aangifte</strong>-tab: zie hoe alle facturen + kosten van een kwartaal worden samengevat in officiële Belastingdienst-rubrieken (1a t/m 5d). Direct overneembaar in mijn.belastingdienst.nl.</p>
+  <h3>Balans</h3>
+  <p>Activa = Passiva. Wordt automatisch berekend uit alle journaalposten. In de échte versie zie je ook W&amp;V, cashflow en jaarrekening.</p>
 </div>
 
 <div class="cta-onderaan">
@@ -202,17 +334,9 @@ footer a{color:rgba(255,255,255,.7);}
   <a href="/kopen">Koop nu voor €49 →</a>
 </div>
 
-<details style="background:var(--bg);border:1px solid var(--rand);border-radius:12px;padding:18px 22px;margin-bottom:32px;">
-  <summary style="cursor:pointer;font-weight:600;color:var(--blauw)">Werkt de demo niet bij jou?</summary>
-  <div style="margin-top:12px;font-size:14px;color:var(--grijs);line-height:1.65">
-    <p>De demo is een Google Sheets-embed via iframe. Sommige browsers / corporate-firewalls blokkeren iframes. Probeer dan:</p>
-    <ul style="margin-left:22px;margin-top:8px">
-      <li><a href="https://docs.google.com/spreadsheets/d/1p9yubBhMhiQeReB8UgdCPyN2TfD2dlTwwAup0od-8zI/edit" target="_blank" rel="noopener">Open in nieuw tabblad</a> (read-only)</li>
-      <li><a href="https://docs.google.com/spreadsheets/d/1p9yubBhMhiQeReB8UgdCPyN2TfD2dlTwwAup0od-8zI/copy" target="_blank" rel="noopener">Maak je eigen kopie</a> (volledig interactief)</li>
-      <li>Mail mij screenshots van wat je ziet: <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a></li>
-    </ul>
-  </div>
-</details>
+<p style="text-align:center;color:var(--grijs);font-size:13px;margin-bottom:32px;font-style:italic">
+  Dit is een statische voorbeeldweergave met test-data. De échte versie die jij krijgt is interactief — je kunt klikken, invoeren, BTW-aangiftes genereren, en alles draait in jouw eigen Google Drive.
+</p>
 
 </main>
 
