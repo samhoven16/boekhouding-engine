@@ -213,16 +213,21 @@ function BTW_SALDO(omzetExcl, tarief, voorbelasting) {
 }
 
 /**
- * Berekent kilometervergoeding tegen het zakelijke tarief van € 0,23/km (2025).
+ * Berekent kilometervergoeding tegen het zakelijke tarief uit BELASTING-config
+ * voor het opgegeven (of huidige) jaar.
  *
  * @param {number} kilometers Aantal gereden zakelijke kilometers.
+ * @param {number=} jaar      Optioneel: jaar voor tariefkeuze (default = nu).
  * @return {number} Vergoeding in euro.
  * @customfunction
  */
-function KM_VERGOEDING(kilometers) {
+function KM_VERGOEDING(kilometers, jaar) {
   var km = Number(kilometers);
   if (!isFinite(km) || km < 0) return 0;
-  return Math.round(km * 0.23 * 100) / 100;
+  var doelJaar = parseInt(jaar, 10) || new Date().getFullYear();
+  var B = _cf_tarievenVoorJaar_(doelJaar);
+  var tarief = (B && B.REISKOSTEN_PER_KM) || 0.23;
+  return Math.round(km * tarief * 100) / 100;
 }
 
 /**

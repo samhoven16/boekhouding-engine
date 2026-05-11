@@ -11,8 +11,11 @@
  *  - Suppletie: detect retroactief BTW-mismatch → genereer formulier-data
  */
 
-const DGA_MIN_SALARIS_2026 = 56000;   // Wet IB; controleer jaarlijks Belastingplan
-const SUPPLETIE_DREMPEL    = 1000;    // Onder = volgende aangifte; boven = direct suppletie
+// DGA gebruikelijk-loon: nu uit BELASTING_PER_JAAR.DGA_MIN_SALARIS (per jaar),
+// met klant-override via Instellingen-tab. Hardcoded fallback alleen indien
+// config-laag onbereikbaar.
+const DGA_MIN_SALARIS_FALLBACK = 56000;   // last-resort indien getBelasting_ niet beschikbaar
+const SUPPLETIE_DREMPEL        = 1000;    // Onder = volgende aangifte; boven = direct suppletie
 
 // ─────────────────────────────────────────────
 //  B6 — KIA + MIA + EIA STAPELING
@@ -83,6 +86,9 @@ function _eia_(inv, B) {
  */
 function toonInvesteringsAftrekStapeling() {
   const ui = SpreadsheetApp.getUi();
+  const _B = (typeof getBelasting_ === 'function') ? getBelasting_() : {};
+  const _ibPct1 = (_B && _B.IB_SCHIJVEN && _B.IB_SCHIJVEN[0] && _B.IB_SCHIJVEN[0].pct) || 0.357;
+  const _ibPct1Display = (Math.round(_ibPct1 * 1000) / 10).toString().replace('.', ',') + '%';
   const html = HtmlService.createHtmlOutput(`
     <style>
       *{box-sizing:border-box}
@@ -141,7 +147,7 @@ function toonInvesteringsAftrekStapeling() {
                 '<div><span>MIA</span><span>' + f(r.mia) + '</span></div>' +
                 '<div><span>EIA</span><span>' + f(r.eia) + '</span></div>' +
               '</div>' +
-              '<div class="sub2">' + r.uitleg + '. Bij IB-tarief 35,7% scheelt dit ' + f(r.totaal * 0.357) + ' aan belasting.</div>' +
+              '<div class="sub2">' + r.uitleg + '. Bij IB-tarief ${_ibPct1Display} scheelt dit ' + f(r.totaal * ${_ibPct1}) + ' aan belasting.</div>' +
             '</div>';
         }).berekenInvesteringsAftrek_(data);
       }
@@ -352,11 +358,12 @@ function checkDgaSalaris_() {
   if (!heeftDga && !/bv|n\.?v\.?/.test(rechtsvorm)) return null;
 
   const brutoSalaris = parseBedrag_(getInstelling_('DGA brutosalaris') || '0');
-  const minimum = DGA_MIN_SALARIS_2026;
+  const B = (typeof getBelasting_ === 'function') ? getBelasting_() : null;
+  const minimum = (B && B.DGA_MIN_SALARIS) || DGA_MIN_SALARIS_FALLBACK;
   if (brutoSalaris === 0) {
     return {
       brutoSalaris: 0, minimum: minimum, voldoet: false,
-      advies: 'Geen DGA-salaris ingevuld — vul in Instellingen "DGA brutosalaris" in. Minimum 2026: €' + minimum.toLocaleString('nl-NL'),
+      advies: 'Geen DGA-salaris ingevuld — vul in Instellingen "DGA brutosalaris" in. Minimum: €' + minimum.toLocaleString('nl-NL'),
     };
   }
   const voldoet = brutoSalaris >= minimum;

@@ -73,6 +73,7 @@ const BELASTING_PER_JAAR = {
     FOR_MAX:                10786,    // FOR afgeschaft 2023 — alleen oude saldo's
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          35987,
+    LIJFRENTE_FACTOR_A:     6.27,    // Wet IB art. 3.127 — pensioen-factor 2024-2025
     AOW_FRANCHISE:          14110,
     AOW_LEEFTIJD:           67,      // 2025/2026/2027 = 67 jaar
     BOX3_GROEN_VRIJSTELLING: 65072,
@@ -121,6 +122,9 @@ const BELASTING_PER_JAAR = {
     BOX2_SCHIJF_1_PCT: 0.245,
     BOX2_SCHIJF_1_MAX: 67000,
     BOX2_SCHIJF_2_PCT: 0.31,
+    // DGA-gebruikelijk-loon — Wet IB art. 12a. Bron: belastingdienst.nl.
+    // 2025: €56.000. Wijzigt vrijwel jaarlijks per Belastingplan.
+    DGA_MIN_SALARIS: 56000,
   },
   2026: {
     ZELFSTANDIGENAFTREK:    1200,    // Verlaagd per 2026 (was €2.470 in 2025)
@@ -130,6 +134,7 @@ const BELASTING_PER_JAAR = {
     FOR_MAX:                10786,   // Geen nieuwe FOR-vorming sinds 2023
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          38000,
+    LIJFRENTE_FACTOR_A:     6.27,    // bevestigen na Belastingplan 2026
     AOW_FRANCHISE:          14540,
     AOW_LEEFTIJD:           67,
     BOX3_GROEN_VRIJSTELLING: 67000,
@@ -172,6 +177,7 @@ const BELASTING_PER_JAAR = {
     BOX2_SCHIJF_1_PCT: 0.245,
     BOX2_SCHIJF_1_MAX: 67000,
     BOX2_SCHIJF_2_PCT: 0.31,
+    DGA_MIN_SALARIS: 56000,   // 2026 — bevestigen na Belastingplan 2026
   },
   // 2027: placeholder — vervang met officiële Miljoenennota-cijfers Prinsjesdag 2026.
   // Bij ontbreken valt getBelasting_() terug op 2026-tarieven met waarschuwing.
@@ -183,6 +189,7 @@ const BELASTING_PER_JAAR = {
     FOR_MAX:                10786,
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          39000,
+    LIJFRENTE_FACTOR_A:     6.27,    // preliminair
     AOW_FRANCHISE:          14800,
     AOW_LEEFTIJD:           67,     // 2027 ongewijzigd 67; 2028 → 67j 3m
     BOX3_GROEN_VRIJSTELLING: 68000,
@@ -222,6 +229,7 @@ const BELASTING_PER_JAAR = {
     BOX2_SCHIJF_1_PCT: 0.245,
     BOX2_SCHIJF_1_MAX: 67000,
     BOX2_SCHIJF_2_PCT: 0.31,
+    DGA_MIN_SALARIS: 56000,   // 2027 — preliminair, wacht Belastingplan 2027
   },
 };
 
@@ -240,14 +248,23 @@ function getBelasting_() {
   } catch (_) { /* fail-open naar lokale tarieven */ }
 
   const tarieven = serverTarieven || BELASTING_PER_JAAR[jaar] || BELASTING_PER_JAAR[2026];
+
+  // KLANT-OVERRIDES uit Instellingen-tab. Drie-laags-merge:
+  //   1. Hardcoded defaults (KOR_GRENS, KIA_MIN, etc.)
+  //   2. Jaarcohort uit BELASTING_PER_JAAR / serverTarieven
+  //   3. Klant-override uit Instellingen-tab (last wins)
+  // Reden: bij Prinsjesdag-wijziging kan klant zelf bijwerken zonder
+  // dat owner een script-deploy hoeft te doen.
+  // Caching: leest Instellingen-tab; getBelasting_ wordt geroepen per
+  // berekening dus we cachen het resultaat per session (zelfde patroon
+  // als _instellingenCache).
+  let klantOverrides = null;
+  try { klantOverrides = (typeof _leesBelastingOverrides_ === 'function') ? _leesBelastingOverrides_() : null; }
+  catch (e) { Logger.log('Belasting-overrides lezen mislukt: ' + e.message); }
+
   return Object.assign({
     KOR_GRENS:              20000,
-    // KIA 2025 (bron: belastingdienst.nl/.../kleinschaligheidsinvesteringsaftrek-2025)
-    //  - investering < €2.901          → geen KIA
-    //  - €2.901  – €69.765             → 28% van investeringsbedrag
-    //  - €69.765 – €130.744            → vast €19.769
-    //  - €130.744 – €392.230           → €19.769 − 7,56% × (investering − €130.744)
-    //  - investering > €392.230        → geen KIA
+    // KIA — investerings-aftrek-tabel. Bron: belastingdienst.nl/.../kia
     KIA_MIN:                2901,
     KIA_MAX:                392230,
     KIA_PCT:                0.28,
@@ -267,7 +284,202 @@ function getBelasting_() {
     GIFTEN_MAX_PCT:         0.10,
     BOX3_GROEN_KORTING_PCT: 0.007,
     TARIEFSJAAR:            tarieven === BELASTING_PER_JAAR[jaar] ? jaar : 2026,
-  }, tarieven);
+  }, tarieven, klantOverrides || {});
+}
+
+// ─────────────────────────────────────────────
+//  KLANT-OVERRIDES VIA INSTELLINGEN-TAB
+// ─────────────────────────────────────────────
+//
+// Klant kan in het Instellingen-tabblad zelf tarieven aanpassen voor
+// het geval Belastingdienst iets wijzigt na Prinsjesdag en owner nog
+// niet een nieuwe versie heeft uitgerold.
+//
+// VEILIGHEID — defensieve parsing (Principal Engineer-pattern):
+//  • Lege cel              → null (= geen override, fallback default)
+//  • Niet-numerieke input  → null + audit-log (= geen override)
+//  • Out-of-range          → null + audit-log
+//  • Percentage in heel %  → auto-omzetting (21 → 0.21)
+//  • Comma als decimal     → naar punt
+//  • % teken               → verwijderd
+//  • € teken               → verwijderd
+//
+// Geen exceptions naar caller: bij FOUTE input wordt de override
+// stilletjes overgeslagen + gelogd. Dit voorkomt dat een typo in
+// Instellingen alle berekeningen crasht.
+
+/**
+ * Declaratieve definitie van overschrijfbare tarieven. Elke entry:
+ *   sleutel:  exacte naam in BELASTING-object (= wat berekeningen lezen)
+ *   label:    rij-label in Instellingen-tab (klant-gezichte tekst)
+ *   type:     'percentage' | 'bedrag' | 'getal'
+ *   min/max:  validatie-bereik. Buiten bereik → reject + log.
+ *   hint:     uitleg in tooltip (cell-note)
+ *
+ * Alleen de meest-veranderlijke tarieven staan hier. BTW-tarieven
+ * (21%/9%) bewust niet — die zijn stabiel (>10 jaar) en de klant kan
+ * BTW per factuur kiezen via dropdown.
+ */
+const BELASTING_OVERRIDE_VELDEN = [
+  { sleutel: 'REISKOSTEN_PER_KM',    label: 'Tarief: Reiskosten per km (€)',     type: 'bedrag',     min: 0.01, max: 1.00,
+    hint: 'Zakelijke kilometers met privéauto. Bron: Belastingdienst. 2024-2025: €0,23. Bij verhoging zelf bijwerken.' },
+  { sleutel: 'THUISWERK_PER_DAG',    label: 'Tarief: Thuiswerk per dag (€)',     type: 'bedrag',     min: 0.01, max: 10.00,
+    hint: 'Onbelaste thuiswerkvergoeding per dag. 2024-2025: €2,40.' },
+  { sleutel: 'ZELFSTANDIGENAFTREK',  label: 'Tarief: Zelfstandigenaftrek (€)',   type: 'bedrag',     min: 0,    max: 10000,
+    hint: 'Jaarbedrag aftrek voor ZZP met ≥1.225 uur. Stapsgewijs verlaagd: 2025=€2.470, 2026=€1.200.' },
+  { sleutel: 'STARTERSAFTREK',       label: 'Tarief: Startersaftrek (€)',        type: 'bedrag',     min: 0,    max: 10000,
+    hint: 'Extra aftrek eerste 3 jaar als ondernemer. 2025-2026: €2.123.' },
+  { sleutel: 'STAKINGSAFTREK',       label: 'Tarief: Stakingsaftrek (€)',        type: 'bedrag',     min: 0,    max: 20000,
+    hint: 'Eenmalig bij bedrijfsbeëindiging. 2025-2026: €3.630.' },
+  { sleutel: 'MKB_WINSTVRIJSTELLING', label: 'Tarief: MKB-winstvrijstelling (%)', type: 'percentage', min: 0,    max: 0.30,
+    hint: 'Percentage winstvrijstelling. 2025-2026: 12,70% = 0,1270.' },
+  { sleutel: 'KIA_PCT',              label: 'Tarief: KIA percentage (%)',        type: 'percentage', min: 0,    max: 0.50,
+    hint: 'Investeringsaftrek voor KIA-zone 1. 2025-2026: 28% = 0,28.' },
+  { sleutel: 'KIA_MIN',              label: 'Grens: KIA minimum (€)',            type: 'bedrag',     min: 0,    max: 10000,
+    hint: 'Drempel waaronder geen KIA. 2025-2026: €2.901.' },
+  { sleutel: 'BOX3_HEFFINGSVRIJ',    label: 'Grens: Box 3 heffingsvrij (€)',     type: 'bedrag',     min: 0,    max: 200000,
+    hint: 'Vrijstelling Box 3 vermogen. 2025: €57.684. Wijzigt vrijwel jaarlijks.' },
+  { sleutel: 'BOX3_TARIEF',          label: 'Tarief: Box 3 belastingtarief (%)', type: 'percentage', min: 0,    max: 0.60,
+    hint: 'Box 3 tarief over fictief rendement. 2024-2026: 36%.' },
+  { sleutel: 'BOX3_FORFAIT_BELEGGING', label: 'Tarief: Box 3 forfait beleggingen (%)', type: 'percentage', min: 0, max: 0.20,
+    hint: 'Fictief rendement beleggingen. 2025: 5,88%. 2026: 7,78% (voorstel).' },
+  { sleutel: 'URENCRITERIUM',        label: 'Grens: Urencriterium (uur/jr)',     type: 'getal',      min: 100,  max: 5000,
+    hint: 'Minimum uren voor zelfstandigenaftrek. Stabiel: 1.225 uur.' },
+  { sleutel: 'ZVW_PCT',              label: 'Tarief: Zvw inkomensafh. bijdrage (%)', type: 'percentage', min: 0, max: 0.15,
+    hint: 'Bijdrage Zorgverzekeringswet. 2025: 5,26% = 0,0526.' },
+  { sleutel: 'ZVW_MAX_INKOMEN',      label: 'Grens: Zvw max inkomen (€)',        type: 'bedrag',     min: 0,    max: 200000,
+    hint: 'Maximum-inkomen waarover Zvw-premie wordt berekend. 2025: €75.864.' },
+  { sleutel: 'DGA_MIN_SALARIS',      label: 'Grens: DGA gebruikelijk-loon (€)',  type: 'bedrag',     min: 0,    max: 500000,
+    hint: 'Minimum-salaris DGA volgens art. 12a Wet IB. 2025-2026: €56.000. Wijzigt jaarlijks.' },
+];
+
+/**
+ * Strict overrides-cache. Module-scope via getter zodat we niet bij elke
+ * getBelasting_-call de sheet hoeven te lezen (~50ms scheelt).
+ * Cache is per-execution (GAS resets module state tussen invocations).
+ */
+let _belastingOverridesCache = null;
+function _wisBelastingOverridesCache_() { _belastingOverridesCache = null; }
+
+/**
+ * Parse één raw cell-waarde naar typed override-waarde.
+ * Defensieve parsing: bij elke twijfel returns null (= geen override).
+ *
+ * @param {*} raw - cel-waarde uit Instellingen-tab
+ * @param {Object} veldDef - element uit BELASTING_OVERRIDE_VELDEN
+ * @returns {number|null} - geparsede waarde, of null als ongeldig/leeg
+ */
+function _parseOverrideWaarde_(raw, veldDef) {
+  // Leeg = geen override (fallback naar default)
+  if (raw === null || raw === undefined || raw === '') return null;
+
+  // Als sheet teruggeeft als Date (Google Sheets parst soms numerics als datum)
+  // → reject, klant moet "0.21" niet "1-1-1900" typen
+  if (raw instanceof Date) return null;
+
+  let waarde;
+  if (typeof raw === 'number') {
+    if (!isFinite(raw)) return null;
+    waarde = raw;
+  } else {
+    // String parsing — strip €, %, comma-als-decimal
+    const schoon = String(raw).trim()
+      .replace(/€/g, '')
+      .replace(/%/g, '')
+      .replace(/\s+/g, '')
+      .replace(',', '.');
+    if (!schoon) return null;
+    waarde = parseFloat(schoon);
+    if (!isFinite(waarde)) return null;
+  }
+
+  // Auto-interpret: als percentage-veld en waarde > 1, interpret als heel-procent
+  // ("21" voor BTW betekent 21%, niet 2100%). Conservatief: alleen toepassen
+  // bij range-criterion max < 1. Boven 1 was sowieso ongeldig voor percentage.
+  if (veldDef.type === 'percentage' && waarde > 1 && veldDef.max <= 1) {
+    waarde = waarde / 100;
+  }
+
+  // Range-validatie. Out-of-range = log + null (vat de fout op, val terug op default).
+  if (typeof veldDef.min === 'number' && waarde < veldDef.min) {
+    try { schrijfAuditLog_('Belasting-override REJECT', veldDef.sleutel + '=' + raw + ' (< min=' + veldDef.min + ')'); } catch (_) {}
+    return null;
+  }
+  if (typeof veldDef.max === 'number' && waarde > veldDef.max) {
+    try { schrijfAuditLog_('Belasting-override REJECT', veldDef.sleutel + '=' + raw + ' (> max=' + veldDef.max + ')'); } catch (_) {}
+    return null;
+  }
+
+  return waarde;
+}
+
+/**
+ * Leest alle belastingtarief-overrides uit het Instellingen-tabblad.
+ * Returns object {sleutel: waarde} met alleen geldig-geparsete overrides.
+ *
+ * Defensief:
+ *  - Geen Instellingen-tab        → {}
+ *  - Cel ontbreekt                → skip dat veld
+ *  - Ongeldige waarde             → skip dat veld + audit-log
+ *  - Cache valid voor één session — invalidate na _wisInstellingenCache_/edit
+ */
+function _leesBelastingOverrides_() {
+  if (_belastingOverridesCache) return _belastingOverridesCache;
+  const result = {};
+  try {
+    BELASTING_OVERRIDE_VELDEN.forEach(function(veld) {
+      const raw = (typeof getInstelling_ === 'function') ? getInstelling_(veld.label) : null;
+      const parsed = _parseOverrideWaarde_(raw, veld);
+      if (parsed !== null) result[veld.sleutel] = parsed;
+    });
+  } catch (e) {
+    Logger.log('_leesBelastingOverrides_ fout: ' + e.message);
+    return {};
+  }
+  _belastingOverridesCache = result;
+  return result;
+}
+
+/**
+ * Voegt de override-sectie toe aan het Instellingen-tabblad als die er
+ * nog niet is. Idempotent: detecteert bestaande sectie via marker-label.
+ *
+ * Voor gebruik bij setup() of als migratie.
+ */
+function voegBelastingOverridesToeAanInstellingen_() {
+  const ss = (typeof getSpreadsheet_ === 'function') ? getSpreadsheet_() : null;
+  if (!ss) return;
+  const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
+  if (!sheet) return;
+
+  // Idempotency-check: bestaat de header-rij al?
+  const MARKER = 'BELASTING-TARIEVEN (aanpasbaar bij Prinsjesdag-update)';
+  const data = sheet.getDataRange().getValues();
+  for (let i = 0; i < data.length; i++) {
+    if (String(data[i][0]).indexOf(MARKER) === 0) return;
+  }
+
+  const startRij = sheet.getLastRow() + 2;
+
+  // Header-rij
+  sheet.getRange(startRij, 1, 1, 2).merge()
+    .setValue(MARKER + ' — laat leeg = automatische waarde')
+    .setBackground(KLEUREN.HEADER_BG).setFontColor('#FFFFFF')
+    .setFontWeight('bold').setFontSize(11);
+
+  // Velden zelf — label in kolom 1, waarde leeg in kolom 2, hint als cell-note
+  BELASTING_OVERRIDE_VELDEN.forEach(function(veld, i) {
+    const rij = startRij + 1 + i;
+    sheet.getRange(rij, 1).setValue(veld.label).setFontWeight('bold');
+    // Lege waarde-cel; klant vult zelf in als ze willen overschrijven
+    const waardeCel = sheet.getRange(rij, 2);
+    waardeCel.setValue('');
+    if (veld.hint) waardeCel.setNote(veld.hint);
+    // Conditional formatting: gele highlight als waarde gevuld is (signaleert klant)
+    // Houden we voor later — eerst basic functionaliteit.
+  });
+
+  try { schrijfAuditLog_('Belasting-overrides sectie toegevoegd', BELASTING_OVERRIDE_VELDEN.length + ' velden'); } catch (_) {}
 }
 
 const BELASTING = getBelasting_();
