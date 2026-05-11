@@ -396,72 +396,29 @@ function toonUpdateMelding_(oudeVersie, nieuweVersie) {
 //  WAT IS ER NIEUW? (versiegeschiedenis)
 // ─────────────────────────────────────────────
 
+/**
+ * Toont de "Wat is er nieuw?" modal. Voorheen had deze functie een
+ * eigen hardcoded HTML-changelog met versies 2.0.0 / 1.5.0 / 1.0.0 —
+ * die werd nooit bijgewerkt en lag mijlen ver achter op het dynamische
+ * CHANGELOG_ENTRIES in Changelog.gs (2.3.0–2.6.0). Klant die de Updates-
+ * submenu-entry opende dacht dat het product al een jaar stilstond.
+ *
+ * Nu: delegeer naar toonChangelogVolledig zodat één bron van waarheid
+ * geldt — wat owner aan CHANGELOG_ENTRIES toevoegt verschijnt overal.
+ */
 function toonWatIsErNieuw() {
-  const html = HtmlService.createHtmlOutput(`
-    <style>
-      *{box-sizing:border-box}
-      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
-           padding:22px;font-size:13px;line-height:1.6;color:#1A1A1A;background:#F7F9FC;
-           -webkit-font-smoothing:antialiased}
-      h2{color:#0D1B4E;font-size:18px;font-weight:700;letter-spacing:-0.01em;margin:0 0 4px}
-      h3{color:#0D1B4E;margin:0 0 6px;font-size:13px;font-weight:600}
-      .versie{background:#fff;border:1px solid #E5EAF2;padding:14px 16px;border-radius:8px;
-              margin-bottom:12px;box-shadow:0 1px 2px rgba(13,27,78,0.03)}
-      .versie.nieuwste{border-left:3px solid #2EC4B6}
-      .nieuw{color:#1A1A1A}
-      .nieuw::marker{color:#2EC4B6}
-      .fix{color:#5A6478}
-      .fix::marker{color:#5A6478}
-      ul{margin:4px 0;padding-left:20px}
-      li{margin:3px 0}
-      a{color:#0D1B4E;text-decoration:none;font-weight:600}
-      a:hover{color:#2EC4B6}
-      .foot{font-size:11px;color:#5A6478;margin-top:16px}
-      .btn-sec{background:#F7F9FC;color:#0D1B4E;border:1px solid #E5EAF2;
-               padding:9px 16px;border-radius:6px;cursor:pointer;font-size:13px;
-               font-weight:600;font-family:inherit;margin-top:10px;transition:background 0.15s}
-      .btn-sec:hover{background:#EEF2F8}
-    </style>
-    <h2>Wat is er nieuw in Boekhoudbaar?</h2>
-
-    <div class="versie nieuwste">
-      <h3>Versie 2.0.0 — grote update</h3>
-      <ul>
-        <li class="nieuw">Eén formulier voor facturen, kosten en declaraties (was: 5 aparte formulieren)</li>
-        <li class="nieuw">Foto van bon of factuur uploaden via het menu</li>
-        <li class="nieuw">Alle teksten herschreven in gewone taal</li>
-        <li class="nieuw">Koppeling met Zapier, Make en n8n voor automatisering</li>
-        <li class="nieuw">Betere factuurlay-out met opgemaakt factuurnummer (F000001)</li>
-        <li class="nieuw">Ondersteuning voor niet-Gmail e-mail (ProtonMail, Outlook etc.)</li>
-        <li class="fix">Alle menu-items werken nu correct (was: toestemmingsfout)</li>
-        <li class="fix">Oude antwoordtabbladen worden automatisch verwijderd</li>
-        <li class="fix">Beveiliging verbeterd: injecties in PDF-facturen niet meer mogelijk</li>
-      </ul>
-    </div>
-
-    <div class="versie">
-      <h3>Versie 1.5.0</h3>
-      <ul>
-        <li>Betalingsherinneringen automatisch versturen</li>
-        <li>Kasstroom (cashflow) rapport toegevoegd</li>
-        <li>KOR-check (Kleineondernemersregeling) ingebouwd</li>
-      </ul>
-    </div>
-
-    <div class="versie">
-      <h3>Versie 1.0.0 — eerste versie</h3>
-      <ul>
-        <li>Basisfunctionaliteit: facturen, kosten, BTW-aangifte</li>
-        <li>Dashboard met live statistieken</li>
-        <li>Google Drive integratie</li>
-      </ul>
-    </div>
-
-    <p class="foot">Vragen of problemen? <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a></p>
-    <button class="btn-sec" onclick="google.script.host.close()">Sluiten</button>
-  `).setWidth(520).setHeight(500).setSandboxMode(HtmlService.SandboxMode.IFRAME);
-
-  SpreadsheetApp.getUi().showModalDialog(html, 'Wat is er nieuw?');
+  if (typeof toonChangelogVolledig === 'function') {
+    toonChangelogVolledig();
+    return;
+  }
+  // Defensieve fallback voor het hypothetische geval dat Changelog.gs
+  // ontbreekt — tonen we een minimaal bericht met versie-info.
+  SpreadsheetApp.getUi().alert(
+    'Wat is er nieuw?',
+    'Versie ' + (typeof HUIDIGE_VERSIE !== 'undefined' ? HUIDIGE_VERSIE : 'onbekend') +
+    ' is geïnstalleerd. Het changelog-overzicht is momenteel niet beschikbaar.',
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
 }
 
 // ─────────────────────────────────────────────
