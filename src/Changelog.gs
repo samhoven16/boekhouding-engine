@@ -75,6 +75,25 @@ const CHANGELOG_ENTRIES = [
 const CHANGELOG_USER_PROP = 'changelogLaatstGezien';
 
 /**
+ * Semver-compare: -1 als a < b, 0 als gelijk, 1 als a > b.
+ * Voorheen werd string-compare gebruikt — werkt voor 2.6.0 vs 2.5.0
+ * maar faalt op 2.10.0 vs 2.9.0 (lexicografisch: "1" < "9").
+ * Werkt voor X.Y.Z. Niet-numerieke tokens worden als 0 geteld.
+ */
+function _vergelijkVersie_(a, b) {
+  const aP = String(a || '0').split('.').map(function(x) { return parseInt(x, 10) || 0; });
+  const bP = String(b || '0').split('.').map(function(x) { return parseInt(x, 10) || 0; });
+  const len = Math.max(aP.length, bP.length);
+  for (let i = 0; i < len; i++) {
+    const av = aP[i] || 0;
+    const bv = bP[i] || 0;
+    if (av < bv) return -1;
+    if (av > bv) return 1;
+  }
+  return 0;
+}
+
+/**
  * Toont changelog-modal als klant een nieuwe versie ziet.
  * Aangeroepen vanuit onOpen. Throttle: maximaal 1× per versie.
  */
@@ -114,7 +133,7 @@ function toonChangelog(huidigeVersie, sindsVersie) {
   let teTonen = CHANGELOG_ENTRIES;
   if (sindsVersie) {
     teTonen = CHANGELOG_ENTRIES.filter(function(e) {
-      return e.versie > sindsVersie;
+      return _vergelijkVersie_(e.versie, sindsVersie) > 0;
     });
   } else {
     teTonen = CHANGELOG_ENTRIES.slice(0, 5);
