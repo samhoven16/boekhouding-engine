@@ -38,7 +38,9 @@ function vernieuwDashboard() {
   if (/^←/.test(bedrijf) || /vul.*bedrijfsnaam/i.test(bedrijf) || /placeholder/i.test(bedrijf)) {
     bedrijf = '';
   }
-  if (!bedrijf) bedrijf = 'Mijn Bedrijf';
+  // Geen 'Mijn Bedrijf' default — dat is een placeholder-tekst die klant verwart.
+  // Liever: vraag actief om in te vullen via Instellingen-tabblad.
+  if (!bedrijf) bedrijf = '← Vul je bedrijfsnaam in op Instellingen-tabblad';
   const jaar = new Date().getFullYear();
   const nu = new Date();
 
@@ -579,7 +581,7 @@ function vernieuwDashboard() {
   // rechtsonder — 8 sec. Verdwijnt vanzelf zodra er omzet/kosten zijn.
   try {
     const leeg = (!kpi.omzet) && (!kpi.kosten) && (!kpi.banksaldo)
-              && (bedrijf === 'Mijn Bedrijf' || bedrijf === '');
+              && (bedrijf === '' || /^←/.test(bedrijf) || bedrijf === 'Mijn Bedrijf');
     if (leeg) {
       ss.toast(
         'Dit dashboard vult zich vanzelf zodra je je eerste factuur of kosten boekt. ' +

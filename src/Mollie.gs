@@ -28,7 +28,7 @@ function zetMollieApiKey() {
   const resp = ui.prompt(
     'Mollie API-key instellen',
     'Plak hier je Mollie API-key (live_xxxxx of test_xxxxx).\n' +
-    'Maak een gratis account aan op mollie.com — eerste 100 transacties zijn gratis.\n\n' +
+    'Maak een gratis account aan op mollie.com — geen abonnement, alleen kleine kosten per transactie.\n\n' +
     'Wordt versleuteld opgeslagen.\n\nHuidig: ' +
       (huidig ? huidig.slice(0, 5) + '…' + huidig.slice(-4) : '(geen)'),
     ui.ButtonSet.OK_CANCEL

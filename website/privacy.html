@@ -182,20 +182,41 @@
 
   <p><strong>Doorgifte buiten de EU:</strong> Voor Google LLC en Cloudflare Inc. (VS) baseren wij doorgifte op het EU-US Data Privacy Framework (DPF). Voor Google Gemini baseren wij ons op de Standard Contractual Clauses (SCCs) van de Europese Commissie.</p>
 
-  <h2>6. Cookies</h2>
-  <p>Onze website (boekhoudbaar.nl) gebruikt geen tracking- of analytische cookies. De software zelf maakt gebruik van Google Sheets, waarbij Google zijn eigen cookiebeleid hanteert.</p>
+  <h2 id="cookies">6. Cookies en analytics</h2>
+  <p>We gebruiken zo min mogelijk cookies en geen advertentie-tracking. Bij het eerste bezoek vraagt een banner om je voorkeur — zonder die keuze worden er geen marketing-cookies geplaatst.</p>
+  <ul>
+    <li><strong>Consent-cookie <code>bhb_consent</code> (functioneel):</strong> slaat je keuze (alleen functioneel / alles toestaan) op. Bevat JSON met versie, marketing-flag en timestamp. Verloopt na 12 maanden. Functioneel cookie, geen voorafgaande toestemming vereist onder AVG art. 6 lid 1 sub b/f.</li>
+    <li><strong>Theme-cookie <code>thema</code> (functioneel):</strong> als je een licht/donker-thema kiest, slaan we die voorkeur lokaal op. Verloopt na 12 maanden. Wordt nergens naar verstuurd.</li>
+    <li><strong>Cloudflare Web Analytics:</strong> we gebruiken Cloudflare's privacy-first analytics-script (<code>beacon.min.js</code>). Dit script zet <em>geen</em> cookies en gebruikt geen fingerprinting. Het stuurt geaggregeerde paginabezoek-statistieken (pad, referrer, geanonimiseerd land) naar Cloudflare. Geen individuele bezoekers traceerbaar. <a href="https://www.cloudflare.com/web-analytics/" target="_blank" rel="noopener">Cloudflare's privacybeleid</a>.</li>
+    <li><strong>Affiliate-cookie <code>bhb_ref</code> (marketing — alléén bij opt-in):</strong> als je via een partner-link (<code>?ref=&lt;code&gt;</code>) op de site komt én je hebt op de cookie-banner "Alles toestaan" gekozen, plaatsen wij een cookie met de partner-code voor maximaal 90 dagen. Bij aankoop wordt deze code doorgegeven aan onze betaalprovider als metadata, zodat we de juiste partner kunnen uitbetalen. De cookie bevat alleen alfanumerieke tekens (max. 32) en geen persoonsgegevens. Bij keuze "Alleen functioneel" wordt deze cookie niet geplaatst en niet doorgegeven.</li>
+    <li><strong>Google Sheets en Apps Script:</strong> de Software zelf draait op Google's infrastructuur. Google hanteert zijn eigen cookiebeleid voor het inloggen op je Google-account en het gebruik van Drive/Sheets. Wij hebben hier geen controle over.</li>
+  </ul>
+  <p>We gebruiken geen Google Analytics, geen Facebook Pixel, geen advertentie-tracking, geen heatmaps. Onze website werkt zonder dat we precies hoeven te weten wie wat doet.</p>
+  <p><strong>Je keuze wijzigen of intrekken:</strong> klik op <button type="button" onclick="if(window.BhbConsent){window.BhbConsent.heropen()}else{alert('Cookie-banner niet geladen — herlaad de pagina.')}" style="background:#0D1B4E;color:#fff;border:0;border-radius:6px;padding:6px 12px;cursor:pointer;font:600 13px inherit">Cookie-keuze opnieuw maken</button> om de banner weer te tonen.</p>
+
+  <h2 id="bounces">6a. E-mail bounce-verwerking</h2>
+  <p>Voor de licentie-mail en eventuele service-updates gebruiken wij Brevo (Sendinblue, EU). Brevo informeert ons via een webhook wanneer een e-mail niet bezorgd kan worden (hard bounce, ongeldig adres, spam-klacht). Wij verwerken die signalen zo:</p>
+  <ul>
+    <li><strong>Hard bounce / ongeldig adres:</strong> wij markeren je account-status als "bounce" en stoppen verdere e-mails naar dat adres. Zo voorkomen we dat we onbedoeld blijven mailen.</li>
+    <li><strong>Spam-klacht:</strong> idem — directe stop, geen herhaal-mails.</li>
+    <li><strong>Soft bounce (tijdelijk):</strong> noteren we als signaal, maar versturen blijven we proberen (mailbox vol e.d.).</li>
+  </ul>
+  <p>De webhook-data (event-type, e-mailadres, reden, datum) wordt alleen opgeslagen om bezorgproblemen op te lossen. Geen content van mails, geen tracking-pixels.</p>
 
   <h2>7. Jouw rechten (AVG)</h2>
-  <p>Je hebt het recht op:</p>
+  <p>Je hebt onder de AVG het recht op:</p>
   <ul>
-    <li><strong>Inzage</strong> — opvragen welke gegevens wij van jou hebben</li>
-    <li><strong>Correctie</strong> — onjuiste gegevens laten verbeteren</li>
-    <li><strong>Verwijdering</strong> — jouw gegevens laten verwijderen ("recht om vergeten te worden"), tenzij een wettelijke bewaarplicht van toepassing is</li>
-    <li><strong>Bezwaar</strong> — bezwaar maken tegen verwerking op basis van gerechtvaardigd belang</li>
-    <li><strong>Overdraagbaarheid</strong> — jouw gegevens in een machine-leesbaar formaat ontvangen</li>
-    <li><strong>Intrekking toestemming</strong> — indien verwerking op toestemming is gebaseerd</li>
+    <li><strong>Inzage</strong> (art. 15) — opvragen welke gegevens wij van jou hebben</li>
+    <li><strong>Rectificatie</strong> (art. 16) — onjuiste gegevens laten verbeteren</li>
+    <li><strong>Verwijdering</strong> (art. 17) — jouw gegevens laten verwijderen ("recht om vergeten te worden"), tenzij een wettelijke bewaarplicht van toepassing is</li>
+    <li><strong>Beperking van verwerking</strong> (art. 18) — verwerking tijdelijk stopzetten, bijvoorbeeld terwijl je een correctieverzoek beoordeelt</li>
+    <li><strong>Bezwaar</strong> (art. 21) — bezwaar maken tegen verwerking op basis van gerechtvaardigd belang</li>
+    <li><strong>Overdraagbaarheid</strong> (art. 20) — jouw gegevens in een machine-leesbaar formaat ontvangen (een Boekhoudbaar-klant kan via menu <em>"Volledige data-export"</em> dit direct zelf doen)</li>
+    <li><strong>Intrekking toestemming</strong> (art. 7 lid 3) — als de verwerking op toestemming is gebaseerd, kun je die toestemming intrekken</li>
+    <li><strong>Niet onderworpen aan geautomatiseerde besluitvorming</strong> (art. 22) — wij nemen geen geautomatiseerde beslissingen met juridische gevolgen over jou</li>
   </ul>
   <p>Stuur je verzoek naar <a href="mailto:info@boekhoudbaar.nl?subject=AVG-verzoek">info@boekhoudbaar.nl</a>. Sam Hoven (eigenaar/Functionaris Gegevensbescherming) reageert binnen 4 weken (AVG art. 12 lid 3).</p>
+  <p><strong>Klachtrecht bij de Autoriteit Persoonsgegevens:</strong> ben je het niet eens met onze verwerking of reactie op je verzoek? Je hebt altijd het recht om een klacht in te dienen bij de toezichthoudende autoriteit. In Nederland is dat de <a href="https://autoriteitpersoonsgegevens.nl/" target="_blank" rel="noopener">Autoriteit Persoonsgegevens</a> (AVG art. 77).</p>
 
   <h2>7a. Bewaartermijnen per data-categorie</h2>
   <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">
@@ -207,6 +228,8 @@
       <tr><td style="padding:10px;border:1px solid #E5EAF2">Email-correspondentie (support)</td><td style="padding:10px;border:1px solid #E5EAF2">2 jaar</td><td style="padding:10px;border:1px solid #E5EAF2">Garantie-claims + product-improvement</td></tr>
       <tr><td style="padding:10px;border:1px solid #E5EAF2">Website-analytics (Cloudflare Insights)</td><td style="padding:10px;border:1px solid #E5EAF2">30 dagen, geanonimiseerd</td><td style="padding:10px;border:1px solid #E5EAF2">Geen cookies, alleen geaggregeerd</td></tr>
       <tr><td style="padding:10px;border:1px solid #E5EAF2">Boekhouding-data (sheet in jouw Drive)</td><td style="padding:10px;border:1px solid #E5EAF2">Door jou bepaald</td><td style="padding:10px;border:1px solid #E5EAF2">Wij hebben geen toegang — Google Drive permissions</td></tr>
+      <tr><td style="padding:10px;border:1px solid #E5EAF2">Affiliate-code (cookie + opslag bij aankoop)</td><td style="padding:10px;border:1px solid #E5EAF2">90 dagen (cookie), 7 jaar (aankoop-record)</td><td style="padding:10px;border:1px solid #E5EAF2">Alleen na consent — gerechtvaardigd belang partner-uitbetaling</td></tr>
+      <tr><td style="padding:10px;border:1px solid #E5EAF2">E-mail bounce-events (Brevo webhook)</td><td style="padding:10px;border:1px solid #E5EAF2">Tot heractivatie van adres</td><td style="padding:10px;border:1px solid #E5EAF2">Gerechtvaardigd belang — voorkomen herhaaldelijke onbestelbare mails</td></tr>
     </tbody>
   </table>
 
@@ -237,5 +260,6 @@
 <script>
   (function(){var btn=document.querySelector('.nav-toggle'),menu=document.getElementById('nav-menu');if(!btn||!menu)return;btn.addEventListener('click',function(){var open=menu.classList.toggle('open');btn.setAttribute('aria-expanded',open?'true':'false');});menu.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){menu.classList.remove('open');btn.setAttribute('aria-expanded','false');});});})();
 </script>
+<script src="/consent.js" defer></script>
 </body>
 </html>

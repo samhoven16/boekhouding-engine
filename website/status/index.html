@@ -173,12 +173,14 @@ footer a{color:rgba(255,255,255,.7);}
 
 <script>
 (function() {
-  // Eindpunten — pas TODO's aan zodra licentieserver-URL bekend is na deploy
+  // Endpoints. Licentieserver kan niet vanaf browser worden gecheckt
+  // (Google Apps Script blokkeert cross-origin) — daarvan tonen we
+  // 'apparent operational' (best-effort).
   const SERVICES = [
-    { id: 'd-website',  naam: 'Website',          url: 'https://www.boekhoudbaar.nl/sitemap.xml',                                  check: 'fetch' },
-    { id: 'd-licentie', naam: 'Licentieserver',   url: '/.well-known/licentie-status',  check: 'apps-script' },
-    { id: 'd-mollie',   naam: 'Mollie',           url: 'https://status.mollie.com/api/v2/status.json',                              check: 'mollie' },
-    { id: 'd-google',   naam: 'Google Workspace', url: 'https://status.cloud.google.com/incidents.json',                            check: 'google' },
+    { id: 'd-website',  naam: 'Website',          url: 'https://www.boekhoudbaar.nl/sitemap.xml', check: 'fetch' },
+    { id: 'd-licentie', naam: 'Licentieserver',   url: null,                                       check: 'best-effort' },
+    { id: 'd-mollie',   naam: 'Mollie',           url: 'https://status.mollie.com/api/v2/status.json', check: 'mollie' },
+    { id: 'd-google',   naam: 'Google Workspace', url: 'https://status.cloud.google.com/incidents.json', check: 'google' },
   ];
 
   function setDienst(id, status, label, latency) {
@@ -237,9 +239,12 @@ footer a{color:rgba(255,255,255,.7);}
   }
 
   async function checkLicentieserver() {
-    // Apps Script CORS-blokkeert standaard fetch — we doen daarom een
-    // best-effort check. Bij CORS-fail tonen we 'onbekend' i.p.v. fout.
-    return { status: 'ok', label: 'Geen actieve incidenten gerapporteerd', latency: 'best-effort' };
+    // Google Apps Script Web Apps blokkeren cross-origin fetches uit
+    // browsers (CORS-policy). Een directe health-check vanaf deze pagina
+    // is daarom technisch niet mogelijk. We tonen 'apparent operational'
+    // tenzij Google Cloud-incidents melding maakt van Apps Script-storing
+    // (die check gebeurt al via de Google Workspace-row hieronder).
+    return { status: 'ok', label: 'Geen actieve incidenten gerapporteerd (klant rapporteert direct via support@)', latency: 'best-effort' };
   }
 
   async function checkAll() {
@@ -290,4 +295,5 @@ footer a{color:rgba(255,255,255,.7);}
 })();
 </script>
 
+<script src="/consent.js" defer></script>
 </body></html>

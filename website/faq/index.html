@@ -35,7 +35,7 @@
   ]},
   {"@type":"FAQPage","mainEntity":[
     {"@type":"Question","name":"Moet ik elk jaar opnieuw betalen?","acceptedAnswer":{"@type":"Answer","text":"Nee. Je betaalt één keer €49 en daarna nooit meer. Geen jaarlijkse licentie, geen verlengingsmail, geen verborgen kosten."}},
-    {"@type":"Question","name":"Wat als het niet werkt voor mij?","acceptedAnswer":{"@type":"Answer","text":"Mail binnen 30 dagen na aankoop op support@boekhoudbaar.nl en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening."}},
+    {"@type":"Question","name":"Wat als het niet werkt voor mij?","acceptedAnswer":{"@type":"Answer","text":"Lukt activeren niet, of werkt iets aantoonbaar niet zoals beschreven? Mail support@boekhoudbaar.nl — ik los het op of stort je €49 terug. Geen onbeperkte "geld terug zonder reden" — Boekhoudbaar is een digitaal product dat direct in jouw Drive komt. Zie voorwaarden artikel 6."}},
     {"@type":"Question","name":"Waar staan mijn gegevens precies?","acceptedAnswer":{"@type":"Answer","text":"In één Google Spreadsheet, in jouw eigen Google Drive. Alleen jij — en wie jij expliciet toegang geeft — kan erbij. Ik kan er niet bij, Google gebruikt de inhoud niet voor advertenties."}},
     {"@type":"Question","name":"Kan mijn boekhouder meekijken?","acceptedAnswer":{"@type":"Answer","text":"Ja, gratis. Je klikt op Delen in Google Sheets, typt het mailadres van je boekhouder, en klaar. Geen extra licentie."}},
     {"@type":"Question","name":"Werkt het ook op een Mac of tablet?","acceptedAnswer":{"@type":"Answer","text":"Ja. Boekhoudbaar draait in je browser, dus je kunt het openen op Mac, Windows, Linux, iPad, zelfs je telefoon."}},
@@ -46,7 +46,7 @@
     {"@type":"Question","name":"Hoe verwerk ik betalingen van Mollie of Stripe?","acceptedAnswer":{"@type":"Answer","text":"Elke uitbetaling naar je bank boek je als bankontvangst, de transactiekosten als bankkosten (BTW-vrij). Stap-voor-stap voorbeeld in de meegeleverde instructie."}},
     {"@type":"Question","name":"Kan ik Boekhoudbaar gebruiken voor mijn KOR-aangifte?","acceptedAnswer":{"@type":"Answer","text":"Ja. Vul in instellingen aan dat KOR actief is, en de sheet rekent geen BTW meer op je facturen. Je doet jaarlijks een KOR-aangifte (op = op €20.000 omzet)."}},
     {"@type":"Question","name":"Werkt Boekhoudbaar offline?","acceptedAnswer":{"@type":"Answer","text":"Niet volledig. Google Sheets heeft een offline-mode, maar de live functies (PDF genereren, e-mailen, BTW-aangifte) hebben internet nodig."}},
-    {"@type":"Question","name":"Wat is de iDEAL-betaal-link op mijn factuur?","acceptedAnswer":{"@type":"Answer","text":"Bij elke factuur krijgt je klant een betaal-knop met iDEAL, Bancontact en creditcard. Klant scant of klikt — direct betaald. Werkt via Mollie. Eerste 100 transacties gratis bij Mollie, daarna ~€0,29 per transactie."}},
+    {"@type":"Question","name":"Wat is de iDEAL-betaal-link op mijn factuur?","acceptedAnswer":{"@type":"Answer","text":"Bij elke factuur krijgt je klant een betaal-knop met iDEAL, Bancontact en creditcard. Klant scant of klikt — direct betaald. Werkt via Mollie. Mollie kent geen abonnement, alleen kleine kosten per transactie (zie mollie.com voor actuele tarieven)."}},
     {"@type":"Question","name":"Hoe werkt de AI-bonnen-scan?","acceptedAnswer":{"@type":"Answer","text":"Maak een foto van je bon of upload een PDF. Boekhoudbaar leest leverancier, datum, bedrag en BTW automatisch in via Gemini Vision. Je hoeft alleen nog te checken en op Opslaan te klikken."}},
     {"@type":"Question","name":"Hoe werkt de read-only-deelflow met mijn accountant?","acceptedAnswer":{"@type":"Answer","text":"Eén klik en er wordt een aparte spreadsheet gemaakt met alleen rapportages — Balans, W&V, Cashflow, BTW. Bron-data is verborgen. Accountant krijgt leesrechten voor 30 dagen (configureerbaar 1-365), daarna automatisch ingetrokken."}},
     {"@type":"Question","name":"Wat is de BTW-spaarpot?","acceptedAnswer":{"@type":"Answer","text":"Bij elke factuur reserveert het systeem automatisch jouw BTW-deel op een aparte rekening (1205) zodat je het niet per ongeluk uitgeeft. Bij kwartaalaangifte staat het bedrag klaar voor overmaking naar de Belastingdienst."}}
@@ -222,7 +222,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
 
     <details data-cat="prijs">
       <summary>Wat als het niet werkt voor mij?</summary>
-      <p>Mail me binnen <strong>30 dagen</strong> na aankoop op <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a> en ik stort je €49 volledig terug. Geen formulier, geen 'waarom dan?', gewoon terug op je rekening.</p>
+      <p>Lukt activeren niet, of werkt iets aantoonbaar niet zoals beschreven? Mail <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a> — ik los het op of stort je €49 terug. Geen onbeperkte "geld terug zonder reden" — Boekhoudbaar is een digitaal product dat direct in jouw Drive komt. Zie <a href="/voorwaarden/#art6">voorwaarden artikel 6</a>.</p>
     </details>
 
     <details data-cat="prijs">
@@ -252,7 +252,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
 
     <details data-cat="features">
       <summary>Wat is de iDEAL-betaal-link op mijn factuur?</summary>
-      <p>Bij elke factuur krijgt je klant automatisch een betaal-knop met iDEAL, Bancontact en creditcard. Klant scant of klikt — direct betaald, geen IBAN-typo's. Werkt via Mollie. Eerste 100 transacties zijn gratis bij Mollie; daarna ~€0,29 per transactie (eigen Mollie-account vereist, maar de koppeling zit al in Boekhoudbaar).</p>
+      <p>Bij elke factuur krijgt je klant automatisch een betaal-knop met iDEAL, Bancontact en creditcard. Klant scant of klikt — direct betaald, geen IBAN-typo's. Werkt via Mollie. Mollie kent geen abonnement, alleen kleine kosten per transactie (zie mollie.com voor actuele tarieven) (eigen Mollie-account vereist, maar de koppeling zit al in Boekhoudbaar).</p>
     </details>
 
     <details data-cat="features">
@@ -569,5 +569,6 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
     });
   })();
 </script>
+<script src="/consent.js" defer></script>
 </body>
 </html>

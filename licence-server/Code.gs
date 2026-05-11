@@ -51,14 +51,23 @@ function doGet(e) {
 
 
 function doPost(e) {
+  // Router: Mollie stuurt form-urlencoded met `id=tr_…`. Brevo stuurt JSON met
+  // `event` veld. We dispatchen op basis van wat er binnenkomt.
+  const isBrevo = e && e.postData && e.postData.type &&
+    /json/i.test(e.postData.type) && /"event"/.test(e.postData.contents || '');
+
   try {
-    verwerkMollieWebhook_(e);
+    if (isBrevo) {
+      verwerkBrevoBounce_(e);
+    } else {
+      verwerkMollieWebhook_(e);
+    }
     return ContentService.createTextOutput('OK');
   } catch (err) {
     Logger.log('Webhook fout: ' + err.message + '\n' + (err.stack || ''));
-    // Re-throw zodat Apps Script HTTP 500 retourneert → Mollie retried
-    // (max 10x over 26 uur). Een returned ContentService output zou 200
-    // teruggeven en de retry-flow uitschakelen.
+    // Re-throw zodat Apps Script HTTP 500 retourneert. Mollie retried
+    // (max 10x over 26 uur); Brevo retried tot 24u. Een returned ContentService
+    // output zou 200 teruggeven en de retry-flow uitschakelen.
     throw err;
   }
 }
@@ -155,6 +164,11 @@ function betaalPagina_(e) {
   const props   = PropertiesService.getScriptProperties();
   const naam    = props.getProperty('PRODUCT_NAAM')  || 'Boekhoudbaar';
   const prijsRw = props.getProperty('PRODUCT_PRIJS') || '49.00';
+  // Affiliate-code uit ?ref=<code> — alleen alfanumeriek/underscore/dash,
+  // max 32 tekens. Wordt doorgegeven aan Mollie als metadata zodat we
+  // bij webhook-verwerking de verwijzer kunnen vastleggen.
+  const refRaw = (e && e.parameter && e.parameter.ref) || '';
+  const refCode = String(refRaw).replace(/[^A-Za-z0-9_-]/g, '').substring(0, 32);
   // Dubbele fallback: zelfs als zelfHerstelProductConfig_ niet heeft gedraaid,
   // corrigeer alsnog in de render-laag zodat de pagina nooit €4900 toont.
   const prijsNum = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
@@ -271,6 +285,7 @@ function betaalPagina_(e) {
     </label>
   </div>
 
+  <input type="hidden" id="ref" value="${escHtml_(refCode)}">
   <button class="btn" id="btn" onclick="betaal()">Bestelling met betalingsverplichting · €${prijs}</button>
   <div class="fout" id="fout"></div>
 
@@ -296,7 +311,7 @@ function betaal() {
       else { toonFout(res.fout || 'Betaling aanmaken mislukt.'); btn.disabled=false; btn.textContent=oriBtnTxt; }
     })
     .withFailureHandler(function(e) { toonFout('Fout: '+e.message); btn.disabled=false; btn.textContent=oriBtnTxt; })
-    .maakBetaling(naam, email);
+    .maakBetaling(naam, email, (document.getElementById('ref')||{}).value||'');
 }
 function toonFout(t){var e=document.getElementById('fout');e.textContent=t;e.style.display='block';}
 </script></body></html>`;
@@ -309,9 +324,11 @@ function toonFout(t){var e=document.getElementById('fout');e.textContent=t;e.sty
 // ─────────────────────────────────────────────
 //  BETAALPAGINA: BETALING AANMAKEN (Mollie)
 // ─────────────────────────────────────────────
-function maakBetaling(klantnaam, klantEmail) {
+function maakBetaling(klantnaam, klantEmail, refCode) {
   klantnaam  = String(klantnaam  || '').trim();
   klantEmail = String(klantEmail || '').trim().toLowerCase();
+  // Sanitiseer ref opnieuw server-side: client kan alles sturen.
+  const ref = String(refCode || '').replace(/[^A-Za-z0-9_-]/g, '').substring(0, 32);
   if (!klantnaam || !klantEmail) return { fout: 'Naam en e-mail zijn verplicht.' };
   // Format-check zodat de licentie-mail later (na betaling) niet crasht.
   // Voor klant beter om vroeg te falen dan na betaling.
@@ -341,7 +358,9 @@ function maakBetaling(klantnaam, klantEmail) {
         description: productnm + ' — ' + klantnaam,
         redirectUrl: webAppUrl + '?actie=bedankt',
         webhookUrl:  webAppUrl,
-        metadata:    { naam: klantnaam, email: klantEmail },
+        metadata:    ref
+          ? { naam: klantnaam, email: klantEmail, ref: ref }
+          : { naam: klantnaam, email: klantEmail },
         method:      ['ideal', 'creditcard', 'bancontact'],
       }),
       muteHttpExceptions: true,
@@ -413,11 +432,20 @@ function verwerkMollieWebhook_(e) {
     const meta    = betaling.metadata || {};
     const naam    = saneerNaam_(String(meta.naam  || 'Klant'));
     const email   = String(meta.email || '').trim().toLowerCase();
+    const ref     = String(meta.ref   || '').replace(/[^A-Za-z0-9_-]/g, '').substring(0, 32);
     const sleutel = genereerSleutel_();
+
+    // Zorg dat de extra kolommen (Verwijzer, Bouncestatus, Bouncereden) bestaan
+    // voordat we de rij appenden. Idempotent.
+    borgExtraKolommen_(sheet);
 
     sheet.appendRow([
       sleutel, naam, email, 'Standaard', 'Actief', '',
       '', new Date(), paymentId, new Date(),
+      '',           // Onboarded op
+      ref,          // Verwijzer (kolom 12, 0-based 11)
+      '',           // Bouncestatus
+      '',           // Bouncereden
     ]);
 
     // Sla op in cache zodat retries direct stoppen
@@ -1810,7 +1838,8 @@ function verstuurDripsDagelijks_() {
       const aanmaakDatum  = data[i][7];
 
       if (!email || !sleutel) continue;
-      if (status && status.toLowerCase() === 'gestopt') continue;
+      const statusLow = status.toLowerCase();
+      if (statusLow === 'gestopt' || statusLow === 'bounce') continue;
       if (!aanmaakDatum || !(aanmaakDatum instanceof Date)) continue;
 
       const dagenSinds = Math.floor((nu - aanmaakDatum.getTime()) / 86400000);
@@ -1978,4 +2007,154 @@ function installeerDripTrigger_() {
   ScriptApp.newTrigger('verstuurDripsDagelijks_')
     .timeBased().everyDays(1).atHour(9).create();
   Logger.log('Drip-trigger geïnstalleerd: 09:00 dagelijks');
+}
+
+// ─────────────────────────────────────────────
+//  AFFILIATE + BOUNCE — sheet-uitbreidingen
+// ─────────────────────────────────────────────
+/**
+ * Voegt idempotent de kolommen Verwijzer, Bouncestatus en Bouncereden toe
+ * aan de Licenties-sheet. Bestaande klanten houden lege waarden.
+ *
+ * Wordt aangeroepen vanuit de Mollie-webhook en de Brevo-webhook zodat
+ * oude installaties zelfheel-baar zijn zonder handmatige migratie.
+ */
+function borgExtraKolommen_(sheet) {
+  if (!sheet) sheet = getLicentieSheet_();
+  const lastCol = sheet.getLastColumn();
+  if (lastCol === 0) return; // leeg blad — setupLicentieSheet zet headers
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const verwacht = ['Verwijzer', 'Bouncestatus', 'Bouncereden'];
+  let teVoegen = verwacht.filter(function(h) { return headers.indexOf(h) === -1; });
+  if (!teVoegen.length) return;
+  const start = lastCol + 1;
+  sheet.getRange(1, start, 1, teVoegen.length).setValues([teVoegen])
+    .setFontWeight('bold').setBackground('#0D1B4E').setFontColor('#FFFFFF');
+}
+
+/**
+ * Vindt het 0-based kolomindex van een header op de Licenties-sheet.
+ * Returns -1 als de kolom niet bestaat (caller moet borgExtraKolommen_ eerst aanroepen).
+ */
+function kolomIndex_(sheet, naam) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  return headers.indexOf(naam);
+}
+
+// ─────────────────────────────────────────────
+//  BREVO BOUNCE-WEBHOOK
+// ─────────────────────────────────────────────
+/**
+ * Verwerkt een Brevo Transactional Webhook event.
+ *
+ * Brevo POST body (JSON):
+ *   { event: "hard_bounce" | "soft_bounce" | "spam" | "invalid_email" | ...,
+ *     email: "klant@voorbeeld.nl", reason: "...", date: "...", ... }
+ *
+ * Authenticatie: query-parameter `?token=<BREVO_WEBHOOK_TOKEN>` moet
+ * matchen met de ScriptProperty. Brevo ondersteunt geen native HMAC-
+ * signature; een ondoorzichtige token in de URL is de officiële aanpak
+ * (URL wordt alleen aan Brevo gegeven via hun dashboard, niet publiek).
+ *
+ * Side-effects:
+ *  - hard_bounce / invalid_email / spam → markeer email als ongeldig
+ *    (Bouncestatus = 'hard') en zet Status van actieve licenties op
+ *    'Bounce' zodat verdere drips niet versturen.
+ *  - soft_bounce → noteer als 'soft' (info-only, geen Status-wijziging).
+ */
+function verwerkBrevoBounce_(e) {
+  const props = PropertiesService.getScriptProperties();
+  const verwachteToken = props.getProperty('BREVO_WEBHOOK_TOKEN');
+  if (!verwachteToken) {
+    Logger.log('BREVO_WEBHOOK_TOKEN niet ingesteld — webhook genegeerd');
+    return;
+  }
+  const aangeleverd = (e && e.parameter && e.parameter.token) || '';
+  if (!veiligVergelijk_(aangeleverd, verwachteToken)) {
+    Logger.log('Brevo webhook: ongeldig token (eerste 4: ' +
+      String(aangeleverd).substring(0, 4) + '…)');
+    throw new Error('Unauthorized'); // 500 → Brevo retried, ops kan investigation doen
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(e.postData.contents);
+  } catch (parseErr) {
+    Logger.log('Brevo webhook: JSON-parse fout: ' + parseErr.message);
+    return;
+  }
+
+  const event = String(payload.event || '').toLowerCase();
+  const email = String(payload.email || '').trim().toLowerCase();
+  const reden = String(payload.reason || payload['delivery_status'] || '').substring(0, 240);
+  if (!event || !email) return;
+
+  const hardBounceEvents = ['hard_bounce', 'invalid_email', 'spam', 'blocked', 'unsubscribed'];
+  const softBounceEvents = ['soft_bounce', 'deferred'];
+  let bounceStatus = '';
+  if (hardBounceEvents.indexOf(event) !== -1) bounceStatus = 'hard';
+  else if (softBounceEvents.indexOf(event) !== -1) bounceStatus = 'soft';
+  else return; // delivered / opened / clicked → genegeerd
+
+  // Cache idempotency-key: zelfde event+email+timestamp niet dubbel verwerken
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'brevo_' + event + '_' + email + '_' +
+    String(payload.date || payload.ts || '').substring(0, 32);
+  if (cache.get(cacheKey) === 'done') return;
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(8000)) throw new Error('Lock timeout Brevo ' + email);
+
+  try {
+    const sheet = getLicentieSheet_();
+    borgExtraKolommen_(sheet);
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const emailCol  = headers.indexOf('Email');
+    const statusCol = headers.indexOf('Status');
+    const bsCol     = headers.indexOf('Bouncestatus');
+    const brCol     = headers.indexOf('Bouncereden');
+    if (emailCol === -1 || bsCol === -1 || brCol === -1) {
+      Logger.log('Brevo webhook: verwachte kolommen niet gevonden');
+      return;
+    }
+    const data = sheet.getRange(2, 1, Math.max(0, sheet.getLastRow() - 1), sheet.getLastColumn()).getValues();
+    let geraakt = 0;
+    for (let i = 0; i < data.length; i++) {
+      if (String(data[i][emailCol]).toLowerCase() === email) {
+        const rij = i + 2; // header-rij = 1
+        sheet.getRange(rij, bsCol + 1).setValue(bounceStatus);
+        sheet.getRange(rij, brCol + 1).setValue(reden + ' · ' + new Date().toISOString().substring(0, 10));
+        // Bij hard-bounce: stop alle drips door Status op 'Bounce' te zetten
+        // (verstuurDripsDagelijks_ filtert op Status='Actief').
+        if (bounceStatus === 'hard' && statusCol !== -1 &&
+            String(data[i][statusCol]).toLowerCase() === 'actief') {
+          sheet.getRange(rij, statusCol + 1).setValue('Bounce');
+        }
+        geraakt++;
+      }
+    }
+    cache.put(cacheKey, 'done', 21600);
+    Logger.log('Brevo bounce verwerkt: ' + event + ' voor ' + email +
+      ' (' + geraakt + ' rijen geraakt)');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Setup-helper: roep eenmalig handmatig aan in de editor om een token
+ * te genereren en in de ScriptProperties op te slaan. Geef de URL aan
+ * Brevo (dashboard → Transactional → Settings → Webhook):
+ *   <WEB_APP_URL>?token=<TOKEN>
+ */
+function setupBrevoWebhookToken() {
+  const props = PropertiesService.getScriptProperties();
+  let token = props.getProperty('BREVO_WEBHOOK_TOKEN');
+  if (!token) {
+    token = Utilities.getUuid().replace(/-/g, '');
+    props.setProperty('BREVO_WEBHOOK_TOKEN', token);
+  }
+  const url = ScriptApp.getService().getUrl() + '?token=' + token;
+  Logger.log('Brevo webhook URL (configureer in Brevo dashboard):\n' + url);
+  return url;
 }

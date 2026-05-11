@@ -655,17 +655,34 @@ function resetOnboarding() {
 //
 // Test elke migratie in tests/unit/migraties.test.js.
 const MIGRATIES_REGISTER = [
-  // Voorbeeld-migratie voor de 2.0 → 2.1 polish-ronde. Geen schema-
-  // wijzigingen in deze release; deze migratie is een no-op die het
-  // framework valideert. Kan vervangen worden zodra echte migratie nodig is.
+  // 2.0 → 2.1: polish-ronde, geen schema-wijziging
   {
     van: '2.0.0',
     naar: '2.1.0',
     naam: 'polish_ronde_mei_2026',
     fn: function(_ss) {
-      // Geen schema-wijziging in 2.1.0 — alleen UX/foutmeldingen/jargon.
-      // Deze stub bewijst dat het framework werkt + audit-log schrijft.
       try { schrijfAuditLog_('Migratie 2.0→2.1', 'no-op (UX-polish only)'); } catch (_) {}
+    },
+  },
+  // 2.1 → 2.6: één gebundelde migratie omdat 2.2-2.5 nooit publieke
+  // releases waren (alleen interne ontwikkel-snapshots). Geen schema-
+  // wijziging — alle 2.1→2.6 verbeteringen zijn UX/copy/email/legal.
+  // Wat WEL doe: zorg dat eventuele oude SHEETS.GROOTBOEK-property ruimt
+  // (de undefined-bug-fix) door cache-invalidation aan te roepen.
+  {
+    van: '2.1.0',
+    naar: '2.6.0',
+    naam: 'launch_ready_mei_2026',
+    fn: function(_ss) {
+      try {
+        // Stop eventuele lopende FATAL-throttle-cache zodat klant niet
+        // herhaalde mails krijgt over de oude 'undefined tabblad'-bug.
+        const cache = CacheService.getScriptCache();
+        ['fataal_TAB_DELETED_', 'fataal_TAB_DELETED'].forEach(function(prefix) {
+          try { cache.remove(prefix); } catch (_) {}
+        });
+      } catch (_) {}
+      try { schrijfAuditLog_('Migratie 2.1→2.6', 'launch-ready (UX/copy/legal + FATAL-spam-fix)'); } catch (_) {}
     },
   },
 ];
