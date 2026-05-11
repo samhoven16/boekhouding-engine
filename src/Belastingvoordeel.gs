@@ -41,7 +41,9 @@ function berekenBelastingvoordeel_(advies, BELASTING) {
   const winst = advies.winstNaAftrek || 0;
   const ib = advies.geschatteIB || 0;
   const effectiefTarief = winst > 0 ? ib / winst : (BELASTING.IB_SCHIJF_1_PCT || 0.3582);
-  const marginaalTarief = winst > BELASTING.IB_SCHIJF_1_MAX ? 0.495 : effectiefTarief;
+  const marginaalTarief = winst > BELASTING.IB_SCHIJF_1_MAX
+    ? (BELASTING.IB_SCHIJF_2_PCT || 0.495)
+    : effectiefTarief;
 
   // ── Benutte aftrekken (klant ziet wat er al opgehaald is) ────────────
   const benutteAftrekken = (advies.aftrekken || []).map(function(a) {
