@@ -61,83 +61,138 @@ function BTW_EXCLUSIEF(bedragIncl, tarief) {
 }
 
 /**
- * Berekent geschatte inkomstenbelasting voor een ZZP'er onder AOW-leeftijd
- * volgens de schijven van 2025 (box 1).
- * Schijf 1: tot € 38.441   → 35,82%
- * Schijf 2: € 38.442 t/m 76.817 → 37,48%
- * Schijf 3: > € 76.817      → 49,50%
+ * Geeft de belastingtarieven voor een specifiek jaar terug uit
+ * BELASTING_PER_JAAR (Belastingadvies.gs). Werkt zonder services
+ * (geen UrlFetch/PropertiesService) — veilig in custom-function context.
+ *
+ * Bij ontbrekend jaar valt terug op het laatst gedefinieerde jaar (in
+ * BELASTING_PER_JAAR) zodat de berekening niet stilletjes 0 retourneert.
+ */
+function _cf_tarievenVoorJaar_(jaar) {
+  var beschikbaar = (typeof BELASTING_PER_JAAR === 'object' && BELASTING_PER_JAAR) ? BELASTING_PER_JAAR : null;
+  if (beschikbaar && beschikbaar[jaar]) return beschikbaar[jaar];
+  // Fallback: zoek het hoogst beschikbare jaar ≤ huidig kalenderjaar
+  if (beschikbaar) {
+    var jaren = Object.keys(beschikbaar).map(function(j) { return parseInt(j, 10); }).filter(isFinite).sort();
+    for (var i = jaren.length - 1; i >= 0; i--) {
+      if (jaren[i] <= jaar) return beschikbaar[jaren[i]];
+    }
+    if (jaren.length) return beschikbaar[jaren[jaren.length - 1]];
+  }
+  // Last-resort hardcoded 2025-snapshot (mocht BELASTING_PER_JAAR ontbreken)
+  return {
+    ZELFSTANDIGENAFTREK: 2470,
+    MKB_WINSTVRIJSTELLING: 0.127,
+    HEFFINGSKORTING_MAX: 3068,
+    HEFFINGSKORTING_AFBOUW_VAN: 28406,
+    HEFFINGSKORTING_AFBOUW_PCT: 0.0634,
+    HEFFINGSKORTING_NUL_VAN: 76817,
+    ARBEIDSKORTING_MAX: 5599,
+    ARBEIDSKORTING_TOP_TOT: 43071,
+    ARBEIDSKORTING_AFBOUW_PCT: 0.0651,
+    ZVW_PCT: 0.0526,
+    ZVW_MAX_INKOMEN: 75864,
+    IB_SCHIJF_1_MAX: 76817,
+    IB_SCHIJVEN: [
+      { tot: 38441,    pct: 0.3582 },
+      { tot: 76817,    pct: 0.3748 },
+      { tot: Infinity, pct: 0.495  },
+    ],
+  };
+}
+
+/**
+ * Geschatte inkomstenbelasting (box 1, jonger dan AOW) volgens
+ * de IB-schijven voor het huidige kalenderjaar.
+ *
+ * Bedragen komen uit BELASTING_PER_JAAR (Belastingadvies.gs) — bij
+ * Prinsjesdag-update wordt de formule automatisch correct voor het
+ * nieuwe jaar zonder dat klanten formules hoeven bij te werken.
+ *
+ * Optioneel: geef expliciet jaar mee voor scenario-berekeningen.
+ *   =SCHULD_SCHIJF(60000)         → tarieven huidig jaar
+ *   =SCHULD_SCHIJF(60000; 2026)   → tarieven 2026
  *
  * @param {number} belastbaarInkomen  Belastbaar inkomen na alle aftrekposten.
+ * @param {number=} jaar              Optioneel: jaar voor tariefkeuze (default = nu).
  * @return {number} Geschatte IB-aanslag (excl. heffingskortingen).
  * @customfunction
  */
-function SCHULD_SCHIJF(belastbaarInkomen) {
+function SCHULD_SCHIJF(belastbaarInkomen, jaar) {
   var n = Number(belastbaarInkomen);
   if (!isFinite(n) || n <= 0) return 0;
-  var s1 = 38441;
-  var s2 = 76817;
-  var t1 = 0.3582;
-  var t2 = 0.3748;
-  var t3 = 0.4950;
+  var doelJaar = parseInt(jaar, 10) || new Date().getFullYear();
+  var B = _cf_tarievenVoorJaar_(doelJaar);
+  var schijven = (B.IB_SCHIJVEN && B.IB_SCHIJVEN.length) ? B.IB_SCHIJVEN : [
+    { tot: 38441, pct: 0.3582 }, { tot: 76817, pct: 0.3748 }, { tot: Infinity, pct: 0.495 },
+  ];
   var bel = 0;
-  if (n <= s1) {
-    bel = n * t1;
-  } else if (n <= s2) {
-    bel = (s1 * t1) + (n - s1) * t2;
-  } else {
-    bel = (s1 * t1) + (s2 - s1) * t2 + (n - s2) * t3;
+  var onder = 0;
+  for (var i = 0; i < schijven.length; i++) {
+    var boven = Math.min(n, schijven[i].tot);
+    if (boven <= onder) break;
+    bel += (boven - onder) * schijven[i].pct;
+    onder = boven;
+    if (n <= schijven[i].tot) break;
   }
   return Math.round(bel * 100) / 100;
 }
 
 /**
- * Berekent het geschatte netto jaarinkomen voor een ZZP'er onder AOW-leeftijd.
- * Past in volgorde toe:
- *   1. Zelfstandigenaftrek (€2.470 in 2025; €1.200 in 2026)
- *   2. Startersaftrek (€2.123) — optioneel
- *   3. MKB-winstvrijstelling (12,7%)
- *   4. IB Box 1 schijven 2025
+ * Geschat netto jaarinkomen voor een ZZP'er onder AOW-leeftijd voor
+ * het huidige kalenderjaar (auto-update via BELASTING_PER_JAAR).
+ *
+ * Toepasvolgorde:
+ *   1. Zelfstandigenaftrek
+ *   2. Startersaftrek (optioneel)
+ *   3. MKB-winstvrijstelling
+ *   4. IB Box 1 schijven
  *   5. Algemene heffingskorting (afgebouwd bij hoog inkomen)
  *   6. Arbeidskorting (afgebouwd bij hoog inkomen)
- *   7. Zvw inkomensafhankelijke bijdrage (5,26% over winst max €75.864)
+ *   7. Zvw inkomensafhankelijke bijdrage
  *
  * @param {number}  winst    Winst uit onderneming (vóór aftrek).
  * @param {boolean} starter  Optioneel: true voor startersaftrek.
+ * @param {number}  jaar     Optioneel: jaar voor tariefkeuze (default = nu).
  * @return {number} Geschatte netto winst na IB + Zvw.
  * @customfunction
  */
-function ZZP_NETTO(winst, starter) {
+function ZZP_NETTO(winst, starter, jaar) {
   var w = Number(winst);
   if (!isFinite(w) || w <= 0) return 0;
-  var zelfstAftrek = 2470;
-  var startersAftrek = starter ? 2123 : 0;
-  var naAftrek = Math.max(0, w - zelfstAftrek - startersAftrek);
-  var mkbVrijstelling = naAftrek * 0.127;
-  var belastbaar = Math.max(0, naAftrek - mkbVrijstelling);
-  var ib = SCHULD_SCHIJF(belastbaar);
+  var doelJaar = parseInt(jaar, 10) || new Date().getFullYear();
+  var B = _cf_tarievenVoorJaar_(doelJaar);
 
-  // Algemene heffingskorting (2025): €3.068 max, afbouw 6,34% vanaf €28.406, €0 vanaf €76.817
-  var ahkMax = 3068;
-  var ahkAfbouwVan = 28406;
-  var ahkAfbouwPct = 0.0634;
-  var ahkNulVan = 76817;
+  var zelfstAftrek = B.ZELFSTANDIGENAFTREK || 0;
+  var startersAftrek = starter ? (B.STARTERSAFTREK || 2123) : 0;
+  var naAftrek = Math.max(0, w - zelfstAftrek - startersAftrek);
+  var mkbVrijstelling = naAftrek * (B.MKB_WINSTVRIJSTELLING || 0.127);
+  var belastbaar = Math.max(0, naAftrek - mkbVrijstelling);
+  var ib = SCHULD_SCHIJF(belastbaar, doelJaar);
+
+  // Algemene heffingskorting (afgebouwd boven afbouwVan)
+  var ahkMax = B.HEFFINGSKORTING_MAX || 0;
+  var ahkAfbouwVan = B.HEFFINGSKORTING_AFBOUW_VAN || 0;
+  var ahkAfbouwPct = B.HEFFINGSKORTING_AFBOUW_PCT || 0;
+  var ahkNulVan = B.HEFFINGSKORTING_NUL_VAN ||
+    Math.round(ahkAfbouwVan + (ahkMax / Math.max(ahkAfbouwPct, 0.0001)));
   var ahk;
   if (belastbaar <= ahkAfbouwVan) ahk = ahkMax;
   else if (belastbaar >= ahkNulVan) ahk = 0;
   else ahk = Math.max(0, ahkMax - (belastbaar - ahkAfbouwVan) * ahkAfbouwPct);
 
-  // Arbeidskorting (2025): €5.599 max tot inkomen €43.071, afbouw 6,51% daarboven
-  var akMax = 5599;
-  var akTopTot = 43071;
-  var akAfbouwPct = 0.0651;
+  // Arbeidskorting (afgebouwd boven topTot)
+  var akMax = B.ARBEIDSKORTING_MAX || 0;
+  var akTopTot = B.ARBEIDSKORTING_TOP_TOT || 45000;
+  var akAfbouwPct = B.ARBEIDSKORTING_AFBOUW_PCT || 0.0651;
   var ak;
   if (w <= akTopTot) ak = akMax;
   else ak = Math.max(0, akMax - (w - akTopTot) * akAfbouwPct);
 
   var nettoIB = Math.max(0, ib - ahk - ak);
 
-  // Zvw inkomensafhankelijke bijdrage (2025): 5,26% over min(winst, €75.864)
-  var zvw = Math.min(w, 75864) * 0.0526;
+  // Zvw inkomensafhankelijke bijdrage
+  var zvw = Math.min(w, B.ZVW_MAX_INKOMEN || 75864) * (B.ZVW_PCT || 0.0526);
 
   return Math.round((w - nettoIB - zvw) * 100) / 100;
 }

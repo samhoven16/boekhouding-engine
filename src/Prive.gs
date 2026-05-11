@@ -270,6 +270,25 @@ function vernieuwPriveDashboard_(ss) {
  *  - Box 3: Sparen en beleggen (vermogen > heffingsvrij)
  */
 function openIbAangifteHelper() {
+  // Haal centrale tarieven op zodat de dialog automatisch up-to-date is bij
+  // Prinsjesdag-updates. Zonder deze interpolatie waren tariefgrenzen hardcoded
+  // 2025 (€38.441/€76.817/€3.068/€57.684/5,88%/36%) — bij 2026+ verouderd
+  // → klant zou verkeerde IB-schatting krijgen en mogelijk reservering missen.
+  const _B = (typeof getBelasting_ === 'function') ? getBelasting_() : null;
+  const _jaar = (_B && _B.TARIEFSJAAR) || new Date().getFullYear();
+  const _schijven = (_B && _B.IB_SCHIJVEN && _B.IB_SCHIJVEN.length >= 2) ? _B.IB_SCHIJVEN : [
+    { tot: 38441, pct: 0.3582 }, { tot: 76817, pct: 0.3748 }, { tot: Infinity, pct: 0.495 },
+  ];
+  const _ibS1Max = _schijven[0].tot;
+  const _ibS1Pct = _schijven[0].pct;
+  const _ibS2Max = _schijven[1].tot;
+  const _ibS2Pct = _schijven[1].pct;
+  const _ibS3Pct = _schijven[2] ? _schijven[2].pct : 0.495;
+  const _ahkMax = (_B && _B.HEFFINGSKORTING_MAX) || 3068;
+  const _box3Vrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 57684;
+  const _box3Forf = (_B && _B.BOX3_FORFAIT_BELEGGING) || 0.0588;
+  const _box3Tar  = (_B && _B.BOX3_TARIEF) || 0.36;
+
   const html = HtmlService.createHtmlOutput(`
     <style>
       *{box-sizing:border-box}
@@ -295,7 +314,7 @@ function openIbAangifteHelper() {
                  background:#E6F7F4;border:1px solid #2EC4B6}
       .info{font-size:10px;color:#5A6478;margin-top:2px}
     </style>
-    <h3>IB aangifte-schatting 2025</h3>
+    <h3>IB aangifte-schatting ${_jaar}</h3>
     <p style="font-size:11px;color:#5A6478">Snelle schatting — niet voor officiële aangifte. Raadpleeg een belastingadviseur voor definitieve berekening.</p>
 
     <div class="box">
@@ -329,7 +348,7 @@ function openIbAangifteHelper() {
       <div class="form-row">
         <label>Schulden die aftrekbaar zijn in Box 3 (boven €3.700 drempel)</label>
         <input type="number" id="b3schulden" placeholder="0" step="100">
-        <div class="info">Heffingsvrij 2025: €57.684 per persoon (€115.368 fiscaal partners). Tarief Box 3: 36%.</div>
+        <div class="info">Heffingsvrij ${_jaar}: €${_box3Vrij.toLocaleString('nl-NL')} per persoon (€${(_box3Vrij * 2).toLocaleString('nl-NL')} fiscaal partners). Tarief Box 3: ${Math.round(_box3Tar * 100)}%.</div>
       </div>
     </div>
 
@@ -345,28 +364,32 @@ function openIbAangifteHelper() {
         var b3v = parseFloat(document.getElementById('b3vermogen').value) || 0;
         var b3s = parseFloat(document.getElementById('b3schulden').value) || 0;
 
-        // Box 1 — 3 schijven 2025 (jonger dan AOW-leeftijd)
-        // Schijf 1: tot €38.441 = 35,82% (8,17% IB + 27,65% premies volksverzekeringen)
-        // Schijf 2: €38.441 – €76.817 = 37,48%
-        // Schijf 3: > €76.817 = 49,5%
+        // Box 1 — 3 schijven (jonger dan AOW-leeftijd).
+        // Grenzen + tarieven uit BELASTING_PER_JAAR (server-side ingevoegd
+        // bij dialog-open). Wijzigt automatisch mee bij Prinsjesdag-update.
         var b1belastbaar = Math.max(0, b1i - b1a);
-        var grensS1 = 38441;
-        var grensS2 = 76817;
+        var grensS1 = ${_ibS1Max};
+        var grensS2 = ${_ibS2Max};
+        var tarS1 = ${_ibS1Pct};
+        var tarS2 = ${_ibS2Pct};
+        var tarS3 = ${_ibS3Pct};
         var b1belasting = 0;
         if (b1belastbaar <= grensS1) {
-          b1belasting = b1belastbaar * 0.3582;
+          b1belasting = b1belastbaar * tarS1;
         } else if (b1belastbaar <= grensS2) {
-          b1belasting = grensS1 * 0.3582 + (b1belastbaar - grensS1) * 0.3748;
+          b1belasting = grensS1 * tarS1 + (b1belastbaar - grensS1) * tarS2;
         } else {
-          b1belasting = grensS1 * 0.3582
-                      + (grensS2 - grensS1) * 0.3748
-                      + (b1belastbaar - grensS2) * 0.495;
+          b1belasting = grensS1 * tarS1
+                      + (grensS2 - grensS1) * tarS2
+                      + (b1belastbaar - grensS2) * tarS3;
         }
         // Heffingskorting (vereenvoudigd — voor topverdieners wordt deze afgebouwd)
-        var heffingskorting = Math.min(3068, b1belasting);
+        var heffingskorting = Math.min(${_ahkMax}, b1belasting);
         b1belasting = Math.max(0, b1belasting - heffingskorting);
 
-        // Box 2 (aanmerkelijk belang) 2025: schijf €0–€67.000 = 24,5%, daarboven 31%
+        // Box 2 (aanmerkelijk belang): schijf €0–€67.000 = 24,5%, daarboven 31%.
+        // (Box-2-grens en -tarieven zitten nog niet in BELASTING-config; bij
+        // wetswijziging hier bijwerken of toevoegen aan BELASTING_PER_JAAR.)
         var b2belasting = 0;
         if (b2d > 0) {
           var grensB2 = 67000;
@@ -374,17 +397,15 @@ function openIbAangifteHelper() {
           else b2belasting = grensB2 * 0.245 + (b2d - grensB2) * 0.31;
         }
 
-        // Box 3 (forfaitair rendement) 2025
-        //   Heffingsvrij vermogen: €57.684 per persoon (€115.368 fiscaal partners)
-        //   Forfait spaargeld: 1,44%   |  Forfait beleggingen: 5,88%
-        //   Tarief: 36% over fictief rendement
-        // Vereenvoudigde benadering: gemengde portefeuille → 5,88% (overschat
-        // bij overwegend spaargeld; voor exact berekening: tegenbewijsregeling
-        // bij Belastingdienst).
-        var heffingsvrij = 57684;
+        // Box 3 (forfaitair rendement) — heffingsvrij + forfait + tarief
+        // worden server-side geïnjecteerd vanuit BELASTING_PER_JAAR.
+        // Vereenvoudigde benadering: gemengde portefeuille → forfait beleggingen
+        // (overschat bij overwegend spaargeld; voor exacte berekening: tegen-
+        // bewijsregeling bij Belastingdienst).
+        var heffingsvrij = ${_box3Vrij};
         var b3grondslag = Math.max(0, b3v - b3s - heffingsvrij);
-        var b3rendement = b3grondslag * 0.0588; // Forfait beleggingen 2025 (gemengd ~ overig)
-        var b3belasting = b3rendement * 0.36;   // 36% box 3-tarief 2025
+        var b3rendement = b3grondslag * ${_box3Forf};
+        var b3belasting = b3rendement * ${_box3Tar};
 
         var totaal = b1belasting + b2belasting + b3belasting;
 
@@ -395,14 +416,14 @@ function openIbAangifteHelper() {
           return '\u20AC' + parts.join(',');
         };
 
-        var html = '<h4 style="color:#0D1B4E;margin:0 0 10px">Schatting inkomstenbelasting 2025</h4>' +
+        var html = '<h4 style="color:#0D1B4E;margin:0 0 10px">Schatting inkomstenbelasting ${_jaar}</h4>' +
           '<table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:6px;overflow:hidden">' +
           '<tr><td style="padding:8px 10px;border-bottom:1px solid #E5EAF2">Box 1 (na heffingskorting)</td><td style="padding:8px 10px;text-align:right;border-bottom:1px solid #E5EAF2"><b>' + fmt(b1belasting) + '</b></td></tr>' +
           (b2d > 0 ? '<tr><td style="padding:8px 10px;border-bottom:1px solid #E5EAF2">Box 2 (aanmerkelijk belang)</td><td style="padding:8px 10px;text-align:right;border-bottom:1px solid #E5EAF2"><b>' + fmt(b2belasting) + '</b></td></tr>' : '') +
           (b3grondslag > 0 ? '<tr><td style="padding:8px 10px;border-bottom:1px solid #E5EAF2">Box 3 (grondslag ' + fmt(b3grondslag) + ')</td><td style="padding:8px 10px;text-align:right;border-bottom:1px solid #E5EAF2"><b>' + fmt(b3belasting) + '</b></td></tr>' : '') +
           '<tr style="background:#0D1B4E;color:white"><td style="padding:10px"><b>TOTAAL GESCHAT</b></td><td style="padding:10px;text-align:right"><b>' + fmt(totaal) + '</b></td></tr>' +
           '</table>' +
-          '<p style="font-size:10px;color:#5A6478;margin-top:10px;line-height:1.5">Bron: belastingtarieven 2025. Dit is een globale schatting zonder rekening met toeslagen, voorlopige aanslag of persoonlijke aftrekposten.</p>';
+          '<p style="font-size:10px;color:#5A6478;margin-top:10px;line-height:1.5">Bron: belastingtarieven ${_jaar}. Dit is een globale schatting zonder rekening met toeslagen, voorlopige aanslag of persoonlijke aftrekposten.</p>';
 
         var el = document.getElementById('resultaat');
         el.style.display = 'block';
@@ -459,13 +480,14 @@ function beheerVermogensoverzicht() {
   for (let i = 1; i < data.length; i++) {
     totaal += parseFloat(data[i][2]) || 0;
   }
-  // Heffingsvrij vermogen Box 3 2025: €57.684 per persoon (was €57.000 in 2024).
-  // Bron: belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2025
-  const heffingsvrij = 57684;
+  // Heffingsvrij vermogen Box 3 — uit BELASTING_PER_JAAR (auto-update bij Prinsjesdag).
+  // Bron: belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen
+  const _B = (typeof getBelasting_ === 'function') ? getBelasting_() : null;
+  const heffingsvrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 57684;
   const grondslag = Math.max(0, totaal - heffingsvrij);
 
   ss.toast(
-    `Totaal vermogen: ${formatBedrag_(totaal)}  |  Box 3 grondslag (na heffingsvrij €57.684): ${formatBedrag_(grondslag)}`,
+    `Totaal vermogen: ${formatBedrag_(totaal)}  |  Box 3 grondslag (na heffingsvrij ${formatBedrag_(heffingsvrij)}): ${formatBedrag_(grondslag)}`,
     '💼 Vermogensoverzicht', 8
   );
 }

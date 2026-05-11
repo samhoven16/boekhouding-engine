@@ -18,46 +18,88 @@ function markeerInkoopfactuurBetaald() {
   if (resp.getSelectedButton() !== ui.Button.OK) return;
 
   const zoekNr = resp.getResponseText().trim();
-  const sheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
-  const data = sheet.getDataRange().getValues();
+  if (!zoekNr) return;
 
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][1]) === zoekNr || String(data[i][0]) === zoekNr) {
+  // Lock voorkomt race-condition: gelijktijdige "Markeer betaald" + bank-CSV-
+  // import op zelfde factuur zou anders 2x journaalpost geven (= dubbel ge-
+  // boekte kosten in grootboek → fout BTW-aangifte → boete-risico). 30s
+  // timeout: financiële integriteit boven UI-snelheid.
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    ui.alert('Andere betaling-actie is bezig — probeer over een paar seconden opnieuw.');
+    return;
+  }
+
+  try {
+    const sheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+    if (!sheet) { ui.alert('Tabblad Inkoopfacturen niet gevonden — run setup() eerst.'); return; }
+    // Re-read NA lock om laatste-stand te zien
+    const data = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][1]) !== zoekNr && String(data[i][0]) !== zoekNr) continue;
+
       const bedrag = parseFloat(data[i][11]) || 0;
+      if (bedrag <= 0) {
+        ui.alert('Inkoopfactuur ' + zoekNr + ' heeft geen geldig bedrag — controleer de rij.');
+        return;
+      }
       const leverancier = data[i][6];
       const datum = new Date();
       const huidigeStatus = String(data[i][12] || '');
 
-      // Idempotency-guard: voorkom dubbel boeken bij meerdere klikken op een
-      // factuur die al BETAALD staat — anders dubbele journaalpost in 4000/1200.
+      // Idempotency: voorkom dubbel boeken bij dubbel-klik / Mollie-webhook-retry
       if (huidigeStatus === FACTUUR_STATUS.BETAALD) {
         ui.alert(`Inkoopfactuur ${zoekNr} staat al op BETAALD — geen nieuwe boeking gemaakt.`);
         return;
       }
 
+      // Set status EERST, dan journaalpost. Bij journaalpost-fail: rollback
+      // status terug naar origineel zodat factuur niet op BETAALD blijft
+      // staan zonder tegenboeking. Zelfde patroon als verkoop-side (PR #90).
+      const origineleStatus = huidigeStatus || FACTUUR_STATUS.CONCEPT;
       sheet.getRange(i + 1, 13).setValue(FACTUUR_STATUS.BETAALD);
       sheet.getRange(i + 1, 14).setValue(datum);
-      sheet.getRange(i + 1, 15).setValue('1200'); // Bank zakelijk
+      sheet.getRange(i + 1, 15).setValue('1200');
+      SpreadsheetApp.flush();
 
-      // Journaalpost: Crediteuren → Bank
-      maakJournaalpost_(ss, {
-        datum,
-        omschr: `Betaling inkoop ${zoekNr} – ${leverancier}`,
-        dagboek: 'Bankboek',
-        debet: '4000',   // Crediteuren
-        credit: '1200',  // Bank
-        bedrag,
-        ref: zoekNr,
-        type: BOEKING_TYPE.BANKBETALING,
-      });
+      try {
+        maakJournaalpost_(ss, {
+          datum,
+          omschr: `Betaling inkoop ${zoekNr} – ${leverancier}`,
+          dagboek: 'Bankboek',
+          debet: '4000',   // Crediteuren
+          credit: '1200',  // Bank
+          bedrag,
+          ref: zoekNr,
+          type: BOEKING_TYPE.BANKBETALING,
+        });
+      } catch (jpFout) {
+        // Rollback: status terug naar origineel — anders inkoopfactuur
+        // toont BETAALD maar 4000 (crediteuren) blijft openstaan.
+        try {
+          sheet.getRange(i + 1, 13).setValue(origineleStatus);
+          sheet.getRange(i + 1, 14).setValue('');
+          sheet.getRange(i + 1, 15).setValue('');
+          SpreadsheetApp.flush();
+        } catch (rollbackFout) {
+          try { schrijfAuditLog_('FATAAL: rollback inkoop-betaald faalde', zoekNr + ' — ' + (rollbackFout && rollbackFout.message)); } catch (_) {}
+        }
+        try { schrijfAuditLog_('Inkoop betaald → journaalpost FAALDE, rollback uitgevoerd', zoekNr + ' — ' + (jpFout && jpFout.message)); } catch (_) {}
+        ui.alert('Markeer-betaald faalde tijdens journaalpost: ' + (jpFout && jpFout.message) + '\n\nFactuur-status is teruggezet. Controleer en probeer opnieuw.');
+        return;
+      }
 
+      try { schrijfAuditLog_('Inkoop betaald', zoekNr + ' — ' + leverancier + ' ' + formatBedrag_(bedrag)); } catch (_) {}
+      try { invalideerKpiSnapshot_(); bustCache_('kpi'); } catch (_) {}
       vernieuwDashboard();
       ui.alert(`Inkoopfactuur ${zoekNr} gemarkeerd als betaald.`);
       return;
     }
+    ui.alert('Inkoopfactuur ' + zoekNr + ' niet gevonden.');
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
   }
-
-  ui.alert('Inkoopfactuur ' + zoekNr + ' niet gevonden.');
 }
 
 // ─────────────────────────────────────────────
