@@ -73,6 +73,7 @@ const BELASTING_PER_JAAR = {
     FOR_MAX:                10786,    // FOR afgeschaft 2023 — alleen oude saldo's
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          35987,
+    LIJFRENTE_FACTOR_A:     6.27,    // Wet IB art. 3.127 — pensioen-factor 2024-2025
     AOW_FRANCHISE:          14110,
     AOW_LEEFTIJD:           67,      // 2025/2026/2027 = 67 jaar
     BOX3_GROEN_VRIJSTELLING: 65072,
@@ -133,6 +134,7 @@ const BELASTING_PER_JAAR = {
     FOR_MAX:                10786,   // Geen nieuwe FOR-vorming sinds 2023
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          38000,
+    LIJFRENTE_FACTOR_A:     6.27,    // bevestigen na Belastingplan 2026
     AOW_FRANCHISE:          14540,
     AOW_LEEFTIJD:           67,
     BOX3_GROEN_VRIJSTELLING: 67000,
@@ -187,6 +189,7 @@ const BELASTING_PER_JAAR = {
     FOR_MAX:                10786,
     THUISWERK_PER_DAG:      2.40,
     LIJFRENTE_MAX:          39000,
+    LIJFRENTE_FACTOR_A:     6.27,    // preliminair
     AOW_FRANCHISE:          14800,
     AOW_LEEFTIJD:           67,     // 2027 ongewijzigd 67; 2028 → 67j 3m
     BOX3_GROEN_VRIJSTELLING: 68000,

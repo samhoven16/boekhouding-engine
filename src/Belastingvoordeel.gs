@@ -872,6 +872,10 @@ function toonLijfrenteJaarruimte() {
   // Wet toekomst pensioenen (2023) verhoogde jaarruimte-pct van 13,3% naar 30%.
   // Centraal in BELASTING_PER_JAAR — niet hardcoden in dialog.
   const lijfrentePct = B.LIJFRENTE_PCT || 0.30;
+  // Factor A — vermindert grondslag bij reeds opgebouwd pensioen. Wet IB art. 3.127.
+  const lijfrenteFactorA = B.LIJFRENTE_FACTOR_A || 6.27;
+  // Marginaal IB-tarief (schijf 1) voor besparing-schatting.
+  const ibPct1Lijfrente = (B.IB_SCHIJVEN && B.IB_SCHIJVEN[0] && B.IB_SCHIJVEN[0].pct) || 0.37;
 
   const html = HtmlService.createHtmlOutput(`
 <!DOCTYPE html>
@@ -918,15 +922,16 @@ input:focus{outline:none;border-color:#2EC4B6}
 
 <script>
 var FRANCHISE=${aowFranchise}, PCT=${lijfrentePct}, MAX=${lijfrenteMax};
+var FACTOR_A=${lijfrenteFactorA}, IB_PCT_1=${ibPct1Lijfrente};
 function bereken(){
   var w=parseFloat(document.getElementById('winst').value)||0;
   var p=parseFloat(document.getElementById('pensioen').value)||0;
   var grondslag=Math.max(0,w-FRANCHISE);
-  var ruwe=Math.max(0,grondslag*PCT - 6.27*p);
+  var ruwe=Math.max(0,grondslag*PCT - FACTOR_A*p);
   var jaarruimte=Math.min(ruwe,MAX);
   document.getElementById('ruimte').textContent='€ '+jaarruimte.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g,'.').replace('.',',').replace(/,(\\d\\d)$/,',$1');
-  // Schat besparing tegen marginaal tarief 37% (gemiddeld)
-  var besp=jaarruimte*0.37;
+  // Schat besparing tegen marginaal IB-tarief schijf 1 (uit BELASTING-config)
+  var besp=jaarruimte*IB_PCT_1;
   document.getElementById('info').textContent='~ '+(Math.round(besp))+' € minder belasting bij storting';
 }
 bereken();
