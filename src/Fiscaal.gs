@@ -32,38 +32,33 @@ function berekenInvesteringsAftrek_(inv) {
   const bedrag = parseFloat(inv.bedrag) || 0;
   if (bedrag <= 0) return { kia: 0, mia: 0, eia: 0, totaal: 0, uitleg: 'Geen bedrag' };
 
-  // KIA — kleinschaligheidsinvesteringsaftrek (4-zone tabel 2026)
+  // KIA — gebruik centrale helper uit Belastingadvies.gs zodat KIA-bedragen
+  // hier identiek zijn aan wat genereerBelastingadvies en het Dashboard
+  // tonen. Voorheen waren hier hardcoded €19.535 / €129.194 die afweken
+  // van de canonical config (€19.769 / €130.744) → twee verschillende
+  // KIA-uitkomsten voor dezelfde investering, afhankelijk van waar de
+  // klant het bekijkt. Bij Prinsjesdag-update is nu één plek (BELASTING_PER_JAAR).
   const totaalJaar = parseFloat(inv.totaalKiaJaar) || bedrag;
-  let kiaPct = 0;
-  if (totaalJaar >= 2901 && totaalJaar <= 69765) {
-    kiaPct = 0.28;
-  } else if (totaalJaar > 69765 && totaalJaar <= 129194) {
-    // Vast bedrag €19.535 in 2026
-    return { kia: 19535, mia: _mia_(inv, B), eia: _eia_(inv, B),
-             totaal: 19535 + _mia_(inv, B) + _eia_(inv, B),
-             uitleg: 'KIA-vastbedrag-zone' };
-  } else if (totaalJaar > 129194 && totaalJaar <= 392230) {
-    // Glijdende afbouw: 19535 - 7.56% × (totaal - 129194)
-    const afbouw = (totaalJaar - 129194) * 0.0756;
-    const kiaBedrag = Math.max(0, 19535 - afbouw);
-    return { kia: rondBedrag_(kiaBedrag), mia: _mia_(inv, B), eia: _eia_(inv, B),
-             totaal: rondBedrag_(kiaBedrag) + _mia_(inv, B) + _eia_(inv, B),
-             uitleg: 'KIA-afbouwzone' };
-  } else {
-    return { kia: 0, mia: _mia_(inv, B), eia: _eia_(inv, B),
-             totaal: _mia_(inv, B) + _eia_(inv, B),
-             uitleg: totaalJaar < 2901 ? 'KIA-drempel niet bereikt' : 'KIA-grens overschreden' };
-  }
-  const kia = rondBedrag_(bedrag * kiaPct);
+  const kia = (typeof berekenKiaAftrek_ === 'function') ? berekenKiaAftrek_(totaalJaar, B) : 0;
   const mia = _mia_(inv, B);
   const eia = _eia_(inv, B);
-  return {
-    kia: kia, mia: mia, eia: eia,
-    totaal: kia + mia + eia,
-    uitleg: 'KIA ' + (kiaPct * 100) + '%' +
-            (mia > 0 ? ' + MIA' : '') +
-            (eia > 0 ? ' + EIA' : ''),
-  };
+
+  // Bepaal de zone-uitleg voor de UI
+  let uitleg;
+  if (totaalJaar < B.KIA_MIN) {
+    uitleg = 'KIA-drempel niet bereikt (< €' + B.KIA_MIN.toLocaleString('nl-NL') + ')';
+  } else if (totaalJaar > B.KIA_MAX) {
+    uitleg = 'KIA-grens overschreden (> €' + B.KIA_MAX.toLocaleString('nl-NL') + ')';
+  } else if (totaalJaar <= B.KIA_VAST_VAN) {
+    uitleg = 'KIA ' + Math.round((B.KIA_PCT || 0.28) * 100) + '%' +
+             (mia > 0 ? ' + MIA' : '') + (eia > 0 ? ' + EIA' : '');
+  } else if (totaalJaar <= B.KIA_AFBOUW_START) {
+    uitleg = 'KIA-vastbedrag-zone' + (mia > 0 ? ' + MIA' : '') + (eia > 0 ? ' + EIA' : '');
+  } else {
+    uitleg = 'KIA-afbouwzone' + (mia > 0 ? ' + MIA' : '') + (eia > 0 ? ' + EIA' : '');
+  }
+
+  return { kia: kia, mia: mia, eia: eia, totaal: kia + mia + eia, uitleg: uitleg };
 }
 
 function _mia_(inv, B) {
