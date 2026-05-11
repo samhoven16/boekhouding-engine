@@ -155,7 +155,9 @@ function _ekrCheckLicentie_() {
 function _ekrCheckFactuurnummerCounter_() {
   try {
     const props = PropertiesService.getScriptProperties();
-    const huidig = parseInt(props.getProperty('volgendFactuurnr') || '0');
+    // PROP.VOLGEND_FACTUUR_NR = 'volgendFactuurNr' (camelCase, capital N).
+    // Voorheen hardcoded lowercase 'volgendFactuurnr' — match faalde altijd.
+    const huidig = parseInt(props.getProperty(PROP.VOLGEND_FACTUUR_NR) || '0');
     if (huidig <= 0) {
       return { naam: 'Factuurnummer-teller', status: 'WAARSCHUWING',
         bericht: 'Teller staat op 0 — bij eerste factuur start hij op 1.',
@@ -227,13 +229,18 @@ function _ekrCheckBedrijfsgegevens_() {
 
 function _ekrCheckDriveStructuur_() {
   try {
-    const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_ID');
+    // DriveStructuur.gs slaat de hoofdmap op als 'DRIVE_HOOFDMAP_<jaar>'.
+    // Voorheen hardcoded 'DRIVE_HOOFDMAP_ID' — die key bestaat niet, dus
+    // de check rapporteerde altijd "Hoofdmap-ID niet gezet" ook wanneer
+    // de Drive-structuur correct stond.
+    const jaar = (typeof getBoekjaar_ === 'function') ? getBoekjaar_() : new Date().getFullYear();
+    const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + jaar);
     if (!hoofdId) {
       return { naam: 'Drive-structuur', status: 'WAARSCHUWING',
-        bericht: 'Hoofdmap-ID niet gezet — wordt bij eerste factuur aangemaakt.' };
+        bericht: 'Hoofdmap voor ' + jaar + ' niet gezet — wordt bij eerste factuur aangemaakt.' };
     }
     DriveApp.getFolderById(hoofdId);  // throws als niet bereikbaar
-    return { naam: 'Drive-structuur', status: 'OK', bericht: 'Hoofdmap bereikbaar.' };
+    return { naam: 'Drive-structuur', status: 'OK', bericht: 'Hoofdmap ' + jaar + ' bereikbaar.' };
   } catch (e) {
     return { naam: 'Drive-structuur', status: 'FOUT',
       bericht: 'Hoofdmap niet meer bereikbaar: ' + e.message,

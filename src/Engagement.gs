@@ -213,14 +213,19 @@ function toonNpsSurvey() {
             document.getElementById('status').style.color = '#B71C1C';
             document.getElementById('status').textContent = 'Fout: probeer opnieuw';
           })
-          .slaNpsResponseOp_(gekozen, document.getElementById('opmerking').value);
+          .slaNpsResponseOp(gekozen, document.getElementById('opmerking').value);
       });
     </script>
   `).setWidth(620).setHeight(540).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, '📊 1-vraag survey');
 }
 
-function slaNpsResponseOp_(score, opmerking) {
+/**
+ * Server-handler voor NPS-form. NAAM ZONDER trailing underscore is
+ * verplicht — google.script.run blokkeert functies met trailing _.
+ * (Voorheen slaNpsResponseOp_ → submit van NPS-modal faalde altijd.)
+ */
+function slaNpsResponseOp(score, opmerking) {
   if (typeof score !== 'number' || score < 0 || score > 10) throw new Error('Ongeldige score');
   const props = PropertiesService.getScriptProperties();
   const responses = JSON.parse(props.getProperty(NPS_PROP_RESPONSE) || '[]');
