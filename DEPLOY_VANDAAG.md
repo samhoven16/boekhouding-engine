@@ -58,7 +58,17 @@ Bestaat er al een TXT record met `v=spf1`? Check dat eerst.
 
 - Type: `TXT`
 - Name: `_dmarc`
-- Content: `v=DMARC1; p=none; rua=mailto:postmaster@boekhoudbaar.nl; ruf=mailto:postmaster@boekhoudbaar.nl; fo=1; aspf=r; adkim=r;`
+- Content: `v=DMARC1; p=none; rua=mailto:info@boekhoudbaar.nl; fo=1; aspf=r; adkim=r;`
+
+> Note: `info@` als DMARC-rapportage-adres want `postmaster@` is geen ingestelde alias bij jou.
+
+### D. Cloudflare Email Routing — verifieer dat `info@` en `support@` werken
+
+De website gebruikt op verschillende plekken `mailto:info@boekhoudbaar.nl` en `mailto:support@boekhoudbaar.nl`. Test:
+
+1. Cloudflare → Email → Email Routing → Routes
+2. Verifieer dat **beide** routes actief zijn en doorsturen naar `samhoven16@gmail.com`
+3. (Aanbevolen) Voeg ook een **Catch-all** toe (`*@boekhoudbaar.nl` → je Gmail) zodat eventuele typo's of toekomstige aliases ook werken
 
 **Check**: na 30 min ga naar [mxtoolbox.com/SuperTool.aspx](https://mxtoolbox.com/SuperTool.aspx) → zoek `boekhoudbaar.nl` → check SPF + DKIM + DMARC = alle 3 groen ✓.
 
