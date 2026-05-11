@@ -311,7 +311,7 @@ function beschermCellen_(ss) {
     { naam: SHEETS.JOURNAALPOSTEN, omschr: 'Journaalposten — boekhoudkundige bron. Bewerken corrumpeert balans + BTW-aangifte. Voeg toe via Boekhouding-menu.' },
   ];
   const ZACHT = [
-    { naam: SHEETS.GROOTBOEK,    omschr: 'Grootboek — categorisatie. Bewerken alleen na consult.' },
+    { naam: SHEETS.GROOTBOEKSCHEMA,    omschr: 'Grootboek — categorisatie. Bewerken alleen na consult.' },
     { naam: SHEETS.INSTELLINGEN, omschr: 'Instellingen — wijziging beïnvloedt PDF-template + email-flow.' },
   ];
 
@@ -355,8 +355,12 @@ function controleerEnHerstelTabbladen_(ss) {
   if (!ss) return;
   const verplicht = [
     SHEETS.VERKOOPFACTUREN, SHEETS.INKOOPFACTUREN, SHEETS.JOURNAALPOSTEN,
-    SHEETS.GROOTBOEK, SHEETS.RELATIES, SHEETS.INSTELLINGEN, SHEETS.DASHBOARD,
-  ];
+    SHEETS.GROOTBOEKSCHEMA, SHEETS.RELATIES, SHEETS.INSTELLINGEN, SHEETS.DASHBOARD,
+  ].filter(function(n) {
+    // Defensieve guard: skip undefined/empty waarden zodat een type-fout in
+    // SHEETS-config niet leidt tot 'tabblad undefined was verwijderd'-spam.
+    return n && typeof n === 'string' && n.trim().length > 0;
+  });
   const ontbreken = [];
   verplicht.forEach(function(naam) {
     if (!ss.getSheetByName(naam)) ontbreken.push(naam);

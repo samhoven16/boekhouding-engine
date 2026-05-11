@@ -103,7 +103,7 @@ function _ekrCheckSheetsAanwezig_(ss) {
   if (!ss) return { naam: 'Tabbladen aanwezig', status: 'FOUT', bericht: 'Geen spreadsheet.' };
   const verplicht = [
     SHEETS.VERKOOPFACTUREN, SHEETS.INKOOPFACTUREN, SHEETS.JOURNAALPOSTEN,
-    SHEETS.GROOTBOEK, SHEETS.RELATIES, SHEETS.INSTELLINGEN, SHEETS.DASHBOARD,
+    SHEETS.GROOTBOEKSCHEMA, SHEETS.RELATIES, SHEETS.INSTELLINGEN, SHEETS.DASHBOARD,
   ];
   const ontbreken = verplicht.filter(naam => !ss.getSheetByName(naam));
   if (ontbreken.length === 0) {
