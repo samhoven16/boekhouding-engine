@@ -96,6 +96,11 @@ function setup() {
       ['Technische tabs verbergen', function() { verbergTechnischeTabbladen_(ss); }],
       ['Grootboekschema laden',     function() { vulGrootboekschema_(ss); }],
       ['Instellingen initialiseren', function() { zetInstellingen_(ss); }],
+      ['Belasting-overrides toevoegen', function() {
+        if (typeof voegBelastingOverridesToeAanInstellingen_ === 'function') {
+          voegBelastingOverridesToeAanInstellingen_();
+        }
+      }],
       ['Audit Log aanmaken',        function() { setupAuditLogSheet_(); }],
       ['Formuliers-tabs aanmaken',  function() { maakFormuliersTabbladen_(ss); }],
       ['Hoofdformulier aanmaken',   function() { maakHoofdFormulier_(ss); }],
@@ -1205,7 +1210,12 @@ function zetHeaderRij_(sheet, headers) {
 // GAS module-level `let` persists within a single execution context
 // (one trigger invocation / one manual run) and resets between runs.
 let _instellingenCache = null;
-function wisInstellingenCache_() { _instellingenCache = null; }
+function wisInstellingenCache_() {
+  _instellingenCache = null;
+  // Belasting-overrides leeft op de Instellingen-tab → cache mee invalideren
+  // zodat een wijziging in een tarief-rij direct doorwerkt in alle berekeningen.
+  try { if (typeof _wisBelastingOverridesCache_ === 'function') _wisBelastingOverridesCache_(); } catch (_) {}
+}
 
 function getInstelling_(sleutel) {
   if (!_instellingenCache) {
@@ -1242,13 +1252,13 @@ function setInstelling_(sleutel, waarde) {
   for (let i = 0; i < data.length; i++) {
     if (String(data[i][0] || '') === String(sleutel)) {
       sheet.getRange(i + 1, 2).setValue(waarde);
-      _instellingenCache = null; // Invalideren — volgende getInstelling_ leest vers
+      wisInstellingenCache_(); // Invalideert ook belasting-overrides cache
       return;
     }
   }
   // Niet gevonden → append onderaan
   sheet.appendRow([sleutel, waarde]);
-  _instellingenCache = null;
+  wisInstellingenCache_();
 }
 
 // ─────────────────────────────────────────────

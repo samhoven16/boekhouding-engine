@@ -12,7 +12,7 @@ const VERSIE_PROP     = 'geinstalleerde_versie';
 // Bump bij elke deploy waarbij sheet-schema, triggers of klant-zichtbaar
 // gedrag verandert. Format: MAJOR.MINOR.PATCH (semver).
 //   2.0.0 → 2.1.0  (Fase 0-4 polish-ronde mei 2026)
-const HUIDIGE_VERSIE  = '2.6.0';
+const HUIDIGE_VERSIE  = '2.7.0';
 
 // ─────────────────────────────────────────────
 //  ONBOARDING STARTEN (automatisch bij eerste gebruik)
@@ -640,6 +640,22 @@ const MIGRATIES_REGISTER = [
         });
       } catch (_) {}
       try { schrijfAuditLog_('Migratie 2.1→2.6', 'launch-ready (UX/copy/legal + FATAL-spam-fix)'); } catch (_) {}
+    },
+  },
+  // 2.6 → 2.7: voeg klant-overschrijfbare belastingtarieven toe aan Instellingen.
+  // Bij Prinsjesdag-update kan klant nu zelf tarieven aanpassen zonder
+  // op script-update te wachten. Idempotent — bij bestaande sectie no-op.
+  {
+    van: '2.6.0',
+    naar: '2.7.0',
+    naam: 'belasting_overrides_in_instellingen',
+    fn: function(_ss) {
+      try {
+        if (typeof voegBelastingOverridesToeAanInstellingen_ === 'function') {
+          voegBelastingOverridesToeAanInstellingen_();
+        }
+      } catch (e) { Logger.log('Migratie 2.6→2.7 fout: ' + e.message); }
+      try { schrijfAuditLog_('Migratie 2.6→2.7', 'belasting-overrides sectie in Instellingen toegevoegd'); } catch (_) {}
     },
   },
 ];

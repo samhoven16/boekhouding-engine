@@ -38,21 +38,40 @@ function onEdit(e) {
     Logger.log('onEdit audit fout: ' + err.message);
   }
 
-  // ── Bedrijfsnaam doorvoeren naar spreadsheet-titel ────────────
+  // ── Edits op Instellingen-tab: cache invalideren + speciale handlers ────
   try {
     if (!e || !e.range) return;
     const sheet = e.range.getSheet();
     if (sheet.getName() !== SHEETS.INSTELLINGEN) return;
 
+    // Wis cache zodat de volgende getInstelling_ / getBelasting_ verse
+    // waarden leest. Belasting-overrides reageren hier ook op. Doe dit
+    // ALTIJD bij een Instellingen-edit, ongeacht welk veld — risico op
+    // stale cache is groter dan kosten van één extra sheet-read.
+    try { if (typeof wisInstellingenCache_ === 'function') wisInstellingenCache_(); } catch (_) {}
+
     // Alleen kolom B (waarden), label in kolom A
     if (e.range.getColumn() !== 2) return;
-    const label = sheet.getRange(e.range.getRow(), 1).getValue();
-    if (String(label) !== 'Bedrijfsnaam') return;
+    const label = String(sheet.getRange(e.range.getRow(), 1).getValue());
 
-    const nieuwNaam = String(e.value || '').trim();
-    if (!nieuwNaam || nieuwNaam.startsWith('←')) return;
+    // Bedrijfsnaam → spreadsheet-titel updaten
+    if (label === 'Bedrijfsnaam') {
+      const nieuwNaam = String(e.value || '').trim();
+      if (nieuwNaam && !nieuwNaam.startsWith('←')) {
+        verwerkBedrijfsnaamWijziging_(nieuwNaam);
+      }
+      return;
+    }
 
-    verwerkBedrijfsnaamWijziging_(nieuwNaam);
+    // Belasting-override wijziging → audit-log voor traceerbaarheid
+    if (label.indexOf('Tarief:') === 0 || label.indexOf('Grens:') === 0) {
+      try {
+        schrijfAuditLog_('Belasting-tarief gewijzigd door klant',
+          label + ' = ' + String(e.value || '(leeg)'));
+      } catch (_) {}
+      // KPI-cache + advies-cache bust zodat dashboard meteen nieuwe getallen toont
+      try { if (typeof bustCache_ === 'function') { bustCache_('kpi'); bustCache_('advies'); } } catch (_) {}
+    }
   } catch (err) {
     Logger.log('onEdit fout: ' + err.message);
   }
