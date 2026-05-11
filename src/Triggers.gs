@@ -488,6 +488,22 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
       // Klant probeert opnieuw — email is al de deur uit, alleen sheet-status repareren
       schrijfAuditLog_('Email DUBBEL geblokkeerd', factuurNummerOpgemaakt + ' — al verzonden, skip');
       emailVerzonden = true;
+    } else if (reedsVerzonden && reedsVerzonden.indexOf('PENDING') === 0) {
+      // Vorige run crashte TUSSEN sendEmail-success en setProperty('DONE').
+      // De mail kan al de deur uit zijn — we mogen NIET nog eens versturen
+      // anders krijgt klant 2x factuur. Owner kan handmatig verifieren via
+      // het Verzonden-Items-Gmail-tabblad en bij twijfel opnieuw versturen
+      // via 'Verstuur factuur via e-mail' in de factuurlijst.
+      schrijfAuditLog_('Email PENDING — retry GEBLOKKEERD',
+        factuurNummerOpgemaakt + ' — vorige run crashte midden in versturen. ' +
+        'Check Gmail Verzonden-Items om te verifieren. Property: ' + reedsVerzonden);
+      try { meldFataalAanOwner_('EMAIL_PENDING_RETRY',
+        'Klant probeerde factuur ' + factuurNummerOpgemaakt + ' opnieuw te versturen ' +
+        'terwijl status PENDING is. Geen automatische retry — verifieer in Gmail.',
+        { factuurnummer: factuurNummerOpgemaakt, klantEmail: klantEmail, pendingSinds: reedsVerzonden }); } catch (_) {}
+      // Mark als 'mogelijk verstuurd' — geen tweede mail, klant ziet status
+      // VERZONDEN (consistent met meest waarschijnlijke realiteit).
+      emailVerzonden = true;
     } else {
       // Markeer PENDING vóór versturen — als crash hierna, weet retry: niet 2× versturen
       try {
