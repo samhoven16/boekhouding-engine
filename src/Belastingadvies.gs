@@ -115,6 +115,12 @@ const BELASTING_PER_JAAR = {
       { tot: 76817,    pct: 0.3748 },
       { tot: Infinity, pct: 0.495  },
     ],
+    // Box 2 — aanmerkelijk belang (BV-dividend). Bron: belastingdienst.nl/.../box-2
+    // 2024: 24,5% / 33% (verhoogd in Belastingplan 2024)
+    // 2025+: 24,5% tot grens, 31% daarboven (verlaagd in Belastingplan 2025)
+    BOX2_SCHIJF_1_PCT: 0.245,
+    BOX2_SCHIJF_1_MAX: 67000,
+    BOX2_SCHIJF_2_PCT: 0.31,
   },
   2026: {
     ZELFSTANDIGENAFTREK:    1200,    // Verlaagd per 2026 (was €2.470 in 2025)
@@ -162,6 +168,10 @@ const BELASTING_PER_JAAR = {
       { tot: 79137,    pct: 0.3756 },
       { tot: Infinity, pct: 0.495  },
     ],
+    // Box 2 — aanmerkelijk belang (BV-dividend). 2025+: 24,5% / 31%.
+    BOX2_SCHIJF_1_PCT: 0.245,
+    BOX2_SCHIJF_1_MAX: 67000,
+    BOX2_SCHIJF_2_PCT: 0.31,
   },
   // 2027: placeholder — vervang met officiële Miljoenennota-cijfers Prinsjesdag 2026.
   // Bij ontbreken valt getBelasting_() terug op 2026-tarieven met waarschuwing.
@@ -208,6 +218,10 @@ const BELASTING_PER_JAAR = {
       { tot: 80500,    pct: 0.3756 },
       { tot: Infinity, pct: 0.495  },
     ],
+    // Box 2 — preliminair (2027 wacht op Belastingplan 2027).
+    BOX2_SCHIJF_1_PCT: 0.245,
+    BOX2_SCHIJF_1_MAX: 67000,
+    BOX2_SCHIJF_2_PCT: 0.31,
   },
 };
 
@@ -1453,12 +1467,18 @@ function berekenPriveBelastingvoordelen_(winst) {
     });
   }
 
-  // Eigen woning
+  // Eigen woning — tarief eerste schijf dynamisch uit BELASTING-config zodat
+  // tekst auto-update bij Prinsjesdag. Geen aparte hypotheekrente-aftrek-grens
+  // in config (= laagste schijf-tarief).
+  const _eersteSchijfPct = (BELASTING.IB_SCHIJVEN && BELASTING.IB_SCHIJVEN[0])
+    ? BELASTING.IB_SCHIJVEN[0].pct
+    : (BELASTING.IB_SCHIJF_1_PCT || 0.357);
+  const _eersteSchijfTekst = (_eersteSchijfPct * 100).toFixed(2).replace('.', ',') + '%';
   adviezen.push({
     type: 'TIP',
     titel: '🏠 Eigen woning – hypotheekrente aftrekbaar in box 1',
     tekst: `Hypotheekrente op uw eigen woning is aftrekbaar in box 1. Aftrek wordt beperkt tot het belastingtarief ` +
-           `van de laagste schijf (35,82% in 2025). Eigenwoningforfait (0,35% WOZ bij WOZ €75k–€1,2M) telt als ` +
+           `van de laagste schijf (${_eersteSchijfTekst} in ${BELASTING.TARIEFSJAAR}). Eigenwoningforfait (0,35% WOZ bij WOZ €75k–€1,2M) telt als ` +
            `fictief inkomen. Als u geen rente meer betaalt (annuïteit bijna klaar), overweeg dan de Hillen-aftrek. ` +
            `Houd uw jaaropgave hypotheekrente bij de hand voor de aangifte.`,
     besparing: null,

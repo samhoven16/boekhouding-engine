@@ -285,6 +285,9 @@ function openIbAangifteHelper() {
   const _ibS2Pct = _schijven[1].pct;
   const _ibS3Pct = _schijven[2] ? _schijven[2].pct : 0.495;
   const _ahkMax = (_B && _B.HEFFINGSKORTING_MAX) || 3068;
+  const _box2Pct1 = (_B && _B.BOX2_SCHIJF_1_PCT) || 0.245;
+  const _box2Max1 = (_B && _B.BOX2_SCHIJF_1_MAX) || 67000;
+  const _box2Pct2 = (_B && _B.BOX2_SCHIJF_2_PCT) || 0.31;
   const _box3Vrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 57684;
   const _box3Forf = (_B && _B.BOX3_FORFAIT_BELEGGING) || 0.0588;
   const _box3Tar  = (_B && _B.BOX3_TARIEF) || 0.36;
@@ -335,7 +338,7 @@ function openIbAangifteHelper() {
       <div class="form-row">
         <label>Dividend ontvangen uit eigen BV (€)</label>
         <input type="number" id="b2dividend" placeholder="0" step="100">
-        <div class="info">Alleen als je ≥5% aandeelhouder bent. Tarief 2025: 24,5% t/m €67.000, daarboven 33%.</div>
+        <div class="info">Alleen als je ≥5% aandeelhouder bent. Tarief ${_jaar}: ${(_box2Pct1*100).toString().replace('.',',')}% t/m €${_box2Max1.toLocaleString('nl-NL')}, daarboven ${(_box2Pct2*100).toString().replace('.',',')}%.</div>
       </div>
     </div>
 
@@ -387,14 +390,13 @@ function openIbAangifteHelper() {
         var heffingskorting = Math.min(${_ahkMax}, b1belasting);
         b1belasting = Math.max(0, b1belasting - heffingskorting);
 
-        // Box 2 (aanmerkelijk belang): schijf €0–€67.000 = 24,5%, daarboven 31%.
-        // (Box-2-grens en -tarieven zitten nog niet in BELASTING-config; bij
-        // wetswijziging hier bijwerken of toevoegen aan BELASTING_PER_JAAR.)
+        // Box 2 (aanmerkelijk belang): tarieven uit BELASTING_PER_JAAR
+        // (server-side geïnjecteerd) — wijzigt automatisch bij Prinsjesdag-update.
         var b2belasting = 0;
         if (b2d > 0) {
-          var grensB2 = 67000;
-          if (b2d <= grensB2) b2belasting = b2d * 0.245;
-          else b2belasting = grensB2 * 0.245 + (b2d - grensB2) * 0.31;
+          var grensB2 = ${_box2Max1};
+          if (b2d <= grensB2) b2belasting = b2d * ${_box2Pct1};
+          else b2belasting = grensB2 * ${_box2Pct1} + (b2d - grensB2) * ${_box2Pct2};
         }
 
         // Box 3 (forfaitair rendement) — heffingsvrij + forfait + tarief
