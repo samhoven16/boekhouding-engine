@@ -454,6 +454,12 @@ function runWatAlsSimulator(mutatie) {
 function toonReiskostenTracker() {
   if (typeof controleerSetupGedaan_ === 'function' && !controleerSetupGedaan_()) return;
   const today = new Date().toISOString().slice(0, 10);
+  // Tarief uit BELASTING-config (auto-update bij Belastingdienst-verhoging).
+  // Server-side ingevoegd in HTML — preview-berekening en boeking kloppen
+  // dan altijd met elkaar én met de werkelijke journaalpost.
+  const _B = (typeof getBelasting_ === 'function') ? getBelasting_() : {};
+  const _kmTarief = _B.REISKOSTEN_PER_KM || 0.23;
+  const _kmTariefStr = '€' + _kmTarief.toString().replace('.', ',');
   let kmYTD = 0;
   let bedragYTD = 0;
   try {
@@ -502,11 +508,11 @@ input:focus{outline:none;border-color:#2EC4B6}
 </style></head>
 <body>
 <h2>🚗 Reiskosten registreren</h2>
-<div class="sub">€0,23/km is aftrekbaar voor zakelijke ritten met privéauto. ZZP'ers missen vaak €500-€1.500/jaar.</div>
+<div class="sub">${_kmTariefStr}/km is aftrekbaar voor zakelijke ritten met privéauto. Veel ZZP'ers vergeten dit te boeken.</div>
 
 <div class="ytd">
   <div class="lbl">Geboekt dit jaar</div>
-  <div class="v">${bedragYTD > 0 ? formatBedrag_(bedragYTD) + ' (~' + Math.round(bedragYTD / 0.23) + ' km)' : 'Nog niets'}</div>
+  <div class="v">${bedragYTD > 0 ? formatBedrag_(bedragYTD) + ' (~' + Math.round(bedragYTD / _kmTarief) + ' km)' : 'Nog niets'}</div>
 </div>
 
 <label>Datum</label>
@@ -519,7 +525,7 @@ input:focus{outline:none;border-color:#2EC4B6}
 <input id="km" type="number" min="1" step="1" oninput="upd()">
 
 <div id="preview" class="preview" style="display:none">
-  Aftrek: <b id="aftrek">€ 0,00</b> (× €0,23/km)<br>
+  Aftrek: <b id="aftrek">€ 0,00</b> (× ${_kmTariefStr}/km)<br>
   <span style="font-size:11px;color:#888">Wordt geboekt op rekening 7350 (Reiskosten openbaar vervoer / privéauto)</span>
 </div>
 
@@ -527,9 +533,10 @@ input:focus{outline:none;border-color:#2EC4B6}
 <div id="status" class="status"></div>
 
 <script>
+var KM_TARIEF = ${_kmTarief};
 function upd(){
   var km=parseFloat(document.getElementById('km').value)||0;
-  var b=km*0.23;
+  var b=km*KM_TARIEF;
   document.getElementById('preview').style.display=km>0?'block':'none';
   document.getElementById('aftrek').textContent='€ '+b.toFixed(2).replace('.',',');
 }
@@ -546,7 +553,7 @@ function boek(){
   google.script.run
     .withSuccessHandler(function(r){
       s.className='status s';
-      s.textContent='✓ '+data.km+' km × €0,23 = '+r.bedrag+' geboekt op rekening 7350.';
+      s.textContent='✓ '+data.km+' km × '+(r.tarief?('€'+r.tarief.toString().replace('.', ',')):'${_kmTariefStr}')+' = '+r.bedrag+' geboekt op rekening 7350.';
       document.getElementById('km').value='';
       document.getElementById('omschr').value='';
       document.getElementById('preview').style.display='none';
@@ -573,8 +580,15 @@ function boekReiskosten(data) {
   if (km <= 0) throw new Error('Aantal km moet groter dan 0 zijn');
   if (km > 9999) throw new Error('Aantal km onwaarschijnlijk hoog (' + km + ') — controleer invoer');
   const datum = parseDatumStrict_(data.datum, 'Datum');
-  const bedrag = rondBedrag_(km * 0.23);
-  const omschr = (data.omschr || 'Reiskosten') + ' (' + km + ' km × €0,23)';
+  // Tarief uit BELASTING-config (BELASTING.REISKOSTEN_PER_KM). Bij verhoging
+  // door Belastingdienst (zoals €0,19 → €0,23 in 2024) hoeft alleen
+  // BELASTING_PER_JAAR aangepast — anders boekt klant te lage aftrek
+  // → betaalt te veel belasting.
+  const B = (typeof getBelasting_ === 'function') ? getBelasting_() : {};
+  const tarief = B.REISKOSTEN_PER_KM || 0.23;
+  const bedrag = rondBedrag_(km * tarief);
+  const tariefStr = '€' + tarief.toString().replace('.', ',');
+  const omschr = (data.omschr || 'Reiskosten') + ' (' + km + ' km × ' + tariefStr + ')';
   maakJournaalpost_(ss, {
     datum: datum,
     omschr: omschr,
@@ -583,9 +597,9 @@ function boekReiskosten(data) {
     bedrag: bedrag,
     type: BOEKING_TYPE.MEMORIAAL,
   });
-  try { schrijfAuditLog_('Reiskosten geboekt', km + ' km = ' + formatBedrag_(bedrag)); } catch (_) {}
+  try { schrijfAuditLog_('Reiskosten geboekt', km + ' km × ' + tariefStr + ' = ' + formatBedrag_(bedrag)); } catch (_) {}
   try { invalideerKpiSnapshot_(); } catch (_) {}
-  return { bedrag: formatBedrag_(bedrag), km: km };
+  return { bedrag: formatBedrag_(bedrag), km: km, tarief: tarief };
 }
 
 // ─────────────────────────────────────────────
@@ -599,6 +613,10 @@ function boekReiskosten(data) {
 function toonReiskostenWeek() {
   if (typeof controleerSetupGedaan_ === 'function' && !controleerSetupGedaan_()) return;
   const nu = new Date();
+  // Tarief uit BELASTING-config (auto-update bij Belastingdienst-verhoging)
+  const _B = (typeof getBelasting_ === 'function') ? getBelasting_() : {};
+  const _kmTarief = _B.REISKOSTEN_PER_KM || 0.23;
+  const _kmTariefStr = '€' + _kmTarief.toString().replace('.', ',');
   // Maandag van de huidige week (of vorige week als 't zondag is)
   const huidigeDag = nu.getDay() === 0 ? 7 : nu.getDay();
   const maandag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - (huidigeDag - 1));
@@ -637,7 +655,7 @@ input[type=number]{max-width:80px;text-align:right}
 </style></head>
 <body>
 <h2>🚗 Week-overzicht reiskosten</h2>
-<div class="sub">Vul per dag aantal km en omschrijving in. Lege rijen worden overgeslagen. Tarief: €0,23/km.</div>
+<div class="sub">Vul per dag aantal km en omschrijving in. Lege rijen worden overgeslagen. Tarief: ${_kmTariefStr}/km.</div>
 
 <table>
   <tr><th>Dag</th><th>Km</th><th style="width:50%">Omschrijving</th></tr>
@@ -659,10 +677,11 @@ ${dagen.map((d, i) => `
 
 <script>
 var DAGEN=${JSON.stringify(dagen)};
+var KM_TARIEF = ${_kmTarief};
 function upd(){
   var totKm=0;
   for(var i=0;i<7;i++){totKm+=parseFloat(document.getElementById('km'+i).value)||0;}
-  var bedrag=totKm*0.23;
+  var bedrag=totKm*KM_TARIEF;
   document.getElementById('tot').textContent=totKm+' km · € '+bedrag.toFixed(2).replace('.',',');
 }
 function boek(){
@@ -703,8 +722,12 @@ function boekReiskostenWeek(rijen) {
     try {
       const res = boekReiskosten({ datum: r.datum, omschr: r.omschr, km: r.km });
       aantal++;
-      totaalKm += parseFloat(r.km) || 0;
-      totaalBedrag += (parseFloat(r.km) || 0) * 0.23;
+      const km = parseFloat(r.km) || 0;
+      totaalKm += km;
+      // Gebruik tarief uit het res-object (komt uit BELASTING-config in boekReiskosten);
+      // fallback 0,23 alleen als config niet beschikbaar is. Voorheen hardcoded 0,23
+      // wat bij tariefwijziging zou drijven van de werkelijke journaalposten.
+      totaalBedrag += km * (res && res.tarief || 0.23);
     } catch (e) {
       Logger.log('Reiskosten-week rij ' + r.datum + ' overgeslagen: ' + e.message);
     }
