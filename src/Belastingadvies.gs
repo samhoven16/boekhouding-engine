@@ -121,6 +121,9 @@ const BELASTING_PER_JAAR = {
     BOX2_SCHIJF_1_PCT: 0.245,
     BOX2_SCHIJF_1_MAX: 67000,
     BOX2_SCHIJF_2_PCT: 0.31,
+    // DGA-gebruikelijk-loon — Wet IB art. 12a. Bron: belastingdienst.nl.
+    // 2025: €56.000. Wijzigt vrijwel jaarlijks per Belastingplan.
+    DGA_MIN_SALARIS: 56000,
   },
   2026: {
     ZELFSTANDIGENAFTREK:    1200,    // Verlaagd per 2026 (was €2.470 in 2025)
@@ -172,6 +175,7 @@ const BELASTING_PER_JAAR = {
     BOX2_SCHIJF_1_PCT: 0.245,
     BOX2_SCHIJF_1_MAX: 67000,
     BOX2_SCHIJF_2_PCT: 0.31,
+    DGA_MIN_SALARIS: 56000,   // 2026 — bevestigen na Belastingplan 2026
   },
   // 2027: placeholder — vervang met officiële Miljoenennota-cijfers Prinsjesdag 2026.
   // Bij ontbreken valt getBelasting_() terug op 2026-tarieven met waarschuwing.
@@ -222,6 +226,7 @@ const BELASTING_PER_JAAR = {
     BOX2_SCHIJF_1_PCT: 0.245,
     BOX2_SCHIJF_1_MAX: 67000,
     BOX2_SCHIJF_2_PCT: 0.31,
+    DGA_MIN_SALARIS: 56000,   // 2027 — preliminair, wacht Belastingplan 2027
   },
 };
 
@@ -341,6 +346,8 @@ const BELASTING_OVERRIDE_VELDEN = [
     hint: 'Bijdrage Zorgverzekeringswet. 2025: 5,26% = 0,0526.' },
   { sleutel: 'ZVW_MAX_INKOMEN',      label: 'Grens: Zvw max inkomen (€)',        type: 'bedrag',     min: 0,    max: 200000,
     hint: 'Maximum-inkomen waarover Zvw-premie wordt berekend. 2025: €75.864.' },
+  { sleutel: 'DGA_MIN_SALARIS',      label: 'Grens: DGA gebruikelijk-loon (€)',  type: 'bedrag',     min: 0,    max: 500000,
+    hint: 'Minimum-salaris DGA volgens art. 12a Wet IB. 2025-2026: €56.000. Wijzigt jaarlijks.' },
 ];
 
 /**

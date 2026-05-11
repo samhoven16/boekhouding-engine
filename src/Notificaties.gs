@@ -106,15 +106,19 @@ function genereerNotificaties_() {
   if (maand >= 11) {
     const urenRaw = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0', 10);
     const uren = isFinite(urenRaw) ? urenRaw : 0;
-    if (uren > 0 && uren < 1225) {
-      const tekort = 1225 - uren;
+    const urenGrens = (B && B.URENCRITERIUM) || 1225;
+    const zaftrek = (B && B.ZELFSTANDIGENAFTREK) || 2470;
+    const ibPct1 = (B && B.IB_SCHIJVEN && B.IB_SCHIJVEN[0] && B.IB_SCHIJVEN[0].pct) || 0.37;
+    const aftrekImpactEuro = Math.round(zaftrek * ibPct1);
+    if (uren > 0 && uren < urenGrens) {
+      const tekort = urenGrens - uren;
       lijst.push({
         prioriteit: tekort <= 200 ? 85 : 60,
-        titel: '⏱️ Urencriterium: nog ' + tekort + ' uur tot 1.225',
+        titel: '⏱️ Urencriterium: nog ' + tekort + ' uur tot ' + formatBedrag_(urenGrens).replace('€', '').trim(),
         tekst: 'Je staat op ' + uren + ' uur. Nog ' + tekort + ' uur tot het urencriterium ' +
-               'voor zelfstandigenaftrek (€2.470) en startersaftrek. Werk je dat dit jaar nog?',
+               'voor zelfstandigenaftrek (' + formatBedrag_(zaftrek) + ') en startersaftrek. Werk je dat dit jaar nog?',
         actie: 'Update "Gewerkte uren dit jaar" via Instellingen',
-        euros: 2470,
+        euros: zaftrek,
         urgent: tekort <= 100 && maand === 12,
         bron: 'urencriterium',
       });
@@ -122,10 +126,10 @@ function genereerNotificaties_() {
       lijst.push({
         prioriteit: 60,
         titel: '⏱️ Urenregistratie ontbreekt',
-        tekst: 'Voor de zelfstandigenaftrek (€2.470/jaar) is een urenadministratie verplicht ' +
-               '(≥ 1.225 uur). Geen registratie = geen aftrek = €914 IB extra.',
+        tekst: 'Voor de zelfstandigenaftrek (' + formatBedrag_(zaftrek) + '/jaar) is een urenadministratie verplicht ' +
+               '(≥ ' + urenGrens + ' uur). Geen registratie = geen aftrek = ' + formatBedrag_(aftrekImpactEuro) + ' IB extra.',
         actie: 'Vul "Gewerkte uren dit jaar" in via Instellingen',
-        euros: 914,
+        euros: aftrekImpactEuro,
         urgent: false,
         bron: 'urencriterium-leeg',
       });
@@ -143,14 +147,17 @@ function genereerNotificaties_() {
       });
       if (inv > 0 && inv < B.KIA_MIN) {
         const tekort = B.KIA_MIN - inv;
+        const kiaPct = (B && B.KIA_PCT) || 0.28;
+        const ibPct1Kia = (B && B.IB_SCHIJVEN && B.IB_SCHIJVEN[0] && B.IB_SCHIJVEN[0].pct) || 0.37;
+        const kiaAftrekExtra = tekort * kiaPct;
         lijst.push({
           prioriteit: 75,
           titel: '🎯 KIA-grens binnen handbereik (' + formatBedrag_(tekort) + ' tekort)',
           tekst: 'Je hebt ' + formatBedrag_(inv) + ' geïnvesteerd. Bij ' + formatBedrag_(B.KIA_MIN) +
-                 '+ krijg je 28% extra aftrek (KIA) — dat is ~' +
-                 formatBedrag_(tekort * 0.28) + ' belastingvoordeel. Investeer dit jaar nog?',
+                 '+ krijg je ' + Math.round(kiaPct * 100) + '% extra aftrek (KIA) — dat is ~' +
+                 formatBedrag_(kiaAftrekExtra) + ' belastingvoordeel. Investeer dit jaar nog?',
           actie: 'Boekhouding → Wat-als-rekenmachine om effect te zien',
-          euros: tekort * 0.28 * 0.37,
+          euros: kiaAftrekExtra * ibPct1Kia,
           urgent: dag >= 20,
           bron: 'kia-deadline',
         });
