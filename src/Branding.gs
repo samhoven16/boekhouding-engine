@@ -19,13 +19,14 @@ const PROP_KLEUR     = 'bedrijfsKleur';
 /**
  * Geeft het bedrijfslogo terug als data-URL (base64).
  * Geeft null terug als er geen logo is ingesteld.
+ *
+ * Het logo wordt chunked opgeslagen omdat ScriptProperties een 9KB-limiet
+ * per waarde heeft. PROP_LOGO bevat alleen een aanwezigheidsstub van ~53
+ * chars; de echte data zit in PROP_LOGO_chunks. Daarom delegate naar
+ * getBedrijfsLogoVolledig_ — anders zou deze functie altijd null geven.
  */
 function getBedrijfsLogo_() {
-  const props = PropertiesService.getScriptProperties();
-  const b64   = props.getProperty(PROP_LOGO);
-  const mime  = props.getProperty(PROP_LOGO_MIME) || 'image/png';
-  if (!b64 || b64.length < 100) return null;
-  return 'data:' + mime + ';base64,' + b64;
+  return getBedrijfsLogoVolledig_();
 }
 
 /**
