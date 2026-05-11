@@ -903,36 +903,51 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
       const bedragIncl = parseFloat(data[i][12]) || 0;
       if (bedragIncl <= 0) throw new Error('Factuur ' + factuurnr + ' heeft geen geldig bedrag');
 
-      sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag
+      // Bij DEELS_BETAALD: alleen het RESTERENDE bedrag boeken. Het al
+      // betaalde deel heeft al een eigen journaalpost (via bank-import
+      // koppelBankTransactieAanFactuur_). Boekten we hier het volle
+      // bedragIncl, dan zou debiteurensaldo dubbel afnemen.
+      const huidigBetaald = parseFloat(data[i][13]) || 0;
+      const resterend = rondBedrag_(bedragIncl - huidigBetaald);
+
+      sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag (= totaal)
       sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.BETAALD);  // Status
       sheet.getRange(i + 1, 16).setValue(datum);                   // Betaaldatum
       SpreadsheetApp.flush();                                       // Forceer write vóór journaalpost
 
-      // Journaalpost: Debiteuren → Bank (exact 1x per aanroep dankzij idempotentie-check).
+      // Journaalpost alleen wanneer er nog resterend openstaat. Bij een
+      // volledig betaalde DEELS_BETAALD → BETAALD upgrade (resterend = 0)
+      // hoeven we niets extra te boeken, alleen status corrigeren.
       // Compensating rollback: als journaalpost faalt, draai factuur-status terug
       // anders staat factuur als BETAALD zonder tegenboeking → balans loopt scheef.
-      try {
-        maakJournaalpost_(ss, {
-          datum,
-          omschr:  'Ontvangst factuur ' + factuurnr,
-          dagboek: 'Bankboek',
-          debet:   '1200',
-          credit:  '1100',
-          bedrag:  bedragIncl,
-          ref:     factuurnr,
-          type:    BOEKING_TYPE.BANKONTVANGST,
-        });
-      } catch (jpFout) {
+      if (resterend > 0.005) {
         try {
-          sheet.getRange(i + 1, 14).setValue('');
-          sheet.getRange(i + 1, 15).setValue(huidigStatus || FACTUUR_STATUS.OPEN);
-          sheet.getRange(i + 1, 16).setValue('');
-          SpreadsheetApp.flush();
-        } catch (rollbackFout) {
-          try { schrijfAuditLog_('FATAAL: rollback factuur-betaald faalde', factuurnr + ' — ' + (rollbackFout && rollbackFout.message || rollbackFout)); } catch (_) {}
+          maakJournaalpost_(ss, {
+            datum,
+            omschr:  huidigBetaald > 0
+              ? 'Restbetaling factuur ' + factuurnr
+              : 'Ontvangst factuur ' + factuurnr,
+            dagboek: 'Bankboek',
+            debet:   '1200',
+            credit:  '1100',
+            bedrag:  resterend,
+            ref:     factuurnr,
+            type:    BOEKING_TYPE.BANKONTVANGST,
+          });
+        } catch (jpFout) {
+          // Rollback: herstel ORIGINELE betaald-bedrag (niet leeg → bewaar
+          // eventuele partial pay). Status terug naar wat het was.
+          try {
+            sheet.getRange(i + 1, 14).setValue(huidigBetaald > 0 ? huidigBetaald : '');
+            sheet.getRange(i + 1, 15).setValue(huidigStatus || FACTUUR_STATUS.VERZONDEN);
+            sheet.getRange(i + 1, 16).setValue('');
+            SpreadsheetApp.flush();
+          } catch (rollbackFout) {
+            try { schrijfAuditLog_('FATAAL: rollback factuur-betaald faalde', factuurnr + ' — ' + (rollbackFout && rollbackFout.message || rollbackFout)); } catch (_) {}
+          }
+          try { schrijfAuditLog_('Factuur betaald → journaalpost FAALDE, rollback uitgevoerd', factuurnr + ' — ' + (jpFout && jpFout.message || jpFout)); } catch (_) {}
+          throw new Error('Markeer-betaald faalde tijdens journaalpost: ' + (jpFout && jpFout.message || jpFout) + ' — factuur-status teruggezet.');
         }
-        try { schrijfAuditLog_('Factuur betaald → journaalpost FAALDE, rollback uitgevoerd', factuurnr + ' — ' + (jpFout && jpFout.message || jpFout)); } catch (_) {}
-        throw new Error('Markeer-betaald faalde tijdens journaalpost: ' + (jpFout && jpFout.message || jpFout) + ' — factuur-status teruggezet.');
       }
 
       schrijfAuditLog_('Factuur betaald', factuurnr + ' via factuurlijst dialog');
