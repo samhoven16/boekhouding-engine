@@ -411,18 +411,12 @@ function sluitBtwPeriode() {
     });
   }
 
-  // Overige tarieven (rubriek 1c) — bv. 5,5% of historisch tarief
-  if (aangifte.r1c_btw > 0) {
-    maakJournaalpost_(ss, {
-      datum,
-      omschr: `BTW afdracht ${kwartaal} ${jaar} – overige tarieven`,
-      dagboek: 'Memoriaal',
-      debet: '4100', credit: '4100',
-      bedrag: aangifte.r1c_btw,
-      ref: `BTW-${kwartaal}-${jaar}`,
-      type: BOEKING_TYPE.MEMORIAAL,
-    });
-  }
+  // Overige tarieven (rubriek 1c) — bv. 5,5% of historisch tarief.
+  // Geen overboeking nodig: bepaalBtwVerkoopRekening_() boekt deze BTW
+  // al direct op 4100 (BTW te betalen) bij de oorspronkelijke factuur,
+  // omdat er geen rate-specifieke rekening voor overige tarieven bestaat.
+  // (Voorheen stond hier debet=credit=4100 wat een self-posting-error gaf
+  // zodra een klant überhaupt omzet met overig tarief had.)
 
   // Verlegde BTW (rubriek 1e) — afnemer draagt af; voor administratie boeken
   // wij dit verplaatst naar 4100 zodat aangifte-totaal klopt.
