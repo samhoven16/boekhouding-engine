@@ -1126,7 +1126,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
   </div>
   <div style="background:#fff;padding:28px 24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px">
     <p style="font-size:16px">Hoi ${naam},</p>
-    <p>Gefeliciteerd met je aankoop van ${productnm}! Je boekhouding staat klaar om te activeren.</p>
+    <p>Bedankt voor je aankoop. Hieronder de stappen om aan de slag te gaan.</p>
     ${stappenHtml}
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
     <p style="font-size:13px;color:#94a3b8;line-height:1.6">
@@ -1145,7 +1145,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
   // HTML-only mails hoger als risico).
   const textBody =
     'Hoi ' + naam + ',\n\n' +
-    'Gefeliciteerd met je aankoop van ' + productnm + '! Je boekhouding staat klaar om te activeren.\n\n' +
+    'Bedankt voor je aankoop. Hieronder de stappen om aan de slag te gaan.\n\n' +
     (kopieerLink ? 'In 3 stappen aan de slag:\n' +
       '1. Open je spreadsheet via: ' + kopieerLink + '\n' +
       '2. Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode\n' +
