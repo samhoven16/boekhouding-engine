@@ -1400,220 +1400,28 @@ function setupLicentieSheet() {
 function genereerHandmatigeLicentie() {
   const sleutel = genereerSleutel_();
   getLicentieSheet_().appendRow([
-    sleutel, 'Handmatig', '', 'Standaard', 'Actief', '', '', new Date(), 'HANDMATIG', '',
+    sleutel, 'Handmatig', '', 'Standaard', 'Actief', '', '', new Date(), 'HANDMATIG', '', '',
   ]);
   Logger.log('Nieuwe sleutel: ' + sleutel);
   SpreadsheetApp.getUi().alert('Nieuwe licentiesleutel', sleutel, SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
-// ─────────────────────────────────────────────────────────────
-//  BREVO FOLLOW-UP SEQUENTIES
-//  Dag 3 / 7 / 14 / 30 / 60 / 90 na activatie
-//  Trigger: dagelijkse GAS time-based trigger (zie installeelFollowUpTrigger_)
-// ─────────────────────────────────────────────────────────────
-
-const FOLLOWUP_SCHEMA = [
-  {
-    dag: 3,
-    onderwerp: 'BTW-aangifte is minder angstaanjagend dan het klinkt',
-    html: (naam) => `<p>Hoi ${naam},</p>
-<p>Je hebt Boekhoudbaar nu 3 dagen. Goeie vraag om jezelf te stellen: <strong>hoeveel facturen staan er al in je boekhouding?</strong> (Het mag nog 0 zijn. Echt.)</p>
-<p>Veel nieuwe ZZP'ers denken dat BTW-aangifte ingewikkeld is. Het geheim: je hoeft zelf niks te berekenen. Boekhoudbaar telt alles op. Jij kopieert het naar Mijn Belastingdienst. Letterlijk 5 minuten.</p>
-<p><strong>Zo werkt het:</strong></p>
-<ol>
-  <li>Open je spreadsheet → <strong>Boekhouding → BTW → Genereer BTW-aangifte</strong></li>
-  <li>Kies het juiste kwartaal</li>
-  <li>Je ziet de bedragen per rubriek — vul ze over in Mijn Belastingdienst</li>
-</ol>
-<p>Eerste keer doe je het in 15 minuten. Tweede keer in 5. Derde keer doe je het ook maar gewoon.</p>
-<p>Heb je vragen of loopt iets vast? Stuur een reply — ik lees mijn mail zelf.</p>
-<p>Sam</p>`,
-  },
-  {
-    dag: 7,
-    onderwerp: 'Je eerste factuur — ja, je mag geld vragen voor je werk',
-    html: (naam) => `<p>Hoi ${naam},</p>
-<p>Je gebruikt Boekhoudbaar nu een week. Volgende stap: je eerste factuur.</p>
-<p>En ja: je mag geld voor je werk vragen. Veel ZZP'ers voelen zich schuldig als ze een factuur sturen. Dat gevoel gaat weg. Stop er nu al mee.</p>
-<p><strong>Factuur maken:</strong></p>
-<ol>
-  <li>Open je spreadsheet</li>
-  <li><strong>Boekhouding → Nieuwe boeking → Verkoopfactuur</strong></li>
-  <li>Vul klantgegevens, beschrijving en bedrag in</li>
-  <li>Klik Verzenden → je klant krijgt direct een PDF per mail</li>
-</ol>
-<p><strong>Tip:</strong> sla je klant één keer op in het Relaties-tabblad. Volgende keer vult Boekhoudbaar alles automatisch in. Scheelt je 2 minuten per factuur — klinkt weinig, maar op jaarbasis tel je dat.</p>
-<p>Trouwens: als je een collega-ZZP'er naar Boekhoudbaar stuurt en die koopt het, dan verdien ik een kleine vergoeding. Ik zeg dit omdat ik het eerlijk vind om te zeggen. Jij speelt geen rol in die vergoeding — maar goed om te weten.</p>
-<p>Sam</p>`,
-  },
-  {
-    dag: 14,
-    onderwerp: 'Belastingvoordelen die je (waarschijnlijk) misloopt',
-    html: (naam) => `<p>Hoi ${naam},</p>
-<p>Als ZZP-er heb je recht op aftrekposten die veel ondernemers vergeten:</p>
-<ul>
-  <li><strong>Zelfstandigenaftrek</strong> — €2.470 als je ≥1.225 uur werkt</li>
-  <li><strong>Thuiswerkaftrek</strong> — €2,40 per dag dat je thuis werkt</li>
-  <li><strong>KIA</strong> — 28% extra aftrek op investeringen ≥€2.801</li>
-  <li><strong>MKB-winstvrijstelling</strong> — 12,7% van je winst is vrijgesteld</li>
-</ul>
-<p>Boekhoudbaar berekent dit automatisch via <strong>Boekhouding → Belastingadvies → Genereer belastingadvies</strong>.</p>`,
-  },
-  {
-    dag: 30,
-    onderwerp: 'Je eerste maand — hoe staat je boekhouding ervoor?',
-    html: (naam) => `<p>Hoi ${naam},</p>
-<p>Je gebruikt Boekhoudbaar nu een maand. Goed moment voor een check:</p>
-<ul>
-  <li>✅ Alle facturen van deze maand geboekt?</li>
-  <li>✅ Kosten geboekt (abonnementen, materialen, reiskosten)?</li>
-  <li>✅ Dashboard bekeken? (<strong>Boekhouding → Dashboard openen</strong>)</li>
-  <li>✅ Bankafschriften vergeleken?</li>
-</ul>
-<p>Een maand bijwerken duurt 15-30 minuten. Als je dat elke maand doet, heb je aan het einde van het jaar geen stress.</p>`,
-  },
-  {
-    dag: 60,
-    onderwerp: 'Kwartaal bijna voorbij — BTW aangifte checklist',
-    html: (naam) => `<p>Hoi ${naam},</p>
-<p>Het kwartaal loopt bijna af. Checklist voor je BTW-aangifte:</p>
-<ol>
-  <li>Alle verkoopfacturen geboekt? Check je Verkoopfacturen-tab</li>
-  <li>Alle inkoopfacturen (met BTW) geboekt? Check je Inkoopfacturen-tab</li>
-  <li>Genereer je aangifte: <strong>Boekhouding → BTW → Genereer BTW-aangifte</strong></li>
-  <li>Dien in via mijn.belastingdienst.nl voor het einde van de maand</li>
-</ol>
-<p>Deadline Q1: 30 april · Q2: 31 juli · Q3: 31 oktober · Q4: 31 januari</p>`,
-  },
-  {
-    dag: 90,
-    onderwerp: 'Drie maanden Boekhoudbaar — wat heb je al bespaard?',
-    html: (naam) => `<p>Hoi ${naam},</p>
-<p>Je gebruikt Boekhoudbaar al 3 maanden. Wat je al hebt bespaard vs. een abonnement:</p>
-<ul>
-  <li>Moneybird zou nu al €45–€117 gekost hebben</li>
-  <li>e-Boekhouden: €30–€72</li>
-  <li>Jij: €49 eenmalig — en dat blijft zo</li>
-</ul>
-<p>Tevreden? Help een andere ZZP-er door Boekhoudbaar te delen. Of word partner (commissie per doorverwezen klant) — stuur een reply.</p>`,
-  },
-];
-
 /**
- * Wikkelt een follow-up-bodyHTML in een brand-aligned e-mail-shell
- * (navy header, neutrale body, subtiele footer met contact). Zo krijgen
- * alle 6 follow-ups dezelfde premium uitstraling als de activatie-mail.
+ * Cleanup-helper: verwijder oude follow-up trigger als die ooit geïnstalleerd is.
+ * Voorheen bestond een verwerkFollowUpEmails-systeem dat verwees naar een
+ * niet-bestaande getSpreadsheet_() en verkeerde kolomindices gebruikte. Het
+ * actieve drip-systeem is nu verstuurDripsDagelijks_ (zie verder beneden).
+ * Run handmatig in editor als je zeker wilt zijn dat de oude trigger weg is.
  */
-function wrapFollowUpHtml_(onderwerp, bodyHtml, vanEmail) {
-  return '<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"></head>' +
-'<body style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Arial,sans-serif;' +
-  'max-width:580px;margin:0 auto;padding:20px;color:#1A1A1A;background:#F7F9FC">' +
-'<div style="background:#0D1B4E;padding:22px 24px;border-radius:10px 10px 0 0">' +
-  '<div style="color:#2EC4B6;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:4px">Boekhoudbaar</div>' +
-  '<h1 style="color:#fff;margin:0;font-size:18px;font-weight:700;letter-spacing:-0.01em;line-height:1.3">' + escHtml_(onderwerp) + '</h1>' +
-'</div>' +
-'<div style="background:#fff;padding:24px;border:1px solid #E5EAF2;border-top:none;border-radius:0 0 10px 10px;font-size:14px;line-height:1.65;color:#1A1A1A">' +
-  bodyHtml +
-  '<hr style="border:none;border-top:1px solid #E5EAF2;margin:22px 0">' +
-  '<p style="font-size:12px;color:#5F6B7A;margin:0">Vragen? Beantwoord deze mail of stuur naar <a href="mailto:' + escHtml_(vanEmail) + '" style="color:#0D1B4E">' + escHtml_(vanEmail) + '</a>.</p>' +
-'</div>' +
-'<p style="font-size:11px;color:#94a3b8;text-align:center;margin-top:12px">' +
-  'Je ontvangt deze tip-serie omdat je Boekhoudbaar hebt geactiveerd. Reageer met "stop" om af te melden.' +
-'</p>' +
-'</body></html>';
-}
-
-/**
- * Controleert alle actieve licenties en stuurt follow-up emails op de juiste dag.
- * Aanroepen via een dagelijkse GAS time-based trigger.
- */
-function verwerkFollowUpEmails() {
-  const props = PropertiesService.getScriptProperties();
-  const brevoKey = props.getProperty('BREVO_API_KEY') || '';
-  const vanEmail = props.getProperty('VAN_EMAIL') || 'info@boekhoudbaar.nl';
-  const vanNaam  = props.getProperty('VAN_NAAM')  || 'Sam van Boekhoudbaar';
-
-  if (!brevoKey) {
-    Logger.log('verwerkFollowUpEmails: BREVO_API_KEY niet ingesteld, overgeslagen.');
-    return;
-  }
-
-  const ss = getSpreadsheet_();
-  if (!ss) return;
-  const sheet = ss.getSheetByName('Licenties');
-  if (!sheet) return;
-
-  const data = sheet.getDataRange().getValues();
-  const vandaag = new Date();
-  vandaag.setHours(0, 0, 0, 0);
-
-  // Kolom-indices op basis van setupLicentieSheet (0-based):
-  // [0]=LicentieID [1]=Sleutel [2]=Naam [3]=Email [4]=Status [5]=ActivatieDatum
-  data.slice(1).forEach((rij, idx) => {
-    const status       = String(rij[4] || '').toLowerCase();
-    const naam         = String(rij[2] || 'ondernemer');
-    const email        = String(rij[3] || '');
-    const activatieDag = rij[5] instanceof Date ? rij[5] : new Date(rij[5]);
-
-    if (status !== 'actief' || !email || isNaN(activatieDag.getTime())) return;
-
-    activatieDag.setHours(0, 0, 0, 0);
-    const dagenSindsActivatie = Math.round((vandaag - activatieDag) / (1000 * 60 * 60 * 24));
-
-    FOLLOWUP_SCHEMA.forEach(seq => {
-      if (dagenSindsActivatie !== seq.dag) return;
-
-      const sentKey = 'followup_' + String(rij[1]) + '_dag' + seq.dag;
-      if (props.getProperty(sentKey) === 'sent') return;  // idempotency
-
-      try {
-        const voornaam = naam.split(' ')[0] || naam;
-        const payload = {
-          sender:      { email: vanEmail, name: vanNaam },
-          to:          [{ email, name: naam }],
-          subject:     seq.onderwerp,
-          htmlContent: wrapFollowUpHtml_(seq.onderwerp, seq.html(voornaam), vanEmail),
-          tags:        ['followup', 'dag' + seq.dag],
-        };
-
-        const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
-          method: 'post',
-          contentType: 'application/json',
-          headers: { 'api-key': brevoKey },
-          payload: JSON.stringify(payload),
-          muteHttpExceptions: true,
-        });
-
-        if (resp.getResponseCode() === 201) {
-          props.setProperty(sentKey, 'sent');
-          Logger.log('Follow-up dag ' + seq.dag + ' verstuurd naar ' + email);
-        } else {
-          Logger.log('Follow-up dag ' + seq.dag + ' FOUT voor ' + email + ': ' + resp.getContentText());
-        }
-      } catch (e) {
-        Logger.log('Follow-up dag ' + seq.dag + ' EXCEPTION voor ' + email + ': ' + e.message);
-      }
-    });
+function verwijderOudeFollowUpTrigger_() {
+  let verwijderd = 0;
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'verwerkFollowUpEmails') {
+      ScriptApp.deleteTrigger(t);
+      verwijderd++;
+    }
   });
-}
-
-/**
- * Installeert de dagelijkse follow-up trigger (idempotent).
- * Eénmalig uitvoeren na deployment.
- */
-function installeelFollowUpTrigger_() {
-  const triggers = ScriptApp.getProjectTriggers();
-  const alAanwezig = triggers.some(t => t.getHandlerFunction() === 'verwerkFollowUpEmails');
-  if (alAanwezig) {
-    Logger.log('Follow-up trigger al aanwezig.');
-    return;
-  }
-  ScriptApp.newTrigger('verwerkFollowUpEmails')
-    .timeBased()
-    .everyDays(1)
-    .atHour(9)
-    .create();
-  Logger.log('Follow-up trigger aangemaakt: dagelijks 09:00.');
+  Logger.log('Oude follow-up triggers verwijderd: ' + verwijderd);
 }
 
 // ─────────────────────────────────────────────
@@ -1670,32 +1478,35 @@ function roteerEndpoint_(e) {
       return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Geef sleutel en email mee.' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
-    const sheet = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID'))
-      .getSheetByName('Licenties');
-    if (!sheet) throw new Error('Licenties-sheet niet gevonden');
+    const sheet = getLicentieSheet_();
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
-    const sleutelCol = headers.indexOf('Licentiesleutel');
+    const sleutelCol = headers.indexOf('Sleutel');
+    const naamCol = headers.indexOf('Naam');
     const emailCol = headers.indexOf('Email');
     const statusCol = headers.indexOf('Status');
     if (sleutelCol < 0 || emailCol < 0 || statusCol < 0) throw new Error('Sheet-format onjuist');
 
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][sleutelCol]) === oudeSleutel && String(data[i][emailCol]).toLowerCase() === email) {
-        if (data[i][statusCol] === 'Revoked') {
-          return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Sleutel is al gerevoked.' }))
+      if (String(data[i][sleutelCol]).toUpperCase() === oudeSleutel.toUpperCase() &&
+          String(data[i][emailCol]).toLowerCase() === email) {
+        if (String(data[i][statusCol]).toLowerCase().indexOf('revoked') !== -1) {
+          return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Sleutel is al ingetrokken.' }))
             .setMimeType(ContentService.MimeType.JSON);
         }
-        // Genereer nieuwe sleutel
-        const nieuweSleutel = 'BHB-' + Utilities.getUuid().slice(0, 12).toUpperCase();
-        // Markeer oud als revoked + voeg nieuwe rij toe (audit-trail)
-        sheet.getRange(i + 1, statusCol + 1).setValue('Revoked-rotatie');
+        const nieuweSleutel = genereerSleutel_();
+        const naam = naamCol >= 0 ? String(data[i][naamCol] || 'Klant') : 'Klant';
+        // Markeer oud als ingetrokken + voeg nieuwe rij toe met dezelfde kolom-volgorde
+        // als setupLicentieSheet (Sleutel, Naam, Email, Versie, Status, Vervaldatum,
+        // Installatie-ID, Aangemaakt op, Mollie betaling ID, Laatste validatie, Onboarded op).
+        sheet.getRange(i + 1, statusCol + 1).setValue('Ingetrokken — rotatie');
         sheet.appendRow([
-          new Date(), email, nieuweSleutel, 'Active', 'Rotatie van rij ' + (i + 1),
+          nieuweSleutel, naam, email, 'Standaard', 'Actief', '',
+          '', new Date(), 'ROTATIE-VAN-' + oudeSleutel, '', '',
         ]);
         return ContentService.createTextOutput(JSON.stringify({
           ok: true, nieuweSleutel: nieuweSleutel,
-          bericht: 'Oude sleutel gerevoked. Nieuwe is direct actief.',
+          bericht: 'Oude sleutel ingetrokken. Nieuwe is direct actief.',
         })).setMimeType(ContentService.MimeType.JSON);
       }
     }
@@ -1720,16 +1531,16 @@ function revokeEndpoint_(e) {
       return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Ongeldig admin-token.' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
-    const sheet = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID'))
-      .getSheetByName('Licenties');
+    const sheet = getLicentieSheet_();
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
-    const sleutelCol = headers.indexOf('Licentiesleutel');
+    const sleutelCol = headers.indexOf('Sleutel');
     const statusCol = headers.indexOf('Status');
+    if (sleutelCol < 0 || statusCol < 0) throw new Error('Sheet-format onjuist');
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][sleutelCol]) === sleutel) {
-        sheet.getRange(i + 1, statusCol + 1).setValue('Revoked');
-        return ContentService.createTextOutput(JSON.stringify({ ok: true, bericht: 'Sleutel gerevoked.' }))
+      if (String(data[i][sleutelCol]).toUpperCase() === sleutel.toUpperCase()) {
+        sheet.getRange(i + 1, statusCol + 1).setValue('Ingetrokken');
+        return ContentService.createTextOutput(JSON.stringify({ ok: true, bericht: 'Sleutel ingetrokken.' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
     }
@@ -1826,36 +1637,41 @@ function verstuurDripsDagelijks_() {
     const sheet = getLicentieSheet_();
     if (!sheet || sheet.getLastRow() < 2) return;
     const data = sheet.getDataRange().getValues();
+    const props = PropertiesService.getScriptProperties();
     const nu = Date.now();
     let verstuurd = 0;
 
+    // Kolom-indices op basis van setupLicentieSheet (0-based):
+    // [0]=Sleutel [1]=Naam [2]=Email [3]=Versie [4]=Status [5]=Vervaldatum
+    // [6]=Installatie-ID [7]=Aangemaakt op [8]=Mollie betaling ID
     for (let i = 1; i < data.length; i++) {
       const sleutel       = String(data[i][0] || '').trim();
       const naam          = String(data[i][1] || '').trim();
       const email         = String(data[i][2] || '').trim();
       const status        = String(data[i][4] || '').trim();
-      const dripStatus    = String(data[i][5] || '');
       const aanmaakDatum  = data[i][7];
 
       if (!email || !sleutel) continue;
       const statusLow = status.toLowerCase();
-      if (statusLow === 'gestopt' || statusLow === 'bounce') continue;
+      // Sla over bij niet-actief, bounce of ingetrokken
+      if (statusLow !== 'actief' && statusLow.indexOf('actief —') === -1) continue;
       if (!aanmaakDatum || !(aanmaakDatum instanceof Date)) continue;
 
       const dagenSinds = Math.floor((nu - aanmaakDatum.getTime()) / 86400000);
       if (dagenSinds < 3) continue;  // eerste drip is dag 3
 
       DRIP_SCHEDULE.forEach(function(drip) {
-        if (dagenSinds >= drip.dag && dripStatus.indexOf(drip.vlag) === -1) {
-          // Niet eerder verstuurd → versturen
-          try {
-            verstuurDripMail_(naam, email, sleutel, drip);
-            const nieuweStatus = (dripStatus ? dripStatus + ',' : '') + drip.vlag;
-            sheet.getRange(i + 1, 6).setValue(nieuweStatus);
-            verstuurd++;
-          } catch (mailErr) {
-            Logger.log('Drip ' + drip.vlag + ' faalde voor ' + email + ': ' + mailErr.message);
-          }
+        if (dagenSinds < drip.dag) return;
+        // State via ScriptProperties — voorheen werd Vervaldatum-kolom
+        // overschreven met "d3,d7,..." wat data corrupteerde.
+        const sentKey = 'drip_' + sleutel + '_' + drip.vlag;
+        if (props.getProperty(sentKey) === 'sent') return;
+        try {
+          verstuurDripMail_(naam, email, sleutel, drip);
+          props.setProperty(sentKey, 'sent');
+          verstuurd++;
+        } catch (mailErr) {
+          Logger.log('Drip ' + drip.vlag + ' faalde voor ' + email + ': ' + mailErr.message);
         }
       });
     }
@@ -2145,7 +1961,18 @@ function verwerkBrevoBounce_(e) {
  * Setup-helper: roep eenmalig handmatig aan in de editor om een token
  * te genereren en in de ScriptProperties op te slaan. Geef de URL aan
  * Brevo (dashboard → Transactional → Settings → Webhook):
- *   <WEB_APP_URL>?token=<TOKEN>
+ *   <WEB_APP_EXEC_URL>?token=<TOKEN>
+ *
+ * Belangrijk: ScriptApp.getService().getUrl() geeft vanuit de editor de
+ * `/dev` URL terug — die werkt NIET voor externe webhooks (Brevo krijgt
+ * dan een Google-login-redirect en faalt stil). Daarom leest deze helper
+ * de echte deployment-URL uit ScriptProperty `WEB_APP_EXEC_URL`.
+ *
+ * Eerste setup:
+ *   1. Deploy → Manage deployments → kopieer de Web app URL (eindigt op /exec)
+ *   2. Project Settings → Script Properties → voeg toe:
+ *        WEB_APP_EXEC_URL = https://script.google.com/macros/s/<ID>/exec
+ *   3. Run deze functie → kopieer de URL uit Logs → plak in Brevo dashboard
  */
 function setupBrevoWebhookToken() {
   const props = PropertiesService.getScriptProperties();
@@ -2154,7 +1981,16 @@ function setupBrevoWebhookToken() {
     token = Utilities.getUuid().replace(/-/g, '');
     props.setProperty('BREVO_WEBHOOK_TOKEN', token);
   }
-  const url = ScriptApp.getService().getUrl() + '?token=' + token;
-  Logger.log('Brevo webhook URL (configureer in Brevo dashboard):\n' + url);
+  const execUrl = props.getProperty('WEB_APP_EXEC_URL');
+  if (!execUrl || !/\/exec$/.test(execUrl)) {
+    Logger.log('::error:: WEB_APP_EXEC_URL ontbreekt of eindigt niet op /exec.');
+    Logger.log('Stappen: Deploy → Manage deployments → kopieer de Web app URL ' +
+      '(eindigt op /exec) → Project Settings → Script Properties → ' +
+      'voeg WEB_APP_EXEC_URL toe. Daarna deze functie opnieuw runnen.');
+    Logger.log('Token alvast opgeslagen: ' + token);
+    return null;
+  }
+  const url = execUrl + '?token=' + token;
+  Logger.log('Brevo webhook URL (plak in Brevo dashboard):\n' + url);
   return url;
 }
