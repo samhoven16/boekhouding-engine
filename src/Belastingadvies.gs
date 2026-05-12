@@ -377,6 +377,12 @@ function _parseOverrideWaarde_(raw, veldDef) {
   // → reject, klant moet "0.21" niet "1-1-1900" typen
   if (raw instanceof Date) return null;
 
+  // Detecteer of klant expliciet "%" heeft getypt — bepaalt of we /100 doen.
+  // Voor number-typed input (uit cel) is er geen %-marker; daar volgen we
+  // strikte interpretatie (0.21 = 21%, bare 21 = ambigu = reject).
+  const isStringInput = typeof raw === 'string';
+  const hadPercentTeken = isStringInput && /%/.test(raw);
+
   let waarde;
   if (typeof raw === 'number') {
     if (!isFinite(raw)) return null;
@@ -393,11 +399,22 @@ function _parseOverrideWaarde_(raw, veldDef) {
     if (!isFinite(waarde)) return null;
   }
 
-  // Auto-interpret: als percentage-veld en waarde > 1, interpret als heel-procent
-  // ("21" voor BTW betekent 21%, niet 2100%). Conservatief: alleen toepassen
-  // bij range-criterion max < 1. Boven 1 was sowieso ongeldig voor percentage.
-  if (veldDef.type === 'percentage' && waarde > 1 && veldDef.max <= 1) {
-    waarde = waarde / 100;
+  // Percentage-velden: strikte interpretatie om silent-misinterpret te voorkomen.
+  //   "21%"   → 0.21   (% expliciet → altijd /100)
+  //   "0,21"  → 0.21   (al decimaal, in range)
+  //   "21"    → REJECT (ambigu: bedoelde klant 21% of 2100%? — log + null)
+  //   21 (num)→ REJECT (idem, geen %-context uit cel)
+  //   "0,5%"  → 0.005  (% expliciet, dus /100)
+  if (veldDef.type === 'percentage' && veldDef.max <= 1) {
+    if (hadPercentTeken) {
+      waarde = waarde / 100;
+    } else if (waarde > 1) {
+      try {
+        schrijfAuditLog_('Belasting-override REJECT-ambigu',
+          veldDef.sleutel + '=' + raw + ' (gebruik "0,21" of "21%" — niet bare "21")');
+      } catch (_) {}
+      return null;
+    }
   }
 
   // Range-validatie. Out-of-range = log + null (vat de fout op, val terug op default).
