@@ -550,6 +550,18 @@ function markeerWelkomGezienEnNavigeer(actie) {
   PropertiesService.getUserProperties().setProperty(POST_SETUP_WELKOM_GEZIEN, 'true');
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    // UX: directe feedback dat klant-actie aankomt. Voorheen sloot modal
+    // dicht zonder dat klant zag wat ging gebeuren → 1-3 sec stilte voelt
+    // als "kapot". Toast verschijnt onder, sheet-navigation volgt direct.
+    const meldingen = {
+      instellingen: 'Naviger naar Instellingen…',
+      dashboard:    'Naviger naar Dashboard…',
+      boeking:      'Boekingsdialog wordt geopend…',
+      later:        '',
+    };
+    const m = meldingen[actie];
+    if (m) { try { ss.toast(m, 'Even geduld', 3); } catch (_) {} }
+
     if (actie === 'instellingen') {
       const s = ss.getSheetByName(SHEETS.INSTELLINGEN);
       if (s) ss.setActiveSheet(s);

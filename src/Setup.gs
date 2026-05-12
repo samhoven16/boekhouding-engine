@@ -111,16 +111,31 @@ function setup() {
       ['Drive-links opslaan',       function() { slaDriverLinksOpInInstellingen_(jaar); }],
     ];
 
+    // UX: toon klant direct dat setup gestart is — voorkomt "doet ie nog wat?" angst.
+    // Toast verschijnt rechtsonder ~5 sec, niet-blokkerend.
+    try { ss.toast('Even geduld — eerste setup duurt ~1-3 minuten', 'Boekhoudbaar — Setup gestart', 6); } catch (_) {}
+
     for (let i = 0; i < stappen.length; i++) {
       const label = stappen[i][0];
       const fn    = stappen[i][1];
       try {
         Logger.log('Setup-stap ' + (i + 1) + '/' + stappen.length + ': ' + label);
+        // UX: live progress-toast per stap. Klant ziet exact wat gebeurt
+        // en hoeveel stappen er nog over zijn.
+        try {
+          ss.toast(
+            label,
+            'Setup — stap ' + (i + 1) + ' van ' + stappen.length,
+            10
+          );
+        } catch (_) {}
         fn();
       } catch (stapErr) {
         const melding = 'Setup gestopt bij stap ' + (i + 1) + ' van ' + stappen.length +
                         ' (' + label + '): ' + stapErr.message;
         Logger.log('::error:: ' + melding + '\n' + (stapErr.stack || ''));
+        // Klant ziet exacte stap waar het misging — niet alleen in log
+        try { ss.toast('FOUT bij stap ' + (i + 1) + ': ' + label + ' — ' + stapErr.message, 'Setup gestopt', 30); } catch (_) {}
         // Herkenbaar voor de eigenaar in support-ticket: stap-nummer + stap-naam
         throw new Error(melding);
       }

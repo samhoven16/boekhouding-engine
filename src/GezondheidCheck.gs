@@ -23,6 +23,148 @@
  */
 
 // ─────────────────────────────────────────────
+//  INSTALLATIE-DIAGNOSE — voor klanten die zich afvragen "is mijn setup OK?"
+// ─────────────────────────────────────────────
+//
+// In tegenstelling tot voerGezondheidCheckUit (data-validatie) checkt deze
+// functie de SYSTEEM-staat: bestaan alle tabbladen, draaien triggers, is
+// licentie actief, zijn config-constants geladen, etc. Bedoeld als eerste-
+// hulp bij "het doet het niet" — output is plain-text die klant in
+// support-mail kan plakken.
+//
+// Menu: Boekhouding → Installatie diagnoseren
+
+function diagnoseInstallatie() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = (typeof getSpreadsheet_ === 'function') ? getSpreadsheet_() : SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    ui.alert('Geen spreadsheet bereikbaar. Open dit script vanuit de spreadsheet, niet vanuit de editor zonder context.');
+    return;
+  }
+
+  const regels = [];
+  function check(naam, fn) {
+    try {
+      const r = fn();
+      if (r && r.ok === false) {
+        regels.push('✗ ' + naam + ' — ' + r.melding);
+      } else {
+        regels.push('✓ ' + naam + (r && r.detail ? '  (' + r.detail + ')' : ''));
+      }
+    } catch (e) {
+      regels.push('✗ ' + naam + ' — CRASH: ' + (e.message || e));
+    }
+  }
+
+  // ── 1. Versie + setup-flag ─────────────────────────────
+  check('Versie', function() {
+    const v = (typeof HUIDIGE_VERSIE !== 'undefined') ? HUIDIGE_VERSIE : '?';
+    return { detail: 'v' + v };
+  });
+
+  check('Setup uitgevoerd', function() {
+    const done = PropertiesService.getScriptProperties().getProperty('PROP_SETUP_DONE') === 'true' ||
+                 PropertiesService.getScriptProperties().getProperty('SETUP_DONE') === 'true' ||
+                 (typeof PROP === 'object' && PROP && PROP.SETUP_DONE &&
+                  PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) === 'true');
+    if (!done) return { ok: false, melding: 'Run Boekhouding → Setup om te installeren.' };
+    return { detail: 'ja' };
+  });
+
+  // ── 2. Verwachte tabbladen ─────────────────────────────
+  const verwachteTabs = (typeof SHEETS === 'object' && SHEETS) ? [
+    SHEETS.DASHBOARD, SHEETS.INSTELLINGEN, SHEETS.VERKOOPFACTUREN,
+    SHEETS.INKOOPFACTUREN, SHEETS.BANKTRANSACTIES, SHEETS.JOURNAALPOSTEN,
+    SHEETS.GROOTBOEKSCHEMA, SHEETS.AUDITLOG,
+  ].filter(Boolean) : [];
+
+  verwachteTabs.forEach(function(naam) {
+    check('Tabblad "' + naam + '"', function() {
+      const s = ss.getSheetByName(naam);
+      if (!s) return { ok: false, melding: 'ontbreekt — run setup opnieuw' };
+      return { detail: s.getLastRow() + ' rijen' };
+    });
+  });
+
+  // ── 3. Triggers ────────────────────────────────────────
+  check('Triggers', function() {
+    const trigs = ScriptApp.getProjectTriggers();
+    if (trigs.length === 0) return { ok: false, melding: 'GEEN triggers — onEdit/dagelijks werkt niet. Run setup opnieuw.' };
+    const namen = trigs.map(function(t) { return t.getHandlerFunction(); }).join(', ');
+    return { detail: trigs.length + ' actief: ' + namen };
+  });
+
+  // ── 4. Config-constants geladen ────────────────────────
+  check('BTW-tarieven geladen', function() {
+    if (typeof BTW_KEUZES === 'undefined' || !BTW_KEUZES.length) {
+      return { ok: false, melding: 'BTW_KEUZES leeg — Config.gs niet correct geladen' };
+    }
+    return { detail: BTW_KEUZES.length + ' tarieven' };
+  });
+
+  check('Kostencategorieën geladen', function() {
+    if (typeof KOSTEN_CATEGORIEEN === 'undefined' || !KOSTEN_CATEGORIEEN.length) {
+      return { ok: false, melding: 'KOSTEN_CATEGORIEEN leeg' };
+    }
+    return { detail: KOSTEN_CATEGORIEEN.length + ' categorieën' };
+  });
+
+  // ── 5. Belasting-config (override-laag) ────────────────
+  check('Belasting-tarieven', function() {
+    if (typeof getBelasting_ !== 'function') return { ok: false, melding: 'getBelasting_ ontbreekt' };
+    const B = getBelasting_();
+    if (!B || typeof B.REISKOSTEN_PER_KM !== 'number') return { ok: false, melding: 'BELASTING-config incompleet' };
+    return { detail: 'reiskosten=' + B.REISKOSTEN_PER_KM + ', jaar=' + B.TARIEFSJAAR };
+  });
+
+  // ── 6. Licentie-status ─────────────────────────────────
+  check('Licentie', function() {
+    if (typeof controleerLicentieStatus_ !== 'function') return { detail: 'check overgeslagen (functie ontbreekt)' };
+    try {
+      const r = controleerLicentieStatus_();
+      if (r === false) return { ok: false, melding: 'NIET ACTIEF — activeer via Boekhouding → Licentie' };
+      return { detail: 'actief' };
+    } catch (_) {
+      return { detail: 'check overgeslagen (offline of server-fout)' };
+    }
+  });
+
+  // ── 7. Bedrijfsgegevens ────────────────────────────────
+  check('Bedrijfsnaam ingevuld', function() {
+    if (typeof getInstelling_ !== 'function') return { ok: false, melding: 'getInstelling_ ontbreekt' };
+    const naam = (getInstelling_('Bedrijfsnaam') || '').trim();
+    if (!naam) return { ok: false, melding: 'leeg — vul in op Instellingen-tab' };
+    return { detail: naam };
+  });
+
+  // ── 8. Drive-mappen ────────────────────────────────────
+  check('Drive-hoofdmap', function() {
+    const jaar = new Date().getFullYear();
+    const id = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + jaar);
+    if (!id) return { ok: false, melding: 'geen DRIVE_HOOFDMAP_' + jaar + ' — run setup opnieuw' };
+    try {
+      const f = DriveApp.getFolderById(id);
+      return { detail: f.getName() };
+    } catch (_) {
+      return { ok: false, melding: 'map met ID ' + id + ' niet meer toegankelijk' };
+    }
+  });
+
+  // ── Resultaat ──────────────────────────────────────────
+  const fouten = regels.filter(function(r) { return r.indexOf('✗') === 0; });
+  const koptekst = fouten.length === 0
+    ? '✓ INSTALLATIE OK — alle checks geslaagd'
+    : '✗ ' + fouten.length + ' PROBLE(E)M(EN) — zie hieronder';
+
+  ui.alert(
+    'Installatie-diagnose',
+    koptekst + '\n\n' + regels.join('\n') + '\n\n' +
+    (fouten.length > 0 ? 'Stuur deze output naar support@boekhoudbaar.nl als je er niet uitkomt.' : ''),
+    ui.ButtonSet.OK
+  );
+}
+
+// ─────────────────────────────────────────────
 //  HOOFDFUNCTIE: VOLLEDIGE CHECK
 // ─────────────────────────────────────────────
 
