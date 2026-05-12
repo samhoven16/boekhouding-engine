@@ -482,8 +482,6 @@ function voegBelastingOverridesToeAanInstellingen_() {
   try { schrijfAuditLog_('Belasting-overrides sectie toegevoegd', BELASTING_OVERRIDE_VELDEN.length + ' velden'); } catch (_) {}
 }
 
-const BELASTING = getBelasting_();
-
 // ─────────────────────────────────────────────
 //  HELPERS — KIA + IB + ZVW + HEFFINGSKORTING
 // ─────────────────────────────────────────────
