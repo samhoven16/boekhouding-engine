@@ -62,17 +62,23 @@ describe('_parseOverrideWaarde_ — defensieve parser voor klant-tarief-override
     test('"  2,40 €  " (whitespace) → 2.40', () => { expect(parse('  2,40 €  ', bedragVeld)).toBeCloseTo(2.40, 5); });
   });
 
-  describe('auto-percentage interpretatie (>1 voor pct-veld)', () => {
-    test('"21" voor percentage-veld → 0.21 (heel-procent)', () => {
-      expect(parse('21', percentageVeld)).toBeCloseTo(0.21, 5);
+  describe('strikte percentage-interpretatie — voorkomt silent misinterpret', () => {
+    test('"21%" (expliciet %) → 0.21', () => {
+      expect(parse('21%', percentageVeld)).toBeCloseTo(0.21, 5);
     });
-    test('21 (number) voor percentage-veld → 0.21', () => {
-      expect(parse(21, percentageVeld)).toBeCloseTo(0.21, 5);
-    });
-    test('"0,21" voor percentage-veld blijft 0.21 (al decimaal)', () => {
+    test('"0,21" (decimaal in range) → 0.21', () => {
       expect(parse('0,21', percentageVeld)).toBeCloseTo(0.21, 5);
     });
-    test('AUTO-OMZETTING geldt NIET voor bedrag-velden — "21" voor bedrag-veld blijft 21', () => {
+    test('"0,5%" (expliciet %, klein getal) → 0.005 (NIET 0.5 — % betekent altijd /100)', () => {
+      expect(parse('0,5%', percentageVeld)).toBeCloseTo(0.005, 5);
+    });
+    test('"21" (bare string, geen %) voor percentage-veld → REJECT (ambigu)', () => {
+      expect(parse('21', percentageVeld)).toBeNull();
+    });
+    test('21 (bare number, geen %-context) voor percentage-veld → REJECT (ambigu)', () => {
+      expect(parse(21, percentageVeld)).toBeNull();
+    });
+    test('strikte rule geldt NIET voor bedrag-velden — "21" voor bedrag-veld blijft 21', () => {
       expect(parse('21', bedragVeld)).toBe(21);
     });
   });
