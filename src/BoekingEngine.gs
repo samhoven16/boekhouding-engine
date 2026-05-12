@@ -139,22 +139,74 @@ function berekenBtw(tarief, bedragExcl, bedragIncl) {
 /**
  * Geeft alle benodigde data voor de dialog terug.
  * Wordt eenmalig geladen bij openen dialog.
+ *
+ * DEFENSIEF: elke server-side call die kan falen (PropertiesService,
+ * Instellingen-sheet lezen) wordt afzonderlijk afgevangen. Bij faal van
+ * één call: fallback naar veilige default zodat dialog NIET hangt op
+ * "Wachten op JS...". Reden: voorheen bleef de hele dialog blokkeren als
+ * één server-call (bv. getInstelling_ op ontbrekend tabblad) een exception
+ * gooide voor de hele functie. Klant zag dan eindeloos "Wachten op JS...".
  */
 function getBoekingContext() {
-  const props = PropertiesService.getScriptProperties();
-  const bt    = props.getProperty('businessType') || 'zzp';
-  const btDef = BUSINESS_TYPES[bt] || BUSINESS_TYPES.zzp;
-  const kleur = (typeof getBedrijfsKleur_ === 'function') ? getBedrijfsKleur_() : '#0D1B4E';
+  let bt = 'zzp';
+  try {
+    bt = PropertiesService.getScriptProperties().getProperty('businessType') || 'zzp';
+  } catch (e) {
+    Logger.log('getBoekingContext: businessType lezen mislukt: ' + e.message);
+  }
+
+  const btDef = (typeof BUSINESS_TYPES === 'object' && BUSINESS_TYPES && BUSINESS_TYPES[bt])
+    ? BUSINESS_TYPES[bt]
+    : { btwStandaard: '21% (hoog)', termijn: 30 };
+
+  let kleur = '#0D1B4E';
+  try {
+    if (typeof getBedrijfsKleur_ === 'function') {
+      const k = getBedrijfsKleur_();
+      if (k) kleur = k;
+    }
+  } catch (e) {
+    Logger.log('getBoekingContext: bedrijfskleur lezen mislukt: ' + e.message);
+  }
+
+  let bedrijfsnaam = '';
+  try {
+    if (typeof getInstelling_ === 'function') {
+      bedrijfsnaam = getInstelling_('Bedrijfsnaam') || '';
+    }
+  } catch (e) {
+    Logger.log('getBoekingContext: bedrijfsnaam lezen mislukt: ' + e.message);
+  }
+
+  // Fallbacks: als BTW_KEUZES of KOSTEN_CATEGORIEEN undefined zijn (file
+  // load-order issue of klant-spreadsheet zonder Config.gs deployment),
+  // gebruik minimale werkbare lijst zodat dialog kan renderen.
+  const btwKeuzes = (typeof BTW_KEUZES !== 'undefined' && Array.isArray(BTW_KEUZES) && BTW_KEUZES.length)
+    ? BTW_KEUZES
+    : ['21% (hoog)', '9% (laag)', '0% (nultarief)', 'Vrijgesteld'];
+
+  const categorieen = (typeof KOSTEN_CATEGORIEEN !== 'undefined' && Array.isArray(KOSTEN_CATEGORIEEN) && KOSTEN_CATEGORIEEN.length)
+    ? KOSTEN_CATEGORIEEN
+    : ['Overig'];
+
+  // Vandaag-datum: defensief tegen tijdzone-fouten
+  let vandaag;
+  try {
+    vandaag = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd');
+  } catch (_) {
+    // Fallback: ISO 8601 zonder timezone
+    vandaag = new Date().toISOString().slice(0, 10);
+  }
 
   return {
-    btwKeuzes:    BTW_KEUZES,
-    categorieen:  KOSTEN_CATEGORIEEN,
+    btwKeuzes:    btwKeuzes,
+    categorieen:  categorieen,
     businessType: bt,
     btwStandaard: btDef.btwStandaard,
     termijn:      btDef.termijn,
-    bedrijf:      getInstelling_('Bedrijfsnaam') || '',
+    bedrijf:      bedrijfsnaam,
     kleur:        kleur,
-    vandaag:      Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd'),
+    vandaag:      vandaag,
   };
 }
 
