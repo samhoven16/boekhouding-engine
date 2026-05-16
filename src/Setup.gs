@@ -141,6 +141,34 @@ function setup() {
       }
     }
 
+    // POST-INSTALL WATCHDOG: verifieer dat critical infrastructure echt werkt
+    // voordat we SETUP_DONE markeren. Voorheen kon setup "slagen" met 0 triggers
+    // of zonder hoofdformulier → klant ziet nooit foutmelding, features stil kapot.
+    const watchdogFouten = [];
+    try {
+      const trigs = ScriptApp.getProjectTriggers();
+      if (trigs.length === 0) {
+        watchdogFouten.push('GEEN triggers geïnstalleerd — onEdit/dagelijks werkt niet');
+      }
+    } catch (e) {
+      watchdogFouten.push('Trigger-check faalde: ' + e.message);
+    }
+    try {
+      const verwacht = [SHEETS.DASHBOARD, SHEETS.INSTELLINGEN, SHEETS.VERKOOPFACTUREN, SHEETS.INKOOPFACTUREN, SHEETS.JOURNAALPOSTEN];
+      verwacht.forEach(function(naam) {
+        if (!ss.getSheetByName(naam)) watchdogFouten.push('Tabblad ontbreekt: ' + naam);
+      });
+    } catch (_) {}
+
+    if (watchdogFouten.length > 0) {
+      // Setup heeft technisch geen exception gegooid maar er ontbreken componenten.
+      // Toast + audit-log + WEL SETUP_DONE markeren (zodat klant niet vastloopt)
+      // maar klant krijgt direct te zien wat er ontbreekt.
+      try { ss.toast('Setup grotendeels OK, maar: ' + watchdogFouten[0] + (watchdogFouten.length > 1 ? ' + ' + (watchdogFouten.length - 1) + ' meer' : ''), 'Setup waarschuwing', 30); } catch (_) {}
+      try { schrijfAuditLog_('Setup watchdog WAARSCHUWING', watchdogFouten.join(' | ')); } catch (_) {}
+      Logger.log('Setup watchdog vond ontbrekende componenten: ' + watchdogFouten.join(' | '));
+    }
+
     PropertiesService.getScriptProperties().setProperty(PROP.SETUP_DONE, 'true');
 
     // Meld onboarding succesvol aan centrale licentieserver (fire-and-forget).

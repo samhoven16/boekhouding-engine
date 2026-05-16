@@ -480,7 +480,7 @@ function controleerKor() {
   const jaar = getBoekjaar_();
   const periode = { van: new Date(jaar, 0, 1), tot: new Date(jaar, 11, 31, 23, 59, 59, 999) };
 
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  const vfData = sheetData_(ss, SHEETS.VERKOOPFACTUREN);
   let totaalOmzet = 0;
 
   for (let i = 1; i < vfData.length; i++) {
@@ -539,8 +539,8 @@ function getBtwPerMaand_(ss, jaar) {
     saldo: 0,
   }));
 
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
-  const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  const vfData = sheetData_(ss, SHEETS.VERKOOPFACTUREN);
+  const ifData = sheetData_(ss, SHEETS.INKOOPFACTUREN);
 
   for (let i = 1; i < vfData.length; i++) {
     const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
