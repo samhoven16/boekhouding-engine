@@ -141,6 +141,34 @@ function setup() {
       }
     }
 
+    // POST-INSTALL WATCHDOG: verifieer dat critical infrastructure echt werkt
+    // voordat we SETUP_DONE markeren. Voorheen kon setup "slagen" met 0 triggers
+    // of zonder hoofdformulier → klant ziet nooit foutmelding, features stil kapot.
+    const watchdogFouten = [];
+    try {
+      const trigs = ScriptApp.getProjectTriggers();
+      if (trigs.length === 0) {
+        watchdogFouten.push('GEEN triggers geïnstalleerd — onEdit/dagelijks werkt niet');
+      }
+    } catch (e) {
+      watchdogFouten.push('Trigger-check faalde: ' + e.message);
+    }
+    try {
+      const verwacht = [SHEETS.DASHBOARD, SHEETS.INSTELLINGEN, SHEETS.VERKOOPFACTUREN, SHEETS.INKOOPFACTUREN, SHEETS.JOURNAALPOSTEN];
+      verwacht.forEach(function(naam) {
+        if (!ss.getSheetByName(naam)) watchdogFouten.push('Tabblad ontbreekt: ' + naam);
+      });
+    } catch (_) {}
+
+    if (watchdogFouten.length > 0) {
+      // Setup heeft technisch geen exception gegooid maar er ontbreken componenten.
+      // Toast + audit-log + WEL SETUP_DONE markeren (zodat klant niet vastloopt)
+      // maar klant krijgt direct te zien wat er ontbreekt.
+      try { ss.toast('Setup grotendeels OK, maar: ' + watchdogFouten[0] + (watchdogFouten.length > 1 ? ' + ' + (watchdogFouten.length - 1) + ' meer' : ''), 'Setup waarschuwing', 30); } catch (_) {}
+      try { schrijfAuditLog_('Setup watchdog WAARSCHUWING', watchdogFouten.join(' | ')); } catch (_) {}
+      Logger.log('Setup watchdog vond ontbrekende componenten: ' + watchdogFouten.join(' | '));
+    }
+
     PropertiesService.getScriptProperties().setProperty(PROP.SETUP_DONE, 'true');
 
     // Meld onboarding succesvol aan centrale licentieserver (fire-and-forget).
@@ -529,6 +557,26 @@ function vulGrootboekschema_(ss) {
 // ─────────────────────────────────────────────
 function zetInstellingen_(ss) {
   const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
+
+  // DATA-LOSS PROTECTION: als klant al bedrijfsgegevens heeft ingevuld
+  // (bv. doordat setup een tweede keer wordt geroepen na guard-verwijdering)
+  // dan NIET clearContents — anders verliezen ze hun ingevulde IBAN, KvK, etc.
+  // Detectie: als kolom B in meer dan 3 rijen niet-leeg waarden bevat,
+  // beschouwen we de sheet als "in gebruik" en slaan we re-init over.
+  try {
+    if (sheet.getLastRow() > 5) {
+      const bestaande = sheet.getRange(1, 2, sheet.getLastRow(), 1).getValues();
+      const gevuld = bestaande.filter(function(r) { return r[0] !== '' && r[0] !== null; }).length;
+      if (gevuld > 3) {
+        Logger.log('zetInstellingen_: ' + gevuld + ' gevulde velden gedetecteerd — sheet behouden (geen overschrijving).');
+        try { schrijfAuditLog_('Setup re-init overgeslagen', 'Instellingen bevat ' + gevuld + ' gevulde velden — geen overschrijving'); } catch (_) {}
+        return;
+      }
+    }
+  } catch (e) {
+    Logger.log('zetInstellingen_ data-check faalde, behandel als lege sheet: ' + e.message);
+  }
+
   sheet.clearContents();
   sheet.clearFormats();
 

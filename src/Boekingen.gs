@@ -163,13 +163,26 @@ function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
 
     // Onbekende rekening — log + audit-trail zodat self-healing dit kan oppikken.
     // Voorheen stille no-op → balans liep ongezien scheef.
+    // Nu: log naar drie kanalen (Logger, noodLog, audit-log) zodat altijd
+    // minstens één plek bewijst dat dit gebeurd is. Geen exception throwen —
+    // de journaalpost ZELF moet wel slagen, anders zou klant geen boeking
+    // kunnen maken bij elke schema-drift. Maar wel zichtbaar maken.
     Logger.log('updateGrootboekSaldo_: onbekende rekening ' + rekeningCode + ' (zijde=' + zijde + ', bedrag=' + bedragNum + ')');
+    try {
+      if (typeof noodLog_ === 'function') {
+        noodLog_('GROOTBOEK_ONBEKEND', 'Rekening ' + rekeningCode + ' niet gevonden (zijde=' + zijde + ', bedrag=' + bedragNum + ')');
+      }
+    } catch (_) {}
     try {
       schrijfAuditLog_(
         'GROOTBOEK ONBEKEND',
         'Rekening ' + rekeningCode + ' niet gevonden — saldo niet bijgewerkt (' + zijde + ' ' + bedragNum + ')'
       );
-    } catch (_) {}
+    } catch (auditFout) {
+      // Beide audit-paden faalden — minstens Logger heeft het. Owner moet
+      // periodiek Logger checken via Apps Script-dashboard.
+      Logger.log('GROOTBOEK_ONBEKEND audit ook gefaald: ' + auditFout.message);
+    }
   } finally {
     if (lockHeld) {
       try { lock.releaseLock(); } catch (_) {}

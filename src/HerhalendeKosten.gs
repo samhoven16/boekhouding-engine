@@ -261,8 +261,18 @@ function verwerkHerhalendeKosten_() {
         ? (data[i][6] instanceof Date ? data[i][6] : new Date(data[i][6]))
         : null;
       if (!volgende || isNaN(volgende.getTime())) {
+        // Klant ziet "Actief" maar krijgt geen boeking → frustrerend. Maak
+        // expliciet zichtbaar: zet status op "FOUT — datum ongeldig" zodat
+        // klant in de sheet ziet dat er aandacht nodig is.
         Logger.log('Herhalende kosten rij ' + (i + 1) + ': ongeldige datum, overgeslagen.');
-        try { schrijfAuditLog_('Herhalende kost OVERGESLAGEN', 'Rij ' + (i + 1) + ' – ongeldige volgende datum'); } catch (_) {}
+        try { schrijfAuditLog_('Herhalende kost OVERGESLAGEN', 'Rij ' + (i + 1) + ' – ongeldige volgende datum: ' + data[i][6]); } catch (_) {}
+        try {
+          const huidigeStatus = String(data[i][8] || '');
+          if (huidigeStatus.indexOf('FOUT') === -1) {
+            sheet.getRange(i + 1, 9).setValue('FOUT — datum ongeldig, corrigeer kolom G');
+          }
+        } catch (_) {}
+        try { SpreadsheetApp.getActiveSpreadsheet().toast('Herhalende kost rij ' + (i + 1) + ' heeft ongeldige datum — corrigeer en hervat', 'Herhalende kost', 8); } catch (_) {}
         continue;
       }
 
