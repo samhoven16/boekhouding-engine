@@ -943,7 +943,15 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
             sheet.getRange(i + 1, 16).setValue('');
             SpreadsheetApp.flush();
           } catch (rollbackFout) {
-            try { schrijfAuditLog_('FATAAL: rollback factuur-betaald faalde', factuurnr + ' — ' + (rollbackFout && rollbackFout.message || rollbackFout)); } catch (_) {}
+            // KRITIEKE STAAT: journaalpost faalde EN rollback faalde. Factuur
+            // staat nu mogelijk in inconsistente staat (status BETAALD zonder
+            // bijbehorende journaalpost). Klant moet handmatig corrigeren.
+            // schrijfAuditLog_ kan ook falen → eerst naar noodLog_, dan
+            // re-throw zodat caller ZIET dat het stuk is.
+            try { if (typeof noodLog_ === 'function') noodLog_('FACTUUR_ROLLBACK_FATAAL', factuurnr + ' — ' + (rollbackFout && rollbackFout.message || rollbackFout)); } catch (_) {}
+            try { schrijfAuditLog_('FATAAL: rollback factuur-betaald faalde', factuurnr + ' — handmatig herstel nodig — ' + (rollbackFout && rollbackFout.message || rollbackFout)); } catch (_) {}
+            // Re-throw zodat klant niet denkt "alles OK"
+            throw new Error('KRITIEK: factuur ' + factuurnr + ' in inconsistente staat — neem direct contact op met support. Foutdetails: journaalpost=' + (jpFout && jpFout.message || jpFout) + ' / rollback=' + (rollbackFout && rollbackFout.message || rollbackFout));
           }
           try { schrijfAuditLog_('Factuur betaald → journaalpost FAALDE, rollback uitgevoerd', factuurnr + ' — ' + (jpFout && jpFout.message || jpFout)); } catch (_) {}
           throw new Error('Markeer-betaald faalde tijdens journaalpost: ' + (jpFout && jpFout.message || jpFout) + ' — factuur-status teruggezet.');

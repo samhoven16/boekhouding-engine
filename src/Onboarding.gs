@@ -443,9 +443,13 @@ function toonPostSetupWelkomModal_() {
   let ui;
   try { ui = SpreadsheetApp.getUi(); } catch (e) { return; }  // geen UI-context (trigger)
 
-  const bedrijf = (getInstelling_ && typeof getInstelling_ === 'function')
+  const bedrijfRaw = (getInstelling_ && typeof getInstelling_ === 'function')
     ? (getInstelling_('Bedrijfsnaam') || '')
     : '';
+  // SECURITY: bedrijfsnaam is klant-controlled input. Escapen voor embed in
+  // HTML/template-literal — anders kan een payload als
+  // "<img src=x onerror=alert(1)>" als bedrijfsnaam JS uitvoeren in dialog.
+  const bedrijf = (typeof escHtml_ === 'function') ? escHtml_(bedrijfRaw) : String(bedrijfRaw).replace(/[<>&"']/g, '');
   const begroeting = bedrijf ? 'Welkom bij Boekhoudbaar, ' + bedrijf : 'Welkom bij Boekhoudbaar';
 
   const html = HtmlService.createHtmlOutput(`

@@ -77,17 +77,32 @@ function isEigenaarBypass_() {
     // Route 2: expliciete bypass-flag
     if (props.getProperty(OWNER_BYPASS_KEY) === 'true') return true;
 
-    // Route 3: geen server geconfigureerd → default dev/owner mode
+    // Route 3 (HARDENED): geen server-URL → ALLEEN bypass als file-owner óók
+    // in ADMIN_EMAILS staat. Voorheen: lege server-URL = bypass voor iedereen
+    // → bij klant-kopie (ScriptProperties komen niet mee, dus LICENTIE_SERVER_URL
+    // is leeg) had klant gratis toegang. Nu: dubbele check vereist.
     const serverUrl = getLicentieServerUrl_();
-    if (!serverUrl) return true;
+    if (!serverUrl) {
+      // Alleen bypass als ook owner = admin
+      try {
+        const ss2 = SpreadsheetApp.getActiveSpreadsheet();
+        const ownerEmail2 = ss2.getOwner() ? String(ss2.getOwner().getEmail() || '').toLowerCase() : '';
+        if (ownerEmail2 && ADMIN_EMAILS.indexOf(ownerEmail2) !== -1) return true;
+      } catch (_) {}
+      // Geen server + niet-admin owner: NIET bypass — klant moet normale flow
+      return false;
+    }
 
     // Route 4: file-owner check (voor het geval admin-email niet matcht
     // door verschillende Google-accounts — getOwner werkt vaak ook)
     try {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const ownerEmail = ss.getOwner() ? ss.getOwner().getEmail() : null;
-      const userEmail2 = Session.getActiveUser().getEmail();
-      if (ownerEmail && userEmail2 && ownerEmail === userEmail2) return true;
+      const ownerEmail = ss.getOwner() ? String(ss.getOwner().getEmail() || '').toLowerCase() : '';
+      const userEmail2 = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+      // HARDENED: alleen bypass als BOTH owner=user AND owner staat in ADMIN_EMAILS.
+      // Voorheen: owner==user altijd bypass → klant die kopie zelf-maakt was
+      // ook owner → bypass. Nu: alleen voor expliciete admins.
+      if (ownerEmail && userEmail2 && ownerEmail === userEmail2 && ADMIN_EMAILS.indexOf(ownerEmail) !== -1) return true;
     } catch (_) {}
   } catch (_) {}
   return false;

@@ -529,6 +529,26 @@ function vulGrootboekschema_(ss) {
 // ─────────────────────────────────────────────
 function zetInstellingen_(ss) {
   const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
+
+  // DATA-LOSS PROTECTION: als klant al bedrijfsgegevens heeft ingevuld
+  // (bv. doordat setup een tweede keer wordt geroepen na guard-verwijdering)
+  // dan NIET clearContents — anders verliezen ze hun ingevulde IBAN, KvK, etc.
+  // Detectie: als kolom B in meer dan 3 rijen niet-leeg waarden bevat,
+  // beschouwen we de sheet als "in gebruik" en slaan we re-init over.
+  try {
+    if (sheet.getLastRow() > 5) {
+      const bestaande = sheet.getRange(1, 2, sheet.getLastRow(), 1).getValues();
+      const gevuld = bestaande.filter(function(r) { return r[0] !== '' && r[0] !== null; }).length;
+      if (gevuld > 3) {
+        Logger.log('zetInstellingen_: ' + gevuld + ' gevulde velden gedetecteerd — sheet behouden (geen overschrijving).');
+        try { schrijfAuditLog_('Setup re-init overgeslagen', 'Instellingen bevat ' + gevuld + ' gevulde velden — geen overschrijving'); } catch (_) {}
+        return;
+      }
+    }
+  } catch (e) {
+    Logger.log('zetInstellingen_ data-check faalde, behandel als lege sheet: ' + e.message);
+  }
+
   sheet.clearContents();
   sheet.clearFormats();
 
