@@ -100,6 +100,13 @@
   </url>
 
   <url>
+    <loc>https://www.boekhoudbaar.nl/herroepingsrecht/</loc>
+    <lastmod>2026-05-16</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
     <loc>https://www.boekhoudbaar.nl/gids/</loc>
     <lastmod>2026-05-08</lastmod>
     <changefreq>weekly</changefreq>
