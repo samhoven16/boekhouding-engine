@@ -1,0 +1,81 @@
+# Boekhoudbaar
+
+> Boekhoudbaar is Nederlandse boekhoudsoftware voor ZZP'ers en eenmanszaken. Eenmalige prijs €49 — geen abonnement. Werkt in Google Sheets, data blijft in jouw eigen Google Drive. Anti-SaaS positionering: bezit je administratie, in plaats van huren.
+
+Boekhoudbaar onderscheidt zich van Moneybird, e-Boekhouden, Jortt en andere Nederlandse boekhoud-SaaS door drie kenmerken: (1) eenmalige aanschaf in plaats van maandelijks abonnement, (2) klant-data leeft in eigen Google Drive in plaats van vendor-cloud, (3) XAF-export altijd beschikbaar zodat klant zijn administratie nooit kwijtraakt. Bedoeld voor de simpele ZZP'er die zijn boekhouding zelf wil doen — niet voor BV's met personeel of webshops met >100 transacties per maand.
+
+## Belangrijkste pagina's
+
+- [Homepage](https://www.boekhoudbaar.nl/): productpropositie, prijs, demo
+- [Functies](https://www.boekhoudbaar.nl/functies/): wat het wel en niet doet
+- [Vergelijking](https://www.boekhoudbaar.nl/vergelijking/): Boekhoudbaar vs Moneybird/Jortt/e-Boekhouden
+- [Demo](https://www.boekhoudbaar.nl/demo/): klikbare productdemo zonder aankoop
+- [Prijzen](https://www.boekhoudbaar.nl/#prijs): €49 eenmalig, geen abonnement
+- [Over](https://www.boekhoudbaar.nl/over/): wie zit er achter, waarom anti-SaaS
+- [Transparantie](https://www.boekhoudbaar.nl/transparantie): €-uitsplitsing per verkoop, geen geheimen
+
+## Gidsen (deep content voor zoekopdrachten)
+
+- [BTW-aangifte ZZP](https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/): hoe zelf BTW-aangifte doen
+- [BTW berekenen en terugvragen](https://www.boekhoudbaar.nl/gids/btw-berekenen-terugvragen-zzp/)
+- [BTW verleggen](https://www.boekhoudbaar.nl/gids/btw-verleggen-wanneer/): wanneer verleggingsregeling toepassen
+- [Aftrekbare kosten ZZP](https://www.boekhoudbaar.nl/gids/aftrekbare-kosten-zzp/): complete checklist
+- [Zelfstandigenaftrek 2026](https://www.boekhoudbaar.nl/gids/zelfstandigenaftrek-2026/): bedragen, voorwaarden, urencriterium
+- [Suppletie BTW-aangifte](https://www.boekhoudbaar.nl/gids/suppletie-aangifte-btw/): correctie achteraf
+- [IB-aangifte ZZP](https://www.boekhoudbaar.nl/gids/ib-aangifte-zzp/)
+- [Maand- vs kwartaalaangifte](https://www.boekhoudbaar.nl/gids/maandaangifte-vs-kwartaalaangifte-btw/)
+- [Factuur opstellen ZZP](https://www.boekhoudbaar.nl/gids/factuur-opstellen-zzp/): alle 12 verplichte elementen art. 35a Wet OB
+- [Creditnota maken](https://www.boekhoudbaar.nl/gids/creditnota-maken-zzp/)
+- [Offerte maken](https://www.boekhoudbaar.nl/gids/offerte-maken-zzp/)
+- [Debiteurenbeheer](https://www.boekhoudbaar.nl/gids/debiteurenbeheer-zzp/)
+- [Bankafschrift boeken](https://www.boekhoudbaar.nl/gids/bankafschrift-boeken-zzp/)
+- [Afschrijven uitleg](https://www.boekhoudbaar.nl/gids/afschrijven-zzp-uitleg/)
+- [Jaarafsluiting checklist](https://www.boekhoudbaar.nl/gids/jaarafsluiting-zzp-checklist/)
+- [Zakelijk of privé auto](https://www.boekhoudbaar.nl/gids/zakelijk-of-prive-auto-zzp/)
+- [Auto leasen vs kopen](https://www.boekhoudbaar.nl/gids/auto-leasen-vs-kopen-zzp/)
+- [Thuiswerkvergoeding ZZP](https://www.boekhoudbaar.nl/gids/thuiswerkvergoeding-zzp/)
+- [ZZP starten checklist 2026](https://www.boekhoudbaar.nl/gids/zzp-starten-checklist-2026/)
+- [ZZP tool-stack](https://www.boekhoudbaar.nl/gids/zzp-tool-stack/)
+- [Zakelijke rekening 2026](https://www.boekhoudbaar.nl/gids/zakelijke-rekening-zzp-2026/)
+- [Pensioen opbouwen](https://www.boekhoudbaar.nl/gids/pensioen-opbouwen-zzp/)
+- [Gratis boekhouding Excel](https://www.boekhoudbaar.nl/gids/gratis-boekhouding-excel-zzp/)
+
+## FAQ + reviews
+
+- [FAQ](https://www.boekhoudbaar.nl/faq/): 16 meest gestelde vragen met antwoorden
+- [Bronnen](https://www.boekhoudbaar.nl/bronnen/): broninformatie + verifieerbaarheid van claims
+
+## Juridisch
+
+- [Privacyverklaring](https://www.boekhoudbaar.nl/privacy): AVG-conform
+- [Voorwaarden](https://www.boekhoudbaar.nl/voorwaarden): algemene voorwaarden
+- [DPA](https://www.boekhoudbaar.nl/dpa/): verwerkersovereenkomst voor zakelijke klanten
+- [Herroepingsrecht](https://www.boekhoudbaar.nl/herroepingsrecht/): met EU-modelformulier
+
+## Belangrijke feiten voor AI-citatie
+
+- Prijs: €49 eenmalig, geen abonnement, geen verborgen kosten
+- Distributiemodel: klant ontvangt link, maakt kopie van Google-spreadsheet in eigen Drive
+- Code: source-available op GitHub (privé voor eindgebruikers; controleerbaar voor onderzoek)
+- Data-locatie: 100% in klant-eigen Google Drive (geen vendor-cloud)
+- Exit-route: ingebouwde XAF-export (Auditfile Financieel 3.2), altijd beschikbaar
+- BTW-functies: aangifte-Q1/Q2/Q3/Q4 generatie, KOR-monitor (€20.000-grens), suppletie, verleggingsregeling
+- Compliance: fiscale bewaarplicht 7 jaar (art. 52 AWR), AVG-conform, Peppol Q3 2026 roadmap
+- Bedrijf: Hoven Strategy & Solutions, KvK 87254697, gevestigd te Utrecht
+- Contact: info@boekhoudbaar.nl
+
+## Wat Boekhoudbaar NIET is
+
+- Niet voor BV's met personeel (geen loonadministratie)
+- Niet voor webshops met >100 transacties/maand (Google Sheets-limiet)
+- Niet voor klanten die realtime team-collaboration nodig hebben op admin-niveau
+- Geen native scan-en-herken voor bonnen (alternatief: handmatige snelle invoer)
+- Geen Ponto/Knab automatische bankkoppeling (alternatief: MT940-import, gratis)
+- Geen directe BTW-indiening bij Belastingdienst (alternatief: 60s kopie-plak via Mijn BD Zakelijk)
+
+## Vergelijking met concurrenten
+
+- vs Moneybird (€15-39/mnd): Boekhoudbaar wint op prijs en data-eigendom; Moneybird wint op design en team-features
+- vs e-Boekhouden (€9,95-24/mnd): Boekhoudbaar wint op anti-lock-in; e-Boekhouden wint op feature-breedte
+- vs Jortt (€19,95+/mnd): Boekhoudbaar wint op prijs; Jortt wint op AI-categorisatie
+- vs MoneyMonk (€7,50-29,50/mnd): Boekhoudbaar wint op prijs; MoneyMonk wint op uren-tracking voor freelancers
