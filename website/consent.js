@@ -122,10 +122,13 @@
       '#bhb-consent-banner .bhb-c-tekst a{color:#2EC4B6;text-decoration:underline}' +
       '#bhb-consent-banner .bhb-c-knoppen{display:flex;gap:8px;flex-wrap:wrap}' +
       '#bhb-consent-banner .bhb-c-btn{cursor:pointer;border:0;border-radius:8px;padding:10px 16px;font-weight:600;font-size:14px;font-family:inherit}' +
+      // AVG: "Weigeren" en "Accepteren" even prominent (AP-guidance 2025).
+      // Beide knoppen identieke fill-stijl met alleen accent-kleur verschil
+      // zodat geen van beide visueel grabbing-power wint.
       '#bhb-consent-banner .bhb-c-primary{background:#2EC4B6;color:#0D1B4E}' +
       '#bhb-consent-banner .bhb-c-primary:hover{background:#26a89c}' +
-      '#bhb-consent-banner .bhb-c-secondary{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4)}' +
-      '#bhb-consent-banner .bhb-c-secondary:hover{background:rgba(255,255,255,.1)}' +
+      '#bhb-consent-banner .bhb-c-secondary{background:#fff;color:#0D1B4E;border:1px solid #fff}' +
+      '#bhb-consent-banner .bhb-c-secondary:hover{background:#f0f0f0}' +
       '@media(max-width:560px){#bhb-consent-banner{padding:8px}#bhb-consent-banner .bhb-c-card{padding:14px}#bhb-consent-banner .bhb-c-btn{flex:1}}';
 
     document.head.appendChild(stijl);
