@@ -1393,3 +1393,145 @@ function zetKvkApiKey() {
   userProps.setProperty('KVK_API_KEY', versleutelString_(key));
   ui.alert('✅ KvK API-key opgeslagen (versleuteld). Auto-fill werkt nu bij ingevoerde KvK-nummers.');
 }
+
+
+// ─────────────────────────────────────────────
+//  PATTERN WRAPPERS — withLock, withRetry, withCheckpoint
+// ─────────────────────────────────────────────
+//
+// Centrale wrappers voor patronen die op veel plekken voorkomen. Conform
+// masterplan maand 2 vereiste: één consistente implementatie ipv 7 verschillende
+// kopieën verspreid over de codebase.
+//
+// Gebruik:
+//   withLock_('boekFactuur', 30000, function() { ...kritieke schrijfactie... });
+//   withRetry_(3, function() { return UrlFetchApp.fetch(url); });
+//   withCheckpoint_('stap1', function() { ... }); // resume bij time-out
+//
+
+/**
+ * Voert een functie uit binnen een Script-lock met timeout. Gegarandeerd
+ * release in finally. Bij lock-timeout: throw met klant-leesbare boodschap
+ * ipv silent skip.
+ *
+ * @param {string} naam Label voor audit-log (bv. 'boekFactuur')
+ * @param {number} timeoutMs Wachttijd op lock (default 30s)
+ * @param {Function} fn Functie die binnen lock moet draaien
+ * @returns {*} Return-waarde van fn
+ * @throws Error bij lock-timeout of bij re-throw uit fn
+ */
+function withLock_(naam, timeoutMs, fn) {
+  const lock = LockService.getScriptLock();
+  const wachttijd = parseInt(timeoutMs, 10) || 30000;
+  if (!lock.tryLock(wachttijd)) {
+    const msg = 'Lock-timeout voor ' + naam + ' na ' + wachttijd + 'ms — andere actie is bezig met dezelfde data. Probeer over enkele seconden opnieuw.';
+    try { schrijfAuditLog_('LOCK TIMEOUT', naam + ' (wachttijd ' + wachttijd + 'ms)'); } catch (_) {}
+    throw new Error(msg);
+  }
+  try {
+    return fn();
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+/**
+ * Voert fn uit met exponential backoff retry bij gooi-fout. Stopt na max
+ * aantal pogingen. Voor netwerk-calls / transient failures.
+ *
+ * @param {number} maxPogingen Bv. 3
+ * @param {Function} fn Functie die kan falen
+ * @param {Function} [shouldRetry] Optioneel: predicate die error inspecteert.
+ *                                 Bij falsy: niet retryen (bv. 4xx HTTP).
+ * @returns {*} Return-waarde van succesvolle fn-call
+ * @throws Laatste error als alle pogingen falen
+ */
+function withRetry_(maxPogingen, fn, shouldRetry) {
+  const max = parseInt(maxPogingen, 10) || 3;
+  let laatsteFout;
+  for (let poging = 1; poging <= max; poging++) {
+    try {
+      return fn();
+    } catch (e) {
+      laatsteFout = e;
+      if (shouldRetry && !shouldRetry(e)) {
+        throw e;  // niet-retryable fout
+      }
+      if (poging < max) {
+        // Exponential backoff: 500ms, 1000ms, 2000ms, ...
+        Utilities.sleep(500 * Math.pow(2, poging - 1));
+      }
+    }
+  }
+  throw laatsteFout;
+}
+
+/**
+ * Slaat een checkpoint op in ScriptProperties zodat een long-running
+ * operatie kan hervatten na een time-out (6-min GAS-limiet). Gebruik in
+ * combinatie met een time-driven trigger die de operatie hervat.
+ *
+ * @param {string} taak Identifier (bv. 'jaarafsluiting-2026')
+ * @param {string} stap Huidige stap-naam
+ * @param {Object} [state] Optionele state (JSON-serializable) om te bewaren
+ */
+function setCheckpoint_(taak, stap, state) {
+  const props = PropertiesService.getScriptProperties();
+  const data = { stap: stap, ts: Date.now(), state: state || {} };
+  props.setProperty('CKPT_' + taak, JSON.stringify(data));
+}
+
+/**
+ * Leest laatste checkpoint voor een taak. Return null als geen checkpoint.
+ *
+ * @param {string} taak
+ * @returns {{stap: string, ts: number, state: Object}|null}
+ */
+function getCheckpoint_(taak) {
+  const props = PropertiesService.getScriptProperties();
+  const raw = props.getProperty('CKPT_' + taak);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Wist checkpoint na succesvolle voltooiing van een taak.
+ *
+ * @param {string} taak
+ */
+function clearCheckpoint_(taak) {
+  PropertiesService.getScriptProperties().deleteProperty('CKPT_' + taak);
+}
+
+/**
+ * Wrapper voor lange operatie met checkpoint-recovery. Bij time-out kan
+ * een time-driven trigger deze functie aanroepen met dezelfde taak-naam
+ * en dan wordt vanaf de laatste stap hervat.
+ *
+ * @param {string} taak
+ * @param {Array<{naam: string, fn: Function}>} stappen Geordende lijst
+ * @returns {{voltooid: boolean, laatsteStap: string}}
+ */
+function withCheckpoint_(taak, stappen) {
+  const ckpt = getCheckpoint_(taak);
+  const startIdx = ckpt ? stappen.findIndex(function(s) { return s.naam === ckpt.stap; }) + 1 : 0;
+  const start = startIdx >= 0 ? startIdx : 0;
+
+  for (let i = start; i < stappen.length; i++) {
+    const stap = stappen[i];
+    try {
+      stap.fn(ckpt && ckpt.state ? ckpt.state : {});
+      setCheckpoint_(taak, stap.naam);
+    } catch (e) {
+      Logger.log('withCheckpoint_ stap "' + stap.naam + '" faalde: ' + e.message);
+      try { schrijfAuditLog_('CHECKPOINT FOUT', taak + ' bij stap "' + stap.naam + '": ' + e.message); } catch (_) {}
+      throw e;
+    }
+  }
+  clearCheckpoint_(taak);
+  return { voltooid: true, laatsteStap: stappen[stappen.length - 1].naam };
+}
