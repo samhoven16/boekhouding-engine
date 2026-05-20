@@ -278,9 +278,13 @@ function _bouwTransactionsXml_(ss, jaar) {
   const data = sheet.getDataRange().getValues();
   if (data.length <= 1) return '      <!-- Geen journaalposten -->\n';
 
-  // Schema verwacht: A=id, B=datum, C=omschrijving, D=debet, E=credit,
-  // F=bedrag, G=tegenrekening, H=type, I=notities
-  // Groepeer per "journal" — voor simpliciteit één journal "ALG" (algemeen)
+  // Schema (echte indexen uit Setup.gs:zetJournaalpostenHeaders_):
+  //   rij[0]=Boeking ID, rij[1]=Datum, rij[2]=Omschrijving, rij[3]=Dagboek,
+  //   rij[4]=Debet rekening, rij[5]=Debet omschr, rij[6]=Credit rekening,
+  //   rij[7]=Credit omschr, rij[8]=Bedrag, rij[9]=BTW %, rij[10]=BTW bedrag, ...
+  // BUG-FIX: voorheen las code rij[3]/4/5 (dagboek/debet/debet-omschr) als
+  // debet/credit/bedrag → alle parseFloat van strings = NaN = 0 → alle
+  // transacties silent geskipt → XAF-export was LEEG. Nu correcte indexen.
   let xml = '      <journal>\n';
   xml += '        <jrnID>ALG</jrnID>\n';
   xml += '        <desc>Algemeen dagboek (alle boekingen)</desc>\n';
@@ -294,6 +298,7 @@ function _bouwTransactionsXml_(ss, jaar) {
     const rij = data[i];
     const id = String(rij[0] || '').trim();
     let datum = rij[1];
+    let datumObj = datum instanceof Date ? datum : null;
     if (datum instanceof Date) {
       // Filter op fiscaal jaar
       if (datum.getFullYear() !== jaar) continue;
@@ -302,17 +307,21 @@ function _bouwTransactionsXml_(ss, jaar) {
       continue;
     } else {
       datum = String(datum);
+      datumObj = new Date(datum);
     }
     const omschr = String(rij[2] || '').trim();
-    const debet = String(rij[3] || '').trim();
-    const credit = String(rij[4] || '').trim();
-    const bedrag = parseFloat(rij[5]) || 0;
+    const debet = String(rij[4] || '').trim();
+    const credit = String(rij[6] || '').trim();
+    const bedrag = parseFloat(rij[8]) || 0;
     if (!id || !debet || !credit || bedrag <= 0) continue;
 
+    // periodNumber 1-12 — gebruik geparste datumObj direct (new Date(datum-string)
+    // kan ambiguous zijn afhankelijk van locale). datumObj is gegarandeerd Date.
+    const periode = datumObj && !isNaN(datumObj.getTime()) ? datumObj.getMonth() + 1 : 1;
     xml += '        <transaction>\n';
     xml += '          <nr>' + _xafEsc_(id) + '</nr>\n';
     xml += '          <desc>' + _xafEsc_(omschr) + '</desc>\n';
-    xml += '          <periodNumber>' + ((new Date(datum)).getMonth() + 1) + '</periodNumber>\n';
+    xml += '          <periodNumber>' + periode + '</periodNumber>\n';
     xml += '          <transactionDate>' + datum + '</transactionDate>\n';
 
     // Debet-regel
