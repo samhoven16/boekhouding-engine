@@ -34,6 +34,7 @@ const SHEETS = {
   CREDITEUREN:       'Crediteuren',
   HERHALENDE_KOSTEN: 'Herhalende Kosten',
   AUDIT_LOG:         'Audit Log',
+  HELP:              'Help & Compliance',
 };
 
 // ─────────────────────────────────────────────

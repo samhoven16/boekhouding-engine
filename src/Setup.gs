@@ -102,6 +102,9 @@ function setup() {
         }
       }],
       ['Audit Log aanmaken',        function() { setupAuditLogSheet_(); }],
+      ['Help & Compliance tab',     function() {
+        if (typeof bouwHelpTab_ === 'function') bouwHelpTab_(ss);
+      }],
       ['Formuliers-tabs aanmaken',  function() { maakFormuliersTabbladen_(ss); }],
       ['Hoofdformulier aanmaken',   function() { maakHoofdFormulier_(ss); }],
       ['Werkruimte ordenen',        function() { herorganiseerWerkruimteSilent_(ss); }],

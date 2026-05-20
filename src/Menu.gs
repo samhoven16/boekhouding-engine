@@ -36,6 +36,12 @@ function onOpen() {
   try { if (typeof checkJaarwisselingNodig_ === 'function') checkJaarwisselingNodig_(); }
   catch (e) { Logger.log('Jaarwisseling-check overgeslagen: ' + e.message); }
 
+  // Gesloten-periode-waarschuwing: klant ziet bij elke open een toast als
+  // er een afgesloten periode actief is. Voorkomt verwarring "waarom kan
+  // ik niets boeken in januari?" — klant weet meteen dat periode dicht is.
+  // Belastingdienst-auditor-eis: geen wijzigingen in afgesloten perioden.
+  try { _waarschuwGeslotenPeriode_(); } catch (e) { Logger.log('Gesloten-periode-check overgeslagen: ' + e.message); }
+
   // Changelog-check: bij eerste open na product-update toon "wat is nieuw".
   // Maakt gratis updates zichtbaar — klant voelt actief onderhoud.
   try { if (typeof checkEnToonChangelog_ === 'function') checkEnToonChangelog_(); }
@@ -147,6 +153,7 @@ function onOpen() {
       .addItem('Gezondheidscheck uitvoeren', 'voerGezondheidCheckUit')
       .addItem('🔍 Installatie diagnoseren (is mijn setup OK?)', 'diagnoseInstallatie')
       .addItem('✨ Tabbladen opnieuw opmaken (kleuren + format)', 'verfraaiTabbladen')
+      .addItem('📚 Help & Compliance tab vernieuwen', 'vernieuwHelpTab')
       .addSeparator()
       .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
       .addItem('💾 Exporteer als XAF (Auditfile — bezit je administratie)', 'exporteerXaf')
@@ -570,4 +577,50 @@ function openBeginbalansDialoog() {
     <button class="btn-sec" onclick="google.script.host.close()">Sluiten</button>
   `).setWidth(450).setHeight(280).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Openingssaldi');
+}
+
+/**
+ * Waarschuwt klant via toast als er afgesloten BTW-perioden actief zijn.
+ * Voorkomt verwarring "waarom kan ik niets boeken?" — klant weet meteen
+ * dat het bewust is. Belastingdienst-auditor-eis: geen wijzigingen in
+ * afgesloten perioden.
+ *
+ * Toont alleen als er minstens één actieve gesloten periode is.
+ * Niet-blocking — toast verdwijnt na 8 sec.
+ */
+function _waarschuwGeslotenPeriode_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) return;
+  const raw = PropertiesService.getScriptProperties().getProperty('GESLOTEN_PERIODES');
+  if (!raw) return;
+
+  let periodes;
+  try { periodes = JSON.parse(raw); } catch (_) { return; }
+  if (!Array.isArray(periodes) || !periodes.length) return;
+
+  // Filter alleen periodes die ÉCHT in het verleden liggen (klant zou
+  // anders bij elke open een waarschuwing krijgen voor toekomstige
+  // afsluitingen — irritant).
+  const nu = new Date();
+  const actiefGesloten = periodes.filter(function(p) {
+    const tot = new Date(p.tot);
+    return !isNaN(tot.getTime()) && tot <= nu;
+  });
+  if (!actiefGesloten.length) return;
+
+  // Vat samen: meest recente eerst
+  actiefGesloten.sort(function(a, b) { return new Date(b.tot) - new Date(a.tot); });
+  const meest = actiefGesloten[0];
+  const vanFmt = Utilities.formatDate(new Date(meest.van), 'Europe/Amsterdam', 'MMM yyyy');
+  const totFmt = Utilities.formatDate(new Date(meest.tot), 'Europe/Amsterdam', 'MMM yyyy');
+  const extra = actiefGesloten.length > 1 ? ' (+ ' + (actiefGesloten.length - 1) + ' andere)' : '';
+
+  try {
+    ss.toast(
+      'Periode ' + vanFmt + ' – ' + totFmt + ' is afgesloten' + extra +
+      '. Boekingen in deze periode worden geblokkeerd. Gebruik "Periode ontgrendelen" voor correctie.',
+      '🔒 Afgesloten boekjaar',
+      8
+    );
+  } catch (_) {}
 }
