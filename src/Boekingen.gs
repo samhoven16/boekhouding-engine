@@ -41,24 +41,27 @@ function maakJournaalpost_(ss, opt) {
     }
   }
 
-  // ── Strict input-validation (zero-failure) ────────────────────────────
-  // Geen silent fallback naar 0/today — corrupt invoer crasht direct.
-  // Voorkomt journaalposten met €0 of NaN-bedrag in grootboek.
-  const bedragGevalideerd = (function() {
-    if (opt.bedrag === null || opt.bedrag === undefined || opt.bedrag === '') {
-      throw new Error('maakJournaalpost_: bedrag is leeg (debet=' + opt.debet + ' credit=' + opt.credit + ')');
+  // ── Strict input-validation (zero-failure) via Invariants-module ──────
+  // Vervangt inline checks (debet/credit/bedrag-validatie) door centrale
+  // valideerInvariantsVoorJournaalpost_ uit Invariants.gs. Voordelen:
+  //   1. ÉÉN bron-van-waarheid voor invariants
+  //   2. Structured error (InvariantSchending) met code + klantBoodschap
+  //      ipv generic Error → caller kan op .code routeren
+  //   3. Tests in invariants.test.js dekken alle edge-cases
+  //
+  // Bij faal: InvariantSchending wordt door caller getoond (niet swallowed).
+  let bedragGevalideerd;
+  try {
+    if (typeof valideerInvariantsVoorJournaalpost_ === 'function') {
+      valideerInvariantsVoorJournaalpost_(opt.debet, opt.credit, opt.bedrag);
     }
-    const n = parseFloat(opt.bedrag);
-    if (isNaN(n) || !isFinite(n)) {
-      throw new Error("maakJournaalpost_: ongeldig bedrag '" + opt.bedrag + "'");
-    }
-    return rondBedrag_(n);
-  })();
-  if (!opt.debet || !opt.credit) {
-    throw new Error('maakJournaalpost_: debet+credit verplicht (debet=' + opt.debet + ' credit=' + opt.credit + ')');
-  }
-  if (String(opt.debet) === String(opt.credit)) {
-    throw new Error('maakJournaalpost_: debet en credit gelijk (' + opt.debet + ') = self-posting; niet toegestaan');
+    // Bedrag is gevalideerd door Invariants als finite + positief; round nu
+    bedragGevalideerd = rondBedrag_(parseFloat(opt.bedrag));
+  } catch (invErr) {
+    // Re-throw met legacy message-format voor backwards-compat van bestaande
+    // catchers, maar behoud original error voor code-inspectie.
+    Logger.log('maakJournaalpost_ invariant-schending: ' + invErr.code + ' — ' + invErr.message);
+    throw invErr;
   }
 
   const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
