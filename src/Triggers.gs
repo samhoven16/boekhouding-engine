@@ -658,6 +658,34 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
   const btwPriveDeel  = rondBedrag_(btwBedrag - btwAftrekbaar);
   const bedragIncl = rondBedrag_(bedragExcl + btwBedrag);
 
+  // P29-FIX (Belastingdienst stress-test): Idempotency-guard tegen
+  // double-submit (network-retry, dubbel-click, Apps Script time-out + retry).
+  // Verkoopfacturen hebben factuurnr-uniciteit + recente-duplicate detect.
+  // Inkoopfacturen hadden NIETS — twee identieke submits gaven 2× journaal-
+  // post + 2× BTW-voorbelasting-claim → naheffing + boete.
+  //
+  // Signatuur: leverancier + datum + bedragIncl + leverancier-factuurnr.
+  // Cache TTL 5 min (zelfde window als verkoop recenteDuplicate-window).
+  // Op fout-pad: cache wissen zodat klant kan retry'en zonder 5 min wachten.
+  const sigInkoop = _bouwInkoopSig_(leverancier, datum, bedragIncl,
+    String(data['Factuurnummer leverancier'] || ''));
+  try {
+    const cache = CacheService.getScriptCache();
+    if (cache.get(sigInkoop)) {
+      schrijfAuditLog_('Uitgave DUBBEL geblokkeerd',
+        leverancier + ' | ' + formatBedrag_(bedragIncl) +
+        ' | factuurnr-lev: ' + (data['Factuurnummer leverancier'] || '(leeg)') +
+        ' — identieke submit binnen 5min');
+      throw new Error('Deze uitgave (' + leverancier + ', ' + formatBedrag_(bedragIncl) +
+        ') is zojuist al geregistreerd. Wacht 5 minuten of wijzig leverancier-factuurnr.');
+    }
+    cache.put(sigInkoop, 'PROCESSING:' + Date.now(), 300);  // 5 min TTL
+  } catch (cacheErr) {
+    // CacheService kan zelden falen (quota) — laat door, beter duplicaat dan miss
+    if (String(cacheErr.message || '').indexOf('zojuist al geregistreerd') >= 0) throw cacheErr;
+    Logger.log('Inkoop idempotency cache-fail (door): ' + cacheErr.message);
+  }
+
   // Kostenrekening bepalen op basis van categorie
   const categorie   = data['Categorie kosten'] || 'Overige kosten';
   const kostenRek   = bepaalKostenrekening_(categorie);
@@ -683,6 +711,8 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
   try {
     ifSheet.appendRow(inkoopData);
   } catch (writeErr) {
+    // Bij sheet-fail: idempotency-cache wissen — klant moet kunnen retry'en
+    try { CacheService.getScriptCache().remove(sigInkoop); } catch (_) {}
     noodLog_('INKOOPFACTUUR_SHEET_FOUT', 'IK' + inkoopNr + ' | ' + leverancier + ' | ' + bedragIncl + ' | ' + writeErr.message);
     try { meldFataalAanOwner_('DATA_LOSS', 'appendRow inkoopfactuur faalde', { ref: 'IK' + inkoopNr, fout: writeErr.message }); } catch (_) {}
     throw writeErr;
@@ -2034,4 +2064,26 @@ function toonAuditLog() {
   try { sheet.showSheet(); } catch (_) {}
   ss.setActiveSheet(sheet);
   schrijfAuditLog_('audit_log_geopend', 'gebruiker bekeek het Audit Log');
+}
+
+/**
+ * P29-FIX helper: bouw idempotency-signatuur voor inkoopfactuur.
+ * Normaliseert leverancier (lowercased, whitespace-collapsed) + datum
+ * (YYYY-MM-DD in lokale TZ) + bedragIncl (cents-precisie) + leverancier-
+ * factuurnr (lowercased). Twee identieke submits geven exact dezelfde key.
+ *
+ * @param {string} leverancier      Leveranciernaam (gestripte input)
+ * @param {Date}   datum            Factuurdatum
+ * @param {number} bedragIncl       Bedrag incl. BTW (€)
+ * @param {string} factuurnrLev     Leverancier-factuurnr (optional)
+ * @return {string} Cache-key, bv. "inkoop_sap_2026-03-15_12100_INV-42"
+ */
+function _bouwInkoopSig_(leverancier, datum, bedragIncl, factuurnrLev) {
+  const lev = String(leverancier || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const datumStr = (datum instanceof Date && !isNaN(datum.getTime()))
+    ? Utilities.formatDate(datum, 'Europe/Amsterdam', 'yyyy-MM-dd')
+    : '0000-00-00';
+  const cents = Math.round((parseFloat(bedragIncl) || 0) * 100);
+  const fnr = String(factuurnrLev || '').toLowerCase().trim();
+  return 'inkoop_' + lev + '_' + datumStr + '_' + cents + '_' + fnr;
 }
