@@ -54,6 +54,102 @@ function isEUB2B_(btwNrKlant, landKlant) {
   return String(btwNrKlant || '').trim().length > 5;
 }
 
+// ════════════════════════════════════════════════════════════════════
+//  P4/P7-FIX: VIES BTW-nummer-validatie
+// ════════════════════════════════════════════════════════════════════
+// Belastingdienst stress-test P4/P7: klant past verleggingsregeling toe
+// (0% BTW, factuur naar EU-klant met BTW-nr) — maar dat BTW-nr is ongeldig
+// of niet meer actief. Gevolg: Belastingdienst heft alsnog 21% NL-BTW
+// na een controle = naheffing + boete. ZZP'er kan tot €5.000 schade hebben
+// per verkeerd verlegde factuur (afhankelijk van bedrag + rente).
+//
+// Echte mitigatie: VIES API-call vóór factuur. Resultaat 30 dagen cachen
+// (BTW-nrs wijzigen zelden) — anders te veel API-calls bij re-factureren.
+// VIES is publiek + gratis maar wel rate-limited (en regelmatig down,
+// vooral 's nachts wegens onderhoud). Daarom: GRACEFUL FAIL — bij fout
+// retourneer { valid: null, error } zodat caller kan kiezen wel/niet
+// te blokkeren. Wij blokkeren nooit (false positive zou klant frustreren),
+// alleen waarschuwen.
+
+const VIES_API_BASE = 'https://ec.europa.eu/taxation_customs/vies/rest-api/ms/';
+const VIES_CACHE_TTL_DAGEN = 30;
+
+/**
+ * Valideer een EU BTW-nummer via VIES (Europese Commissie).
+ * Cached 30 dagen via ScriptProperties.
+ *
+ * @param {string} btwNr  BTW-nr inclusief landcode, bv. "DE123456789"
+ * @return {{valid: boolean|null, naam?: string, adres?: string, gecacheerd: boolean, error?: string}}
+ *         valid === null bij netwerk/API-fout (caller mag dan wél factureren).
+ */
+function valideerBtwViaVies_(btwNr) {
+  const schoon = String(btwNr || '').replace(/\s/g, '').toUpperCase();
+  if (!schoon || schoon.length < 4) {
+    return { valid: false, gecacheerd: false, error: 'Leeg of te kort' };
+  }
+  // Format-check eerst — geen API-call verspillen op pure typo's
+  if (!isGeldigEuBTWNummer_(schoon)) {
+    return { valid: false, gecacheerd: false, error: 'Format ongeldig' };
+  }
+  const land = schoon.slice(0, 2);
+  const nummer = schoon.slice(2);
+
+  // Cache-check (30 dgn TTL via PropertiesService — overleeft script-herstart)
+  const cacheKey = 'VIES_' + schoon;
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const cached = props.getProperty(cacheKey);
+    if (cached) {
+      const obj = JSON.parse(cached);
+      const ageDagen = (Date.now() - obj.ts) / (1000 * 60 * 60 * 24);
+      if (ageDagen < VIES_CACHE_TTL_DAGEN) {
+        return Object.assign({}, obj.data, { gecacheerd: true });
+      }
+    }
+  } catch (_) { /* cache-corrupt → fresh fetch */ }
+
+  // API-call met timeout-defense
+  try {
+    const url = VIES_API_BASE + encodeURIComponent(land) + '/vat/' + encodeURIComponent(nummer);
+    const resp = UrlFetchApp.fetch(url, {
+      method: 'get',
+      muteHttpExceptions: true,
+      followRedirects: true,
+      validateHttpsCertificates: true,
+      headers: { 'Accept': 'application/json' },
+    });
+    const code = resp.getResponseCode();
+    if (code !== 200) {
+      // 404 = niet gevonden (= invalid), 5xx = VIES down → null
+      if (code === 404) {
+        const result = { valid: false, naam: '', adres: '' };
+        _viesCacheSet_(cacheKey, result);
+        return Object.assign({}, result, { gecacheerd: false });
+      }
+      return { valid: null, gecacheerd: false, error: 'VIES HTTP ' + code };
+    }
+    const body = JSON.parse(resp.getContentText() || '{}');
+    const result = {
+      valid: !!body.isValid,
+      naam: String(body.name || '').trim(),
+      adres: String(body.address || '').trim(),
+    };
+    _viesCacheSet_(cacheKey, result);
+    return Object.assign({}, result, { gecacheerd: false });
+  } catch (e) {
+    return { valid: null, gecacheerd: false, error: String(e.message || e) };
+  }
+}
+
+function _viesCacheSet_(key, data) {
+  try {
+    PropertiesService.getScriptProperties().setProperty(key, JSON.stringify({
+      ts: Date.now(),
+      data: data,
+    }));
+  } catch (_) { /* quota vol — geen blocker */ }
+}
+
 /**
  * OSS-monitor: berekent cumulatieve EU-B2C-omzet huidig kalenderjaar.
  * Returns { totaalEuB2c, drempelOverschreden, perLand: {DE: 1234, FR: 567} }
