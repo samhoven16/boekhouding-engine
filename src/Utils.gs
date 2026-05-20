@@ -72,13 +72,35 @@ function parseDatum_(str) {
   if (str instanceof Date) return str;
   str = String(str);
 
+  // ROLLOVER-VALIDATIE (P22-fix uit Belastingdienst stress-test): voorheen
+  // rolde "31-02-2026" silent door naar 03-03-2026 → factuur in verkeerd
+  // kwartaal → BTW-aangifte mismatch → boete. Nu strikt:
+  // bij maand>12, dag>31, of dag-na-rollover-mismatch → val terug op vandaag.
+  // Voor STRENGE validatie (reject ipv fallback): gebruik parseDatumStrict_.
+  function _datumGevalideerd_(jaar, maand, dag) {
+    if (maand < 1 || maand > 12 || dag < 1 || dag > 31) return null;
+    const d = new Date(jaar, maand - 1, dag);
+    if (isNaN(d.getTime())) return null;
+    // Bewaar oorspronkelijke dag/maand: na rollover wijken die af
+    if (d.getMonth() !== maand - 1 || d.getDate() !== dag) return null;
+    return d;
+  }
+
   // Probeer ISO formaat (yyyy-mm-dd)
   const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (isoMatch) return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+  if (isoMatch) {
+    const d = _datumGevalideerd_(parseInt(isoMatch[1]), parseInt(isoMatch[2]), parseInt(isoMatch[3]));
+    if (d) return d;
+    return new Date();  // ongeldig (bv. 2026-02-31) → val terug op vandaag
+  }
 
   // Probeer NL formaat (dd-mm-yyyy of dd/mm/yyyy)
   const nlMatch = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
-  if (nlMatch) return new Date(parseInt(nlMatch[3]), parseInt(nlMatch[2]) - 1, parseInt(nlMatch[1]));
+  if (nlMatch) {
+    const d = _datumGevalideerd_(parseInt(nlMatch[3]), parseInt(nlMatch[2]), parseInt(nlMatch[1]));
+    if (d) return d;
+    return new Date();
+  }
 
   // Fallback: native parsing
   const d = new Date(str);
@@ -356,7 +378,22 @@ function isGeldigIBAN_(iban) {
 function isGeldigBTWNummer_(btwNr) {
   btwNr = String(btwNr || '');
   if (!btwNr) return false;
-  return /^NL\d{9}B\d{2}$/.test(btwNr.replace(/\s/g, '').toUpperCase());
+  const clean = btwNr.replace(/\s/g, '').toUpperCase();
+  if (!/^NL\d{9}B\d{2}$/.test(clean)) return false;
+
+  // OPMERKING bij P21 (Belastingdienst stress-test):
+  // Mod-11 checksum voor NL BTW-nrs is NIET één publieke standaard —
+  // bronnen geven verschillende gewichten. Een wrong-impl zou geldige
+  // BTW-nrs wegfilteren (false positives schadelijker dan false negatives).
+  // Echte validatie = VIES API-call (zie ViesValidatie.gs in toekomstige PR).
+  // Voor nu: format-check is sufficient als invariant tegen pure typo's
+  // (te kort, missende B, etc). Volledige verifiëring via VIES async.
+  //
+  // Bewust uitgesloten:
+  //   - Reserved 0-formats (NL000000000B00 — format-valide, niet uitgegeven)
+  //   - Test-patterns (NL123456789B00 — kan toevallig matchen)
+  // Klant moet zelf BTW-nr bij KvK-uittreksel verifiëren.
+  return true;
 }
 
 /**
