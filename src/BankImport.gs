@@ -51,6 +51,25 @@ function parseBankCsv_(csv) {
     tegenpartij:   vindCsvKolom_(headers, ['naam tegenpartij', 'counterparty', 'tegenpartij', 'naam']),
   };
 
+  // FORENSIC-FIX (incident bankimport 10k): bij niet-herkende headers liep
+  // import silent leeg → klant zag "0 transacties" zonder uitleg.
+  // Nu: throw met klant-leesbare melding waar exact wat ontbrak. Caller
+  // (openBankImportDialoog) toont dit aan klant en logt voor support.
+  if (idx.datum < 0 || idx.bedrag < 0) {
+    const ontbrekend = [];
+    if (idx.datum < 0) ontbrekend.push('datum-kolom (verwacht "Datum"/"Date"/"Boekdatum"/"Transactiedatum")');
+    if (idx.bedrag < 0) ontbrekend.push('bedrag-kolom (verwacht "Bedrag"/"Amount"/"Bedrag (EUR)")');
+    const fout = new Error(
+      'CSV-headers niet herkend — ' + ontbrekend.join(' EN ') +
+      '. Gevonden headers: ' + headers.join(', ') +
+      '. Controleer of je het juiste bank-export-format gebruikt (ING/Rabo/Bunq/KNAB).'
+    );
+    fout.code = 'CSV_HEADERS_NIET_HERKEND';
+    fout.gevondenHeaders = headers;
+    fout.ontbrekend = ontbrekend;
+    throw fout;
+  }
+
   const resultaat = [];
   for (let i = 1; i < regels.length; i++) {
     const velden = splitCsvRegel_(regels[i], delim);
