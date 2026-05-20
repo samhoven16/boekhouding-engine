@@ -5,6 +5,10 @@
 # Checkout — doorsturen naar licentieserver
 /kopen https://script.google.com/macros/s/AKfycbyq5Xrvh4bFXkcjpjsdaPS-UJm3b7h-X7kGyfdTnDNcNS2brUX0q86pRU7Q2nSMCOWsMg/exec 302
 
+# Security.txt — RFC 9116 noemt /.well-known/security.txt als canonical,
+# maar veel scanners checken óók /security.txt — redirect voor compat.
+/security.txt /.well-known/security.txt 301
+
 # ── Affiliate tracking (/go/ routes) ──────────────────────────
 # 302 = tijdelijk, zodat target-URL bijgewerkt kan worden zonder SEO-impact.
 # Vervang door echte affiliate-links zodra goedgekeurd.
