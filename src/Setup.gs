@@ -502,13 +502,26 @@ function zetBanktransactiesHeaders_(sheet) {
 }
 
 function zetJournaalpostenHeaders_(sheet) {
-  if (sheet.getLastRow() > 0) return;
+  // 19 kolommen: 16 originele + 3 HITL-validatie (Human-in-the-Loop):
+  // Q=Status (Concept/Gevalideerd), R=Gevalideerd door (email), S=Gevalideerd op (datum).
+  // Default voor nieuwe boekingen: Status='Concept'. Klant valideert via menu
+  // "Boekhouding → Geavanceerd → Boekingen valideren". Pas dan officieel "afgesloten".
   const headers = [
     'Boeking ID', 'Datum', 'Omschrijving', 'Dagboek', 'Debet rekening',
     'Debet omschrijving', 'Credit rekening', 'Credit omschrijving',
     'Bedrag', 'BTW %', 'BTW bedrag', 'Referentie', 'Projectcode',
-    'Type', 'Notities', 'Aangemaakt op'
+    'Type', 'Notities', 'Aangemaakt op',
+    'Status', 'Gevalideerd door', 'Gevalideerd op',
   ];
+  if (sheet.getLastRow() > 0) {
+    // Bestaande sheet: voeg ontbrekende kolommen toe (idempotent — geen overschrijven)
+    const huidigeBreedte = sheet.getLastColumn();
+    if (huidigeBreedte < headers.length) {
+      sheet.getRange(1, huidigeBreedte + 1, 1, headers.length - huidigeBreedte)
+        .setValues([headers.slice(huidigeBreedte)]);
+    }
+    return;
+  }
   zetHeaderRij_(sheet, headers);
 }
 

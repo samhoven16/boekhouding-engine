@@ -42,6 +42,11 @@ function onOpen() {
   // Belastingdienst-auditor-eis: geen wijzigingen in afgesloten perioden.
   try { _waarschuwGeslotenPeriode_(); } catch (e) { Logger.log('Gesloten-periode-check overgeslagen: ' + e.message); }
 
+  // HITL-validatie-toast: bij 10+ Concept-boekingen herinnering. Zachte druk
+  // om klant niet te laten ophopen — vermijdt jaarafsluiting-paniek.
+  try { if (typeof _waarschuwOnvalidered_ === 'function') _waarschuwOnvalidered_(); }
+  catch (e) { Logger.log('HITL-waarschuwing overgeslagen: ' + e.message); }
+
   // Changelog-check: bij eerste open na product-update toon "wat is nieuw".
   // Maakt gratis updates zichtbaar — klant voelt actief onderhoud.
   try { if (typeof checkEnToonChangelog_ === 'function') checkEnToonChangelog_(); }
@@ -144,6 +149,7 @@ function onOpen() {
       .addItem('Openingssaldi invoeren (start boekjaar)', 'openBeginbalansDialoog')
       .addSeparator()
       .addItem('Afschrijvingen verwerken', 'boekAfschrijvingen')
+      .addItem('✔ Concept-boekingen valideren (Human-in-the-Loop)', 'openValidatieChecklist')
       .addItem('BTW-periode afsluiten', 'sluitBtwPeriode')
     )
 

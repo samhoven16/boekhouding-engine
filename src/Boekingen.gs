@@ -93,6 +93,15 @@ function maakJournaalpost_(ss, opt) {
     opt.type || BOEKING_TYPE.JOURNAALPOST,
     opt.notities || '',
     new Date(),
+    // HITL-validatie (kolom Q-R-S):
+    //   Q=Status (default 'Concept' bij auto-boeking; 'Gevalideerd' bij handmatige bevestiging)
+    //   R=Gevalideerd door (email — leeg tot validatie)
+    //   S=Gevalideerd op (datum — leeg tot validatie)
+    // Reden: art. 52 AWR vereist juiste boekhouding, niet "snelle" boekhouding.
+    // Klant wordt gedwongen om bewust te bevestigen dat GL-rek + BTW + bijlage correct zijn.
+    opt.preGevalideerd === true ? 'Gevalideerd' : 'Concept',
+    opt.preGevalideerd === true ? (Session.getActiveUser().getEmail() || 'systeem') : '',
+    opt.preGevalideerd === true ? new Date() : '',
   ];
 
   // Critical write — dubbel-loggen (audit + nood) tegen sheet-write-fail
