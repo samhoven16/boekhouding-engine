@@ -160,6 +160,7 @@ function onOpen() {
       .addItem('🔍 Installatie diagnoseren (is mijn setup OK?)', 'diagnoseInstallatie')
       .addItem('✨ Tabbladen opnieuw opmaken (kleuren + format)', 'verfraaiTabbladen')
       .addItem('📚 Help & Compliance tab vernieuwen', 'vernieuwHelpTab')
+      .addItem('💬 Fout melden of suggestie indienen', 'openFeedbackDialog')
       .addSeparator()
       .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
       .addItem('💾 Exporteer als XAF (Auditfile — bezit je administratie)', 'exporteerXaf')

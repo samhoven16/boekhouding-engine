@@ -1535,3 +1535,54 @@ function withCheckpoint_(taak, stappen) {
   clearCheckpoint_(taak);
   return { voltooid: true, laatsteStap: stappen[stappen.length - 1].naam };
 }
+
+
+// ─────────────────────────────────────────────
+//  CHAOS-MITIGATIES — formule-injection, IBAN-checksum
+// ─────────────────────────────────────────────
+
+/**
+ * Saniteer klant-input vóór setValue om spreadsheet-formule-injection te
+ * voorkomen. Klant typt `=HYPERLINK("http://evil.com","Klik")` als bedrijfs-
+ * naam → Google Sheets voert dit uit als formule.
+ *
+ * Mitigatie: prefix met apostrophe (Sheets toont apostrophe NIET, behandelt
+ * inhoud als plain-text). Alleen toepassen bij STRING-input die in een
+ * generieke cel terechtkomt — niet voor expliciete formules die wij zelf
+ * schrijven.
+ *
+ * @param {*} waarde
+ * @returns {string|*} waarde met apostrophe-prefix indien formule, anders ongewijzigd
+ */
+function veiligSheetWaarde_(waarde) {
+  if (typeof waarde !== 'string') return waarde;
+  // Sheets behandelt rijen die met deze chars beginnen als formule/expressie
+  if (/^[=+\-@\t\r]/.test(waarde)) {
+    return "'" + waarde;
+  }
+  return waarde;
+}
+
+/**
+ * MOD-97 checksum voor IBAN — formal-correctness check naast format.
+ * Bron: ISO 13616. Voorkomt typo's die de regex passeren.
+ *
+ * @param {string} iban
+ * @returns {boolean} true als IBAN format + checksum geldig
+ */
+function isGeldigeIBANMet97Check_(iban) {
+  const cleaned = String(iban || '').replace(/\s/g, '').toUpperCase();
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{4,30}$/.test(cleaned)) return false;
+  // Verplaats eerste 4 chars naar einde
+  const rearranged = cleaned.slice(4) + cleaned.slice(0, 4);
+  // Vervang letters door cijfers (A=10, B=11, ..., Z=35)
+  const numeric = rearranged.replace(/[A-Z]/g, function(ch) {
+    return (ch.charCodeAt(0) - 55).toString();
+  });
+  // MOD-97 via lange-deling (numeric kan >15 cijfers zijn, JS Number overflow)
+  let remainder = 0;
+  for (let i = 0; i < numeric.length; i++) {
+    remainder = (remainder * 10 + parseInt(numeric.charAt(i), 10)) % 97;
+  }
+  return remainder === 1;
+}
