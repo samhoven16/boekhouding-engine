@@ -330,3 +330,185 @@ function valideerInvariantsVoorFactuur_(ss, factuur) {
 function valideerInvariantsVoorJournaalpost_(debet, credit, bedrag) {
   valideerJournaalpostBalans_(debet, credit, bedrag);
 }
+
+
+// ─────────────────────────────────────────────
+//  RED-TEAM: BTW-TARIEF CONSISTENCY CHECK
+// ─────────────────────────────────────────────
+//
+// Belastingdienst-boete-risico: klant boekt "boek" als 21% (hoog) ipv 9% (laag).
+// Resultaat: te veel BTW gerekend → klant betaalt te veel BTW → bij audit
+// correctie + mogelijk boete + suppletie-aangifte verplicht.
+//
+// Lijst van keywords die DUIDELIJK 9%-tarief vereisen. Bron: belastingdienst.nl
+// laag tarief-overzicht. Niet uitputtend — slechts de meest voorkomende
+// missclassifications.
+//
+// Functie returnt waarschuwing-object {ernstig, voorgesteldTarief, reden}
+// of null als geen verdenking. Caller (factuur-flow) toont dit als toast
+// of in-dialog-waarschuwing voordat de boeking definitief wordt.
+
+const BTW_LAAG_TARIEF_KEYWORDS = [
+  // Boeken & media (9%)
+  'boek', 'tijdschrift', 'krant', 'magazine', 'ebook', 'audioboek',
+  // Voedsel & drank (9%)
+  'voedsel', 'levensmiddel', 'maaltijd', 'broodje', 'lunch', 'diner',
+  'restaurant', 'catering', 'horeca', 'cafetaria',
+  // Cultuur & sport (9%)
+  'theater', 'museum', 'concert', 'bioscoop', 'sportevenement', 'attractie',
+  // Personenvervoer (9%)
+  'taxi', 'trein', 'bus', 'tram', 'metro',
+  // Logies — TOT 2025 was 9%, vanaf 1-1-2026 is 21% (Belastingplan 2025)
+  // Niet toevoegen — sinds 2026 is hotelovernachting weer 21%.
+  // Geneesmiddelen, hulpmiddelen (9%)
+  'medicijn', 'geneesmiddel', 'hulpmiddel',
+  // Bloemen & planten (9%)
+  'bloem', 'plant',
+  // Kappersdiensten + fietsenmaker (9%)
+  'kapper', 'haarknippen', 'fietsenreparatie',
+];
+
+const BTW_HOOG_TARIEF_KEYWORDS = [
+  // Diensten standaard 21%
+  'advies', 'consultancy', 'design', 'software', 'licentie', 'abonnement',
+  'marketing', 'reclame', 'webdesign', 'development',
+];
+
+/**
+ * Detecteert verdachte BTW-tarief × omschrijving combinatie.
+ *
+ * @param {string} omschrijving Factuurregel-omschrijving (klant-input)
+ * @param {number} tarief 0.21, 0.09, 0 of null
+ * @returns {Object|null} { ernstig: bool, voorgesteldTarief: 0.09|0.21|null,
+ *                          reden: 'string' } of null als geen verdenking
+ */
+function checkBtwTariefVerdacht_(omschrijving, tarief) {
+  if (omschrijving === null || omschrijving === undefined) return null;
+  const t = String(omschrijving).toLowerCase();
+  if (!t) return null;
+
+  const tariefNum = parseFloat(tarief);
+
+  // SCENARIO 1: omschrijving suggereert 9% maar klant heeft 21% gekozen
+  if (Math.abs(tariefNum - 0.21) < 0.01) {
+    for (let i = 0; i < BTW_LAAG_TARIEF_KEYWORDS.length; i++) {
+      const kw = BTW_LAAG_TARIEF_KEYWORDS[i];
+      if (t.indexOf(kw) !== -1) {
+        return {
+          ernstig: true,
+          voorgesteldTarief: 0.09,
+          reden: 'Omschrijving bevat "' + kw + '" — dat valt meestal onder ' +
+                 '9% (laag tarief). Controleer dit bij twijfel via Belastingdienst-' +
+                 'overzicht laag tarief.',
+        };
+      }
+    }
+  }
+
+  // SCENARIO 2: omschrijving suggereert 21% maar klant heeft 9% gekozen
+  if (Math.abs(tariefNum - 0.09) < 0.01) {
+    for (let i = 0; i < BTW_HOOG_TARIEF_KEYWORDS.length; i++) {
+      const kw = BTW_HOOG_TARIEF_KEYWORDS[i];
+      if (t.indexOf(kw) !== -1) {
+        return {
+          ernstig: true,
+          voorgesteldTarief: 0.21,
+          reden: 'Omschrijving bevat "' + kw + '" — diensten zijn meestal ' +
+                 '21% (hoog tarief). Controleer of 9% klopt.',
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+// ─────────────────────────────────────────────
+//  RED-TEAM: BANK-UITGAVE ZONDER INKOOPFACTUUR
+// ─────────────────────────────────────────────
+//
+// Belastingdienst-boete-risico: klant verricht zakelijke betaling vanaf bank,
+// maar boekt geen inkoopfactuur → kosten te laag in winst-berekening → IB
+// te hoog → klant betaalt te veel IB. Plus BTW-voorbelasting wordt niet
+// teruggevraagd.
+//
+// Detectie: scan bank-uitgaven (negatieve transacties, vaak naar leveranciers)
+// die geen ref hebben naar een inkoopfactuur of die niet als kosten-journaalpost
+// zijn geboekt. Returnt lijst van verdachte transacties voor klant-review.
+//
+// @param {Spreadsheet} ss
+// @returns {Array<{datum, bedrag, tegenpartij, omschr, rij}>} verdachte uitgaven
+
+function detecteerOngekoppeldeBankuitgaven_(ss) {
+  const bankSheet = ss.getSheetByName(SHEETS.BANKTRANSACTIES);
+  const jpSheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (!bankSheet || !jpSheet) return [];
+
+  // Verzamel ref-velden van inkoopboekingen (debet=7xxx kosten, credit=1100 bank)
+  const jpData = jpSheet.getDataRange().getValues();
+  const gekoppeldeBankRefs = new Set();
+  for (let i = 1; i < jpData.length; i++) {
+    const debet = String(jpData[i][4] || '');
+    const credit = String(jpData[i][6] || '');
+    // Inkoop-betaling: kostenrekening (4xxx/7xxx) debet, bank credit
+    if (credit === '1100' && (debet.startsWith('7') || debet.startsWith('4'))) {
+      const ref = String(jpData[i][11] || '').trim();
+      if (ref) gekoppeldeBankRefs.add(ref);
+    }
+  }
+
+  // Verzamel referenties van geboekte inkoopfacturen
+  const inkoopRefs = new Set();
+  if (ifSheet) {
+    const ifData = ifSheet.getDataRange().getValues();
+    for (let i = 1; i < ifData.length; i++) {
+      const ifNr = String(ifData[i][0] || '').trim();
+      if (ifNr) inkoopRefs.add(ifNr);
+    }
+  }
+
+  // Scan bank-transacties: negatief bedrag = uitgave
+  const verdacht = [];
+  const bankData = bankSheet.getDataRange().getValues();
+  // Schema bank: datum, omschr, bedrag, tegenrekening, tegenpartij, ref?
+  for (let i = 1; i < bankData.length; i++) {
+    const datum = bankData[i][0];
+    const omschr = String(bankData[i][1] || '');
+    const bedrag = parseFloat(bankData[i][2]) || 0;
+    const tegenpartij = String(bankData[i][4] || '');
+
+    if (bedrag >= 0) continue;  // alleen uitgaven (negatief)
+    if (Math.abs(bedrag) < 5) continue;  // skip kleine bedragen (bankkosten etc)
+
+    // Cross-check: matcht deze uitgave een geboekte inkoop?
+    let gekoppeld = false;
+    // Format-onafhankelijke substring-match: zit een bestaande inkoopfactuur-id
+    // ergens in de bank-omschrijving? Voorbeeld: "Betaling IF-2026-001 ABC BV"
+    // bevat de ID "IF-2026-001".
+    if (inkoopRefs.size > 0) {
+      const omschrLower = omschr.toLowerCase();
+      inkoopRefs.forEach(function(ref) {
+        if (gekoppeld) return;
+        const r = String(ref).toLowerCase();
+        if (r && omschrLower.indexOf(r) !== -1) gekoppeld = true;
+      });
+    }
+    // Of via journaalpost-ref (kolom 6 in bank-schema, optioneel)
+    if (!gekoppeld && gekoppeldeBankRefs.has(String(bankData[i][5] || ''))) gekoppeld = true;
+
+    if (!gekoppeld) {
+      verdacht.push({
+        rij: i + 1,
+        datum: datum,
+        bedrag: bedrag,
+        omschr: omschr.substring(0, 80),
+        tegenpartij: tegenpartij,
+      });
+    }
+
+    if (verdacht.length > 20) break;  // cap voor performance
+  }
+
+  return verdacht;
+}
