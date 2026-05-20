@@ -198,7 +198,7 @@ describe('Edge-case: KOR-grens monitoring', () => {
   beforeAll(() => {
     ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Belastingadvies.gs', 'Invariants.gs']);
     ctx.schrijfAuditLog_ = () => {};
-    ctx.getInstelling_ = (k) => (k === 'KOR actief' ? 'Ja' : null);
+    ctx.getInstelling_ = (k) => (k === 'KOR regeling actief' ? 'Ja' : null);
   });
 
   const mockSs = { toast: () => {} };
@@ -453,7 +453,7 @@ describe('Edge-case: diverse gebruikersprofielen — alle Nederlandse rechtsvorm
     ['Coöperatie U.A.', 'CV', 12000, 'ok'],
   ])('Profiel %s (%s) omzet €%i → KOR status %s',
     (profiel, vorm, omzet, verwacht) => {
-      ctx.getInstelling_ = (k) => (k === 'KOR actief' ? 'Ja' : null);
+      ctx.getInstelling_ = (k) => (k === 'KOR regeling actief' ? 'Ja' : null);
       const r = ctx.checkKorGrens_(mockSs, omzet);
       expect(r.status).toBe(verwacht);
     });

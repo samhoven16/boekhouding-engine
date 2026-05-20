@@ -226,7 +226,10 @@ function checkKorGrens_(ss, jaaromzetTotaal) {
   let korActief = false;
   try {
     if (typeof getInstelling_ === 'function') {
-      korActief = String(getInstelling_('KOR actief') || '').toLowerCase() === 'ja';
+      // Setup.gs:626 schrijft 'KOR regeling actief' — moet hier matchen.
+      // Eerdere key 'KOR actief' bestond nergens in productie-sheet → functie
+      // returned altijd 'nvt' als ooit aangeroepen vanuit src/.
+      korActief = String(getInstelling_('KOR regeling actief') || '').toLowerCase() === 'ja';
     }
   } catch (_) {}
 

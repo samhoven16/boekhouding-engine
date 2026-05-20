@@ -183,7 +183,10 @@ function valideerEnMeldInstellingen() {
   const btwNr   = getInstelling_('BTW-nummer');
   const kvk     = getInstelling_('KvK-nummer');
   const iban    = getInstelling_('IBAN');
-  const email   = getInstelling_('Factuur e-mailadres') || getInstelling_('E-mail');
+  // Setup.gs:613 schrijft 'Email'. 'Factuur e-mailadres' bestaat niet als
+  // instelling-key — leverde altijd null → onterechte "email ontbreekt"
+  // waarschuwing in validatie-rapport.
+  const email   = getInstelling_('Factuur e-mailadres') || getInstelling_('Email');
   const postcode = getInstelling_('Postcode');
   const bedrijf = getInstelling_('Bedrijfsnaam');
   const mode    = getInstelling_('Gebruik') || 'Zakelijk';

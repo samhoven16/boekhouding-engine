@@ -72,7 +72,10 @@ function controleerBtwDeadline_() {
 
   // E-mailadres ophalen + valideren via centrale isGeldigEmail_ (Utils.gs)
   // — voorkomt GmailApp-crash op invalid input + consistente RFC-validatie.
-  const email = getInstelling_('E-mailadres') || Session.getActiveUser().getEmail();
+  // Setup.gs:613 schrijft de instelling onder key 'Email'. Voorheen 'E-mailadres'
+  // → key bestond niet → fallback naar Session-email = Google-account ipv
+  // business-email → BTW-reminder naar verkeerd adres → gemiste deadline + boete.
+  const email = getInstelling_('Email') || Session.getActiveUser().getEmail();
   if (!email || !isGeldigEmail_(email)) {
     Logger.log('BTW reminder overgeslagen: geen of ongeldig e-mailadres (' + email + ')');
     try { schrijfAuditLog_('BTW reminder OVERGESLAGEN', 'Ongeldig e-mailadres: ' + email); } catch (_) {}
