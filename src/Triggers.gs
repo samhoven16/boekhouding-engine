@@ -420,6 +420,21 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     try { if (typeof rapporteerAnomalie_ === 'function') rapporteerAnomalie_('factuur_mogelijk_dubbel', 'similar to ' + recenteDuplicate); } catch (_) {}
   }
 
+  // INVARIANT-CHECK: factuurnummer-uniciteit (art. 35a Wet OB).
+  // volgendFactuurnummer_ heeft script-lock, dus duplicaat is theoretisch
+  // onmogelijk. Maar bij script-restart of property-corruptie kan teller
+  // resetten — extra check vóór append voorkomt corrupt-state. Bij
+  // schending: blokkeer write, klant ziet specifieke fout.
+  try {
+    if (typeof valideerFactuurnummerUniek_ === 'function') {
+      valideerFactuurnummerUniek_(ss, factuurNummerOpgemaakt);
+    }
+  } catch (invErr) {
+    noodLog_('FACTUURNR_DUPLICAAT_DETECT', factuurNummerOpgemaakt + ' — ' + invErr.message);
+    try { meldFataalAanOwner_('INVARIANT_BREACH', 'factuurnr duplicaat gedetecteerd vóór write', { factuurnr: factuurNummerOpgemaakt, code: invErr.code }); } catch (_) {}
+    throw invErr;
+  }
+
   // Critical write — beschermd door dubbel-logging: appendRow + noodLog_.
   // Als sheet locked/quota: noodLog_ is laatste-redmiddel in ScriptProperty.
   try {
