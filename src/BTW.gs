@@ -182,7 +182,47 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     aangifte.r1a_btw + aangifte.r1b_btw + aangifte.r1c_btw +
     aangifte.r1e_btw + aangifte.r4a_btw
   );
-  aangifte.r5b = rondBedrag_(aangifte.r5b);
+
+  // P5/P10-FIX (Belastingdienst stress-test): Pro-rata BTW-aftrek bij gemengde
+  // omzet (Wet OB art. 11 + art. 15 lid 1). Wanneer een klant BÁDE belaste én
+  // vrijgestelde omzet heeft (bv. dokter met side-consulting, sportschool met
+  // horeca, verhuurder met woningen+kantoren), mag de voorbelasting (rubriek 5b)
+  // NIET volledig worden afgetrokken — alleen het deel dat toerekenbaar is aan
+  // de BTW-belaste output. Te veel aftrekken = naheffing + boete 5-25%.
+  //
+  // Formule (algemene methode, art. 11 Uitv.besch.):
+  //   pro_rata = belaste_omzet / (belaste_omzet + vrijgestelde_omzet)
+  //   aftrekbaar = voorbelasting_origineel × pro_rata
+  //
+  // Verlegd (r1e) telt als BELAST (alleen heffing verschoven naar afnemer).
+  // Export (2a) en EU 0% (1c als 0%) tellen ook als belast.
+  const r5bOrigineel = rondBedrag_(aangifte.r5b);
+  const belasteOmzet = (aangifte.r1a_grondslag || 0)
+    + (aangifte.r1b_grondslag || 0)
+    + (aangifte.r1c_grondslag || 0)
+    + (aangifte.r1e_grondslag || 0);
+  const vrijgesteldeOmzet = aangifte.r1d || 0;
+  const totaalOmzet = belasteOmzet + vrijgesteldeOmzet;
+
+  if (vrijgesteldeOmzet > 0 && belasteOmzet > 0 && totaalOmzet > 0) {
+    const proRata = belasteOmzet / totaalOmzet;
+    const aftrekbaar = rondBedrag_(r5bOrigineel * proRata);
+    const nietAftrekbaar = rondBedrag_(r5bOrigineel - aftrekbaar);
+    aangifte.r5b = aftrekbaar;
+    aangifte._proRataToegepast = true;
+    aangifte._proRataRatio = Math.round(proRata * 10000) / 100;  // % met 2 decimalen
+    aangifte._voorbelastingOrigineel = r5bOrigineel;
+    aangifte._voorbelastingNietAftrekbaar = nietAftrekbaar;
+    try {
+      schrijfAuditLog_('Pro-rata BTW-aftrek toegepast',
+        'belast €' + rondBedrag_(belasteOmzet) + ' / vrijgesteld €' +
+        rondBedrag_(vrijgesteldeOmzet) + ' → ratio ' + aangifte._proRataRatio +
+        '% — niet-aftrekbaar €' + nietAftrekbaar);
+    } catch (_) {}
+  } else {
+    aangifte.r5b = r5bOrigineel;
+  }
+
   aangifte.r5c = rondBedrag_(Math.max(0, aangifte.r5b - aangifte.r5a));
   aangifte.saldo = rondBedrag_(aangifte.r5a - aangifte.r5b);
 
