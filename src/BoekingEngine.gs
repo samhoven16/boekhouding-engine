@@ -438,14 +438,47 @@ function _slaBonoOp_(base64Data, mimeType, naam) {
   }
 }
 
+// ─── AI AUDIT-LOG (EU AI Act art. 50 transparantieplicht) ──────────────
+//
+// Loggt elke AI-aanroep met: timestamp, soort call, input-hash (geen ruwe
+// input om privacy te beschermen), output-samenvatting, status. Klant kan
+// dit terugzien in AuditLog-tab. AI Act art. 50 (vanaf 2 aug 2026):
+// gebruikers moeten kunnen zien wanneer AI is gebruikt om content te
+// genereren of categoriseren. Hash i.p.v. ruwe input voor GDPR-veiligheid
+// (PDF-bonnen kunnen persoonsgegevens bevatten).
+//
+// Schrijft naar AuditLog-tab via schrijfAuditLog_.
+function logAiAanroep_(soort, inputHash, output, status, metadata) {
+  try {
+    const samenvatting = (typeof output === 'object' && output)
+      ? Object.keys(output).slice(0, 5).join(',') + (output.fout ? ' [FOUT]' : '')
+      : String(output).slice(0, 100);
+    const detail = 'AI[' + soort + '] hash=' + inputHash.slice(0, 12) +
+                   ' status=' + status + ' velden=' + samenvatting +
+                   (metadata ? ' meta=' + JSON.stringify(metadata).slice(0, 100) : '');
+    schrijfAuditLog_('AI-aanroep ' + soort, detail);
+  } catch (_) { /* audit-log mag AI-flow niet blokkeren */ }
+}
+
 // ─── AI SCAN (GEMINI VISION) ──────────────────
 /**
  * Stuurt een afbeelding/PDF naar Gemini Vision.
  * Geeft gestructureerde extractie terug.
+ *
+ * AI ACT TRANSPARANTIE: deze functie roept een externe AI (Gemini) aan.
+ * Resultaat wordt gelogd in AuditLog onder "AI-aanroep bon-scan". Klant
+ * MOET het resultaat handmatig bevestigen voor opslag — geen automatische
+ * journaalpost zonder klant-actie.
  */
 function scanDocumentMetAI(base64Data, mimeType) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) return { fout: 'Gemini API-sleutel niet ingesteld (Boekhouding → Instellingen → Gemini API-sleutel).' };
+
+  // Hash voor audit-log — geen ruwe input opslaan (kan persoonsgegevens bevatten)
+  const inputHash = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    base64Data.slice(0, 1000) + mimeType  // alleen begin voor performance
+  ).map(function(b) { return (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'); }).join('');
 
   const prompt = [
     'Analyseer dit document (bon, factuur of kassabon) en extraheer in STRICT JSON (geen markdown, geen uitleg):',
@@ -478,11 +511,21 @@ function scanDocumentMetAI(base64Data, mimeType) {
       }
     );
     const json   = JSON.parse(resp.getContentText());
-    if (json.error) return { fout: json.error.message };
+    if (json.error) {
+      logAiAanroep_('bon-scan', inputHash, { fout: json.error.message }, 'GEMINI_ERROR', { mimeType: mimeType });
+      return { fout: json.error.message };
+    }
     const tekst  = json.candidates[0].content.parts[0].text.trim()
                       .replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/i,'').trim();
-    return JSON.parse(tekst);
+    const result = JSON.parse(tekst);
+    // Audit-log AI-suggestie (klant moet deze nog bevestigen vóór opslag)
+    logAiAanroep_('bon-scan', inputHash, result, 'SUGGESTIE', { mimeType: mimeType });
+    // Markeer dat dit AI-output is — UI kan dit gebruiken voor disclaimer
+    result._aiBron = 'gemini-vision';
+    result._aiVereistBevestiging = true;
+    return result;
   } catch (e) {
+    logAiAanroep_('bon-scan', inputHash, { fout: e.message }, 'EXCEPTION', { mimeType: mimeType });
     Logger.log('AI scan fout: ' + e.message);
     return { fout: 'AI kon het document niet lezen. Vul handmatig in.' };
   }
