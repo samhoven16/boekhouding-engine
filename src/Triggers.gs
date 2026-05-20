@@ -1314,9 +1314,24 @@ function verwerkJournaalpostFormulier(e) {
 // ─────────────────────────────────────────────
 //  DAGELIJKSE TAKEN (TIMER TRIGGER)
 // ─────────────────────────────────────────────
+
+// Healthchecks.io heartbeat — bewijs dat dagelijkse trigger gedraaid heeft.
+// Gemiste heartbeat na 1u grace = email-alert. Gratis tier (samhoven16@gmail.com).
+const HEALTHCHECK_DAGELIJKSE_TAKEN = 'https://hc-ping.com/d1a1c491-59b6-4380-a4b1-357649f749b3';
+
 function dagelijkseTaken() {
   const ss = getSpreadsheet_();
   const dagelijksTotaal0 = Date.now();
+
+  // START-ping: laat healthchecks.io weten dat we begonnen zijn. Bij crash
+  // halverwege missen we de SUCCESS-ping en krijgt owner alert.
+  try {
+    UrlFetchApp.fetch(HEALTHCHECK_DAGELIJKSE_TAKEN + '/start', {
+      muteHttpExceptions: true,
+      method: 'post',
+      payload: 'host=' + ss.getName(),
+    });
+  } catch (_) { /* fail-open: healthcheck mag taken niet blokkeren */ }
 
   // Elke taak in eigen try-catch: één falende taak stopt de rest niet.
   // Wrap in _runTaak_ voor automatische metrics + status-logging.
@@ -1339,8 +1354,19 @@ function dagelijkseTaken() {
   });
 
   // Aggregaat: totale duur dagelijkseTaken
-  try { metricsLog_('dagelijkseTaken.totaal', Date.now() - dagelijksTotaal0, true); } catch (_) {}
+  const totaleDuur = Date.now() - dagelijksTotaal0;
+  try { metricsLog_('dagelijkseTaken.totaal', totaleDuur, true); } catch (_) {}
   Logger.log('Dagelijkse taken uitgevoerd: ' + new Date());
+
+  // SUCCESS-ping: alles afgerond zonder uncaught exception. Healthchecks.io
+  // markeert deze run als groen. Duur (ms) in body voor monitoring-trends.
+  try {
+    UrlFetchApp.fetch(HEALTHCHECK_DAGELIJKSE_TAKEN, {
+      muteHttpExceptions: true,
+      method: 'post',
+      payload: 'duur_ms=' + totaleDuur,
+    });
+  } catch (_) {}
 }
 
 /**
