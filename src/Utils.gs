@@ -958,7 +958,12 @@ function noodLog_(actie, details) {
   try {
     const props = PropertiesService.getScriptProperties();
     const KEY = 'noodLog';
-    const entry = new Date().toISOString() + ' | ' + actie + ' | ' + String(details || '').slice(0, 200);
+    // OWASP LLM02 mitigatie: mask PII voordat we naar ScriptProperty schrijven.
+    // Vóór deze fix kon noodLog_ klant-emails, IBANs, en factuur-bedragen in
+    // plain-text bewaren tot expliciet gewist. ScriptProperty leeft buiten
+    // sheet-context → wordt niet door audit-log retentie-policy gedekt.
+    const gemaskeerd = _maskeerPiiNoodLog_(String(details || '')).slice(0, 200);
+    const entry = new Date().toISOString() + ' | ' + actie + ' | ' + gemaskeerd;
     const raw = props.getProperty(KEY) || '';
     const regels = raw ? raw.split('\n') : [];
     regels.push(entry);
@@ -971,6 +976,27 @@ function noodLog_(actie, details) {
     }
     props.setProperty(KEY, buffer);
   } catch (_) { /* nood-log mag NOOIT crashen */ }
+}
+
+/**
+ * Maskeert PII-patronen voor opslag in ScriptProperties (OWASP LLM02).
+ * Conservatief: liever te veel maskeren dan klant-data lekken.
+ *
+ * Detecteert + vervangt:
+ *   - Email-adressen → klant@***
+ *   - IBANs → IBAN-***
+ *   - Bedragen €1234,56 → €***
+ *   - BTW-nummers NLxxx → BTW-***
+ */
+function _maskeerPiiNoodLog_(tekst) {
+  if (!tekst) return '';
+  return String(tekst)
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '***@***')
+    // BTW-nummer EERST (matcht NL\d{9}B\d{2} format — specifieker dan IBAN-regex)
+    .replace(/\bNL\d{9}B\d{2}\b/g, 'BTW-***')
+    .replace(/\b[A-Z]{2}\d{2}[A-Z0-9]{4,30}\b/g, 'IBAN-***')
+    .replace(/€\s*-?\d{1,3}(?:[.\s]\d{3})*(?:,\d{1,2})?\b/g, '€***')
+    .replace(/\b\d{8}\b/g, 'KvK-***');  // KvK 8-cijfers
 }
 
 // ─────────────────────────────────────────────
