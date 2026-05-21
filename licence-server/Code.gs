@@ -35,8 +35,8 @@ function doGet(e) {
 
   if (actie === 'health')        return healthEndpoint_();
   if (actie === 'valideer')      return valideerEndpoint_(e);
-  if (actie === 'aanvraag-otp')  return rateLimit_(e, 10, 60) || aanvraagOtpEndpoint_(e);
-  if (actie === 'activeer-otp')  return rateLimit_(e, 10, 60) || activeerOtpEndpoint_(e);
+  if (actie === 'aanvraag-otp')  return rateLimit_(e, { actie: 'aanvraag-otp', perEmail: 5,  globaal: 500, windowMin: 60 }) || aanvraagOtpEndpoint_(e);
+  if (actie === 'activeer-otp')  return rateLimit_(e, { actie: 'activeer-otp', perEmail: 12, globaal: 500, windowMin: 60 }) || activeerOtpEndpoint_(e);
   if (actie === 'onboarded')     return onboardedEndpoint_(e);
   if (actie === 'config')        return configEndpoint_(e);
   if (actie === 'telemetry')     return telemetryEndpoint_(e);
@@ -1437,33 +1437,91 @@ function verwijderOudeFollowUpTrigger_() {
  * @param {number} ttlMin     window in minuten
  * @returns {ContentService.TextOutput|null}  output bij blokkering, null bij OK
  */
-function rateLimit_(e, maxPerUur, ttlMin) {
+/**
+ * Twee-laags rate-limiting voor publieke endpoints.
+ *
+ * ACHTERGROND — waarom geen IP-gebaseerde limiting:
+ * Apps Script Web Apps exposen GEEN betrouwbaar client-IP. De vorige
+ * implementatie las `e.parameter.ip` — een URL-parameter die de aanvrager
+ * zelf zet. Een attacker kon die per request variëren en zo de limiet
+ * volledig omzeilen; legitiem verkeer zonder parameter deelde één globale
+ * 'anon'-bucket, waardoor één bad actor alle nieuwe klanten 60 min kon
+ * blokkeren. Beide gevallen = kapot. Daarom volledig vervangen.
+ *
+ * NIEUW MODEL — twee lagen die elkaar aanvullen:
+ *   Laag 1 (per-identiteit): throttle op het genormaliseerde e-mailadres
+ *           uit de request. E-mail is spoofbaar, maar de OTP-endpoints
+ *           valideren het adres tegen de licentie-sheet — abuse blijft dus
+ *           beperkt tot reeds-bekende klant-adressen, elk apart geremd.
+ *   Laag 2 (circuit-breaker): ruime globale cap over álle requests van een
+ *           actie. Raakt normaal verkeer nooit (ook niet bij een drukke
+ *           launch-dag); stopt uitsluitend massale geautomatiseerde abuse.
+ *
+ * Fail-open: bij een CacheService-storing gaat de request door — een
+ * tijdelijke infra-hapering mag geen klant buitensluiten.
+ *
+ * @param {Object} e       doGet/doPost event-object.
+ * @param {Object} opties  { actie:string, perEmail:number, globaal:number,
+ *                           windowMin:number }
+ * @return {ContentService.TextOutput|null} 429-respons bij overschrijding,
+ *         anders null (= ga door met het endpoint).
+ */
+function rateLimit_(e, opties) {
   try {
-    const ip = (e && e.parameter && e.parameter.ip) || '';
-    let key = 'rl_';
-    if (ip) {
-      key += 'ip_' + Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, ip)
-        .map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); })
-        .join('').slice(0, 12);
-    } else {
-      try { key += 'user_' + (Session.getActiveUser().getEmail() || 'anon').slice(0, 30); }
-      catch (_) { key += 'anon_' + Math.floor(Date.now() / 60000); }
+    opties = opties || {};
+    const actie     = opties.actie || 'algemeen';
+    const windowMin = opties.windowMin || 60;
+    const windowSec = windowMin * 60;
+    const cache     = CacheService.getScriptCache();
+
+    // Verzamel alle van toepassing zijnde checks vóór we iets ophogen —
+    // zo telt een geweigerde request niet mee in een andere bucket.
+    const checks = [];
+
+    const email = String((e && e.parameter && e.parameter.email) || '')
+      .trim().toLowerCase();
+    if (email && opties.perEmail) {
+      const ek = 'rl_' + actie + '_e_' + _rlHash_(email);
+      checks.push({ key: ek, count: parseInt(cache.get(ek) || '0', 10), max: opties.perEmail });
     }
-    const cache = CacheService.getScriptCache();
-    const huidig = parseInt(cache.get(key) || '0');
-    if (huidig >= maxPerUur) {
-      return ContentService.createTextOutput(JSON.stringify({
-        ok: false,
-        fout: 'Te veel verzoeken — wacht ' + ttlMin + ' minuten.',
-        retryAfterSec: ttlMin * 60,
-      })).setMimeType(ContentService.MimeType.JSON);
+
+    if (opties.globaal) {
+      const gk = 'rl_' + actie + '_g';
+      checks.push({ key: gk, count: parseInt(cache.get(gk) || '0', 10), max: opties.globaal });
     }
-    cache.put(key, String(huidig + 1), (ttlMin || 60) * 60);
+
+    for (let i = 0; i < checks.length; i++) {
+      if (checks[i].count >= checks[i].max) return _rl429_(windowMin);
+    }
+    for (let i = 0; i < checks.length; i++) {
+      cache.put(checks[i].key, String(checks[i].count + 1), windowSec);
+    }
     return null;  // OK, ga door
-  } catch (e) {
-    Logger.log('rateLimit_ fout: ' + e.message);
-    return null;  // fail-open
+  } catch (err) {
+    Logger.log('rateLimit_ fout (fail-open): ' + err.message);
+    return null;  // fail-open — beter functioneel dan klanten buitensluiten
   }
+}
+
+/**
+ * Korte, niet-omkeerbare hash van een rate-limit-identiteit (e-mail).
+ * Houdt plaintext-adressen uit cache-keys.
+ */
+function _rlHash_(s) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, String(s))
+    .map(function(b) { return (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'); })
+    .join('').slice(0, 16);
+}
+
+/**
+ * Standaard 429-achtige JSON-respons bij rate-limit-overschrijding.
+ */
+function _rl429_(windowMin) {
+  return ContentService.createTextOutput(JSON.stringify({
+    ok: false,
+    fout: 'Te veel verzoeken — wacht ' + windowMin + ' minuten en probeer opnieuw.',
+    retryAfterSec: windowMin * 60,
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
