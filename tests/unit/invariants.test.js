@@ -239,25 +239,25 @@ describe('checkKorGrens_', () => {
   });
 
   test('KOR actief + omzet 5000 → status ok', () => {
-    ctx.getInstelling_ = (k) => (k === 'KOR actief' ? 'Ja' : null);
+    ctx.getInstelling_ = (k) => (k === 'KOR regeling actief' ? 'Ja' : null);
     const r = ctx.checkKorGrens_(mockSs, 5000);
     expect(r.status).toBe('ok');
   });
 
   test('KOR actief + omzet 19000 → status naderend (>90%)', () => {
-    ctx.getInstelling_ = (k) => (k === 'KOR actief' ? 'Ja' : null);
+    ctx.getInstelling_ = (k) => (k === 'KOR regeling actief' ? 'Ja' : null);
     const r = ctx.checkKorGrens_(mockSs, 19000);
     expect(r.status).toBe('naderend');
   });
 
   test('KOR actief + omzet 25000 → status overschreden', () => {
-    ctx.getInstelling_ = (k) => (k === 'KOR actief' ? 'Ja' : null);
+    ctx.getInstelling_ = (k) => (k === 'KOR regeling actief' ? 'Ja' : null);
     const r = ctx.checkKorGrens_(mockSs, 25000);
     expect(r.status).toBe('overschreden');
   });
 
   test('KOR actief + omzet precies 20000 → status naderend (op grens)', () => {
-    ctx.getInstelling_ = (k) => (k === 'KOR actief' ? 'Ja' : null);
+    ctx.getInstelling_ = (k) => (k === 'KOR regeling actief' ? 'Ja' : null);
     const r = ctx.checkKorGrens_(mockSs, 20000);
     // Op grens = niet overschreden (omzet > grens is false)
     expect(['naderend', 'ok'].indexOf(r.status) >= 0).toBe(true);
