@@ -34,11 +34,12 @@ _(geen — PR #117 staat draft, owner reviewed niet tijdens nacht)_
 - DevDep, geen `pull`/`clone` in CI/scripts. Niet exploitable in ons gebruik.
 - **Toekomst:** bij volgende dependency-upgrade naar v3.x (semver-major). Vereist test op `clasp push` workflow.
 
-### V2: licence-server rateLimit_ vertrouwt ?ip= URL-param
+### V2: licence-server rateLimit_ vertrouwt ?ip= URL-param — ✅ OPGELOST
 - Apps Script exposed geen client-IP. ?ip= = attacker-controlled.
-- Real-world impact beperkt door per-email defenses (otp_ts + pogingen-counter).
-- Anonymous-bucket exhaustion (1 attacker → 10 req → 60min DoS voor alle anonymous) WEL mogelijk maar geen €100+ schade-bewijs.
-- **Aanbeveling:** sprint-item — verwijder ?ip=-trust, verhoog anonymous-bucket-cap, of switch naar per-email-rate-limit als primary.
+- Anonymous-bucket exhaustion (1 attacker → 10 req → 60min DoS voor alle anonymous) was mogelijk.
+- **Opgelost in PR #118:** `rateLimit_` herschreven naar twee-laags model
+  (per-email throttle + globale circuit-breaker), ?ip=-vertrouwen volledig
+  verwijderd. 17 nieuwe tests. Vereist nog `npm run push:licence` om live te gaan.
 
 ### V3: adminPaneel_ geen rate-limit op wachtwoord-check
 - Owner-wachtwoord sterk = geen probleem. Google Apps Script's eigen rate-limits zijn natuurlijke ceiling.
