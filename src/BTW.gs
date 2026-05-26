@@ -65,14 +65,24 @@ function genereerBtwAangifte(kwartaal) {
 // ─────────────────────────────────────────────
 //  BTW AANGIFTE BEREKENING (ALLE RUBRIEKEN)
 // ─────────────────────────────────────────────
+/**
+ * V9-FIX: sheetData_ helper. Was eerder geneste functie binnen
+ * berekenBtwAangifte_ (lokaal scope), maar twee andere functies in dit
+ * bestand riepen 'm aan als globale — controleerKor (BTW.gs:556) en
+ * getBtwPerMaand_ (BTW.gs:615-616) crashten met ReferenceError in
+ * productie. Klant zag KOR-check niet werken + dashboard miste BTW-per-
+ * maand-data. Nu top-level met 2-arg signature die alle callers verwachten.
+ */
+function sheetData_(ss, naam) {
+  if (!ss || typeof ss.getSheetByName !== 'function') return [[]];
+  const s = ss.getSheetByName(naam);
+  return s ? s.getDataRange().getValues() : [[]];
+}
+
 function berekenBtwAangifte_(ss, vanDatum, totDatum) {
   // Null-guard: sheet kan ontbreken bij gedeeltelijke setup of verwijderde tab.
-  function sheetData_(naam) {
-    const s = ss.getSheetByName(naam);
-    return s ? s.getDataRange().getValues() : [[]];
-  }
-  const vfData = sheetData_(SHEETS.VERKOOPFACTUREN);
-  const ifData = sheetData_(SHEETS.INKOOPFACTUREN);
+  const vfData = sheetData_(ss, SHEETS.VERKOOPFACTUREN);
+  const ifData = sheetData_(ss, SHEETS.INKOOPFACTUREN);
 
   // Rubrieken conform Aangifte Omzetbelasting (OB):
   // 1a: Leveringen/diensten belast 21%
