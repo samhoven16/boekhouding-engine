@@ -1184,16 +1184,62 @@ const FEATURE_DEFAULTS = {
 };
 
 /**
+ * Case-insensitive ja/nee-interpretatie voor klant-instellingen.
+ *
+ * V3-FIX (boete-preventie): toggles in Instellingen werden eerder met strikte
+ * === 'Ja' vergeleken. Eén typo ('ja', 'JA', ' Ja ') zette een feature stil
+ * uit zonder dat de klant het door had. Voor BTW-reminder = gemiste deadline
+ * = €68+ verzuimboete. Voor auto-boeking herhalende kosten = gemiste aftrek
+ * = meer IB betalen. Centrale, vergevingsgezinde matcher voorkomt dit.
+ *
+ * Accepteert als TRUE (case-/spatie-insensitief): "ja", "yes", "y", "true",
+ * "1", "aan", "on". Plus boolean true.
+ * Alles anders → FALSE.
+ *
+ * @param {*} waarde Ruwe instellings-waarde.
+ * @return {boolean}
+ */
+function isJa_(waarde) {
+  if (waarde === true) return true;
+  if (waarde === false || waarde === null || waarde === undefined) return false;
+  const s = String(waarde).trim().toLowerCase();
+  return s === 'ja' || s === 'yes' || s === 'y'
+      || s === 'true' || s === '1'
+      || s === 'aan' || s === 'on';
+}
+
+/**
+ * Tegenhanger van isJa_ — case-insensitive nee/uit-detectie.
+ *
+ * Bewust expliciet (i.p.v. !isJa_(x)) om onderscheid te kunnen maken tussen
+ * "expliciet nee" en "leeg/onbekend" — featureAan_ heeft dat onderscheid
+ * nodig om door te kunnen vallen naar globale defaults bij lege input.
+ *
+ * @param {*} waarde
+ * @return {boolean}
+ */
+function isNee_(waarde) {
+  if (waarde === false) return true;
+  if (waarde === true || waarde === null || waarde === undefined) return false;
+  const s = String(waarde).trim().toLowerCase();
+  return s === 'nee' || s === 'no' || s === 'n'
+      || s === 'false' || s === '0'
+      || s === 'uit' || s === 'off';
+}
+
+/**
  * @param {string} naam    feature-key uit FEATURE_DEFAULTS
  * @returns {boolean}
  */
 function featureAan_(naam) {
   if (!naam) return false;
-  // Per-klant override via Instellingen
+  // Per-klant override via Instellingen — nu via case-insensitive isJa_/isNee_
+  // zodat 'JA', 'ja', ' Ja ' niet meer stil door de mazen vallen.
   try {
     const klantOverride = getInstelling_('Feature: ' + naam);
-    if (klantOverride === 'Ja' || klantOverride === 'true') return true;
-    if (klantOverride === 'Nee' || klantOverride === 'false') return false;
+    if (isJa_(klantOverride)) return true;
+    if (isNee_(klantOverride)) return false;
+    // Leeg/onbekend → val door naar volgende laag
   } catch (_) {}
   // Globale override via ScriptProperty
   try {
