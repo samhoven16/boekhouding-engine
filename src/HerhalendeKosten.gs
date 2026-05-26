@@ -297,7 +297,10 @@ function verwerkHerhalendeKosten_() {
           iteratie++;
           continue;
         }
-        if (auto === 'Ja' && bedrag > 0) {
+        // V3-FIX: case-insensitief via isJa_. Strikte === 'Ja' liet 'ja'/'JA'
+        // stil falen → herhalende kost werd niet auto-geboekt → klant mist
+        // aftrek (huur, abonnement, verzekering) → meer IB.
+        if (isJa_(auto) && bedrag > 0) {
           const zakelijkBedrag = rondBedrag_(bedrag * (splitPct / 100));
           const privaatBedrag  = rondBedrag_(bedrag - zakelijkBedrag);
           if (zakelijkBedrag > 0) {

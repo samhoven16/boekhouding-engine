@@ -1383,7 +1383,9 @@ function dagelijkseTaken() {
   _runTaak_('markeerVervallen', function() { markeerVervallenFacturen_(ss); });
   _runTaak_('herinneringen',    function() { stuurAutomatischeBetalingsherinneringen_(ss); });
   _runTaak_('btwDeadline',      function() {
-    if (getInstelling_('BTW aangifte herinnering') === 'Ja') controleerBtwDeadlines_();
+    // V3-FIX: case-insensitief via isJa_. Strikte === 'Ja' liet 'ja'/'JA'/' Ja '
+    // stil falen → BTW-reminder draaide niet → klant miste deadline → €68+ boete.
+    if (isJa_(getInstelling_('BTW aangifte herinnering'))) controleerBtwDeadlines_();
   });
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
