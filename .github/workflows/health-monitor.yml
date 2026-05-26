@@ -1,7 +1,9 @@
 name: Daily health-monitor
 
 # Pingt website + licentieserver elke ochtend.
-# Faalt? GitHub stuurt automatisch een notification (Settings → Actions → Failures).
+# V7: continue-on-error per stap + roll-up step → één rode check verbergt
+# de andere niet, en false-positives (Cloudflare bot-block op de Actions-
+# runner-IP) worden als waarschuwing, niet als fail, gerapporteerd.
 #
 # EENMALIGE SETUP — secrets:
 #   LICENCE_EXEC_URL — de /exec URL van je licentieserver-deploy
@@ -21,27 +23,50 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Website bereikbaar?
+        id: website
+        continue-on-error: true
         env:
           WEBSITE_URL: ${{ secrets.WEBSITE_URL }}
         run: |
           URL="${WEBSITE_URL:-https://www.boekhoudbaar.nl}"
-          HTTP=$(curl -s -o /tmp/site.html -w "%{http_code}" -L "$URL")
+          # V7: browser-User-Agent + Cloudflare-bot-mitigation tolerantie.
+          # GitHub Actions runners draaien op Azure datacenter-IP's;
+          # Cloudflare "Bot Fight Mode" geeft die vaak een 403-challenge
+          # in plaats van de echte site. Vorige versie faalde dagelijks
+          # met "Website down" terwijl de site voor echte bezoekers OK is.
+          HTTP=$(curl -s -o /tmp/site.html -D /tmp/site.hdr \
+            -w "%{http_code}" -L \
+            -H "User-Agent: Mozilla/5.0 (compatible; Boekhoudbaar-Monitor/1.0; +https://www.boekhoudbaar.nl)" \
+            "$URL")
+          if [ "$HTTP" = "200" ] && grep -qi "boekhoudbaar" /tmp/site.html; then
+            echo "✅ Website OK ($URL → HTTP 200, brand intact)"
+            echo "status=ok" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Cloudflare bot-mitigation → waarschuwing, geen fail.
+          if grep -qi "^cf-mitigated\|cf-chl-bypass\|Just a moment\|Attention Required" /tmp/site.hdr /tmp/site.html 2>/dev/null; then
+            echo "::warning title=Cloudflare bot-block (geen storing)::Datacenter-IP geblokkeerd door CF; echte bezoekers kunnen wel. HTTP=$HTTP"
+            echo "status=cf-bot-block" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [ "$HTTP" != "200" ]; then
             echo "::error title=Website down (HTTP $HTTP)::$URL onbereikbaar"
+            echo "status=down" >> "$GITHUB_OUTPUT"
             exit 1
           fi
-          if ! grep -qi "boekhoudbaar" /tmp/site.html; then
-            echo "::error title=Website body verdacht::geen 'boekhoudbaar' in HTML — mogelijk DNS/cache-issue"
-            exit 1
-          fi
-          echo "✅ Website OK ($URL → HTTP 200, brand intact)"
+          echo "::error title=Website body verdacht::HTTP 200 maar geen 'boekhoudbaar' in HTML — mogelijk DNS/cache-issue"
+          echo "status=body-suspect" >> "$GITHUB_OUTPUT"
+          exit 1
 
       - name: Licentieserver healthy?
+        id: licence
+        continue-on-error: true
         env:
           LICENCE_EXEC_URL: ${{ secrets.LICENCE_EXEC_URL }}
         run: |
           if [ -z "$LICENCE_EXEC_URL" ]; then
             echo "::warning title=LICENCE_EXEC_URL ontbreekt::Stel secret in voor monitoring"
+            echo "status=skipped" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           HTTP=$(curl -s -L -o /tmp/health.json -w "%{http_code}" \
@@ -50,19 +75,48 @@ jobs:
           echo "Status: $HTTP — Body: $BODY"
           if [ "$HTTP" != "200" ]; then
             echo "::error title=Licentieserver down (HTTP $HTTP)::Klanten kunnen geen licentie activeren of valideren"
+            echo "status=down" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           if echo "$BODY" | grep -qi '"healthy"\s*:\s*false\|"ok"\s*:\s*false'; then
             echo "::error title=Licentieserver unhealthy::config-issue gerapporteerd"
+            echo "status=unhealthy" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           echo "✅ Licentieserver healthy"
+          echo "status=ok" >> "$GITHUB_OUTPUT"
 
       - name: Mollie API bereikbaar?
+        id: mollie
+        continue-on-error: true
         run: |
-          HTTP=$(curl -s -o /dev/null -w "%{http_code}" "https://api.mollie.com/v2/methods")
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "User-Agent: Mozilla/5.0 (compatible; Boekhoudbaar-Monitor/1.0)" \
+            "https://api.mollie.com/v2/methods")
           if [ "$HTTP" != "200" ] && [ "$HTTP" != "401" ]; then
             echo "::error title=Mollie API down (HTTP $HTTP)::Betalingen werken niet"
+            echo "status=down" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           echo "✅ Mollie API up (HTTP $HTTP, 401 = ok zonder key)"
+          echo "status=ok" >> "$GITHUB_OUTPUT"
+
+      # V7: roll-up. Faalt de job alleen als een ECHTE storing is gedetecteerd
+      # (down / unhealthy / body-suspect) — cf-bot-block en skipped tellen niet.
+      - name: Eindoordeel
+        run: |
+          W="${{ steps.website.outputs.status }}"
+          L="${{ steps.licence.outputs.status }}"
+          M="${{ steps.mollie.outputs.status }}"
+          echo "Website: ${W:-?}, Licentieserver: ${L:-?}, Mollie: ${M:-?}"
+          FAIL=0
+          for s in "$W" "$L" "$M"; do
+            case "$s" in
+              down|unhealthy|body-suspect) FAIL=1 ;;
+            esac
+          done
+          if [ "$FAIL" = "1" ]; then
+            echo "::error title=Een of meer endpoints down::Zie stappen hierboven"
+            exit 1
+          fi
+          echo "✅ Alle endpoints OK (cf-bot-block en skipped tellen niet als storing)"

@@ -1184,6 +1184,43 @@ const FEATURE_DEFAULTS = {
 };
 
 /**
+ * V8: stuur notificatie-mail met automatische DLQ-fallback.
+ *
+ * Mail-calls in proactieve checks (BTW-reminder, suppletie, KIA-misser,
+ * bewaarplicht) waren tot nu toe fail-soft: try/catch zonder retry. Bij een
+ * tijdelijke Brevo/MailApp-storing of quota-fail verdween de melding stil
+ * → klant wist niet dat er iets te doen was → boete/aftrek-verlies.
+ *
+ * Nu: poging via MailApp.sendEmail; bij fout wordt het bericht in de DLQ
+ * gezet en automatisch later opnieuw geprobeerd (dlqVerwerkRetries_,
+ * exponentiële backoff 1u/4u/12u). Klant ziet de melding binnen 24u toch,
+ * mits de mail-quota uiteindelijk herstelt.
+ *
+ * @param {string} ontvanger
+ * @param {string} onderwerp
+ * @param {string} tekst
+ * @return {boolean} true bij directe verzending, false bij DLQ-fallback.
+ */
+function stuurMailMetDlq_(ontvanger, onderwerp, tekst) {
+  if (!ontvanger) return false;
+  if (typeof isGeldigEmail_ === 'function' && !isGeldigEmail_(ontvanger)) return false;
+  try {
+    MailApp.sendEmail(ontvanger, onderwerp, tekst);
+    return true;
+  } catch (mailErr) {
+    try {
+      if (typeof dlqVoegToe_ === 'function') {
+        dlqVoegToe_('EMAIL_NOTIFICATIE',
+          { email: ontvanger, onderwerp: onderwerp, tekst: tekst },
+          String(mailErr.message || mailErr));
+      }
+    } catch (_) {}
+    Logger.log('Mail-fail → DLQ: ' + ontvanger + ' "' + onderwerp + '" — ' + mailErr.message);
+    return false;
+  }
+}
+
+/**
  * Case-insensitive ja/nee-interpretatie voor klant-instellingen.
  *
  * V3-FIX (boete-preventie): toggles in Instellingen werden eerder met strikte

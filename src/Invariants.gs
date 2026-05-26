@@ -301,6 +301,83 @@ function bepaalBewaarplichtTot_(bewaarplichtTot, isOnroerend) {
   return new Date(boekjaarEinde.getFullYear() + jaren, 11, 31);
 }
 
+/**
+ * V6: proactieve bewaarplicht-waarschuwing.
+ *
+ * Fiscale bewaarplicht art. 52 AWR = 7 jaar (10 voor onroerend goed). Als de
+ * oudste journaalpost in de spreadsheet de 6,5-jaars-grens nadert, krijgt
+ * de klant een mail met de aanbeveling om NU het XAF-bestand + PDF-archief
+ * te exporteren en buiten Google Drive te bewaren. Zonder die backup riskeer
+ * je bij een Belastingdienst-controle bewijslast-omkering (= naheffing
+ * zonder verweer als je administratie niet meer compleet is).
+ *
+ * Idempotent: 1× per kalenderjaar via ScriptProperty BEWAARPLICHT_GEMELD_<jaar>.
+ * Aangeroepen vanuit dagelijkseTaken.
+ */
+function controleerBewaarplichtAlert_() {
+  let ss;
+  try { ss = getSpreadsheet_(); } catch (_) { return; }
+  if (!ss) return;
+  const jpSheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  if (!jpSheet || jpSheet.getLastRow() < 2) return;
+
+  // Scan kolom [1] (Datum). Beperk tot een vaste range om niet 50k rijen
+  // te hoeven scannen — alleen de eerste 5 datum-cellen na de header zijn
+  // genoeg om de oudste te kennen als het een normaal-geordende sheet is.
+  // Defense: bij ongeordende sheet doen we volle scan tot eerste 1000 rijen.
+  const max = Math.min(jpSheet.getLastRow(), 1001);
+  const data = jpSheet.getRange(2, 2, max - 1, 1).getValues();
+  let oudsteDatum = null;
+  for (let i = 0; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    const d = parseDatum_(data[i][0]);
+    if (!d || isNaN(d.getTime())) continue;
+    if (!oudsteDatum || d < oudsteDatum) oudsteDatum = d;
+  }
+  if (!oudsteDatum) return;
+
+  const dagenSinds = Math.floor((Date.now() - oudsteDatum.getTime()) / (24 * 60 * 60 * 1000));
+  if (dagenSinds < 6.5 * 365) return;  // bewaarplicht nog ruim binnen termijn
+
+  // Idempotent: 1× per kalenderjaar
+  const huidigJaar = new Date().getFullYear();
+  const idemKey = 'BEWAARPLICHT_GEMELD_' + huidigJaar;
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty(idemKey)) return;
+  try { props.setProperty(idemKey, String(Date.now())); } catch (_) {}
+
+  const jaren = Math.round(dagenSinds / 365 * 10) / 10;
+  try {
+    schrijfAuditLog_('BEWAARPLICHT NADERT',
+      'Oudste boeking ' +
+      Utilities.formatDate(oudsteDatum, 'Europe/Amsterdam', 'yyyy-MM-dd') +
+      ' = ' + jaren + ' jaar oud. XAF-archief aanbevolen.');
+  } catch (_) {}
+
+  const ontvanger = (typeof getInstelling_ === 'function')
+    ? (getInstelling_('Email rapporten naar') || getInstelling_('Email'))
+    : null;
+  if (!ontvanger) return;
+
+  const body =
+    'Beste,\n\n' +
+    'Je oudste boeking dateert van ' +
+    Utilities.formatDate(oudsteDatum, 'Europe/Amsterdam', 'dd-MM-yyyy') + '.\n' +
+    'Dat is ongeveer ' + jaren + ' jaar geleden.\n\n' +
+    'De fiscale bewaarplicht (art. 52 AWR) is 7 jaar (10 jaar voor onroerend\n' +
+    'goed). Exporteer NU het XAF-bestand én een PDF-archief van je facturen,\n' +
+    'en bewaar dat BUITEN Google Drive (USB, externe schijf, persoonlijke cloud).\n\n' +
+    'In Boekhoudbaar:  Controle & Export → XAF-export\n\n' +
+    'Bij een Belastingdienst-controle is dit het verschil tussen "ik heb alles\n' +
+    'bewaard" en bewijslast-omkering — dat laatste betekent naheffing zonder\n' +
+    'verweer als je administratie niet meer compleet is.\n\n' +
+    'Boekhoudbaar';
+
+  if (typeof stuurMailMetDlq_ === 'function') {
+    stuurMailMetDlq_(ontvanger, '📦 Bewaarplicht: archiveer je boekhouding nu', body);
+  }
+}
+
 // ─────────────────────────────────────────────
 //  HOOFD-VALIDATOR: alle invariants in één call
 // ─────────────────────────────────────────────
