@@ -1387,6 +1387,13 @@ function dagelijkseTaken() {
     // stil falen → BTW-reminder draaide niet → klant miste deadline → €68+ boete.
     if (isJa_(getInstelling_('BTW aangifte herinnering'))) controleerBtwDeadlines_();
   });
+  // V3-FIX: proactieve suppletie-check. detecteerSuppletieMogelijk_ bestond
+  // al maar zat alleen op een menu-item. Klant die niet handmatig "Controleer
+  // afsluiting" runt mist de boete-vrije 8-weken-termijn voor vrijwillige
+  // verbetering → bij latere Belastingdienst-ontdekking: 30% boete + rente.
+  _runTaak_('suppletieCheck',   function() {
+    if (typeof controleerSuppletieProactief_ === 'function') controleerSuppletieProactief_();
+  });
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   _runTaak_('groottecheck',     function() { controleerSheetGrootte_(ss); });

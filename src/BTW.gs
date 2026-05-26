@@ -500,6 +500,39 @@ function sluitBtwPeriode() {
   // Vergrendel de periode automatisch na afsluiten
   vergrendelPeriode_(periode.van, periode.tot, `BTW ${kwartaal} ${jaar}`);
 
+  // V3-FIX (suppletie): leg snapshot vast van wat NU is aangegeven, zodat
+  // detecteerSuppletieMogelijk_ over weken/maanden kan vergelijken met de
+  // dan-actuele boekstand. Zonder dit blijft BTW_SNAPSHOTS leeg en is de
+  // suppletie-detector dood (alles "geen suppletie nodig", ook bij €5.000
+  // retroactieve correctie → klant dient niet in → naheffing + 30% boete
+  // bij latere Belastingdienst-ontdekking).
+  try {
+    const props = PropertiesService.getScriptProperties();
+    let snaps;
+    try { snaps = JSON.parse(props.getProperty('BTW_SNAPSHOTS') || '{}'); }
+    catch (_) { snaps = {}; }
+    snaps[jaar + '_' + kwartaal] = {
+      saldo:    aangifte.saldo,
+      r1a_btw:  aangifte.r1a_btw  || 0,
+      r1b_btw:  aangifte.r1b_btw  || 0,
+      r1c_btw:  aangifte.r1c_btw  || 0,
+      r1e_btw:  aangifte.r1e_btw  || 0,
+      r4a_btw:  aangifte.r4a_btw  || 0,
+      r5a:      aangifte.r5a      || 0,
+      r5b:      aangifte.r5b      || 0,
+      vastgelegdOp: new Date().toISOString(),
+    };
+    props.setProperty('BTW_SNAPSHOTS', JSON.stringify(snaps));
+    try { schrijfAuditLog_('BTW snapshot vastgelegd',
+      kwartaal + ' ' + jaar + ' — saldo ' + formatBedrag_(aangifte.saldo)); } catch (_) {}
+  } catch (snapErr) {
+    // Niet-kritiek: snapshot mist is een gemis aan suppletie-detectie,
+    // niet aan de aangifte zelf. Logger + audit zodat we het wel weten.
+    Logger.log('BTW snapshot fout (niet-kritiek): ' + snapErr.message);
+    try { schrijfAuditLog_('BTW snapshot MISLUKT',
+      kwartaal + ' ' + jaar + ' — ' + snapErr.message); } catch (_) {}
+  }
+
   const actie = aangifte.saldo >= 0
     ? `Te betalen: ${formatBedrag_(aangifte.saldo)}\nDeadline: ${bepaalBtwDeadline_(kwartaal, jaar)}\n\nMaak de betaling over aan de Belastingdienst vóór de deadline.`
     : `Terug te vorderen: ${formatBedrag_(Math.abs(aangifte.saldo))}\nDien uw aangifte in om dit terug te krijgen.`;
