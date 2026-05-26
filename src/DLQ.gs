@@ -146,6 +146,14 @@ function _dlqHandler_(type, payload) {
         return true;
       } catch (_) { return false; }
 
+    case 'EMAIL_NOTIFICATIE':
+      // V8: proactieve checks (BTW-reminder/suppletie/KIA-misser/bewaarplicht)
+      // gebruiken stuurMailMetDlq_ → bij MailApp-fail komt het hier terecht.
+      try {
+        MailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst);
+        return true;
+      } catch (_) { return false; }
+
     default:
       Logger.log('DLQ handler onbekend type: ' + type);
       return false;

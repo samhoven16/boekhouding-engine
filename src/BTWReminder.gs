@@ -113,13 +113,29 @@ Uw boekhoudprogramma`;
   // Try/catch zodat een GmailApp-quota-fout de trigger-keten niet stopt;
   // props alleen bijwerken bij geslaagde verzending (anders wordt morgen
   // opnieuw geprobeerd — gewenst gedrag).
-  try {
-    GmailApp.sendEmail(email, onderwerp, body);
+  //
+  // V8: via stuurMailMetDlq_ — bij Brevo/Gmail-quota-fail komt het bericht in
+  // de DLQ en wordt automatisch opnieuw geprobeerd binnen 1u/4u/12u in plaats
+  // van stilletjes te verdwijnen → klant mist deadline niet door één hapering.
+  // Markeer als verstuurd alleen bij directe verzending; bij DLQ-fallback NIET
+  // markeren zodat een succesvolle retry alsnog een fresh herinnering geeft
+  // (de DLQ-retry zélf verstuurt; periodeKey wordt dan in volgende dag-loop
+  // alsnog gemarkeerd via dezelfde flow).
+  const verzonden = (typeof stuurMailMetDlq_ === 'function')
+    ? stuurMailMetDlq_(email, onderwerp, body)
+    : (function() {
+        try { GmailApp.sendEmail(email, onderwerp, body); return true; }
+        catch (e) {
+          Logger.log('BTW herinnering MISLUKT: ' + e.message);
+          try { schrijfAuditLog_('BTW reminder MISLUKT', e.message); } catch (_) {}
+          return false;
+        }
+      })();
+  if (verzonden) {
     props.setProperty(verstuurdKey, periodeKey);
     Logger.log('BTW herinnering verstuurd naar ' + email);
-  } catch (e) {
-    Logger.log('BTW herinnering MISLUKT: ' + e.message);
-    try { schrijfAuditLog_('BTW reminder MISLUKT', e.message); } catch (_) {}
+  } else {
+    Logger.log('BTW herinnering naar DLQ (' + email + ') — retry binnen 24u');
   }
 }
 

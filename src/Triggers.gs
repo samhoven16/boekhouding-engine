@@ -1394,6 +1394,18 @@ function dagelijkseTaken() {
   _runTaak_('suppletieCheck',   function() {
     if (typeof controleerSuppletieProactief_ === 'function') controleerSuppletieProactief_();
   });
+  // V5: KIA-misser detectie. Investering verkeerd op kostenrekening = klant
+  // mist 28% KIA-aftrek. Aggregeer jaar-totaal, mail bij ≥€2.901 potentieel
+  // gemist. Idempotent per kwartaal.
+  _runTaak_('kiaMisser', function() {
+    if (typeof controleerKiaMisserProactief_ === 'function') controleerKiaMisserProactief_();
+  });
+  // V6: bewaarplicht pre-alert. Oudste boeking > 6,5 jaar = klant moet XAF +
+  // PDF-archief offline opslaan vóór 7-jaars-grens. Voorkomt bewijslast-
+  // omkering bij latere Belastingdienst-controle. 1×/kalenderjaar.
+  _runTaak_('bewaarplichtAlert', function() {
+    if (typeof controleerBewaarplichtAlert_ === 'function') controleerBewaarplichtAlert_();
+  });
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   _runTaak_('groottecheck',     function() { controleerSheetGrootte_(ss); });

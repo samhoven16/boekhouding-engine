@@ -1642,6 +1642,108 @@ function signaleerAfschrijvingskandidaat_(ss, bedrag, leverancier, omschr) {
 }
 
 // ─────────────────────────────────────────────
+//  V5 — PROACTIEVE KIA-MISSER DETECTIE
+//  signaleerAfschrijvingskandidaat_ schrijft alleen audit-log dat de klant
+//  zelden ziet. Deze functie aggregeert ALLE potentieel-gemiste investeringen
+//  van het lopende jaar en mailt de klant met een geschatte gemiste KIA.
+//  Klant mist anders €420-€19.769 KIA-aftrek (28%-zone) afhankelijk van
+//  omvang investeringen. Dagelijks aangeroepen via dagelijkseTaken.
+// ─────────────────────────────────────────────
+function controleerKiaMisserProactief_() {
+  let ss;
+  try { ss = getSpreadsheet_(); } catch (_) { return; }
+  if (!ss) return;
+  const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (!ifSheet || ifSheet.getLastRow() < 2) return;
+
+  const B = getBelasting_();
+  const grens  = B.ACTIVEER_GRENS || 450;
+  const kiaMin = B.KIA_MIN || 2901;
+  const huidigJaar = new Date().getFullYear();
+  const data = ifSheet.getDataRange().getValues();
+
+  let totaalPotMisser = 0;
+  const kandidaten = [];
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][3]) continue;
+    const datum = parseDatum_(data[i][3]);  // [3] Factuurdatum
+    if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== huidigJaar) continue;
+    const status = String(data[i][12] || '');
+    if (status === FACTUUR_STATUS.GECREDITEERD) continue;
+    const bedragExcl = parseFloat(data[i][8]) || 0;
+    if (bedragExcl < grens) continue;
+    const kostenRek = String(data[i][15] || '').trim();
+    // Skip als al op activa (0xxx) geboekt — dan is KIA al van toepassing
+    if (!kostenRek || kostenRek.charAt(0) === '0') continue;
+    totaalPotMisser += bedragExcl;
+    kandidaten.push({
+      datum:       Utilities.formatDate(datum, 'Europe/Amsterdam', 'yyyy-MM-dd'),
+      leverancier: String(data[i][6] || ''),
+      bedrag:      bedragExcl,
+      rek:         kostenRek,
+      omschr:      String(data[i][7] || ''),
+    });
+  }
+
+  // Onder KIA-drempel = geen KIA mogelijk → geen mail
+  if (totaalPotMisser < kiaMin) return;
+
+  const kiaGeschat = (typeof berekenKiaAftrek_ === 'function')
+    ? berekenKiaAftrek_(totaalPotMisser, B) : 0;
+  if (kiaGeschat < 100) return;  // <€100 KIA-impact is geen mail waard
+
+  // Idempotency per kwartaal — 90 dgn cooldown per kwartaal-bucket
+  const kwartaal = Math.floor(new Date().getMonth() / 3) + 1;
+  const idemKey  = 'KIA_MISSER_GEMELD_' + huidigJaar + '_Q' + kwartaal;
+  const props    = PropertiesService.getScriptProperties();
+  const eerderRaw = props.getProperty(idemKey);
+  const nuMs     = Date.now();
+  if (eerderRaw) {
+    const eerder = parseInt(eerderRaw, 10);
+    if (eerder && (nuMs - eerder) < 90 * 24 * 60 * 60 * 1000) return;
+  }
+  // Markeer VÓÓR mail — voorkomt mail-storm bij retry-loop
+  try { props.setProperty(idemKey, String(nuMs)); } catch (_) {}
+
+  try {
+    schrijfAuditLog_('KIA MISSER kandidaten',
+      kandidaten.length + ' uitgaven, totaal ' + formatBedrag_(totaalPotMisser) +
+      ' → mogelijk gemist KIA ' + formatBedrag_(kiaGeschat));
+  } catch (_) {}
+
+  const ontvanger = getInstelling_('Email rapporten naar') || getInstelling_('Email');
+  if (!ontvanger) return;
+
+  const top10 = kandidaten.slice(0, 10).map(function(k) {
+    const omschr = k.omschr.length > 50 ? k.omschr.slice(0, 50) + '…' : k.omschr;
+    return '  • ' + k.datum + ' — ' + k.leverancier + ': ' + formatBedrag_(k.bedrag) +
+           ' (rek ' + k.rek + ', "' + omschr + '")';
+  }).join('\n');
+  const meer = kandidaten.length > 10
+    ? '\n  … en nog ' + (kandidaten.length - 10) + ' uitgave(n)'
+    : '';
+
+  const body =
+    'Beste,\n\n' +
+    'In je boekhouding zijn ' + kandidaten.length + ' uitgaven van €' + grens +
+    ' of meer geboekt op een KOSTENREKENING. Voor aankopen die eigenlijk\n' +
+    'INVESTERINGEN zijn (laptop, machine, meubilair, voertuig, server, etc.)\n' +
+    'kan KIA-aftrek (28%) van toepassing zijn — door ze te activeren op een\n' +
+    '02xx-rekening claim je tot ' + formatBedrag_(kiaGeschat) + ' extra aftrek.\n\n' +
+    'Totaal mogelijk activeerbaar: ' + formatBedrag_(totaalPotMisser) + '\n' +
+    'Geschat gemiste KIA-aftrek:   ' + formatBedrag_(kiaGeschat) + '\n\n' +
+    'Top kandidaten:\n' + top10 + meer + '\n\n' +
+    'Niet alle uitgaven zijn investeringen — controleer per regel. Een laptop\n' +
+    'wel, een telefoonabonnement niet. Corrigeer in de Inkoopfacturen-tab vóór\n' +
+    '31 december van dit jaar om KIA te claimen.\n\n' +
+    'Boekhoudbaar';
+
+  if (typeof stuurMailMetDlq_ === 'function') {
+    stuurMailMetDlq_(ontvanger, '💰 KIA-aftrek mogelijk gemist (~€' + Math.round(kiaGeschat) + ')', body);
+  }
+}
+
+// ─────────────────────────────────────────────
 //  PRIVÉ BELASTINGVOORDELEN
 // ─────────────────────────────────────────────
 function berekenPriveBelastingvoordelen_(winst) {

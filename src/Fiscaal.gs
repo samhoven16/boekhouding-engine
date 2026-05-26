@@ -356,8 +356,14 @@ function controleerSuppletieProactief_() {
         'en dien daarna in via Mijn Belastingdienst Zakelijk → "Suppletie omzetbelasting".\n\n' +
         'Niet indienen kan bij latere ontdekking leiden tot naheffing + 30% verzuimboete + rente.\n\n' +
         'Boekhoudbaar';
-      try { MailApp.sendEmail(ontvanger, '🔄 Suppletie BTW verplicht — actie binnen 8 weken', body); }
-      catch (_) {}
+      // V8: via stuurMailMetDlq_ — bij MailApp-quota-fail komt het in de DLQ
+      // en wordt automatisch opnieuw geprobeerd. Stille verdwijning van een
+      // suppletie-melding zou de boete-vrije 8-weken-termijn kunnen kosten.
+      if (typeof stuurMailMetDlq_ === 'function') {
+        stuurMailMetDlq_(ontvanger, '🔄 Suppletie BTW verplicht — actie binnen 8 weken', body);
+      } else {
+        try { MailApp.sendEmail(ontvanger, '🔄 Suppletie BTW verplicht — actie binnen 8 weken', body); } catch (_) {}
+      }
     }
   } catch (_) {}
 }
