@@ -284,6 +284,85 @@ function detecteerSuppletieMogelijk_() {
 }
 
 /**
+ * Proactieve suppletie-check vanuit dagelijkseTaken.
+ *
+ * V3-FIX: detecteerSuppletieMogelijk_ bestond al maar werd alleen aangeroepen
+ * via een menu-item dat klanten zelf moeten kiezen. Bij een retroactieve
+ * correctie > €1.000 is suppletie binnen 5 jaar verplicht — en de eerste
+ * 8 weken zonder boete (vrijwillige verbetering). Klant die niet handmatig
+ * "Controleer afsluiting" runt mist die boete-vrije termijn → bij latere
+ * Belastingdienst-ontdekking: naheffing + 30% boete + heffingsrente.
+ *
+ * Idempotent: per periode max 1× per 90 dagen mailen, ook bij dagelijks
+ * dezelfde detectie. Klant kan in die 90 dagen indienen of negeren.
+ *
+ * Fail-soft: elke fout wordt gelogd, dagelijkseTaken stopt nooit op
+ * suppletie-check (best-effort waarschuwing).
+ */
+function controleerSuppletieProactief_() {
+  let verschillen;
+  try { verschillen = detecteerSuppletieMogelijk_(); }
+  catch (e) { Logger.log('Suppletie-check fout: ' + e.message); return; }
+  if (!verschillen || verschillen.length === 0) return;
+
+  const verplicht = verschillen.filter(function(v) { return v.verplicht; });
+  if (verplicht.length === 0) return;  // alle verschillen <€1.000 = mogen mee in volgende aangifte
+
+  const props = PropertiesService.getScriptProperties();
+  const nuMs = Date.now();
+  const cooldownMs = 90 * 24 * 60 * 60 * 1000;  // 90 dgn
+
+  const opnieuwTeMelden = verplicht.filter(function(v) {
+    const key = 'SUPPLETIE_GEMELD_' + v.periode;
+    const eerderRaw = props.getProperty(key);
+    if (eerderRaw) {
+      const eerder = parseInt(eerderRaw, 10);
+      if (eerder && (nuMs - eerder) < cooldownMs) return false;  // nog binnen 90d
+    }
+    return true;
+  });
+  if (opnieuwTeMelden.length === 0) return;
+
+  // Markeer ALS GEMELD vóór mail-poging — voorkomt mail-storm bij retry-loop.
+  opnieuwTeMelden.forEach(function(v) {
+    try { props.setProperty('SUPPLETIE_GEMELD_' + v.periode, String(nuMs)); } catch (_) {}
+  });
+
+  // Audit-log + klant-melding via toast + email
+  try {
+    const samenvatting = opnieuwTeMelden.map(function(v) {
+      const richting = v.verschil > 0 ? 'extra te betalen' : 'extra terug te vragen';
+      return v.periode + ': ' + formatBedrag_(Math.abs(v.verschil)) + ' ' + richting;
+    }).join('; ');
+    schrijfAuditLog_('Suppletie VERPLICHT gedetecteerd', samenvatting);
+  } catch (_) {}
+
+  // Email naar eigenaar — gebruikt zelfde key als BTW-reminder (PR #117 fix)
+  try {
+    const ontvanger = getInstelling_('Email rapporten naar') || getInstelling_('Email');
+    if (ontvanger && typeof isGeldigEmail_ === 'function' && isGeldigEmail_(ontvanger)) {
+      const lijst = opnieuwTeMelden.map(function(v) {
+        const richting = v.verschil > 0 ? 'extra te BETALEN' : 'extra TERUG te vragen';
+        return '  • ' + v.periode + ': ' + formatBedrag_(Math.abs(v.verschil)) + ' ' + richting +
+               ' (vorige aangifte ' + formatBedrag_(v.oudBedrag) + ' → nu ' + formatBedrag_(v.nieuwBedrag) + ')';
+      }).join('\n');
+      const body =
+        'Beste,\n\n' +
+        'In je boekhouding is een retroactieve wijziging gedetecteerd op een AFGESLOTEN BTW-periode\n' +
+        'met een verschil ≥ €1.000. Voor zulke wijzigingen ben je verplicht een suppletie-aangifte\n' +
+        'in te dienen bij de Belastingdienst (binnen 5 jaar; de eerste 8 weken zonder boete).\n\n' +
+        'Periode(s) met verschil:\n' + lijst + '\n\n' +
+        'Open je boekhouding → menu BTW → "Suppletie-rapport genereren" voor de exacte bedragen,\n' +
+        'en dien daarna in via Mijn Belastingdienst Zakelijk → "Suppletie omzetbelasting".\n\n' +
+        'Niet indienen kan bij latere ontdekking leiden tot naheffing + 30% verzuimboete + rente.\n\n' +
+        'Boekhoudbaar';
+      try { MailApp.sendEmail(ontvanger, '🔄 Suppletie BTW verplicht — actie binnen 8 weken', body); }
+      catch (_) {}
+    }
+  } catch (_) {}
+}
+
+/**
  * Genereer suppletie-rapport tabblad met alle gedetecteerde correcties.
  */
 function genereerSuppletieRapport() {
