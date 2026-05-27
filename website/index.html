@@ -184,6 +184,14 @@
             "@type": "Answer",
             "text": "Na aankoop ontvang je je licentiesleutel per e-mail. Activeren duurt 5 minuten. Daarna kun je direct je eerste factuur versturen."
           }
+        },
+        {
+          "@type": "Question",
+          "name": "Google geeft een 'niet-geverifieerde app'-waarschuwing — is dat veilig?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ja, dat is correct én verwacht. Boekhoudbaar heeft Google's officiële OAuth-app-verification (€5k-€15k + audit van 3-8 weken) niet doorlopen — voor een €49-product is dat onhaalbaar. De waarschuwing zegt niets over veiligheid; hij verschijnt voor ALLE niet-geverifieerde Apps Scripts. Klik 'Geavanceerd' → 'Ga naar Boekhoudbaar (onveilig)' — standaard procedure. Code is source-available op GitHub voor inspectie."
+          }
         }
       ]
     }
@@ -1705,6 +1713,13 @@
       <details id="gmail">
         <summary>Heb ik een Gmail-adres nodig?</summary>
         <p>Nee. Een gratis Google-account is genoeg en die kun je aanmaken met je bestaande email (Outlook, iCloud, Proton, eigen domein). <a href="https://accounts.google.com/signup" target="_blank" rel="noopener">accounts.google.com/signup</a> → "Use my existing email". 2 minuten.</p>
+      </details>
+
+      <details id="google-warning">
+        <summary>Google geeft een "niet-geverifieerde app"-waarschuwing — is dat veilig?</summary>
+        <p>Ja, dat is correct én verwacht. Boekhoudbaar is een klein NL-bedrijf en heeft de officiële Google OAuth-app-verification (€5.000-€15.000 + 3-8 weken audit) niet doorlopen — voor een €49-product is dat onhaalbaar. <strong>De waarschuwing zegt niets over veiligheid</strong>: hij verschijnt voor ALLE Apps Scripts die niet door Google zijn geverifieerd, óók eerlijke kleine producten zoals deze.</p>
+        <p><strong>Wat de waarschuwing concreet betekent:</strong> Google weet niet of mijn app-naam, logo en privacy-policy door een grote organisatie zijn nagekeken. Dat is alles. De code zelf draait wel binnen Google's eigen infrastructuur, op jouw Drive, met OAuth-permissies die jij expliciet bevestigt.</p>
+        <p><strong>Eerlijk advies:</strong> klik op <em>"Geavanceerd"</em> → <em>"Ga naar Boekhoudbaar (onveilig)"</em>. Dat is standaard-procedure bij niet-geverifieerde Apps Scripts in NL. Wil je 100% zekerheid? Lees eerst de code op <a href="https://github.com/samhoven16/boekhouding-engine" target="_blank" rel="noopener">GitHub</a> (source-available) of mail <a href="mailto:hallo@boekhoudbaar.nl">hallo@boekhoudbaar.nl</a> voor uitleg. Geen druk.</p>
       </details>
 
     </div>
