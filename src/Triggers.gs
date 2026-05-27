@@ -116,6 +116,27 @@ function schrijfAuditEdit_(e) {
   let user = '';
   try { user = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || ''; } catch (_) {}
 
+  // CYCLE-5 (axiom 5 — immutable na commit): detecteer wijzigingen op
+  // financieel-kritieke kolommen van JOURNAALPOSTEN. In bound-script kan
+  // sheet-protection klant niet hard tegenhouden (klant = eigenaar). Dus:
+  //   1. severity-flag in audit-log
+  //   2. toast met sterke waarschuwing
+  //   3. owner-alert via meldFataalAanOwner_
+  // Correcties horen via storno-boeking (nieuwe inverse journaalpost), niet
+  // door bestaande regels te wijzigen.
+  let severity = 'cell-edit';
+  let kritiek = false;
+  if (naam === SHEETS.JOURNAALPOSTEN) {
+    // JOURNAALPOSTEN kolom-indices (1-based in A1Notation):
+    //   B=Datum  E=Debet rek  G=Credit rek  I=Bedrag  J=BTW%  K=BTW bedrag
+    const a1 = e.range.getA1Notation();
+    const kolomLetter = String(a1).replace(/[0-9]/g, '').toUpperCase();
+    if (['B', 'E', 'G', 'I', 'J', 'K'].indexOf(kolomLetter) !== -1) {
+      severity = 'KRITIEKE-JOURNAALPOST-WIJZIGING';
+      kritiek = true;
+    }
+  }
+
   const rij = [
     new Date(),
     user,
@@ -123,7 +144,7 @@ function schrijfAuditEdit_(e) {
     e.range.getA1Notation(),
     String(oud).slice(0, 500),
     String(nieuw).slice(0, 500),
-    'cell-edit',
+    severity,
   ];
 
   // Voeg toe aan einde, daarna trim:
@@ -131,6 +152,27 @@ function schrijfAuditEdit_(e) {
   //  • Hard-cap 5000 rijen als safety-net tegen runaway-growth
   // Voorheen: 500 rijen ≈ 2,5 jaar, te kort voor compliance.
   auditSheet.appendRow(rij);
+
+  // Kritieke journaalpost-edit: toast + owner-alert.
+  if (kritiek) {
+    try {
+      ss.toast(
+        'Wijziging op cel ' + e.range.getA1Notation() + ' van Journaalposten geregistreerd. ' +
+        'Voor correcties: gebruik storno-boeking (nieuwe inverse regel), niet bestaande wijzigen — ' +
+        'art. 52 AWR vereist bewaarplicht van originele boekingen.',
+        '⚠ Kritieke journaalpost-wijziging',
+        15
+      );
+    } catch (_) {}
+    try {
+      if (typeof meldFataalAanOwner_ === 'function') {
+        meldFataalAanOwner_('JOURNAALPOST_MUTATIE',
+          'Klant heeft financiële kolom van Journaalposten gewijzigd',
+          { cel: e.range.getA1Notation(), oud: String(oud).slice(0, 100),
+            nieuw: String(nieuw).slice(0, 100), user: user });
+      }
+    } catch (_) {}
+  }
 
   _trimAuditLog_(auditSheet);
 }
