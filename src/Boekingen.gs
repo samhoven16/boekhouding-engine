@@ -1045,3 +1045,53 @@ function beheerGeslotenPeriodes() {
     ui.alert('Periode ontgrendeld.', 'U kunt weer boekingen maken in deze periode.', ui.ButtonSet.OK);
   }
 }
+
+// ─────────────────────────────────────────────
+//  CYCLE-9 — STORNO DIALOG (menu-entrypoint)
+// ─────────────────────────────────────────────
+/**
+ * Opent een dialog waarmee de klant een eerder geboekte journaalpost kan
+ * storneren. Vereist boekingId + reden (verplicht voor audit-trail).
+ *
+ * Strict-validatie via maakStornoJournaalpost_ (cycle 7):
+ *  - Origineel moet bestaan
+ *  - Mag niet al gestorneerd zijn
+ *  - Reden ≥ 5 tekens
+ */
+function openStornoDialog() {
+  if (typeof controleerSetupGedaan_ === 'function' && !controleerSetupGedaan_()) return;
+  const ui = SpreadsheetApp.getUi();
+  const idResp = ui.prompt(
+    'Journaalpost storneren',
+    'Welk boekingId wil je storneren? (zichtbaar in kolom A van Journaalposten, bv. BK000007)',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (idResp.getSelectedButton() !== ui.Button.OK) return;
+  const boekingId = String(idResp.getResponseText() || '').trim();
+  if (!boekingId) {
+    ui.alert('Geen boekingId opgegeven — storno geannuleerd.');
+    return;
+  }
+
+  const redenResp = ui.prompt(
+    'Reden van storno',
+    'Waarom wil je deze boeking storneren? (min. 5 tekens — komt in audit-trail voor Belastingdienst)',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (redenResp.getSelectedButton() !== ui.Button.OK) return;
+  const reden = String(redenResp.getResponseText() || '').trim();
+
+  try {
+    const ss = getSpreadsheet_();
+    const stornoId = maakStornoJournaalpost_(ss, boekingId, reden);
+    ui.alert(
+      'Storno geboekt',
+      'Boeking ' + boekingId + ' is teruggedraaid met een nieuwe inverse boeking (' + stornoId + ').\n\n' +
+      'Beide boekingen blijven zichtbaar in de Journaalposten-tab (art. 52 AWR — niets wordt verwijderd).\n' +
+      'Grootboeksaldi zijn nu terug in pre-origineel-staat.',
+      ui.ButtonSet.OK
+    );
+  } catch (err) {
+    ui.alert('Storno mislukt', err.message || String(err), ui.ButtonSet.OK);
+  }
+}
