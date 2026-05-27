@@ -311,11 +311,31 @@ function logoGekozen(input) {
   var file = input.files[0];
   if (!file) return;
   if (file.size > 200 * 1024) { alert('Logo te groot (max 200 KB). Maak de afbeelding kleiner.'); return; }
+
+  // CYCLE-4 FIX (axiom 14 + axiom 15): MIME-whitelist voorkomt SVG/HTML upload
+  // die via innerHTML XSS zou kunnen veroorzaken. SVG kan <script>-tags
+  // bevatten die uitvoeren bij rendering in bepaalde browser-contexten.
+  // Apps Script dialog draait in iframe \u2014 defense-in-depth ook hier.
+  var toegestaneMimes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+  var fileMime = String(file.type || '').toLowerCase();
+  if (toegestaneMimes.indexOf(fileMime) === -1) {
+    alert('Bestandstype niet ondersteund (' + (fileMime || 'onbekend') + '). Kies een PNG, JPG, GIF of WebP.');
+    if (input) input.value = '';
+    return;
+  }
+
   var reader = new FileReader();
   reader.onload = function(e) {
+    // Sanity-check: dataUrl moet exact match'en op raster-image data-URL formaat.
+    // Voorkomt dat een gewijzigde file.type met afwijkende werkelijke inhoud
+    // toch wordt geaccepteerd (defense vs. file.type-spoofing).
+    if (!/^data:image\/(png|jpeg|jpg|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(e.target.result)) {
+      alert('Bestand kon niet veilig worden gelezen. Kies een andere afbeelding.');
+      return;
+    }
     var parts = e.target.result.split(',');
     logoBase64 = parts[1];
-    logoMime = file.type || 'image/png';
+    logoMime = fileMime;
     toonLogoPreview(e.target.result);
     document.getElementById('logoStatus').textContent = '\u2713 ' + file.name + ' geselecteerd';
     document.getElementById('verwijderBtn').style.display = 'inline-block';
