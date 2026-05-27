@@ -150,6 +150,7 @@ function onOpen() {
       .addSeparator()
       .addItem('Afschrijvingen verwerken', 'boekAfschrijvingen')
       .addItem('✔ Concept-boekingen valideren (Human-in-the-Loop)', 'openValidatieChecklist')
+      .addItem('↺ Journaalpost storneren (correctie)', 'openStornoDialog')
       .addItem('BTW-periode afsluiten', 'sluitBtwPeriode')
     )
 
