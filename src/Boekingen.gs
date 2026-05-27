@@ -112,8 +112,50 @@ function maakJournaalpost_(ss, opt) {
     try { meldFataalAanOwner_('DATA_LOSS', 'Journaalpost-write faalde', { boekingId: boekingId, debet: opt.debet, credit: opt.credit, bedrag: bedragGevalideerd }); } catch (_) {}
     throw writeErr;
   }
-  updateGrootboekSaldo_(ss, opt.debet, bedragGevalideerd, 'debet');
-  updateGrootboekSaldo_(ss, opt.credit, bedragGevalideerd, 'credit');
+
+  // CYCLE-2 FIX (axiom 9 atomair): saldo-updates zijn 2 separate sheet-writes.
+  // Als de eerste slaagt en de tweede crasht (GAS-timeout, sheet-lock, quota),
+  // dan blijft het grootboek onevenwichtig staan → balans klopt niet.
+  // Compensating action: bij credit-fail de debet-update terugdraaien zodat
+  // het grootboek minstens INTERN consistent is. Journaalpost-rij wordt
+  // gemarkeerd als 'CORRUPT' zodat rapportages 'm kunnen skippen (axiom 13).
+  //
+  // Echte atomicity over 3 sheet-writes is in Google Sheets onmogelijk zonder
+  // externe transactie-store. Deze compensating-action-laag is de best
+  // haalbare benadering — bij worst-case (rollback faalt ook) wordt owner
+  // gealarmeerd via meldFataalAanOwner_ zodat handmatig herstel mogelijk is.
+  let debetGedaan = false;
+  try {
+    updateGrootboekSaldo_(ss, opt.debet, bedragGevalideerd, 'debet');
+    debetGedaan = true;
+    updateGrootboekSaldo_(ss, opt.credit, bedragGevalideerd, 'credit');
+  } catch (saldoErr) {
+    if (debetGedaan) {
+      // Rollback: keer debet-update om met tegengestelde zijde
+      try {
+        updateGrootboekSaldo_(ss, opt.debet, bedragGevalideerd, 'credit');
+        try { schrijfAuditLog_('JOURNAALPOST ATOMIC ROLLBACK',
+          'boekingId=' + boekingId + ' debet ' + opt.debet + ' teruggedraaid wegens credit-fail: ' + saldoErr.message); } catch (_) {}
+      } catch (rollbackErr) {
+        // Triple-fail: saldi zijn nu zeker corrupt. Markeer journaalpost-rij
+        // zodat rapportages 'm uitsluiten + alarmeer owner.
+        try {
+          const rij = sheet.getLastRow();
+          // Status-kolom Q (17) op CORRUPT zetten — rapportage-filter pakt dit op
+          sheet.getRange(rij, 17).setValue('CORRUPT');
+        } catch (_) {}
+        try { noodLog_('SALDO_CORRUPT',
+          'boekingId=' + boekingId + ' | saldo: ' + saldoErr.message +
+          ' | rollback: ' + rollbackErr.message); } catch (_) {}
+        try { meldFataalAanOwner_('SALDO_CORRUPT',
+          'Inconsistent grootboeksaldo na journaalpost — handmatig herstel nodig',
+          { boekingId: boekingId, debet: opt.debet, credit: opt.credit,
+            bedrag: bedragGevalideerd, saldoFout: saldoErr.message,
+            rollbackFout: rollbackErr.message }); } catch (_) {}
+      }
+    }
+    throw saldoErr;  // re-throw zodat caller weet dat de boeking onbruikbaar is
+  }
 
   return boekingId;
 }
