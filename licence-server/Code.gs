@@ -330,11 +330,46 @@ function maakBetaling(klantnaam, klantEmail, refCode) {
   // Sanitiseer ref opnieuw server-side: client kan alles sturen.
   const ref = String(refCode || '').replace(/[^A-Za-z0-9_-]/g, '').substring(0, 32);
   if (!klantnaam || !klantEmail) return { fout: 'Naam en e-mail zijn verplicht.' };
+  // CYCLE-8 FIX: max-length defense (RFC 5321 email = 254 chars; klantnaam
+  // > 200 chars wijst op script-attack of accidental paste). Voorheen geen
+  // bovengrens → grote payloads konden GAS-quota verbruiken of Mollie
+  // afkappen op onbekende manier.
+  if (klantnaam.length > 200) {
+    return { fout: 'Naam is te lang (max 200 tekens). Gebruik je gewone bedrijfs- of persoonsnaam.' };
+  }
+  if (klantEmail.length > 254) {
+    return { fout: 'E-mailadres is te lang. Controleer of je geen typefout hebt gemaakt.' };
+  }
   // Format-check zodat de licentie-mail later (na betaling) niet crasht.
   // Voor klant beter om vroeg te falen dan na betaling.
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(klantEmail)) {
     return { fout: 'Vul een geldig e-mailadres in (bijv. naam@voorbeeld.nl).' };
   }
+
+  // CYCLE-8 FIX: idempotency tegen dubbel-klik. Als zelfde email net (binnen
+  // 5 min) een checkout-URL kreeg, geef die TERUG ipv nieuwe Mollie-call.
+  // Voorheen: klant die 2x op "Betalen" klikt = 2 separate Mollie-payments
+  // aangemaakt → kans op 2x €49 afrekenen als ze beide doorlopen.
+  const cache = CacheService.getScriptCache();
+  const idemKey = 'maakBetaling_' + Utilities.computeDigest(
+    Utilities.DigestAlgorithm.MD5, klantEmail
+  ).map(function(b) { return (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'); })
+   .join('').slice(0, 16);
+  const eerderUrl = cache.get(idemKey);
+  if (eerderUrl) {
+    Logger.log('maakBetaling idempotent retour van checkout-URL voor ' + klantEmail.slice(0, 3) + '***');
+    return { checkoutUrl: eerderUrl };
+  }
+
+  // CYCLE-8 FIX: rate-limit per email (max 5 betalingen/uur). Voorkomt dat
+  // attacker met geldig email-formaat de Mollie-API spamt en daarmee onze
+  // quota uitput / Mollie ons blokkeert.
+  const rateLimitKey = 'rate_maakBetaling_' + idemKey;
+  const huidig = parseInt(cache.get(rateLimitKey) || '0', 10);
+  if (huidig >= 5) {
+    return { fout: 'Te veel betalingspogingen voor dit e-mailadres. Wacht een uur of neem contact op via hallo@boekhoudbaar.nl.' };
+  }
+  cache.put(rateLimitKey, String(huidig + 1), 3600);  // 1 uur
 
   const props     = PropertiesService.getScriptProperties();
   const mollieKey = props.getProperty('MOLLIE_API_KEY');
@@ -377,6 +412,11 @@ function maakBetaling(klantnaam, klantEmail, refCode) {
       Logger.log('Mollie fout/onvolledige response: ' + resp.getContentText().slice(0, 500));
       return { fout: 'Betaling aanmaken mislukt. Probeer opnieuw.' };
     }
+    // CYCLE-8 FIX: cache de checkout-URL voor idempotency bij dubbel-klik.
+    // 5 min TTL — lang genoeg dat klant op "Betalen" kan klikken zonder
+    // dubbel-charge-risico, kort genoeg dat een echte 2e betaling (later)
+    // wel doorgaat.
+    try { cache.put(idemKey, data._links.checkout.href, 300); } catch (_) {}
     return { checkoutUrl: data._links.checkout.href };
   } catch (err) {
     Logger.log('maakBetaling fout: ' + err.message);
