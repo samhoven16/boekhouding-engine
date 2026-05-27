@@ -131,6 +131,44 @@ function valideerJournaalpostBalans_(debetRekening, creditRekening, bedrag) {
       { bedrag: bedrag }
     );
   }
+  // CYCLE-3 FIX (axiom 8 — leaf accounts): blokkeer boekingen op pure
+  // category-header-rekeningen die NERGENS in src/ als debet/credit worden
+  // gebruikt en logisch parent zijn van meerdere sub-accounts.
+  //
+  // Conservatieve scope: alleen 3 onbetwiste parents. 1400/4100 zijn óók
+  // technisch parent maar worden ACTIEF gebruikt (BTW-suspensie + afdracht)
+  // — die strict-enforcen zou bestaande flow breken. Voor die ambigue
+  // gevallen: alleen audit-log waarschuwing (geen throw).
+  const debetStr  = String(debetRekening).trim();
+  const creditStr = String(creditRekening).trim();
+  const purePArents = ['0100', '0200', '0300'];
+  for (let i = 0; i < purePArents.length; i++) {
+    if (debetStr === purePArents[i] || creditStr === purePArents[i]) {
+      throw new InvariantSchending(
+        'REKENING_NIET_POSTABLE',
+        'Journaalpost kan niet worden geboekt op rekening ' + purePArents[i] +
+        ' — dit is een categorie-header, geen boekbare rekening. ' +
+        'Gebruik een specifieke sub-rekening (bv. 0110, 0120, 0210, 0220, etc.).',
+        { debet: debetStr, credit: creditStr, parent: purePArents[i] }
+      );
+    }
+  }
+  // Ambigue parents (1400, 4100) — alleen waarschuwen via audit-log.
+  // Verwijder deze warning zodra het design rond BTW-saldi (parent vs leaf)
+  // is uitgezuiverd. Voor nu: detectie zonder blokkade.
+  const ambiguousParents = ['1400', '4100'];
+  for (let j = 0; j < ambiguousParents.length; j++) {
+    if (debetStr === ambiguousParents[j] || creditStr === ambiguousParents[j]) {
+      try {
+        if (typeof schrijfAuditLog_ === 'function') {
+          schrijfAuditLog_('REKENING AMBIGU PARENT',
+            'Boeking op ' + ambiguousParents[j] + ' (parent-categorie). ' +
+            'Overweeg specifieke sub-rekening (1410/1420 voor BTW-voorbelasting, ' +
+            '4110/4120/4130 voor BTW-afdracht).');
+        }
+      } catch (_) {}
+    }
+  }
 }
 
 // ─────────────────────────────────────────────
