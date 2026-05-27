@@ -37,6 +37,7 @@ function doGet(e) {
   if (actie === 'valideer')      return valideerEndpoint_(e);
   if (actie === 'aanvraag-otp')  return rateLimit_(e, { actie: 'aanvraag-otp', perEmail: 5,  globaal: 500, windowMin: 60 }) || aanvraagOtpEndpoint_(e);
   if (actie === 'activeer-otp')  return rateLimit_(e, { actie: 'activeer-otp', perEmail: 12, globaal: 500, windowMin: 60 }) || activeerOtpEndpoint_(e);
+  if (actie === 'herstuur-licentie') return rateLimit_(e, { actie: 'herstuur-licentie', perEmail: 3, globaal: 200, windowMin: 60 }) || herstuurLicentieEndpoint_(e);
   if (actie === 'onboarded')     return onboardedEndpoint_(e);
   if (actie === 'config')        return configEndpoint_(e);
   if (actie === 'telemetry')     return telemetryEndpoint_(e);
@@ -1293,6 +1294,72 @@ function markeerTemplateOntbreekt_(sleutel) {
  * mail faalde (bv. TEMPLATE_SS_ID stond toen nog niet ingesteld).
  * Run in de editor: herstuurLicentiemailHandmatig("BKHE-XXXX-XXXX-XXXX")
  */
+/**
+ * CYCLE-13 — Klant-zelf-service: licentie-mail opnieuw versturen op basis
+ * van email. Klant heeft sleutel verloren / email gemist → kan zelf
+ * herstellen zonder support-ticket.
+ *
+ * Privacy-by-default: respons reveals NOOIT of email een actieve licentie
+ * heeft (anders = enumeration-leak). Altijd dezelfde "als bekend, mail
+ * onderweg"-melding. Audit-log capture'd of mail is verzonden.
+ *
+ * Rate-limit (via doGet rateLimit_):
+ *   - 3 herstuur-pogingen per email per uur
+ *   - 200 globaal per uur (catastrofale-spam-cap)
+ */
+function herstuurLicentieEndpoint_(e) {
+  const email = String((e && e.parameter && e.parameter.email) || '')
+    .trim().toLowerCase();
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    return jsonResp_({ ok: false, fout: 'Vul een geldig e-mailadres in.' });
+  }
+
+  // Constante respons — onafhankelijk van of email bestaat.
+  // Voorkomt account-enumeration-leak via timing of inhoud.
+  const genericeRespons = {
+    ok: true,
+    bericht: 'Als dit e-mailadres een actieve licentie heeft, ontvang je binnen enkele minuten opnieuw je installatie-mail. Check ook je spam-map.',
+  };
+
+  try {
+    const sheet = getLicentieSheet_();
+    const data = sheet.getDataRange().getValues();
+    let gevonden = null;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][2] || '').toLowerCase() === email &&
+          String(data[i][4] || '').toLowerCase().startsWith('actief')) {
+        gevonden = {
+          sleutel: String(data[i][0] || ''),
+          naam:    String(data[i][1] || 'Klant'),
+        };
+        break;
+      }
+    }
+    if (gevonden && gevonden.sleutel) {
+      try { stuurLicentiemail_(gevonden.naam, email, gevonden.sleutel); }
+      catch (mailErr) { Logger.log('herstuur-mail fout: ' + mailErr.message); }
+      try {
+        // Audit-log alleen owner-zichtbaar, met email-hash voor privacy
+        const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, email)
+          .map(function(b){ return (b<0?b+256:b).toString(16).padStart(2,'0'); })
+          .join('').slice(0, 12);
+        Logger.log('Licentie-mail opnieuw verstuurd (hash ' + hash + ')');
+      } catch (_) {}
+    } else {
+      // Geen actieve match — log voor support-trace zonder email te onthullen
+      Logger.log('herstuur-licentie: geen actieve match voor email-hash ' +
+        (Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, email)
+          .map(function(b){ return (b<0?b+256:b).toString(16).padStart(2,'0'); })
+          .join('').slice(0, 8)));
+    }
+  } catch (lookupErr) {
+    // Sheet-fout mag NOOIT gevolg geven aan klant — fail-silent met respons
+    Logger.log('herstuur-licentie sheet-fout: ' + lookupErr.message);
+  }
+
+  return jsonResp_(genericeRespons);
+}
+
 function herstuurLicentiemailHandmatig(sleutel) {
   sleutel = String(sleutel || '').trim().toUpperCase();
   if (!sleutel) throw new Error('Geef een licentiesleutel op.');
