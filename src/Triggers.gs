@@ -1045,13 +1045,28 @@ function verwerkVerkoopfactuurFormulier(e) {
     if (regels.length === 0) {
       throw new Error('Geen geldige factuurregels gevonden — geen factuurnummer geclaimd.');
     }
-    const factuurNr = volgendFactuurnummer_();
 
+    // CYCLE-6 FIX (axiom 12 — factuurnummer pas na complete validatie):
+    // VOORHEEN werd volgendFactuurnummer_ direct na de lege-regels-check
+    // aangeroepen, vóór klantnaam/BTW-tarief/totalen geverifieerd waren.
+    // Bij fout daarna ontstond een GAT in factuurreeks (art. 35a Wet OB
+    // vereist doorlopend nummering — gaten = audit-flag bij controle).
+    // Volgorde nu: ALLE validatie eerst, daarna pas nummer claimen.
     const btwTarief = parseBtwTarief_(data['BTW tarief'] || '21% (hoog)');
     totalBtw = btwTarief !== null ? rondBedrag_(totalExcl * btwTarief) : 0;
     const totalIncl = rondBedrag_(totalExcl + totalBtw);
 
-    const klantnaam = data['Klantnaam'] || '';
+    const klantnaam = String(data['Klantnaam'] || '').trim();
+    if (!klantnaam) {
+      throw new Error('Klantnaam is verplicht — factuurnummer niet geclaimd.');
+    }
+    if (!isFinite(totalIncl) || totalIncl <= 0) {
+      throw new Error('Factuurtotaal moet > €0 zijn — factuurnummer niet geclaimd.');
+    }
+
+    // ── Pas NU het factuurnummer claimen (alle validatie geslaagd) ──
+    const factuurNr = volgendFactuurnummer_();
+
     const klantId = zoekOfMaakRelatie_(ss, klantnaam, RELATIE_TYPE.KLANT);
 
     // Hoofdregel in Verkoopfacturen tabblad
