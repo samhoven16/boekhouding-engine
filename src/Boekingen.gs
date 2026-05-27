@@ -161,6 +161,85 @@ function maakJournaalpost_(ss, opt) {
 }
 
 // ─────────────────────────────────────────────
+//  CYCLE-7 — STORNO/CORRECTIE-JOURNAALPOST
+// ─────────────────────────────────────────────
+/**
+ * Storneer een eerdere journaalpost door een NIEUWE inverse journaalpost
+ * te maken (debet ↔ credit, zelfde bedrag). De originele journaalpost
+ * blijft staan — art. 52 AWR + axiom 5 (immutable na commit): nooit
+ * verwijderen, alleen tegenboeken.
+ *
+ * Effect op grootboek: nieuwe boeking heft de oude exact op (saldo terug
+ * naar pre-origineel-staat). Beide boekingen blijven zichtbaar in de
+ * audit-trail.
+ *
+ * @param {Spreadsheet} ss
+ * @param {string} origineelBoekingId  bv. 'BK000007'
+ * @param {string} reden               vereist — komt in omschrijving + audit
+ * @return {string} nieuw boekingId van de storno
+ * @throws {Error} als origineel niet gevonden of al gestorneerd
+ */
+function maakStornoJournaalpost_(ss, origineelBoekingId, reden) {
+  if (!origineelBoekingId) throw new Error('Storno: origineel boekingId is verplicht.');
+  if (!reden || String(reden).trim().length < 5) {
+    throw new Error('Storno: reden is verplicht (min. 5 tekens) voor audit-trail.');
+  }
+
+  const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  if (!sheet) throw new Error('Storno: Journaalposten-tabblad niet gevonden.');
+
+  const data = sheet.getDataRange().getValues();
+  let origineel = null;
+  let alGestorneerd = false;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(origineelBoekingId)) origineel = data[i];
+    // Detecteer eerdere storno op deze boeking (ref bevat "STORNO ${id}")
+    const omschr = String(data[i][2] || '');
+    if (omschr.indexOf('STORNO ' + origineelBoekingId) !== -1) alGestorneerd = true;
+  }
+  if (!origineel) throw new Error('Storno: origineel ' + origineelBoekingId + ' niet gevonden.');
+  if (alGestorneerd) {
+    throw new Error('Storno: ' + origineelBoekingId + ' is al eerder gestorneerd. Dubbele storno zou origineel weer effectief maken.');
+  }
+
+  // Kolom-indices (zie .claude/sheet-schemas.md JOURNAALPOSTEN):
+  //   [1] Datum  [3] Dagboek  [4] Debet rek  [6] Credit rek  [8] Bedrag
+  //   [9] BTW%   [10] BTW bedrag  [11] Referentie  [13] Type
+  const datum    = new Date();  // storno-datum is NU, niet origineel-datum
+  const debetOud = String(origineel[4] || '');
+  const credOud  = String(origineel[6] || '');
+  const bedrag   = parseFloat(origineel[8]) || 0;
+  if (bedrag <= 0) throw new Error('Storno: origineel bedrag ongeldig (' + bedrag + ').');
+
+  const origineelDatumStr = origineel[1] instanceof Date
+    ? Utilities.formatDate(origineel[1], 'Europe/Amsterdam', 'yyyy-MM-dd')
+    : String(origineel[1] || '');
+  const omschr = 'STORNO ' + origineelBoekingId +
+    ' (origineel ' + origineelDatumStr + '): ' + String(reden).trim();
+
+  // Inverse boeking: debet↔credit gewisseld
+  const stornoId = maakJournaalpost_(ss, {
+    datum:        datum,
+    omschr:       omschr,
+    dagboek:      String(origineel[3] || 'Memoriaal'),
+    debet:        credOud,           // origineel-credit wordt nu debet
+    credit:       debetOud,          // origineel-debet wordt nu credit
+    bedrag:       bedrag,
+    btwTarief:    null,              // BTW-storno aparte handling — niet hier
+    btwBedrag:    0,
+    ref:          String(origineel[11] || '') + ' (storno)',
+    type:         BOEKING_TYPE.JOURNAALPOST,
+    preGevalideerd: true,             // storno is per definitie gevalideerd
+  });
+
+  try {
+    schrijfAuditLog_('STORNO geboekt',
+      stornoId + ' storneert ' + origineelBoekingId + ' (' + reden + ')');
+  } catch (_) {}
+  return stornoId;
+}
+
+// ─────────────────────────────────────────────
 //  GROOTBOEKSALDO BIJWERKEN
 // ─────────────────────────────────────────────
 function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
