@@ -38,7 +38,7 @@ function doGet(e) {
   if (actie === 'aanvraag-otp')  return rateLimit_(e, { actie: 'aanvraag-otp', perEmail: 5,  globaal: 500, windowMin: 60 }) || aanvraagOtpEndpoint_(e);
   if (actie === 'activeer-otp')  return rateLimit_(e, { actie: 'activeer-otp', perEmail: 12, globaal: 500, windowMin: 60 }) || activeerOtpEndpoint_(e);
   if (actie === 'herstuur-licentie') return rateLimit_(e, { actie: 'herstuur-licentie', perEmail: 3, globaal: 200, windowMin: 60 }) || herstuurLicentieEndpoint_(e);
-  if (actie === 'onboarded')     return onboardedEndpoint_(e);
+  if (actie === 'onboarded')     return rateLimit_(e, { actie: 'onboarded', globaal: 500, windowMin: 60 }) || onboardedEndpoint_(e);
   if (actie === 'config')        return configEndpoint_(e);
   if (actie === 'telemetry')     return telemetryEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
@@ -841,6 +841,14 @@ function onboardedEndpoint_(e) {
 
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]).toUpperCase() !== sleutel) continue;
+
+      // CYCLE-15: weiger onboarded-mark op niet-actieve licentie (revoked /
+      // bounce / pending). Voorkomt dat ingetrokken sleutels alsnog als
+      // "onboarded" gemarkeerd worden (= verwarrend voor admin-overview).
+      const status = String(data[i][4] || '').toLowerCase();
+      if (!status.startsWith('actief')) {
+        return jsonResp_({ ok: false, fout: 'Licentie is niet actief.' });
+      }
 
       const boundSsId = String(data[i][6] || '');
       if (ssId && boundSsId && ssId !== boundSsId) {
