@@ -978,6 +978,8 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
       sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag (= totaal)
       sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.BETAALD);  // Status
       sheet.getRange(i + 1, 16).setValue(datum);                   // Betaaldatum
+      // CYCLE-20: cleanup herinneringsStap_ — voorkomt ScriptProperty-accumulatie
+      try { PropertiesService.getScriptProperties().deleteProperty('herinneringsStap_' + factuurnr); } catch (_) {}
       SpreadsheetApp.flush();                                       // Forceer write vóór journaalpost
 
       // Journaalpost alleen wanneer er nog resterend openstaat. Bij een

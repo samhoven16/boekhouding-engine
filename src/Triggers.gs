@@ -1902,6 +1902,12 @@ function koppelBankTransactieAanFactuur_(ss, transactieId, ref, bedrag, isOntvan
       sheet.getRange(i + 1, 15).setValue(nieuwStatus);    // Status
       if (nieuwStatus === FACTUUR_STATUS.BETAALD) {
         sheet.getRange(i + 1, 16).setValue(datum);        // Betaaldatum
+        // CYCLE-20: ruim herinneringsStap_<fnr> op zodra factuur betaald is.
+        // Zonder cleanup accumuleren deze keys voor altijd in
+        // ScriptProperties (1 per ooit-verstuurde herinnering). Bonus: als
+        // klant later crediteert + opnieuw factureert onder zelfde nummer,
+        // start dunning vers (geen 'stap 3 verstuurd' meer als ghost-state).
+        try { PropertiesService.getScriptProperties().deleteProperty('herinneringsStap_' + fnr); } catch (_) {}
       }
       // Boek de daadwerkelijke betaling van DEZE transactie (niet cumulatief).
       // Vóór de fix werd `nieuwBetaald` geboekt waardoor bij een tweede
