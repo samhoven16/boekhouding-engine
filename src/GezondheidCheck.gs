@@ -538,20 +538,32 @@ function controleerVerkoopfacturen_(ss) {
   try {
     const data = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
     const nummers = {};
-    let duplicaten    = 0;
-    let geenKlant     = 0;
+    let duplicaten     = 0;
+    let geenKlant      = 0;
+    let geenNummer     = 0;
     let negatiefBedrag = 0;
     let vervallenOpen  = 0;
     const vandaag = new Date();
 
     for (let i = 1; i < data.length; i++) {
-      const nr      = String(data[i][1] || '');
-      const klant   = String(data[i][5] || '').trim();
-      const bedrag  = parseFloat(data[i][12]) || 0;
+      // Rijen die compleet leeg lijken (geen ID + geen klant + geen bedrag)
+      // overslaan — voorkomt false positives op trailing-blanks na rijdelete.
+      const heeftId     = !!String(data[i][0] || '').trim();
+      const klant       = String(data[i][5] || '').trim();
+      const bedragRaw   = parseFloat(data[i][12]);
+      if (!heeftId && !klant && (isNaN(bedragRaw) || bedragRaw === 0)) continue;
+
+      const nr      = String(data[i][1] || '').trim();
+      const bedrag  = bedragRaw || 0;
       const status  = String(data[i][14] || '');
       const vervalD = data[i][3] ? parseDatum_(data[i][3]) : null;
 
-      if (nr) {
+      // CYCLE-26: factuurnummer ontbreken = wettelijk probleem (NL OB-1968
+      // art. 35 vereist een doorlopend nummer per factuur). Eerder werd dit
+      // silent geskipped doordat `if (nr)` false was → factuur passeerde
+      // check ongezien.
+      if (!nr) geenNummer++;
+      else {
         if (nummers[nr]) duplicaten++;
         else nummers[nr] = true;
       }
@@ -562,10 +574,18 @@ function controleerVerkoopfacturen_(ss) {
       }
     }
 
+    if (geenNummer > 0) {
+      resultaten.push({
+        check: 'Facturen – Ontbrekend nummer',
+        status: 'FOUT',
+        bericht: `${geenNummer} factuur/facturen zonder factuurnummer. Wettelijk verplicht (NL OB-1968 art. 35) — vul een uniek nummer in of verwijder de rij.`,
+      });
+    }
+
     if (duplicaten > 0) {
       resultaten.push({ check: 'Facturen – Duplicaat nummers', status: 'FOUT',
         bericht: `${duplicaten} factuurnummer(s) komen meerdere keren voor. Dit is niet toegestaan — elk factuurnummer moet uniek zijn (wettelijk vereist).` });
-    } else {
+    } else if (geenNummer === 0) {
       resultaten.push({ check: 'Facturen – Unieke nummers', status: 'OK', bericht: 'Alle factuurnummers zijn uniek.' });
     }
 
