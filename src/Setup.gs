@@ -541,20 +541,54 @@ function zetRelatiesHeaders_(sheet) {
 // ─────────────────────────────────────────────
 function vulGrootboekschema_(ss) {
   const sheet = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
-  sheet.clearContents();
-
   const headers = ['Code', 'Naam', 'Type', 'Categorie', 'Balans/W&V', 'Saldo'];
+
+  // ── BESTAANDE DATA INDEXEREN (vóór clearContents) ───────────────────────
+  // Zonder deze preservatie wist "Rekeningschema opnieuw laden":
+  //   - klant-toegevoegde rekeningen (bv. 7100 'Reiskosten — bus' of
+  //     8800 'Project Acme inkomsten') → audit-trail loss
+  //   - alle saldi → grootboek loopt uit-fase tot klant 'Saldi herberekenen'
+  //     handmatig draait
+  // Beide bugs leverden silent data-corruption op (geen waarschuwing).
+  const standaardCodes = new Set(STANDAARD_GROOTBOEK.map(r => String(r.code)));
+  const bestaandeSaldi = {};   // code → laatste saldo (preserveer voor standaard-codes)
+  const klantRijen = [];        // niet-standaard rekeningen (klant toegevoegd)
+  try {
+    const bestaande = sheet.getDataRange().getValues();
+    for (let i = 1; i < bestaande.length; i++) {
+      const code = String(bestaande[i][0] || '').trim();
+      if (!code) continue;
+      if (standaardCodes.has(code)) {
+        const saldoRaw = bestaande[i][5];
+        const saldo = parseFloat(saldoRaw);
+        if (isFinite(saldo) && saldo !== 0) bestaandeSaldi[code] = saldo;
+      } else {
+        // Klant-rij: bewaar exact zoals ingevoerd (6 kolommen)
+        klantRijen.push([
+          code,
+          String(bestaande[i][1] || ''),
+          String(bestaande[i][2] || ''),
+          String(bestaande[i][3] || ''),
+          String(bestaande[i][4] || ''),
+          parseFloat(bestaande[i][5]) || 0,
+        ]);
+      }
+    }
+  } catch (_) { /* eerste-run setup: sheet is leeg, geen preservatie nodig */ }
+
+  sheet.clearContents();
   zetHeaderRij_(sheet, headers);
 
-  const rijen = STANDAARD_GROOTBOEK.map(r => [
-    r.code, r.naam, r.type, r.cat, r.bw, 0
+  const standaardRijen = STANDAARD_GROOTBOEK.map(r => [
+    r.code, r.naam, r.type, r.cat, r.bw, bestaandeSaldi[String(r.code)] || 0,
   ]);
-  if (rijen.length > 0) {
-    sheet.getRange(2, 1, rijen.length, headers.length).setValues(rijen);
+  const alleRijen = standaardRijen.concat(klantRijen);
+  if (alleRijen.length > 0) {
+    sheet.getRange(2, 1, alleRijen.length, headers.length).setValues(alleRijen);
   }
 
   // Opmaak
-  sheet.getRange(2, 1, rijen.length, 1)
+  sheet.getRange(2, 1, alleRijen.length, 1)
     .setNumberFormat('@')
     .setFontFamily('Courier New');
 
@@ -564,8 +598,14 @@ function vulGrootboekschema_(ss) {
   sheet.setColumnWidth(4, 200);
   sheet.setColumnWidth(5, 100);
   sheet.setColumnWidth(6, 100);
-  sheet.getRange(2, 6, rijen.length, 1).setNumberFormat('€#,##0.00');
+  sheet.getRange(2, 6, alleRijen.length, 1).setNumberFormat('€#,##0.00');
   sheet.setFrozenRows(1);
+
+  return {
+    standaard: standaardRijen.length,
+    klantBehouden: klantRijen.length,
+    saldiBehouden: Object.keys(bestaandeSaldi).length,
+  };
 }
 
 // ─────────────────────────────────────────────
