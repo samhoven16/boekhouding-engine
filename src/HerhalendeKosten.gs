@@ -349,6 +349,50 @@ function verwerkHerhalendeKosten_() {
   return { geboekt, komend };
 }
 
+/**
+ * Opruimen van oude `herhKost_<rijId>_<YYYY-MM-DD>` idempotency-keys.
+ *
+ * Zonder deze cleanup accumuleren de keys in ScriptProperties voor altijd:
+ * 10 herhalende kosten × 365 dagen × 5 jaar = ~18.250 keys, ~900KB. De
+ * ScriptProperties-quota is 500KB — bij overschrijding falen ALLE writes
+ * silent (inclusief factuurnummer-claim, idempotency-guards, settings).
+ *
+ * Strategie: verwijder keys waarvan het datum-deel > `maxDagen` oud is.
+ * De keys voor toekomstige iteraties blijven ongemoeid (zou dubbele boeking
+ * veroorzaken). 90 dagen is ruim voorbij elke realistische inhaal-window;
+ * berekenVolgendeDatum_ kijkt nooit terug.
+ *
+ * @param {number=} maxDagen  drempel in dagen (default 90)
+ * @returns {{verwijderd: number, behouden: number}}
+ */
+function cleanupHerhalendeKostenIdempotency_(maxDagen) {
+  const dagen = (typeof maxDagen === 'number' && maxDagen > 0) ? maxDagen : 90;
+  const drempelMs = Date.now() - dagen * 24 * 60 * 60 * 1000;
+  const props = PropertiesService.getScriptProperties();
+  let alleKeys;
+  try {
+    alleKeys = props.getKeys();
+  } catch (_) { return { verwijderd: 0, behouden: 0 }; }
+
+  let verwijderd = 0;
+  let behouden = 0;
+  // Pattern: herhKost_<rijId>_<YYYY-MM-DD>
+  const re = /^herhKost_.+_(\d{4})-(\d{2})-(\d{2})$/;
+  for (let i = 0; i < alleKeys.length; i++) {
+    const k = alleKeys[i];
+    const m = k.match(re);
+    if (!m) continue;
+    const dt = new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+    if (isNaN(dt.getTime())) continue;
+    if (dt.getTime() < drempelMs) {
+      try { props.deleteProperty(k); verwijderd++; } catch (_) { /* best-effort */ }
+    } else {
+      behouden++;
+    }
+  }
+  return { verwijderd, behouden };
+}
+
 function _volgendHerhalendKostId_() {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);

@@ -1475,6 +1475,11 @@ function dagelijkseTaken() {
     if (typeof featureAan_ === 'function' && !featureAan_('dlq_retry')) return;
     if (typeof dlqVerwerkRetries_ === 'function') dlqVerwerkRetries_();
   });
+  // Idempotency-cleanup: voorkomt ScriptProperties-quota overschrijding na
+  // jaren herhalende-kosten-keys. Draait dagelijks; cleanup zelf is goedkoop.
+  _runTaak_('cleanupHerhIdem',  function() {
+    if (typeof cleanupHerhalendeKostenIdempotency_ === 'function') cleanupHerhalendeKostenIdempotency_();
+  });
 
   // Aggregaat: totale duur dagelijkseTaken
   const totaleDuur = Date.now() - dagelijksTotaal0;
