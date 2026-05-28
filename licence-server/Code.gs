@@ -43,7 +43,7 @@ function doGet(e) {
   if (actie === 'telemetry')     return telemetryEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   if (actie === 'admin')         return adminPaneel_(e);
-  if (actie === 'roteer')        return roteerEndpoint_(e);
+  if (actie === 'roteer')        return rateLimit_(e, { actie: 'roteer', perEmail: 3, globaal: 100, windowMin: 60 }) || roteerEndpoint_(e);
   if (actie === 'revoke')        return revokeEndpoint_(e);
 
   // Standaard: betaalpagina tonen
@@ -1686,7 +1686,11 @@ function roteerEndpoint_(e) {
     return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Sleutel + email combinatie niet gevonden.' }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: err.message }))
+    // CYCLE-14: lek geen err.message naar publieke endpoint — kan stack-trace,
+    // sheet-format details of interne paden onthullen. Generieke respons voor
+    // klant; Logger.log voor diagnose door owner.
+    Logger.log('roteerEndpoint_ fout: ' + (err && err.message || err));
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Interne fout — neem contact op met support.' }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -1701,6 +1705,9 @@ function revokeEndpoint_(e) {
     const token = String((e.parameter && e.parameter.token) || '').trim();
     const adminToken = PropertiesService.getScriptProperties().getProperty('ADMIN_REVOKE_TOKEN');
     if (!adminToken || !veiligVergelijk_(token, adminToken)) {
+      // CYCLE-14: log mislukte revoke-pogingen (security-event)
+      try { Logger.log('revokeEndpoint_ unauthorized: token-poging ' +
+        String(token).substring(0, 4) + '… voor sleutel ' + sleutel.substring(0, 4) + '…'); } catch (_) {}
       return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Ongeldig admin-token.' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -1713,14 +1720,33 @@ function revokeEndpoint_(e) {
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][sleutelCol]).toUpperCase() === sleutel.toUpperCase()) {
         sheet.getRange(i + 1, statusCol + 1).setValue('Ingetrokken');
+        // CYCLE-14: audit-log voor security-significant event (admin trekt
+        // licentie in). Logger.log + sheet-write zodat owner kan reconstrueren.
+        try {
+          Logger.log('Licentie ingetrokken: ' + sleutel.substring(0, 8) + '… op ' + new Date().toISOString());
+          // Probeer ook in audit-tabblad als die bestaat (defense in depth)
+          const ss = SpreadsheetApp.openById(
+            PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID') || ''
+          );
+          if (ss) {
+            let auditSheet = ss.getSheetByName('Revoke-audit');
+            if (!auditSheet) {
+              auditSheet = ss.insertSheet('Revoke-audit');
+              auditSheet.appendRow(['Datum', 'Sleutel (eerste 8)', 'Status', 'Sheet-rij']);
+            }
+            auditSheet.appendRow([new Date(), sleutel.substring(0, 8) + '…', 'Ingetrokken', i + 1]);
+          }
+        } catch (_) {}
         return ContentService.createTextOutput(JSON.stringify({ ok: true, bericht: 'Sleutel ingetrokken.' }))
           .setMimeType(ContentService.MimeType.JSON);
-      }
+    }
     }
     return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Sleutel niet gevonden.' }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: err.message }))
+    // CYCLE-14: zelfde err.message-lek-fix als roteer
+    Logger.log('revokeEndpoint_ fout: ' + (err && err.message || err));
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Interne fout — neem contact op met support.' }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
