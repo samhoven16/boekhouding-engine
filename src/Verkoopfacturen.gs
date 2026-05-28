@@ -472,8 +472,12 @@ function importeerBankafschrift() {
           bedrag: parseInt(document.getElementById('colBedrag').value) - 1,
         };
         google.script.run
-          .withSuccessHandler(n => {
-            document.getElementById('result').textContent = n + ' transacties geïmporteerd.';
+          .withSuccessHandler(r => {
+            const aantal = (r && typeof r === 'object') ? r.aantal : r;
+            const over = (r && typeof r === 'object') ? r.overgeslagen : 0;
+            let msg = aantal + ' transacties geïmporteerd.';
+            if (over > 0) msg += ' ' + over + ' rij(en) overgeslagen (ongeldige datum of bedrag).';
+            document.getElementById('result').textContent = msg;
           })
           .withFailureHandler(e => {
             document.getElementById('result').textContent = '⚠️ ' + (e && e.message ? e.message : 'Er ging iets mis. Probeer opnieuw.');
@@ -492,31 +496,91 @@ function importeerBankafschrift() {
   SpreadsheetApp.getUi().showModalDialog(html, 'Bankafschrift importeren');
 }
 
+/**
+ * Detecteert decimal-separator door naar de LAATSTE punt vs komma te kijken.
+ * Voorkomt twee silent-corruption bugs van de oude versie:
+ *   1. "1234.56" (US/intl, dot-decimaal) → werd 123456 → klant boekt €123.456
+ *      ipv €1.234,56. Komt o.a. voor in Wise/Revolut/N26-CSV en in
+ *      Excel-exports met EN-US-locale.
+ *   2. "1,234.56" (US thousands-comma + dot-decimaal) → werd 1.23456.
+ * Retourneert NaN voor onparsebare input zodat caller kan skippen.
+ */
+function _parseBankBedrag_(raw) {
+  const s = String(raw == null ? '' : raw).trim().replace(/[€\s]/g, '');
+  if (!s) return NaN;
+  const lastDot = s.lastIndexOf('.');
+  const lastComma = s.lastIndexOf(',');
+  let cleaned;
+  if (lastDot > lastComma) {
+    cleaned = s.replace(/,/g, '');                       // dot is decimal
+  } else if (lastComma > lastDot) {
+    cleaned = s.replace(/\./g, '').replace(',', '.');    // comma is decimal
+  } else {
+    cleaned = s;                                          // geen scheiding
+  }
+  const n = parseFloat(cleaned);
+  if (!isFinite(n)) return NaN;
+  return Math.round(n * 100) / 100;
+}
+
+/**
+ * Strikte CSV-datum-parser. parseDatum_ valt terug op vandaag bij onparsebare
+ * input — wat bij bank-import betekent dat een hele rij silent op vandaag
+ * geboekt wordt (verkeerd kwartaal, verkeerde BTW-aangifte). Hier retourneren
+ * we null zodat caller de rij kan skippen + de klant kan waarschuwen.
+ */
+function _parseCsvDatumStrict_(str) {
+  if (!str) return null;
+  if (str instanceof Date) return isNaN(str.getTime()) ? null : str;
+  const s = String(str).trim();
+  if (!s) return null;
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const d = new Date(parseInt(iso[1]), parseInt(iso[2]) - 1, parseInt(iso[3]));
+    if (!isNaN(d.getTime()) && d.getMonth() === parseInt(iso[2]) - 1 && d.getDate() === parseInt(iso[3])) return d;
+    return null;
+  }
+  const nl = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{4})$/);
+  if (nl) {
+    const d = new Date(parseInt(nl[3]), parseInt(nl[2]) - 1, parseInt(nl[1]));
+    if (!isNaN(d.getTime()) && d.getMonth() === parseInt(nl[2]) - 1 && d.getDate() === parseInt(nl[1])) return d;
+    return null;
+  }
+  return null;
+}
+
 function verwerkBankCsvImport(csvTekst, scheidingsteken, kolommen) {
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.BANKTRANSACTIES);
-  const regels = csvTekst.trim().split('\n');
-  let aantalImport = 0;
+  if (!sheet) {
+    throw new Error('Tabblad Banktransacties ontbreekt — run Setup eerst (menu: Boekhoudbaar → Setup).');
+  }
+  const csv = String(csvTekst || '').trim();
+  if (!csv) return { aantal: 0, overgeslagen: 0 };
+  const regels = csv.split(/\r?\n/);
 
   // Skip eerste rij als header
-  const startRij = regels[0].toLowerCase().includes('datum') || regels[0].toLowerCase().includes('date') ? 1 : 0;
+  const eerste = String(regels[0] || '').toLowerCase();
+  const startRij = (eerste.includes('datum') || eerste.includes('date')) ? 1 : 0;
+
+  let aantalImport = 0;
+  let overgeslagen = 0;
 
   for (let i = startRij; i < regels.length; i++) {
     const koloms = regels[i].split(scheidingsteken).map(k => k.trim().replace(/^"|"$/g, ''));
-    if (koloms.length < 3) continue;
+    if (koloms.length < 3) { if (regels[i].trim()) overgeslagen++; continue; }
 
-    // Defensieve fallback: als kolom niet gemapped of out-of-bounds, gebruik leeg
     const datumStr = String(koloms[kolommen.datum] || '');
     const omschr   = String(koloms[kolommen.omschr] || '');
     const bedragRw = String(koloms[kolommen.bedrag] || '');
-    if (!bedragRw) continue;
-    // Normaliseer Nederlandstalig getal: "1.234,56" → "1234.56"
-    const bedragStr = bedragRw.replace(/\./g, '').replace(',', '.');
-    const bedrag = parseFloat(bedragStr);
+    if (!bedragRw) { overgeslagen++; continue; }
 
-    if (isNaN(bedrag)) continue;
+    const bedrag = _parseBankBedrag_(bedragRw);
+    if (isNaN(bedrag) || bedrag === 0) { overgeslagen++; continue; }
 
-    const datum = parseDatum_(datumStr);
+    const datum = _parseCsvDatumStrict_(datumStr);
+    if (!datum) { overgeslagen++; continue; }   // geen silent fallback op vandaag
+
     const transactieId = volgendTransactieId_();
     const isOntvangst = bedrag > 0;
 
@@ -526,14 +590,15 @@ function verwerkBankCsvImport(csvTekst, scheidingsteken, kolommen) {
       omschr,
       bedrag,
       isOntvangst ? 'Ontvangst (bij)' : 'Betaling (af)',
-      '1200',  // Bank zakelijk
+      '1200',
       '', '', '', '',
       '', '', 'Geïmporteerd', '', new Date(),
     ]);
     aantalImport++;
   }
 
-  return aantalImport;
+  try { schrijfAuditLog_('Bank CSV geïmporteerd', 'transacties: ' + aantalImport + ' | overgeslagen: ' + overgeslagen); } catch (_) {}
+  return { aantal: aantalImport, overgeslagen };
 }
 
 // ─────────────────────────────────────────────
