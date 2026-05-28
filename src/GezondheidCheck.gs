@@ -778,6 +778,15 @@ function voerGezondheidCheckStil_() {
   try { controleerInstellingen_().forEach(tel); } catch (e) { Logger.log('stille check inst: ' + e.message); }
   try { tel(controleerTaxBtwDeadlineCheck_()); } catch (e) { Logger.log('stille check tax-btw: ' + e.message); }
   try { tel(controleerTaxAdmBewaarplichtCheck_()); } catch (e) { Logger.log('stille check tax-adm: ' + e.message); }
+  // CYCLE-24: deze twee checks zaten in voerGezondheidCheckUit_ (menu-pad)
+  // maar NIET in de stille variant — dus dashboard-score reflecteerde ze
+  // niet. Klanten die de check niet handmatig draaien misten signalen over:
+  //   - verweesde facturen (klant verwijderd uit Relaties → audit-trail
+  //     loopt vast)
+  //   - betalings-integriteit (status=BETAALD zonder JP-1200→1100 = scheef
+  //     grootboek, vaak gevolg van crash-tijdens-betaling)
+  try { controleerReferentiele_(ss).forEach(tel); } catch (e) { Logger.log('stille check ref: ' + e.message); }
+  try { tel(controleerBetalingsIntegriteit_(ss)); } catch (e) { Logger.log('stille check betint: ' + e.message); }
 
   const totaal = aantalFouten + aantalWaarsch + aantalOk;
   const score  = totaal > 0 ? Math.round(((aantalOk + aantalWaarsch * 0.5) / totaal) * 100) : 100;
