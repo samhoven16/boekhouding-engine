@@ -534,8 +534,24 @@ function toonFormulierLinks() {
 //  REKENINGSCHEMA HERLADEN
 // ─────────────────────────────────────────────
 function herlaadGrootboekschema() {
-  vulGrootboekschema_(getSpreadsheet_());
-  SpreadsheetApp.getUi().alert('Rekeningschema is opnieuw geladen.');
+  const ui = SpreadsheetApp.getUi();
+  const bevestiging = ui.alert(
+    'Rekeningschema herladen',
+    'Standaard-rekeningen worden hersteld (naam/categorie/type).\n\n' +
+    '• Klant-toegevoegde rekeningen blijven behouden.\n' +
+    '• Bestaande saldi blijven behouden.\n' +
+    '• Standaard-rekeningen die u hernoemd had, krijgen weer hun originele naam.\n\n' +
+    'Doorgaan?',
+    ui.ButtonSet.YES_NO
+  );
+  if (bevestiging !== ui.Button.YES) return;
+  const stats = vulGrootboekschema_(getSpreadsheet_());
+  const samenvatting = (stats && typeof stats === 'object')
+    ? `${stats.standaard} standaard-rekeningen geladen.\n` +
+      `${stats.klantBehouden} eigen rekening(en) behouden.\n` +
+      `${stats.saldiBehouden} saldo('s) behouden.`
+    : 'Rekeningschema is opnieuw geladen.';
+  ui.alert('Rekeningschema herladen', samenvatting, ui.ButtonSet.OK);
 }
 
 // ─────────────────────────────────────────────
