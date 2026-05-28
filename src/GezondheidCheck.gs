@@ -665,6 +665,30 @@ function controleerInstellingen_() {
     });
   }
 
+  // CYCLE-23: format-validatie op gevulde velden. Voorheen werd alleen
+  // PRESENCE gecheckt — klant kon 'abc' als IBAN of '123' als KvK invullen
+  // en de check zou OK geven. Bij eerstvolgende factuur kreeg klant dan
+  // pas onverklaarbare fouten (PDF zonder QR, KvK-API faalt, BTW-aangifte
+  // schadig).
+  function _veldFormaat_(sleutel, label, validator) {
+    const waarde = getInstelling_(sleutel);
+    if (!waarde) return;   // ontbreken al gemeld door verplicht-loop
+    if (typeof validator !== 'function') return;
+    try {
+      const r = validator(waarde);
+      if (!r.geldig) {
+        resultaten.push({
+          check: `Instellingen – ${label} formaat`,
+          status: 'FOUT',
+          bericht: `${label} heeft een ongeldig formaat. ${r.fout.split('\n')[0]}`,
+        });
+      }
+    } catch (_) { /* validator ontbreekt — best-effort */ }
+  }
+  _veldFormaat_('IBAN',       'IBAN',       typeof valideerIban_       === 'function' ? valideerIban_       : null);
+  _veldFormaat_('BTW-nummer', 'BTW-nummer', typeof valideerBtwNummer_ === 'function' ? valideerBtwNummer_ : null);
+  _veldFormaat_('KvK-nummer', 'KvK-nummer', typeof valideerKvkNummer_ === 'function' ? valideerKvkNummer_ : null);
+
   return resultaten;
 }
 
