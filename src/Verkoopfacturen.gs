@@ -939,14 +939,17 @@ function getFactuurlijstData() {
 function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
   if (!factuurnr) throw new Error('Geen factuurnummer opgegeven');
 
-  // Optimistic locking: voorkom dat handmatig "Markeer betaald" + bank-CSV-
-  // import gelijktijdig dezelfde factuur 2x als betaald markeren (= 2x
-  // journaalpost = €X dubbel geboekt). LockService.tryLock(3s) wacht max
-  // 3s; bij timeout valt aanroep door — idempotency-check vangt rest.
+  // CYCLE-27: strikte lock-eis voor financieel-kritieke sectie. Voorheen
+  // ging de functie door bij lock-timeout — de idempotency-check ving het
+  // meeste op, maar twee callers konden allebei de check passeren VOORDAT
+  // de status-write naar BETAALD afgerond was → 2× journaalpost = €X dubbel
+  // geboekt op debiteuren. Nu: bij timeout → klantvriendelijke fout, klant
+  // probeert opnieuw na bestaande operatie klaar is.
   const lock = LockService.getScriptLock();
-  // 30s — financiële integriteit > UI-snelheid; voorkomt dubbele journaalpost
-  // bij parallelle "Markeer betaald" + bank-CSV-import
   const gotLock = lock.tryLock(30000);
+  if (!gotLock) {
+    throw new Error('Systeem is bezig met een andere betaling te verwerken. Wacht een ogenblik en probeer opnieuw.');
+  }
 
   try {
     const ss    = getSpreadsheet_();
