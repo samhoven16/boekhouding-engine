@@ -310,13 +310,21 @@ function controleerBalans_(ss) {
     // Resultaat boekjaar telt mee als passiva (tijdelijk in passiva/EV)
     const verschil = rondBedrag_(Math.abs(totaalActiva - totaalPassiva));
 
-    if (verschil < 1) {
+    // CYCLE-22: drempel verlaagd van €1 → €0,05. €1 was veel te ruim voor een
+    // finance-systeem: een €0,99 verschil tussen Activa en Passiva is GEEN
+    // afronding (alle journaalposten worden op €0,01 afgerond) maar duidt
+    // op een ontbrekende of foutieve boeking. €0,05 vangt edge-cases van
+    // floating-point accumulatie over honderden boekingen op, maar niet
+    // meer dan dat. De WAARSCHUWING-tekst noemt nu expliciet het bedrag
+    // zodat klant kan inschatten of het urgent is.
+    if (verschil <= 0.05) {
       return { check: 'Balans', status: 'OK', bericht: `Activa en passiva zijn in evenwicht (${formatBedrag_(totaalActiva)}).` };
     } else {
       return {
         check: 'Balans',
         status: 'WAARSCHUWING',
-        bericht: `Verschil van ${formatBedrag_(verschil)} tussen activa (${formatBedrag_(totaalActiva)}) en passiva (${formatBedrag_(totaalPassiva)}). Controleer openingssaldi of ontbrekende boekingen. Dit kan normaal zijn als het boekjaar nog loopt.`,
+        bericht: `Verschil van ${formatBedrag_(verschil)} tussen activa (${formatBedrag_(totaalActiva)}) en passiva (${formatBedrag_(totaalPassiva)}). ` +
+                 `Controleer openingssaldi of ontbrekende boekingen. Dit kan normaal zijn tijdens het lopende boekjaar; bij afsluiting moet het naar €0,00.`,
       };
     }
   } catch (e) {
@@ -685,6 +693,30 @@ function controleerInstellingen_() {
     });
   }
 
+  // CYCLE-23: format-validatie op gevulde velden. Voorheen werd alleen
+  // PRESENCE gecheckt — klant kon 'abc' als IBAN of '123' als KvK invullen
+  // en de check zou OK geven. Bij eerstvolgende factuur kreeg klant dan
+  // pas onverklaarbare fouten (PDF zonder QR, KvK-API faalt, BTW-aangifte
+  // schadig).
+  function _veldFormaat_(sleutel, label, validator) {
+    const waarde = getInstelling_(sleutel);
+    if (!waarde) return;   // ontbreken al gemeld door verplicht-loop
+    if (typeof validator !== 'function') return;
+    try {
+      const r = validator(waarde);
+      if (!r.geldig) {
+        resultaten.push({
+          check: `Instellingen – ${label} formaat`,
+          status: 'FOUT',
+          bericht: `${label} heeft een ongeldig formaat. ${r.fout.split('\n')[0]}`,
+        });
+      }
+    } catch (_) { /* validator ontbreekt — best-effort */ }
+  }
+  _veldFormaat_('IBAN',       'IBAN',       typeof valideerIban_       === 'function' ? valideerIban_       : null);
+  _veldFormaat_('BTW-nummer', 'BTW-nummer', typeof valideerBtwNummer_ === 'function' ? valideerBtwNummer_ : null);
+  _veldFormaat_('KvK-nummer', 'KvK-nummer', typeof valideerKvkNummer_ === 'function' ? valideerKvkNummer_ : null);
+
   return resultaten;
 }
 
@@ -798,6 +830,15 @@ function voerGezondheidCheckStil_() {
   try { controleerInstellingen_().forEach(tel); } catch (e) { Logger.log('stille check inst: ' + e.message); }
   try { tel(controleerTaxBtwDeadlineCheck_()); } catch (e) { Logger.log('stille check tax-btw: ' + e.message); }
   try { tel(controleerTaxAdmBewaarplichtCheck_()); } catch (e) { Logger.log('stille check tax-adm: ' + e.message); }
+  // CYCLE-24: deze twee checks zaten in voerGezondheidCheckUit_ (menu-pad)
+  // maar NIET in de stille variant — dus dashboard-score reflecteerde ze
+  // niet. Klanten die de check niet handmatig draaien misten signalen over:
+  //   - verweesde facturen (klant verwijderd uit Relaties → audit-trail
+  //     loopt vast)
+  //   - betalings-integriteit (status=BETAALD zonder JP-1200→1100 = scheef
+  //     grootboek, vaak gevolg van crash-tijdens-betaling)
+  try { controleerReferentiele_(ss).forEach(tel); } catch (e) { Logger.log('stille check ref: ' + e.message); }
+  try { tel(controleerBetalingsIntegriteit_(ss)); } catch (e) { Logger.log('stille check betint: ' + e.message); }
 
   const totaal = aantalFouten + aantalWaarsch + aantalOk;
   const score  = totaal > 0 ? Math.round(((aantalOk + aantalWaarsch * 0.5) / totaal) * 100) : 100;
