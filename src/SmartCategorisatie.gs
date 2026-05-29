@@ -358,6 +358,16 @@ function slaansFuzzyKoppelTransacties_() {
       if (nieuwStatus === FACTUUR_STATUS.BETAALD) {
         const btDatum = btData[i][1] ? new Date(btData[i][1]) : new Date();
         vfSheet.getRange(gevondenFactuurRij + 1, 16).setValue(btDatum);
+        // CYCLE-28: zelfde cleanup als cycle 20 — voorkomt accumulatie van
+        // herinneringsStap_<fnr> ScriptProperties via dit auto-koppel-pad.
+        // SmartCategorisatie was eerder over-het-hoofd gezien; zonder deze
+        // delete houden facturen die via slimme-koppeling betaald worden
+        // hun dunning-state, wat na crediteren-en-rebillen tot ghost-state
+        // leidt.
+        try {
+          PropertiesService.getScriptProperties()
+            .deleteProperty('herinneringsStap_' + String(vfData[gevondenFactuurRij][1] || ''));
+        } catch (_) {}
       }
 
       // Maak journaalpost voor de betaling — anders is debiteurensaldo
