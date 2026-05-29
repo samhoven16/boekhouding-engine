@@ -1858,8 +1858,12 @@ function verstuurDripsDagelijks_() {
 
       if (!email || !sleutel) continue;
       const statusLow = status.toLowerCase();
-      // Sla over bij niet-actief, bounce of ingetrokken
-      if (statusLow !== 'actief' && statusLow.indexOf('actief —') === -1) continue;
+      // CYCLE-30: startsWith('actief') ipv `=== 'actief' || indexOf('actief —')`.
+      // Vorige check miste varianten 'Actief (handmatig)', 'Actief - trial'
+      // (gewone dash ipv em-dash), 'Actief\tcustomvariant' → klanten in zulke
+      // statussen kregen geen onboarding-drips → minder activatie + churn-risico.
+      // Nu consistent met onboarded-/herstuur-/OTP-endpoints (cycles 13/15/29).
+      if (!statusLow.startsWith('actief')) continue;
       if (!aanmaakDatum || !(aanmaakDatum instanceof Date)) continue;
 
       const dagenSinds = Math.floor((nu - aanmaakDatum.getTime()) / 86400000);
