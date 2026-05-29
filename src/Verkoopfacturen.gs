@@ -789,6 +789,21 @@ function haalSepaQrBase64_(iban, bedrijfNaam, bedrag, referentie) {
   // api.qrserver.com als secundaire fallback. Beide zijn gratis tiers.
   const ibanClean = String(iban || '').replace(/\s/g, '');
   if (!ibanClean) return null;
+
+  // CYCLE-19: pre-validate IBAN met MOD-97 vóór QR-generatie. Zonder check
+  // werd er silent een QR met ongeldig IBAN gegenereerd → klant van klant
+  // scant met bank-app → "ongeldig betaal-verzoek" → frictie + verwarring.
+  // Bij invalid: skip QR en log, factuur PDF gaat verder zonder QR (zelfde
+  // gedrag als 'geen IBAN ingesteld').
+  try {
+    if (typeof valideerIban_ === 'function') {
+      const v = valideerIban_(ibanClean);
+      if (!v.geldig) {
+        try { schrijfAuditLog_('SEPA QR overgeslagen', 'ongeldig IBAN: ' + ibanClean.slice(0, 8) + '… (MOD-97 controle gefaald)'); } catch (_) {}
+        return null;
+      }
+    }
+  } catch (_) { /* valideerIban_ ontbreekt? door — fallback: oude gedrag */ }
   const qrData = [
     'BCD', '001', '1', 'SCT', '',
     String(bedrijfNaam || '').substring(0, 70),
@@ -978,6 +993,8 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
       sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag (= totaal)
       sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.BETAALD);  // Status
       sheet.getRange(i + 1, 16).setValue(datum);                   // Betaaldatum
+      // CYCLE-20: cleanup herinneringsStap_ — voorkomt ScriptProperty-accumulatie
+      try { PropertiesService.getScriptProperties().deleteProperty('herinneringsStap_' + factuurnr); } catch (_) {}
       SpreadsheetApp.flush();                                       // Forceer write vóór journaalpost
 
       // Journaalpost alleen wanneer er nog resterend openstaat. Bij een
