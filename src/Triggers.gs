@@ -4,6 +4,51 @@
  * Het hoofdformulier heeft drie secties: Inkomsten, Uitgaven, Declaratie.
  */
 
+/**
+ * CYCLE-35: form-datum parser met strikte validatie + zichtbare fout.
+ *
+ * Vóór deze cycle deden vier legacy/hoofdform-handlers:
+ *   const datum = parseDatum_(data['…datum']) || new Date();
+ * Het probleem:
+ *   - parseDatum_ valt SILENT terug op vandaag bij garbage ('abc', '20260601'
+ *     zonder separator, etc.) → factuur landt in verkeerd kwartaal →
+ *     BTW-aangifte verstoord
+ *   - `|| new Date()` is dead code want parseDatum_ retourneert nooit falsy
+ *
+ * Deze helper maakt het expliciet:
+ *   - Leeg / ontbrekend → return fallback (default: vandaag) — bedoeld gedrag
+ *   - Niet-parsebaar formaat → audit-log + throw met klantvriendelijke fout
+ *   - Geldig formaat → geparsede Date
+ *
+ * @param {*} raw            Ruwe form-input
+ * @param {string=} veldnaam Label voor audit-log + error-message
+ * @param {Date=} fallback   Wat te returnen bij leeg/ontbrekend (default new Date())
+ * @returns {Date}
+ */
+function _parseFormDatumStrikt_(raw, veldnaam, fallback) {
+  const label = veldnaam || 'Datum';
+  if (raw === null || raw === undefined || raw === '') return fallback || new Date();
+  if (raw instanceof Date) {
+    if (isNaN(raw.getTime())) {
+      try { schrijfAuditLog_(label + ' ongeldig', 'Invalid Date-object ontvangen'); } catch (_) {}
+      throw new Error(label + ' is ongeldig. Vul een datum in (formaat dd-mm-jjjj of jjjj-mm-dd).');
+    }
+    return raw;
+  }
+  const s = String(raw).trim();
+  if (!s) return fallback || new Date();
+  if (!/^(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[-./]\d{1,2}[-./]\d{4})$/.test(s)) {
+    try { schrijfAuditLog_(label + ' ongeldig', 'invoer: "' + s.slice(0, 40) + '"'); } catch (_) {}
+    throw new Error(label + ' is ongeldig: "' + s.slice(0, 40) + '". Gebruik formaat dd-mm-jjjj of jjjj-mm-dd.');
+  }
+  const d = parseDatum_(s);
+  if (!d || isNaN(d.getTime())) {
+    try { schrijfAuditLog_(label + ' parse-fout', 'invoer: "' + s.slice(0, 40) + '"'); } catch (_) {}
+    throw new Error(label + ' kon niet geparsed worden. Controleer de invoer.');
+  }
+  return d;
+}
+
 // ─────────────────────────────────────────────
 //  ON EDIT: BEDRIJFSNAAM DOORVOEREN
 // ─────────────────────────────────────────────
@@ -286,9 +331,10 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   const klantnaam  = data['Klantnaam'] || '';
   const klantEmail = String(data['Klant e-mailadres'] || '').trim();
   const klantAdres = data['Factuuradres klant'] || '';
-  // parseDatum_ verwerkt DD-MM-YYYY, ISO én Date-objecten — voorkomt dat een
-  // factuur met handgetypte NL-locale datum stilletjes 'today' krijgt.
-  const datum      = parseDatum_(data['Factuurdatum']) || new Date();
+  // CYCLE-35: strikt parsen — voorheen viel parseDatum_ silent terug op
+  // vandaag bij garbage. Nu throw bij niet-parsebaar formaat zodat klant
+  // zijn typo ziet ipv silent verkeerd kwartaal.
+  const datum      = _parseFormDatumStrikt_(data['Factuurdatum'], 'Factuurdatum');
   // Datum-range validatie:
   //   * niet > 90 dagen toekomst (anti-fraude / typo)
   //   * niet > 7 jaar in verleden (bewaarplicht-grens AWR art. 52 = 7 jaar)
@@ -1023,7 +1069,7 @@ function verwerkVerkoopfactuurFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const datum = parseDatum_(data['Factuurdatum']) || new Date();
+    const datum = _parseFormDatumStrikt_(data['Factuurdatum'], 'Factuurdatum');   // CYCLE-35
     const termijn = parseInt(data['Betalingstermijn (dagen)'] || '30');
     const vervaldatum = new Date(datum.getTime() + termijn * 24 * 60 * 60 * 1000);
 
@@ -1174,7 +1220,7 @@ function verwerkInkoopfactuurFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const datum = parseDatum_(data['Factuurdatum']) || new Date();
+    const datum = _parseFormDatumStrikt_(data['Factuurdatum'], 'Factuurdatum');   // CYCLE-35
     const leverancier = String(data['Leveranciernaam'] || '').trim();
     const bedragExcl = parseBedrag_(data['Bedrag excl. BTW'] || '0');
     // Validatie EERST — voorkom gap in inkoopnummer-reeks bij lege submit
@@ -1271,7 +1317,7 @@ function verwerkBanktransactieFormulier(e) {
 
     const ss = getSpreadsheet_();
     const transactieId = volgendTransactieId_();
-    const datum = parseDatum_(data['Transactiedatum']) || new Date();
+    const datum = _parseFormDatumStrikt_(data['Transactiedatum'], 'Transactiedatum');   // CYCLE-35
     const type = data['Type transactie'] || 'Betaling (af)';
     const bedrag = parseBedrag_(data['Bedrag'] || '0');
     const isOntvangst = type.includes('Ontvangst');
@@ -1382,7 +1428,7 @@ function verwerkJournaalpostFormulier(e) {
     antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });
 
     const ss = getSpreadsheet_();
-    const datum = parseDatum_(data['Boekingsdatum']) || new Date();
+    const datum = _parseFormDatumStrikt_(data['Boekingsdatum'], 'Boekingsdatum');   // CYCLE-35
     const bedrag = parseBedrag_(data['Bedrag (excl. BTW)'] || '0');
     const btwKeuze = data['BTW tarief'] || 'Geen BTW';
     const btwTarief = btwKeuze === 'Geen BTW' ? null : parseBtwTarief_(btwKeuze);
