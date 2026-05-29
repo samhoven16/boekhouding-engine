@@ -42,7 +42,12 @@ function doGet(e) {
   if (actie === 'config')        return configEndpoint_(e);
   if (actie === 'telemetry')     return telemetryEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
-  if (actie === 'admin')         return adminPaneel_(e);
+  // CYCLE-41: rate-limit admin-login om brute-force op ADMIN_WACHTWOORD
+  // te voorkomen. Voorheen kon attacker onbeperkt wachtwoorden proberen
+  // (veiligVergelijk_ stopt timing-attack maar niet rate-attack).
+  // 20 pogingen/uur globaal — voldoende voor legitieme typo's, voorkomt
+  // brute-force scanning.
+  if (actie === 'admin')         return rateLimit_(e, { actie: 'admin-login', globaal: 20, windowMin: 60 }) || adminPaneel_(e);
   if (actie === 'roteer')        return rateLimit_(e, { actie: 'roteer', perEmail: 3, globaal: 100, windowMin: 60 }) || roteerEndpoint_(e);
   if (actie === 'revoke')        return revokeEndpoint_(e);
 
