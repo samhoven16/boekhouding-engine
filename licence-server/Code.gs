@@ -2183,10 +2183,14 @@ function verwerkBrevoBounce_(e) {
         const rij = i + 2; // header-rij = 1
         sheet.getRange(rij, bsCol + 1).setValue(bounceStatus);
         sheet.getRange(rij, brCol + 1).setValue(reden + ' · ' + new Date().toISOString().substring(0, 10));
-        // Bij hard-bounce: stop alle drips door Status op 'Bounce' te zetten
-        // (verstuurDripsDagelijks_ filtert op Status='Actief').
+        // Bij hard-bounce: stop alle drips door Status op 'Bounce' te zetten.
+        // CYCLE-32: startsWith('actief') ipv strict equality. Klanten met
+        // varianten 'Actief (handmatig)' / 'Actief — trial' werden eerder
+        // overgeslagen → drips bleven naar bounce-adres gestuurd worden →
+        // Brevo-quota verspild + sender reputation hit. Nu consistent met
+        // cycles 13/15/29/30.
         if (bounceStatus === 'hard' && statusCol !== -1 &&
-            String(data[i][statusCol]).toLowerCase() === 'actief') {
+            String(data[i][statusCol] || '').toLowerCase().startsWith('actief')) {
           sheet.getRange(rij, statusCol + 1).setValue('Bounce');
         }
         geraakt++;
