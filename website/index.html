@@ -49,12 +49,18 @@
 <meta property="og:image" content="https://www.boekhoudbaar.nl/og-image.svg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<!-- CYCLE-37: og:image:type expliciet voor SVG (Facebook/LinkedIn vereisen
+     dit voor non-raster og-images, anders fallback naar lege card).
+     og:image:alt voor toegankelijkheid in screen-readers van social apps. -->
+<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:image:alt" content="Boekhoudbaar — ZZP-boekhouding in Google Sheets, eenmalig €49">
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Boekhoudbaar — ZZP-boekhouding in Google Sheets">
 <meta name="twitter:description" content="Eenmalig €49. Geen abonnement. Jouw data in jouw Drive.">
 <meta name="twitter:image" content="https://www.boekhoudbaar.nl/og-image.svg">
+<meta name="twitter:image:alt" content="Boekhoudbaar — ZZP-boekhouding in Google Sheets, eenmalig €49">
 
 <!-- Schema.org JSON-LD -->
 <script type="application/ld+json">
