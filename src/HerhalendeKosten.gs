@@ -192,32 +192,76 @@ function maakHerhalendeKostenTab_(ss) {
 }
 
 function opslaanHerhalendeKost(data) {
+  // CYCLE-21: strikte input-validatie. Oude versie liet drie silent
+  // corruption-paden door:
+  //   1. parseFloat("12,50") → 12 (lost 50 cent per iteratie; NL-formaat)
+  //   2. parseInt(0) || 100 = 100 (0% zakelijk werd silent 100%)
+  //   3. parseDatum_("garbage") → vandaag (kost stond aan met fout
+  //      startdatum — boekte direct ipv op klant-bedoelde datum)
+  // Plus géén check op naam-leeg of bedrag<=0 (lege rij gemaakt → klant
+  // ziet "Actief" zonder bedrag → verwarrend).
+  const naam = String((data && data.naam) || '').trim();
+  if (!naam) throw new Error('Naam is verplicht voor een herhalende kost.');
+
+  // parseBedrag_ accepteert "1.234,56" en "1234.56" beide; parseFloat doet
+  // dat NIET. Strict (>0) want een €0 herhalende kost is onzinnig.
+  const bedrag = (typeof parseBedrag_ === 'function')
+    ? parseBedrag_(data.bedrag)
+    : (parseFloat(data.bedrag) || 0);
+  if (!(bedrag > 0)) throw new Error('Bedrag moet groter dan €0,00 zijn.');
+
+  // splitPct: 0 is een legitieme waarde (100% privé). isNaN-check ipv
+  // truthy-fallback zodat 0 niet silent 100 wordt.
+  let splitPct = parseInt(data && data.splitPct);
+  if (!isFinite(splitPct)) splitPct = 100;
+  splitPct = Math.min(100, Math.max(0, splitPct));
+
+  // Datum: parseDatum_ valt silent terug op vandaag bij onparsebare input.
+  // Voor herhalende kosten betekent dat: kost wordt direct geboekt ipv op
+  // klant-bedoelde startdatum. We checken eerst het format strikt; alleen
+  // herkende formaten (ISO of NL met separator) gaan door parseDatum_.
+  let startDatum;
+  const datumRaw = data && data.datum;
+  if (!datumRaw) {
+    startDatum = new Date();
+  } else if (datumRaw instanceof Date) {
+    if (isNaN(datumRaw.getTime())) throw new Error('Startdatum is een ongeldig Date-object.');
+    startDatum = datumRaw;
+  } else {
+    const s = String(datumRaw).trim();
+    if (!/^(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[-./]\d{1,2}[-./]\d{4})$/.test(s)) {
+      throw new Error('Startdatum is ongeldig — gebruik formaat dd-mm-jjjj of jjjj-mm-dd.');
+    }
+    startDatum = parseDatum_(s);
+    if (!startDatum || isNaN(startDatum.getTime())) {
+      throw new Error('Startdatum is ongeldig — gebruik formaat dd-mm-jjjj of jjjj-mm-dd.');
+    }
+  }
+
   const ss = getSpreadsheet_();
   const sheet = maakHerhalendeKostenTab_(ss);
 
-  // ID via Properties-counter (race-safe + uniek). Het oude
-  // `getLastRow()`-patroon kon duplicaten geven na een verwijderde rij.
   const id = _volgendHerhalendKostId_();
   const huidigAantal = sheet.getLastRow();
 
-  const splitPct = Math.min(100, Math.max(0, parseInt(data.splitPct) || 100));
   sheet.appendRow([
     id,
-    data.naam,
-    data.leveranc || '',
-    parseFloat(data.bedrag) || 0,
-    data.btw || '21% (hoog)',
-    data.freq || 'Maandelijks',
-    parseDatum_(data.datum) || new Date(),
-    data.rekening || '7000 Overige kosten',
+    naam,
+    String((data && data.leveranc) || ''),
+    bedrag,
+    (data && data.btw) || '21% (hoog)',
+    (data && data.freq) || 'Maandelijks',
+    startDatum,
+    (data && data.rekening) || '7000 Overige kosten',
     'Actief',
-    data.auto || 'Nee',
-    data.notities || '',
+    (data && data.auto) || 'Nee',
+    (data && data.notities) || '',
     splitPct,
   ]);
 
   sheet.getRange(huidigAantal + 1, 4).setNumberFormat('€#,##0.00');
   sheet.getRange(huidigAantal + 1, 7).setNumberFormat('dd-mm-yyyy');
+  return { id, naam, bedrag, splitPct };
 }
 
 // ─────────────────────────────────────────────
