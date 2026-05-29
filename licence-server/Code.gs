@@ -515,8 +515,12 @@ function aanvraagOtpEndpoint_(e) {
   const data  = sheet.getDataRange().getValues();
   let gevonden = false;
   for (let i = 1; i < data.length; i++) {
+    // CYCLE-29: startsWith('actief') ipv === 'actief' voor consistentie met
+    // onboardedEndpoint_/herstuurLicentieEndpoint_/admin-counters. Anders
+    // krijgen klanten met manueel-gezette varianten ('Actief (handmatig)',
+    // 'Actief — trial', 'Actief — vervolg') silent 'geen actieve licentie'.
     if (String(data[i][2]).toLowerCase() === email &&
-        String(data[i][4]).toLowerCase() === 'actief') { gevonden = true; break; }
+        String(data[i][4] || '').toLowerCase().startsWith('actief')) { gevonden = true; break; }
   }
   if (!gevonden) {
     return jsonResp_({ ok: false, fout: 'Dit e-mailadres is niet bekend als klant. Controleer het e-mailadres waarmee je hebt gekocht.' });
@@ -592,7 +596,9 @@ function activeerOtpEndpoint_(e) {
   const data  = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][2]).toLowerCase() !== email) continue;
-    if (String(data[i][4]).toLowerCase() !== 'actief') continue;
+    // CYCLE-29: zie aanvraagOtpEndpoint_ — startsWith('actief') voor
+    // consistentie met varianten als 'Actief (handmatig)' etc.
+    if (!String(data[i][4] || '').toLowerCase().startsWith('actief')) continue;
 
     const sleutel    = String(data[i][0]);
     const naam       = String(data[i][1]);
