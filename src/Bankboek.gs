@@ -37,12 +37,34 @@ function bankAfstemming() {
 
   const resp = ui.prompt(
     'Bankafstemming',
-    'Voer het werkelijke eindsaldo in van uw bankafschrift (bijv. 12345.67):',
+    'Voer het werkelijke eindsaldo in van uw bankafschrift (bijv. 12345,67 of -250,00):',
     ui.ButtonSet.OK_CANCEL
   );
   if (resp.getSelectedButton() !== ui.Button.OK) return;
 
-  const werkelijkSaldo = parseBedrag_(resp.getResponseText());
+  // CYCLE-25: strikte input-validatie. Vroeger viel parseBedrag_ silent
+  // terug op 0 bij garbage of lege input → 'Verschil: -€1234,56' alert
+  // die suggereerde dat klant €1234,56 in de min stond (terwijl er gewoon
+  // niets was ingevuld). Klant kreeg paniek-moment ipv duidelijke fout.
+  const ruwe = String(resp.getResponseText() || '').trim();
+  if (!ruwe) {
+    ui.alert('Bankafstemming', 'U heeft geen bedrag ingevoerd. Annuleer of vul het werkelijke banksaldo in.', ui.ButtonSet.OK);
+    return;
+  }
+  let werkelijkSaldo;
+  try {
+    werkelijkSaldo = (typeof parseBedragStrict_ === 'function')
+      ? parseBedragStrict_(ruwe, 'Werkelijk banksaldo')
+      : parseBedrag_(ruwe);
+  } catch (err) {
+    ui.alert('Bankafstemming', String(err && err.message ? err.message : err), ui.ButtonSet.OK);
+    return;
+  }
+  if (!isFinite(werkelijkSaldo)) {
+    ui.alert('Bankafstemming', 'Het ingevoerde bedrag "' + ruwe.slice(0, 40) + '" is geen geldig getal.', ui.ButtonSet.OK);
+    return;
+  }
+
   const boekhoudSaldo = getBanksaldo_(ss, '1200');
   const verschil = rondBedrag_(werkelijkSaldo - boekhoudSaldo);
 
