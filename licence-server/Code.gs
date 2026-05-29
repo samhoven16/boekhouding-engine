@@ -717,10 +717,17 @@ function valideerEndpoint_(e) {
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]).toUpperCase() !== sleutel) continue;
 
-      const status    = String(data[i][4]).toLowerCase();
+      const status    = String(data[i][4] || '').toLowerCase();
       const vervaldat = data[i][5] ? new Date(data[i][5]) : null;
 
-      if (status === 'ingetrokken') return jsonResp_({ geldig: false, fout: 'Licentie is ingetrokken.' });
+      // CYCLE-42: startsWith('ingetrokken') ipv strict equality. Voorheen
+      // werd 'Ingetrokken — rotatie' (cycle 31) niet herkend → een gerotireerde
+      // sleutel bleef geldig valideren → klant (of attacker met oude sleutel)
+      // kon de spreadsheet blijven gebruiken. Plus bounce-status werd niet
+      // gecheckt → klant met onbereikbare email kon door zonder dat wij hen
+      // konden bereiken voor support.
+      if (status.startsWith('ingetrokken')) return jsonResp_({ geldig: false, fout: 'Licentie is ingetrokken.' });
+      if (status === 'bounce') return jsonResp_({ geldig: false, fout: 'E-mailadres ontvangt geen post. Neem contact op via support@boekhoudbaar.nl.' });
       if (vervaldat && vervaldat < new Date()) return jsonResp_({ geldig: false, fout: 'Licentie is verlopen.' });
 
       // Registreer installatie-ID bij eerste activatie (één installatie per sleutel)
