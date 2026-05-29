@@ -177,13 +177,37 @@ function voegPriveTransactieToe() {
 }
 
 function opslaanPriveTransactie(data) {
-  // Server-side validatie — de dialog-side check kan omzeild worden.
-  const bedragNum = parseFloat(data && data.bedrag);
+  // CYCLE-33: parseBedrag_ ipv parseFloat voor NL-formaat support
+  // (klant typt "12,50" → parseFloat gaf 12, parseBedrag_ geeft 12.50).
+  // Plus strict format-check op datum (voorheen new Date('garbage') = NaN
+  // werd silent in sheet geschreven → klant ziet '#NUM!' bij volgende open).
+  const bedragNum = (typeof parseBedrag_ === 'function')
+    ? parseBedrag_(data && data.bedrag)
+    : parseFloat(data && data.bedrag);
   if (!isFinite(bedragNum) || bedragNum === 0) {
     throw new Error('Vul een geldig bedrag in (groter dan €0,00).');
   }
   const omschr = String((data && data.omschr) || '').trim();
   if (!omschr) throw new Error('Omschrijving is verplicht.');
+
+  // Datum: strikte format-check ipv silent NaN-Date
+  let datum;
+  const datumRaw = data && data.datum;
+  if (!datumRaw) {
+    datum = new Date();
+  } else if (datumRaw instanceof Date) {
+    if (isNaN(datumRaw.getTime())) throw new Error('Datum is een ongeldig Date-object.');
+    datum = datumRaw;
+  } else {
+    const s = String(datumRaw).trim();
+    if (!/^(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[-./]\d{1,2}[-./]\d{4})$/.test(s)) {
+      throw new Error('Datum is ongeldig — gebruik formaat dd-mm-jjjj of jjjj-mm-dd.');
+    }
+    datum = (typeof parseDatum_ === 'function') ? parseDatum_(s) : new Date(s);
+    if (!datum || isNaN(datum.getTime())) {
+      throw new Error('Datum is ongeldig — gebruik formaat dd-mm-jjjj of jjjj-mm-dd.');
+    }
+  }
 
   const ss = getSpreadsheet_();
   maakPriveTabbladen_(ss);
@@ -193,7 +217,7 @@ function opslaanPriveTransactie(data) {
     :  Math.abs(bedragNum);
 
   sheet.appendRow([
-    data.datum ? new Date(data.datum) : new Date(),
+    datum,
     omschr,
     data.categorie,
     bedrag,
