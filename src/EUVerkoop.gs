@@ -168,8 +168,14 @@ function controleerOssDrempel_() {
   // We hebben factuur-rij maar niet altijd EU-flag. Heuristiek:
   // Klant-BTW-nr (kolom 21) of land-veld in adres parseren.
   for (let i = 1; i < data.length; i++) {
-    const datum = data[i][2] instanceof Date ? data[i][2] : null;
-    if (!datum || datum.getFullYear() !== huidigJaar) continue;
+    // CYCLE-38: string-dated invoices (CSV-import) werden silent geskipped
+    // doordat alleen `instanceof Date` werd geaccepteerd. Gevolg: klant
+    // overschreed €10k OSS-drempel zonder waarschuwing → BTW-aangifte
+    // mismatch. Nu: parseDatum_ accepteert string én Date.
+    const ruwDatum = data[i][2];
+    const datum = (ruwDatum instanceof Date) ? ruwDatum
+                : ruwDatum ? parseDatum_(ruwDatum) : null;
+    if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== huidigJaar) continue;
     const status = String(data[i][14] || '');
     if (status === 'Gecrediteerd') continue;
     const btwNrKlant = String(data[i][21] || '').trim();
@@ -237,8 +243,13 @@ function genereerIcpRapport() {
   // Aggregate per (BTW-nummer + land) — Belastingdienst wil per ontvanger
   const agg = {};
   for (let i = 1; i < data.length; i++) {
-    const datum = data[i][2] instanceof Date ? data[i][2] : null;
-    if (!datum || datum < van || datum > tot) continue;
+    // CYCLE-38: parseDatum_ voor string-tolerance (zie controleerOssDrempel_).
+    // ICP-rapport is legaal verplicht per kwartaal — incompleet rapport door
+    // string-skip = onjuiste Belastingdienst-rapportage.
+    const ruwDatum = data[i][2];
+    const datum = (ruwDatum instanceof Date) ? ruwDatum
+                : ruwDatum ? parseDatum_(ruwDatum) : null;
+    if (!datum || isNaN(datum.getTime()) || datum < van || datum > tot) continue;
     const status = String(data[i][14] || '');
     if (status === 'Gecrediteerd') continue;
     const btwNrKlant = String(data[i][21] || '').trim();
