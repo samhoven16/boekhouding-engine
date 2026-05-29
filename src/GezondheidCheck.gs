@@ -310,13 +310,21 @@ function controleerBalans_(ss) {
     // Resultaat boekjaar telt mee als passiva (tijdelijk in passiva/EV)
     const verschil = rondBedrag_(Math.abs(totaalActiva - totaalPassiva));
 
-    if (verschil < 1) {
+    // CYCLE-22: drempel verlaagd van €1 → €0,05. €1 was veel te ruim voor een
+    // finance-systeem: een €0,99 verschil tussen Activa en Passiva is GEEN
+    // afronding (alle journaalposten worden op €0,01 afgerond) maar duidt
+    // op een ontbrekende of foutieve boeking. €0,05 vangt edge-cases van
+    // floating-point accumulatie over honderden boekingen op, maar niet
+    // meer dan dat. De WAARSCHUWING-tekst noemt nu expliciet het bedrag
+    // zodat klant kan inschatten of het urgent is.
+    if (verschil <= 0.05) {
       return { check: 'Balans', status: 'OK', bericht: `Activa en passiva zijn in evenwicht (${formatBedrag_(totaalActiva)}).` };
     } else {
       return {
         check: 'Balans',
         status: 'WAARSCHUWING',
-        bericht: `Verschil van ${formatBedrag_(verschil)} tussen activa (${formatBedrag_(totaalActiva)}) en passiva (${formatBedrag_(totaalPassiva)}). Controleer openingssaldi of ontbrekende boekingen. Dit kan normaal zijn als het boekjaar nog loopt.`,
+        bericht: `Verschil van ${formatBedrag_(verschil)} tussen activa (${formatBedrag_(totaalActiva)}) en passiva (${formatBedrag_(totaalPassiva)}). ` +
+                 `Controleer openingssaldi of ontbrekende boekingen. Dit kan normaal zijn tijdens het lopende boekjaar; bij afsluiting moet het naar €0,00.`,
       };
     }
   } catch (e) {
