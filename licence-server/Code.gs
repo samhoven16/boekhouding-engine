@@ -1679,6 +1679,9 @@ function roteerEndpoint_(e) {
         // als setupLicentieSheet (Sleutel, Naam, Email, Versie, Status, Vervaldatum,
         // Installatie-ID, Aangemaakt op, Mollie betaling ID, Laatste validatie, Onboarded op).
         sheet.getRange(i + 1, statusCol + 1).setValue('Ingetrokken — rotatie');
+        // CYCLE-31: zelfde cleanup als revoke — oude drip-state weg.
+        // Nieuwe sleutel krijgt eigen verse drips via aanmaakDatum=new Date().
+        _verwijderDripKeys_(oudeSleutel);
         sheet.appendRow([
           nieuweSleutel, naam, email, 'Standaard', 'Actief', '',
           '', new Date(), 'ROTATIE-VAN-' + oudeSleutel, '', '',
@@ -1705,6 +1708,34 @@ function roteerEndpoint_(e) {
  * /api/licentie/revoke — admin-only revocation (bij refund of misbruik).
  * Vereist admin-token in query: ?actie=revoke&sleutel=...&token=ADMIN_TOKEN
  */
+/**
+ * CYCLE-31: verwijdert alle `drip_<sleutel>_*` ScriptProperties voor één
+ * licentie-sleutel. Wordt aangeroepen na revoke of roteer zodat:
+ *   - de oude sleutel geen residuele drip-state heeft (defense; loop in
+ *     verstuurDripsDagelijks_ skipped al op status, maar dit is opruim)
+ *   - ScriptProperties-quota niet onnodig vol blijft (1 key per drip per
+ *     ooit-bestaande sleutel, accumuleert anders voor altijd)
+ * Best-effort: failures niet propagateren — endpoint-resultaat blijft OK.
+ */
+function _verwijderDripKeys_(sleutel) {
+  if (!sleutel) return 0;
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const prefix = 'drip_' + String(sleutel).toUpperCase() + '_';
+    const prefixLower = 'drip_' + String(sleutel).toLowerCase() + '_';
+    const keys = props.getKeys();
+    let verwijderd = 0;
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (k.indexOf(prefix) === 0 || k.indexOf(prefixLower) === 0 ||
+          k.indexOf('drip_' + sleutel + '_') === 0) {
+        try { props.deleteProperty(k); verwijderd++; } catch (_) {}
+      }
+    }
+    return verwijderd;
+  } catch (_) { return 0; }
+}
+
 function revokeEndpoint_(e) {
   try {
     const sleutel = String((e.parameter && e.parameter.sleutel) || '').trim();
@@ -1726,6 +1757,9 @@ function revokeEndpoint_(e) {
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][sleutelCol]).toUpperCase() === sleutel.toUpperCase()) {
         sheet.getRange(i + 1, statusCol + 1).setValue('Ingetrokken');
+        // CYCLE-31: ruim drip-state op zodat ScriptProperty-quota niet
+        // accumuleert. Best-effort — failure mag revoke niet blokkeren.
+        _verwijderDripKeys_(sleutel);
         // CYCLE-14: audit-log voor security-significant event (admin trekt
         // licentie in). Logger.log + sheet-write zodat owner kan reconstrueren.
         try {
