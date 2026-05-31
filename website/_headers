@@ -52,6 +52,12 @@
 /*.css
   Cache-Control: public, max-age=86400, s-maxage=604800
 
+# CYCLE-45: JS — zelfde patroon als CSS. consent.js werd anders bij elke
+# pagina-view opnieuw gedownload (geen default cache-policy = browser
+# kiest 0). Cloudflare edge cached 1 week, browser revalideert na 1 dag.
+/*.js
+  Cache-Control: public, max-age=86400, s-maxage=604800
+
 # robots/sitemap — 1 dag
 /robots.txt
   Cache-Control: public, max-age=86400, s-maxage=86400
