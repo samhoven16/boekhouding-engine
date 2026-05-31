@@ -105,7 +105,8 @@ function toonAchievementToast_(achievements) {
  */
 function toonAchievementsOverzicht() {
   const props = PropertiesService.getScriptProperties();
-  const behaald = JSON.parse(props.getProperty(ACHIEVEMENT_PROP) || '[]');
+  // CYCLE-54: veilig parsen — corrupt prop zou anders het menu doen crashen
+  const behaald = parseJsonVeilig_(props.getProperty(ACHIEVEMENT_PROP), []);
   const ui = SpreadsheetApp.getUi();
   const totaal = Object.keys(ACHIEVEMENTS).length;
   const lijst = Object.keys(ACHIEVEMENTS).map(function(k) {
@@ -228,7 +229,8 @@ function toonNpsSurvey() {
 function slaNpsResponseOp(score, opmerking) {
   if (typeof score !== 'number' || score < 0 || score > 10) throw new Error('Ongeldige score');
   const props = PropertiesService.getScriptProperties();
-  const responses = JSON.parse(props.getProperty(NPS_PROP_RESPONSE) || '[]');
+  // CYCLE-54: veilig parsen — corrupt prop mag NPS-submit niet doen crashen
+  const responses = parseJsonVeilig_(props.getProperty(NPS_PROP_RESPONSE), []);
   responses.push({
     ts: new Date().toISOString(),
     score: score,
