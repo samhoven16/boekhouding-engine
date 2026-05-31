@@ -65,7 +65,7 @@ function vernieuwDashboard() {
     .setFontWeight('bold').setFontSize(16).setHorizontalAlignment('center');
 
   sheet.getRange(2, 1, 1, 8).merge()
-    .setValue(`${formatDatumTijd_(nu)}  ·  Boekjaar ${jaar}  ·  Boekhoudbaar`)
+    .setValue(`${formatDatumTijd_(nu)}  ·  Boekjaar ${btwJaar}  ·  Boekhoudbaar`)
     .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#B8C2D1')
     .setFontSize(10).setHorizontalAlignment('center');
 
@@ -331,7 +331,7 @@ function vernieuwDashboard() {
   // ── BTW Maandoverzicht ────────────────────────────────────────────────
   rij += 2;
   sheet.getRange(rij, 1, 1, 8).merge()
-    .setValue(`BTW OVERZICHT ${jaar} (per kwartaal)`)
+    .setValue(`BTW OVERZICHT ${btwJaar} (per kwartaal)`)
     .setBackground(KLEUREN.SECTIE_BG).setFontWeight('bold');
   rij++;
 
