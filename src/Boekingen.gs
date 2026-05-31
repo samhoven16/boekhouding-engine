@@ -17,18 +17,10 @@ function maakJournaalpost_(ss, opt) {
   // ── Periode-vergrendeling check ───────────────────────────────────────
   // Adresseert "geen controle" pijnpunt: voorkom boekingen in afgesloten periodes
   const boekDatum = opt.datum instanceof Date ? opt.datum : new Date(opt.datum || new Date());
-  const geslotenPeriodes = PropertiesService.getScriptProperties().getProperty('GESLOTEN_PERIODES');
-  if (geslotenPeriodes) {
-    let periodes;
-    try {
-      periodes = JSON.parse(geslotenPeriodes);
-    } catch (jsonErr) {
-      Logger.log('GESLOTEN_PERIODES parse fout (ongeldige JSON): ' + jsonErr.message);
-      // Sla corrupte waarde op zodat toekomstige boekingen niet geblokkeerd worden
-      PropertiesService.getScriptProperties().deleteProperty('GESLOTEN_PERIODES');
-      periodes = [];
-    }
-    for (const p of (periodes || [])) {
+  // CYCLE-53: gedeelde self-healing parse (was inline try/catch)
+  const periodes = (typeof _leesGeslotenPeriodes_ === 'function') ? _leesGeslotenPeriodes_() : [];
+  if (periodes.length) {
+    for (const p of periodes) {
       const van = new Date(p.van);
       const tot = new Date(p.tot);
       if (boekDatum >= van && boekDatum <= tot) {
@@ -977,13 +969,33 @@ function bepaalBtwVoorbelastingRekening_(btwLabel) {
 // ─────────────────────────────────────────────
 
 /**
+ * CYCLE-53: self-healing parse van GESLOTEN_PERIODES. Corrupt JSON
+ * (bv. half-geschreven door quota-fail) zou anders vergrendelPeriode_
+ * (tijdens BTW-afsluiten) én beheerGeslotenPeriodes (menu) doen crashen.
+ * maakJournaalpost_ had deze guard al inline; nu gedeeld + self-heal.
+ * @returns {Array<Object>}
+ */
+function _leesGeslotenPeriodes_() {
+  const props = PropertiesService.getScriptProperties();
+  const bestaand = props.getProperty('GESLOTEN_PERIODES');
+  if (!bestaand) return [];
+  try {
+    const parsed = JSON.parse(bestaand);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (jsonErr) {
+    Logger.log('GESLOTEN_PERIODES parse fout (self-heal): ' + jsonErr.message);
+    try { props.deleteProperty('GESLOTEN_PERIODES'); } catch (_) {}
+    return [];
+  }
+}
+
+/**
  * Vergrendelt een periode zodat er geen nieuwe boekingen in gemaakt kunnen worden.
  * Wordt automatisch aangeroepen bij het afsluiten van een BTW-periode.
  */
 function vergrendelPeriode_(van, tot, label) {
   const props = PropertiesService.getScriptProperties();
-  const bestaand = props.getProperty('GESLOTEN_PERIODES');
-  const periodes = bestaand ? JSON.parse(bestaand) : [];
+  const periodes = _leesGeslotenPeriodes_();
 
   // Voorkom dubbele vergrendeling
   const al = periodes.find(p => p.van === van.toISOString() && p.tot === tot.toISOString());
@@ -1005,8 +1017,7 @@ function vergrendelPeriode_(van, tot, label) {
  */
 function beheerGeslotenPeriodes() {
   const props = PropertiesService.getScriptProperties();
-  const bestaand = props.getProperty('GESLOTEN_PERIODES');
-  const periodes = bestaand ? JSON.parse(bestaand) : [];
+  const periodes = _leesGeslotenPeriodes_();   // CYCLE-53: self-healing parse
   const ui = SpreadsheetApp.getUi();
 
   if (periodes.length === 0) {
