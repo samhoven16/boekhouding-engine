@@ -307,7 +307,13 @@ function _bouwTransactionsXml_(ss, jaar) {
       continue;
     } else {
       datum = String(datum);
-      datumObj = new Date(datum);
+      datumObj = (typeof parseDatum_ === 'function') ? parseDatum_(datum) : new Date(datum);
+      // CYCLE-48: string-dated journaalposten ontweken eerder het fiscaal-jaar
+      // filter (alleen Date-pad checkte jaar). Gevolg: XAF-export voor jaar X
+      // bevatte ook entries van jaar Y → audit-error bij Belastingdienst of
+      // accountant. Filter nu in beide paden.
+      if (!datumObj || isNaN(datumObj.getTime()) || datumObj.getFullYear() !== jaar) continue;
+      datum = Utilities.formatDate(datumObj, 'Europe/Amsterdam', 'yyyy-MM-dd');
     }
     const omschr = String(rij[2] || '').trim();
     const debet = String(rij[4] || '').trim();
