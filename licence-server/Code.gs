@@ -906,6 +906,9 @@ function ensureOnboardedKolom_(sheet) {
 function bedanktPagina_(e) {
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- CYCLE-49: transactionele post-purchase pagina — niet indexeren,
+     anders kunnen reviews/screenshots in zoekresultaten verschijnen. -->
+<meta name="robots" content="noindex,nofollow">
 <title>Betaling ontvangen</title>
 <style>
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
