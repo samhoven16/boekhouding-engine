@@ -1681,7 +1681,11 @@ function roteerEndpoint_(e) {
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][sleutelCol]).toUpperCase() === oudeSleutel.toUpperCase() &&
           String(data[i][emailCol]).toLowerCase() === email) {
-        if (String(data[i][statusCol]).toLowerCase().indexOf('revoked') !== -1) {
+        // CYCLE-43: status-language-bug fix. Voorheen `indexOf('revoked')` —
+        // maar de sheet bevat NL-status 'Ingetrokken' resp. 'Ingetrokken —
+        // rotatie' (cycle 31). 'revoked' matchte NOOIT → reeds-ingetrokken
+        // sleutel kon alsnog geroteerd worden → bypass van revoke.
+        if (String(data[i][statusCol] || '').toLowerCase().startsWith('ingetrokken')) {
           return ContentService.createTextOutput(JSON.stringify({ ok: false, fout: 'Sleutel is al ingetrokken.' }))
             .setMimeType(ContentService.MimeType.JSON);
         }
