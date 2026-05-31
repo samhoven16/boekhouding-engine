@@ -335,8 +335,13 @@ function _berekenJaarStats_(ss, jaar) {
     if (vfSheet && vfSheet.getLastRow() > 1) {
       const data = vfSheet.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
-        const datum = data[i][2] instanceof Date ? data[i][2] : null;
-        if (!datum || datum.getFullYear() !== jaar) continue;
+        // CYCLE-39: string-dated invoices (CSV-import) werden silent
+        // geskipped → onjuiste jaaroverzicht-omzet getoond aan klant.
+        // Zelfde bug-pattern als cycle 38 (EUVerkoop).
+        const ruwDatum = data[i][2];
+        const datum = (ruwDatum instanceof Date) ? ruwDatum
+                    : ruwDatum ? parseDatum_(ruwDatum) : null;
+        if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
         if (data[i][14] === 'Gecrediteerd') continue;
         const omzet = parseFloat(data[i][9]) || 0;
         stats.omzet += omzet;
@@ -350,8 +355,11 @@ function _berekenJaarStats_(ss, jaar) {
     if (ifSheet && ifSheet.getLastRow() > 1) {
       const data = ifSheet.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
-        const datum = data[i][3] instanceof Date ? data[i][3] : null;
-        if (!datum || datum.getFullYear() !== jaar) continue;
+        // CYCLE-39: parseDatum_ voor string-tolerance (zie boven)
+        const ruwDatum = data[i][3];
+        const datum = (ruwDatum instanceof Date) ? ruwDatum
+                    : ruwDatum ? parseDatum_(ruwDatum) : null;
+        if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
         stats.kosten += parseFloat(data[i][8]) || 0;
         stats.aantalKosten++;
       }
