@@ -15,6 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const { createGasRuntime } = require('../__helpers__/gas-runtime');
+const { maakStoreMock, maakPropertiesServiceMock } = require('../__helpers__/mocks');
 
 const CODE_GS = path.resolve(__dirname, '../../licence-server/Code.gs');
 const src = fs.readFileSync(CODE_GS, 'utf8');
@@ -49,28 +50,25 @@ describe('CYCLE 31: _verwijderDripKeys_ helper + integratie', () => {
 });
 
 describe('CYCLE 31: end-to-end met mock ScriptProperties', () => {
-  function maakCtx() {
-    const store = {};
+  // CYCLE-40: gemigreerd naar cycle-34 mocks helper.
+  // Voorheen: 8 regels handgemaakte PropertiesService-mock per test-suite.
+  // Nu: 4 regels via maakStoreMock + maakPropertiesServiceMock.
+  function maakCtx(initial) {
+    const scriptStore = maakStoreMock(initial);
     const ctx = createGasRuntime([CODE_GS], {
-      PropertiesService: {
-        getScriptProperties: () => ({
-          getKeys: () => Object.keys(store),
-          getProperty: (k) => store[k] || null,
-          setProperty: (k, v) => { store[k] = String(v); },
-          deleteProperty: (k) => { delete store[k]; },
-        }),
-      },
+      PropertiesService: maakPropertiesServiceMock({ script: scriptStore }),
     });
-    return { ctx, store };
+    return { ctx, store: scriptStore._data };
   }
 
   test('Verwijdert alle drip_<sleutel>_* keys', () => {
-    const { ctx, store } = maakCtx();
-    store['drip_ABCDE1_d3'] = 'sent';
-    store['drip_ABCDE1_d7'] = 'sent';
-    store['drip_ABCDE1_d14'] = 'sent';
-    store['drip_OTHERKEY_d3'] = 'sent';   // ander sleutel — moet blijven
-    store['notDripKey'] = 'keep';
+    const { ctx, store } = maakCtx({
+      'drip_ABCDE1_d3': 'sent',
+      'drip_ABCDE1_d7': 'sent',
+      'drip_ABCDE1_d14': 'sent',
+      'drip_OTHERKEY_d3': 'sent',   // ander sleutel — moet blijven
+      'notDripKey': 'keep',
+    });
     const r = ctx._verwijderDripKeys_('ABCDE1');
     expect(r).toBe(3);
     expect(store['drip_ABCDE1_d3']).toBeUndefined();
@@ -86,15 +84,13 @@ describe('CYCLE 31: end-to-end met mock ScriptProperties', () => {
   });
 
   test('Case-insensitive: sleutel "abcde1" wist ook "drip_ABCDE1_*"', () => {
-    const { ctx, store } = maakCtx();
-    store['drip_ABCDE1_d3'] = 'sent';
+    const { ctx } = maakCtx({ 'drip_ABCDE1_d3': 'sent' });
     const r = ctx._verwijderDripKeys_('abcde1');
     expect(r).toBe(1);
   });
 
   test('Geen drip-keys → 0', () => {
-    const { ctx, store } = maakCtx();
-    store['other_key'] = 'x';
+    const { ctx } = maakCtx({ 'other_key': 'x' });
     const r = ctx._verwijderDripKeys_('SLEUTEL');
     expect(r).toBe(0);
   });
