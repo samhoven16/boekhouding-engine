@@ -464,6 +464,36 @@ function isGeldigEmail_(email) {
 // ─────────────────────────────────────────────
 
 /**
+ * CYCLE-51: veilig sheet-data lezen — voorkomt cryptische TypeError
+ * "Cannot read properties of null (reading 'getDataRange')" wanneer een
+ * verplicht tabblad ontbreekt (klant heeft het per ongeluk verwijderd).
+ *
+ * Returned `[]` bij missing sheet zodat loops natuurlijk skippen (length=0)
+ * + audit-log via noodLog_ zodat owner het signaal krijgt.
+ *
+ * Voor verplichte writes (waar je NIET silent wilt doorgaan): gebruik
+ * direct `ss.getSheetByName(...)` met expliciete throw + meldFataalAanOwner_.
+ *
+ * @param {Spreadsheet} ss   Spreadsheet
+ * @param {string} naam      Tabblad-naam (uit SHEETS.X)
+ * @returns {Array<Array>}   Sheet-data of [] bij ontbreken
+ */
+function leesSheetVeilig_(ss, naam) {
+  if (!ss) return [];
+  const sheet = ss.getSheetByName(naam);
+  if (!sheet) {
+    try { noodLog_('SHEET_ONTBREEKT', String(naam)); } catch (_) {}
+    return [];
+  }
+  try {
+    return sheet.getDataRange().getValues();
+  } catch (err) {
+    try { noodLog_('SHEET_READ_FOUT', String(naam) + ': ' + err.message); } catch (_) {}
+    return [];
+  }
+}
+
+/**
  * Voegt dropdown validatie toe aan een bereik
  */
 function zetDropdown_(sheet, rij, kolom, keuzes) {

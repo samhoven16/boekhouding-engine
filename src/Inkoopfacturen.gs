@@ -129,7 +129,7 @@ function valideerInkoopfactuur_(data) {
 // ─────────────────────────────────────────────
 function toonOpenInkoopfacturen() {
   const ss = getSpreadsheet_();
-  const data = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  const data = leesSheetVeilig_(ss, SHEETS.INKOOPFACTUREN);   // CYCLE-51
   const vandaag = new Date();
 
   let html = `
