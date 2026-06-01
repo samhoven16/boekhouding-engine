@@ -673,7 +673,7 @@ function zetInstellingen_(ss) {
     ['', ''],
     ['FACTUUR INSTELLINGEN', ''],
     ['Factuur voettekst', 'Bedankt voor uw opdracht. Betaling binnen de gestelde termijn wordt op prijs gesteld.'],
-    ['Bankrekening op factuur', 'NL01ABNA0123456789'],
+    ['Bankrekening op factuur', ''], // CYCLE 76: leeg — voorheen 'NL01ABNA0123456789', een MOD-97-ongeldige nep-IBAN die wél presence-checks passeerde → klant verstuurde factuur met nep-IBAN. Veld leeg laten dwingt de klant tot invullen vóór de eerste factuur (zie cycle 74 pre-flight).
     ['Betaallink tonen', 'Nee'],
     ['', ''],
     ['RAPPORTAGE INSTELLINGEN', ''],

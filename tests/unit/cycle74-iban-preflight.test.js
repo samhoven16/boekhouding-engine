@@ -21,15 +21,19 @@ const { createGasRuntime } = require('../__helpers__/gas-runtime');
 const SRC = path.resolve(__dirname, '../../src');
 
 function maakCtx(instellingen) {
-  const ctx = createGasRuntime(['Config.gs', 'BoekingEngine.gs']);
+  // Utils.gs nodig voor isGeldigeIBANMet97Check_ (cycle 76 MOD-97 check).
+  const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'BoekingEngine.gs']);
   // getInstelling_ levert de testwaarden.
   ctx.getInstelling_ = (k) => (k in instellingen ? instellingen[k] : '');
   return ctx;
 }
 
+// Publieke testvector — MOD-97-geldige IBAN, geen echte rekening.
+const VALID_IBAN = 'NL91ABNA0417164300';
+
 describe('CYCLE 74: factuur bedrijfsgegevens pre-flight', () => {
   test('compleet (Bedrijfsnaam + IBAN) → geen fout', () => {
-    const ctx = maakCtx({ Bedrijfsnaam: 'Jansen ZZP', 'Bankrekening op factuur': 'NL00BANK0123456789' });
+    const ctx = maakCtx({ Bedrijfsnaam: 'Jansen ZZP', 'Bankrekening op factuur': VALID_IBAN });
     expect(() => ctx._eisFactuurBedrijfsgegevens_()).not.toThrow();
   });
 
@@ -39,7 +43,7 @@ describe('CYCLE 74: factuur bedrijfsgegevens pre-flight', () => {
   });
 
   test('Bedrijfsnaam ontbreekt → throw met Bedrijfsnaam in de melding', () => {
-    const ctx = maakCtx({ 'Bankrekening op factuur': 'NL00BANK0123456789' });
+    const ctx = maakCtx({ 'Bankrekening op factuur': VALID_IBAN });
     expect(() => ctx._eisFactuurBedrijfsgegevens_()).toThrow(/Bedrijfsnaam/);
   });
 
@@ -52,7 +56,7 @@ describe('CYCLE 74: factuur bedrijfsgegevens pre-flight', () => {
   });
 
   test("IBAN-alias 'IBAN' telt ook (niet alleen 'Bankrekening op factuur')", () => {
-    const ctx = maakCtx({ Bedrijfsnaam: 'Jansen ZZP', IBAN: 'NL00BANK0123456789' });
+    const ctx = maakCtx({ Bedrijfsnaam: 'Jansen ZZP', IBAN: VALID_IBAN });
     expect(() => ctx._eisFactuurBedrijfsgegevens_()).not.toThrow();
   });
 
