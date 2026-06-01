@@ -1227,6 +1227,7 @@ const FEATURE_DEFAULTS = {
   'kvk_autofill':             false,  // idem voor KVK_API_KEY
   'accountant_share':         true,
   'auto_backup':              true,
+  'noah_ark_export':          true,   // cycle 70: dagelijkse JSONL-snapshot
   'dlq_retry':                true,
   'webhook_hmac':             false,  // optionele opwaardering
   'multi_jaar_dashboard':     false,  // experimentele feature
