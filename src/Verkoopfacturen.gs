@@ -21,9 +21,12 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     const iban = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '';
     const factuurprefix = getInstelling_('Factuurprefix') || 'F';
     const voettekst = getInstelling_('Factuur voettekst') || '';
-    // Case-insensitive: 'Ja' / 'JA' / 'ja' / 'true' werken allemaal
-    const korActiefRaw = String(getInstelling_('KOR regeling actief') || '').toLowerCase().trim();
-    const korActief = korActiefRaw === 'ja' || korActiefRaw === 'true' || korActiefRaw === 'yes';
+    // CYCLE-56: gebruik isJa_ helper (consistent met andere paden) —
+    // accepteert ook 'y', '1', 'aan', 'on', true-boolean ipv alleen
+    // 'ja'/'true'/'yes'.
+    const korActief = (typeof isJa_ === 'function')
+      ? isJa_(getInstelling_('KOR regeling actief'))
+      : false;
 
     const factuurnummer = formatFactuurnummer_(factuurNr, factuurprefix, 6);
     const sepaQr = haalSepaQrBase64_(iban, bedrijf, totalIncl, factuurnummer);
