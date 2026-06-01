@@ -40,9 +40,13 @@ describe('CYCLE 63: demo ↔ product structuur', () => {
       .forEach((k) => expect(demo).toMatch(new RegExp(k, 'i')));
   });
 
-  test('Toont dat er 16 tabbladen zijn (eerlijk over volledige scope)', () => {
-    expect(demo).toMatch(/16 tabbladen/);
-    ['Cashflow', 'Debiteuren', 'Crediteuren', 'Jaarrekening', 'Beleggingen']
+  test('Toont dat er 15 tabbladen zijn (eerlijk over volledige scope, cycle 66)', () => {
+    expect(demo).toMatch(/15 tabbladen/);
+    // Beleggingen geschrapt in cycle 66: geen source-managed setup +
+    // GOOGLEFINANCE accepteert geen AMS:-prefix. Box-3-vermogen loopt
+    // via Privé → Vermogensoverzicht (Prive.gs, wél source-managed).
+    expect(demo).not.toContain('Beleggingen');
+    ['Cashflow', 'Debiteuren', 'Crediteuren', 'Jaarrekening']
       .forEach((t) => expect(demo).toContain(t));
   });
 });
