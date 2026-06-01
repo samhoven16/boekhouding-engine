@@ -216,17 +216,26 @@ function getBoekingContext() {
  * IBAN ontbreekt het betaalblok + de SEPA-QR → de ontvanger kan niet betalen.
  * De klant merkt dat pas nadat de factuur al verstuurd is.
  *
+ * CYCLE 76: presence is niet genoeg. De oude default 'NL01ABNA0123456789'
+ * is een nep-IBAN die wél niet-leeg is en daarmee de presence-check passeerde
+ * → een verse klant kon een factuur met nep-IBAN sturen. Validatie is nu
+ * MOD-97 (ISO 13616) i.p.v. !== ''. Een placeholder of typo wordt geweigerd
+ * met een actiegerichte fout. De Setup.gs default is gelijktijdig leeg
+ * gemaakt zodat het probleem ook bij de bron is dichtgezet.
+ *
  * Single source of truth: aangeroepen vanuit de dialog (verwerkNieuweBoeking,
  * snelle fail vóór verwerking) ÉN vanuit de chokepoint
  * verwerkInkomstenUitHoofdformulier_, zodat ook de Google-Form- en API-paden
  * gedekt zijn (die liepen voorheen langs de dialog-check heen).
  *
- * Gooit een actiegerichte fout als er iets ontbreekt; doet niets als alles
- * aanwezig is. IBAN-key is 'Bankrekening op factuur' met 'IBAN' als alias.
+ * Gooit een actiegerichte fout als er iets ontbreekt of ongeldig is; doet
+ * niets als alles aanwezig+geldig is. IBAN-key is 'Bankrekening op factuur'
+ * met 'IBAN' als alias.
  */
 function _eisFactuurBedrijfsgegevens_() {
   const bedrijf = getInstelling_('Bedrijfsnaam');
   const iban    = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN');
+
   const ontbrekend = [];
   if (!bedrijf) ontbrekend.push('Bedrijfsnaam');
   if (!iban)    ontbrekend.push('IBAN');
@@ -236,6 +245,20 @@ function _eisFactuurBedrijfsgegevens_() {
       ontbrekend.join(', ') + '.\n\n' +
       'Vul ze eerst in via het tabblad Instellingen en probeer opnieuw. ' +
       'Zonder IBAN kan je klant de factuur niet betalen.'
+    );
+  }
+
+  // CYCLE 76: format + MOD-97 validatie. isGeldigeIBANMet97Check_ bestaat al
+  // (Utils.gs) en wordt ook door de SEPA-QR pre-validatie gebruikt — zelfde
+  // bron-van-waarheid. Bij gefaalde check: blokkeer met een instructie die de
+  // klant naar Instellingen stuurt. Voorbeeld-IBAN tonen we bewust NIET (geen
+  // copy-paste-trap zoals de oude default).
+  if (typeof isGeldigeIBANMet97Check_ === 'function' && !isGeldigeIBANMet97Check_(iban)) {
+    throw new Error(
+      'Je factuur kan niet worden gemaakt — de IBAN in Instellingen is ongeldig.\n\n' +
+      'Controleer "Bankrekening op factuur" in het tabblad Instellingen. ' +
+      'Een geldige Nederlandse IBAN heeft de vorm NL + 2 cijfers + 4 letters + 10 cijfers ' +
+      'en moet kloppen volgens de MOD-97 controle.'
     );
   }
 }
