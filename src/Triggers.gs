@@ -685,8 +685,12 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   let debiteurenOpenNa = 0;
   for (let i = 1; i < bestaandeRijen.length; i++) {
     const r = bestaandeRijen[i];
-    const rDatum = r[2] ? new Date(r[2]) : null;
-    if (rDatum && rDatum.getFullYear() === huidigJaar) {
+    // CYCLE-59: parseDatum_ ipv bare new Date() — anders worden string-dated
+    // facturen (CSV-import / sheet-restore) silent geskipped → YTD-omzet
+    // ondertelt → mijlpaal-banner toont onjuist "eerste €X dit jaar"-bedrag.
+    // Zelfde patroon als cycle 38 (EUVerkoop) en cycle 39 (Engagement).
+    const rDatum = r[2] ? ((r[2] instanceof Date) ? r[2] : parseDatum_(r[2])) : null;
+    if (rDatum && !isNaN(rDatum.getTime()) && rDatum.getFullYear() === huidigJaar) {
       ytdOmzetExcl += parseFloat(r[9]) || 0;
     }
     const rStatus = r[14];
@@ -1652,10 +1656,11 @@ function stuurWeeklySamenvatting_() {
     if (vfSheet && vfSheet.getLastRow() > 1) {
       const data = vfSheet.getRange(2, 1, vfSheet.getLastRow() - 1, vfSheet.getLastColumn()).getValues();
       data.forEach(function(r) {
-        const datum = r[2] ? new Date(r[2]) : null;
+        // CYCLE-59: parseDatum_ voor string-tolerance
+        const datum = r[2] ? ((r[2] instanceof Date) ? r[2] : parseDatum_(r[2])) : null;
         const bedragIncl = Number(r[12]) || 0;
         const status = String(r[14] || '');
-        if (datum && datum >= weekGeleden && datum <= nu) {
+        if (datum && !isNaN(datum.getTime()) && datum >= weekGeleden && datum <= nu) {
           omzetWeek += bedragIncl;
           aantalFacturen++;
         }
@@ -1839,8 +1844,10 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
     const status = data[i][14];
     if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
 
-    const vervaldatum = data[i][3] ? new Date(data[i][3]) : null;
-    if (!vervaldatum) continue;
+    // CYCLE-59: parseDatum_ — anders skipt dunning string-dated facturen
+    // → klant verstuurt nooit herinnering → debiteuren-saldo loopt op.
+    const vervaldatum = data[i][3] ? ((data[i][3] instanceof Date) ? data[i][3] : parseDatum_(data[i][3])) : null;
+    if (!vervaldatum || isNaN(vervaldatum.getTime())) continue;
     const dagenOver = Math.floor((vandaag - vervaldatum) / 86400000);
     if (dagenOver < 1) continue;
 
