@@ -459,6 +459,26 @@ function isGeldigEmail_(email) {
   return /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/.test(email);
 }
 
+/**
+ * CYCLE-54: veilig JSON parsen — voorkomt crashes wanneer een
+ * ScriptProperty corrupt is (half-write bij quota-fail, handmatige edit).
+ * Bij parse-fout: log + return fallback (geen throw).
+ *
+ * @param {*} raw       String om te parsen (of null/undefined)
+ * @param {*} fallback  Wat te returnen bij leeg/corrupt (default null)
+ * @returns {*}
+ */
+function parseJsonVeilig_(raw, fallback) {
+  const fb = (fallback === undefined) ? null : fallback;
+  if (raw === null || raw === undefined || raw === '') return fb;
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    try { Logger.log('parseJsonVeilig_ corrupt JSON (fallback): ' + err.message); } catch (_) {}
+    return fb;
+  }
+}
+
 // ─────────────────────────────────────────────
 //  SPREADSHEET HELPERS
 // ─────────────────────────────────────────────
