@@ -217,7 +217,8 @@ function matchTransactiesMetFacturen_(ss, transacties) {
       if (incl <= 0) continue;
       openInkoop.push({
         rij: i + 1, nr: String(ifData[i][1] || ''),
-        datum: ifData[i][3] ? new Date(ifData[i][3]) : null,
+        // CYCLE-60: parseDatum_ voor string-tolerance (CSV-import datum)
+        datum: ifData[i][3] ? ((ifData[i][3] instanceof Date) ? ifData[i][3] : parseDatum_(ifData[i][3])) : null,
         leverancier: String(ifData[i][6] || ''),
         ref: String(ifData[i][4] || ''),
         openBedrag: rondBedrag_(incl),

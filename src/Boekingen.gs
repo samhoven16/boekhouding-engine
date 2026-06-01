@@ -743,9 +743,14 @@ function vernieuwCrediteurenOverzicht() {
     if (openstaand <= 0) continue;
 
     // ifData[i][3] is Factuurdatum leverancier (no separate vervaldatum column in schema)
-    const factuurdatum = ifData[i][3] ? new Date(ifData[i][3]) : null;
+    // CYCLE-60: parseDatum_ + isNaN-guard — string-dated inkoopfacturen anders
+    // silent geskipped → onjuiste crediteuren-aging in betalings-overzicht.
+    const factuurdatum = ifData[i][3]
+      ? ((ifData[i][3] instanceof Date) ? ifData[i][3] : parseDatum_(ifData[i][3]))
+      : null;
+    const factuurdatumGeldig = factuurdatum && !isNaN(factuurdatum.getTime());
     // Approximate vervaldatum: factuurdatum + 30 days (standard payment term)
-    const vervaldatum = factuurdatum ? new Date(factuurdatum.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
+    const vervaldatum = factuurdatumGeldig ? new Date(factuurdatum.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
     const dagenOver = vervaldatum ? Math.floor((vandaag - vervaldatum) / (1000 * 60 * 60 * 24)) : 0;
 
     totaalOpen += openstaand;
