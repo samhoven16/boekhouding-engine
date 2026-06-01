@@ -14,6 +14,7 @@
     "test:watch": "jest --watch --passWithNoTests",
     "index": "node scripts/symbol-index.js",
     "impact": "node scripts/impact.js",
+    "truth-check": "node scripts/truth-check.js",
     "prepare": "husky",
     "push:gas": "node scripts/clasp-push.js",
     "push:licence": "cd licence-server && NODE_TLS_REJECT_UNAUTHORIZED=0 npx clasp push --force",
