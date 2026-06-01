@@ -909,8 +909,9 @@ function getFactuurlijstData() {
   for (let i = 1; i < data.length; i++) {
     const r = data[i];
     if (!r[1]) continue; // Geen factuurnummer = lege rij
-    const vervaldatum = r[3] ? new Date(r[3]) : null;
-    const datum       = r[2] ? new Date(r[2]) : null;
+    // CYCLE-59: parseDatum_ voor string-tolerance (CSV-import / restore)
+    const vervaldatum = r[3] ? ((r[3] instanceof Date) ? r[3] : parseDatum_(r[3])) : null;
+    const datum       = r[2] ? ((r[2] instanceof Date) ? r[2] : parseDatum_(r[2])) : null;
     const status      = String(r[14] || '');
     const bedragIncl  = parseFloat(r[12]) || 0;
     const betaald     = parseFloat(r[13]) || 0;
