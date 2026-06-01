@@ -1551,10 +1551,11 @@ function genereerHandmatigeLicentie() {
  */
 function verwijderOudeFollowUpTrigger_() {
   let verwijderd = 0;
+  // CYCLE-52: try/catch per trigger (zie src/Setup.gs)
   ScriptApp.getProjectTriggers().forEach(function(t) {
     if (t.getHandlerFunction() === 'verwerkFollowUpEmails') {
-      ScriptApp.deleteTrigger(t);
-      verwijderd++;
+      try { ScriptApp.deleteTrigger(t); verwijderd++; }
+      catch (err) { Logger.log('deleteTrigger faalde (skipping): ' + err.message); }
     }
   });
   Logger.log('Oude follow-up triggers verwijderd: ' + verwijderd);
@@ -2079,8 +2080,12 @@ function dripInhoud_(dag, naam, productnm) {
  * voor verstuurDripsDagelijks_ worden eerst verwijderd.
  */
 function installeerDripTrigger_() {
+  // CYCLE-52: try/catch per trigger
   ScriptApp.getProjectTriggers().forEach(function(t) {
-    if (t.getHandlerFunction() === 'verstuurDripsDagelijks_') ScriptApp.deleteTrigger(t);
+    if (t.getHandlerFunction() === 'verstuurDripsDagelijks_') {
+      try { ScriptApp.deleteTrigger(t); }
+      catch (err) { Logger.log('deleteTrigger drip faalde: ' + err.message); }
+    }
   });
   ScriptApp.newTrigger('verstuurDripsDagelijks_')
     .timeBased().everyDays(1).atHour(9).create();

@@ -1257,10 +1257,15 @@ function installeelTriggers_() {
   );
 
   // Verwijder nu pas de oude triggers (nieuwe zijn al actief)
+  // CYCLE-52: try/catch per trigger — voorkomt dat één faal (bv. trigger
+  // tussentijds al verwijderd door andere session) de rest blokkeert.
   const nieuwIds = new Set(nieuweTriggers.map(t => t.getUniqueId()));
   ScriptApp.getProjectTriggers()
     .filter(t => !nieuwIds.has(t.getUniqueId()))
-    .forEach(t => ScriptApp.deleteTrigger(t));
+    .forEach(t => {
+      try { ScriptApp.deleteTrigger(t); }
+      catch (err) { Logger.log('deleteTrigger faalde (skipping): ' + err.message); }
+    });
 
   Logger.log('Triggers geïnstalleerd (' + nieuweTriggers.length + ' actief)');
 }
@@ -1399,7 +1404,11 @@ function resetSetup() {
    PROP.SETUP_DONE, PROP.KPI_SNAPSHOT,
   ].forEach(k => props.deleteProperty(k));
 
-  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
+  // CYCLE-52: try/catch per trigger — voorkomt half-finished reset
+  ScriptApp.getProjectTriggers().forEach(t => {
+    try { ScriptApp.deleteTrigger(t); }
+    catch (err) { Logger.log('reset deleteTrigger faalde: ' + err.message); }
+  });
 
   ui.alert('Klaar! ✓',
     'Reset gelukt. Run nu opnieuw setup via:\n' +
