@@ -614,23 +614,29 @@ function vulGrootboekschema_(ss) {
 function zetInstellingen_(ss) {
   const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
 
-  // DATA-LOSS PROTECTION: als klant al bedrijfsgegevens heeft ingevuld
-  // (bv. doordat setup een tweede keer wordt geroepen na guard-verwijdering)
-  // dan NIET clearContents — anders verliezen ze hun ingevulde IBAN, KvK, etc.
-  // Detectie: als kolom B in meer dan 3 rijen niet-leeg waarden bevat,
-  // beschouwen we de sheet als "in gebruik" en slaan we re-init over.
+  // CYCLE 75: data-behoud via per-veld MERGE i.p.v. een drempel-skip.
+  // VOORHEEN: als kolom B >3 gevulde waarden had → re-init volledig
+  // overgeslagen (return). Twee gebreken: (a) de drempel telde óók de
+  // DEFAULT-waarden mee (een verse setup vult al ~19 cellen) → de skip was
+  // grillig en kon bij weinig gevulde velden alsnog wissen; (b) bij skip
+  // kreeg een bestaande klant nooit nieuwe instellingen uit een product-update.
+  // NU: lees bestaande label→waarde, en overschrijf een default ALLEEN als de
+  // klant dat veld nog niet zelf heeft ingevuld. De structuur wordt altijd
+  // ververst (nieuwe defaults erbij), klant-data gaat NOOIT verloren.
+  const bestaandeWaarden = {};
   try {
-    if (sheet.getLastRow() > 5) {
-      const bestaande = sheet.getRange(1, 2, sheet.getLastRow(), 1).getValues();
-      const gevuld = bestaande.filter(function(r) { return r[0] !== '' && r[0] !== null; }).length;
-      if (gevuld > 3) {
-        Logger.log('zetInstellingen_: ' + gevuld + ' gevulde velden gedetecteerd — sheet behouden (geen overschrijving).');
-        try { schrijfAuditLog_('Setup re-init overgeslagen', 'Instellingen bevat ' + gevuld + ' gevulde velden — geen overschrijving'); } catch (_) {}
-        return;
-      }
+    if (sheet.getLastRow() >= 1) {
+      const rijen = sheet.getRange(1, 1, sheet.getLastRow(), 2).getValues();
+      rijen.forEach(function(r) {
+        const label = String(r[0] || '').trim();
+        const waarde = r[1];
+        if (label && waarde !== '' && waarde !== null && waarde !== undefined) {
+          bestaandeWaarden[label] = waarde;
+        }
+      });
     }
   } catch (e) {
-    Logger.log('zetInstellingen_ data-check faalde, behandel als lege sheet: ' + e.message);
+    Logger.log('zetInstellingen_ kon bestaande waarden niet lezen, behandel als lege sheet: ' + e.message);
   }
 
   sheet.clearContents();
@@ -681,6 +687,22 @@ function zetInstellingen_(ss) {
     ['Webhook API sleutel', ''],
     ['Web App URL', ''],
   ];
+
+  // MERGE-overlay: behoud elke door de klant ingevulde waarde (gematcht op
+  // het label in kolom A). Sectie-headers en lege scheidingsrijen hebben geen
+  // bewaarde waarde en blijven dus op hun default. Zo wint klant-data altijd
+  // van de default, terwijl nieuwe default-rijen wél worden toegevoegd.
+  let aantalBehouden = 0;
+  for (let i = 0; i < data.length; i++) {
+    const label = String(data[i][0] || '').trim();
+    if (label && Object.prototype.hasOwnProperty.call(bestaandeWaarden, label)) {
+      data[i][1] = bestaandeWaarden[label];
+      aantalBehouden++;
+    }
+  }
+  if (aantalBehouden > 0) {
+    try { schrijfAuditLog_('Setup instellingen samengevoegd', aantalBehouden + ' bestaande veld(en) behouden bij re-init'); } catch (_) {}
+  }
 
   sheet.getRange(1, 1, data.length, 2).setValues(data);
 
