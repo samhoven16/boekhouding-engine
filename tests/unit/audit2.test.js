@@ -217,7 +217,6 @@ describe('setup() idempotency guard (Setup.gs)', () => {
     ctx.vulGrootboekschema_         = jest.fn();
     ctx.zetInstellingen_            = jest.fn();
     ctx.setupAuditLogSheet_         = jest.fn();
-    ctx.setupBeleggingenSheet_      = jest.fn();
     ctx.maakFormuliersTabbladen_    = jest.fn();
     ctx.maakHoofdFormulier_         = jest.fn();
     ctx.herorganiseerWerkruimteSilent_ = jest.fn();
