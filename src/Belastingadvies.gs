@@ -248,6 +248,12 @@ function getBelasting_() {
   } catch (_) { /* fail-open naar lokale tarieven */ }
 
   const tarieven = serverTarieven || BELASTING_PER_JAAR[jaar] || BELASTING_PER_JAAR[2026];
+  // Hebben we échte tarieven voor het lopende jaar (server-override of lokale
+  // tabel)? Zo niet, dan vielen we terug op de 2026-snapshot. Belangrijk:
+  // serverTarieven is een ANDER object dan BELASTING_PER_JAAR[jaar], dus we
+  // mogen TARIEFSJAAR niet via object-identiteit bepalen — anders rapporteert
+  // de (aanbevolen) server-update-route ten onrechte 2026 i.p.v. het echte jaar.
+  const heeftJaarTarieven = !!(serverTarieven || BELASTING_PER_JAAR[jaar]);
 
   // KLANT-OVERRIDES uit Instellingen-tab. Drie-laags-merge:
   //   1. Hardcoded defaults (KOR_GRENS, KIA_MIN, etc.)
@@ -283,7 +289,7 @@ function getBelasting_() {
     GIFTEN_DREMPEL_PCT:     0.01,
     GIFTEN_MAX_PCT:         0.10,
     BOX3_GROEN_KORTING_PCT: 0.007,
-    TARIEFSJAAR:            tarieven === BELASTING_PER_JAAR[jaar] ? jaar : 2026,
+    TARIEFSJAAR:            heeftJaarTarieven ? jaar : 2026,
   }, tarieven, klantOverrides || {});
 }
 
