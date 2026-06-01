@@ -164,11 +164,17 @@ totalIncl = totalExcl + totalBtw                         [rounded]
 
 | Risk | Location | Severity | Notes |
 |------|----------|----------|-------|
-| berekenBtw '9' matching | BoekingEngine.gs:79 | LOW | `includes('9')` fragile; safe while BTW_KEUZES unchanged |
-| Herhalende kosten race condition | HerhalendeKosten.gs | LOW | Two simultaneous dashboard refreshes could double-book |
+| Sheet access in 20+ functions | Various | MEDIUM | Many files still directly call `.getSheetByName().getDataRange()` without null guard. Partial mitigation via `controleerEnHerstelTabbladen_` dagelijks. |
 | No force-re-setup escape hatch | Setup.gs | LOW | User must manually clear 'setupDone' property |
-| Sheet access in 20+ functions | Various | MEDIUM | Many files still directly call `.getSheetByName().getDataRange()` without null guard |
-| Dashboard BTW year assumption | Dashboard.gs | UNKNOWN | Uses current year; may mismatch if boekjaar set differently |
+
+### Resolved in recent cycles (audit-trail)
+
+- ~~`berekenBtw` '9' matching~~ → resolved: `BoekingEngine.gs:114` gebruikt nu `t.includes('9%')` (niet bare `'9'`), met `21%`-check eerst.
+- ~~Herhalende kosten race condition~~ → resolved (cycle 18 daily cleanup + `LockService.tryLock(30000)` in `verwerkHerhalendeKosten_`).
+- ~~Dashboard BTW year assumption~~ → resolved cycle 50: labels gebruiken nu `btwJaar = getBoekjaar_()`.
+- KOR-/verleggings-verklaring tegelijk → resolved cycle 55: `korVerklaring`-conditie checkt nu ook `!isVerlegd`.
+- GESLOTEN_PERIODES parse-crash → resolved cycle 53: `_leesGeslotenPeriodes_` self-heal.
+- ScriptProperty corrupt JSON → resolved cycle 54: `parseJsonVeilig_` helper.
 
 ---
 
