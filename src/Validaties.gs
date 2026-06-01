@@ -196,8 +196,8 @@ function valideerEnMeldInstellingen() {
 
   // BTW-nummer valideren (alleen als niet KOR en zakelijk)
   // KOR-actief: ondernemer factureert geen BTW, dus BTW-nr niet verplicht.
-  const korActiefRaw = String(getInstelling_('KOR regeling actief') || '').toLowerCase().trim();
-  const korActief = korActiefRaw === 'ja' || korActiefRaw === 'true' || korActiefRaw === 'yes';
+  // CYCLE-56: isJa_ helper voor consistente case-insensitive detectie
+  const korActief = (typeof isJa_ === 'function') ? isJa_(getInstelling_('KOR regeling actief')) : false;
   if (mode !== 'Privé' && btwNr) {
     const r = valideerBtwNummer_(btwNr);
     if (!r.geldig) fouten.push(`❌ BTW-nummer: ${r.fout}`);

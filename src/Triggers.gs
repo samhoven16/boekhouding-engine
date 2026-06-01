@@ -1622,8 +1622,8 @@ function stuurWeeklySamenvatting_() {
     // OPT-IN check: niet iedereen wil tips/samenvatting per email.
     // Default = Nee. Klant zet 'Ja' via Instellingen om abonnement aan te
     // zetten. Voorkomt ongewenste mail die als spam aanvoelt.
-    const opt = String(getInstelling_('Email tips wekelijks') || '').toLowerCase().trim();
-    const optActief = opt === 'ja' || opt === 'true' || opt === 'yes';
+    // CYCLE-56: isJa_ helper
+    const optActief = (typeof isJa_ === 'function') ? isJa_(getInstelling_('Email tips wekelijks')) : false;
     if (!optActief) {
       Logger.log('Wekelijkse samenvatting overgeslagen: opt-in niet actief (Email tips wekelijks=Nee)');
       return;

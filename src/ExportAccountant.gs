@@ -477,8 +477,8 @@ function mailMaandrapport() {
     if (!ss) return;
     // OPT-IN: niet iedereen wil maandelijks PDF-rapport (dashboard volstaat
     // voor de meesten). Default Nee. Klant zet 'Ja' via Instellingen.
-    const opt = String(getInstelling_('Email maandrapport') || '').toLowerCase().trim();
-    const optActief = opt === 'ja' || opt === 'true' || opt === 'yes';
+    // CYCLE-56: isJa_ helper voor consistente case-insensitive detectie
+    const optActief = (typeof isJa_ === 'function') ? isJa_(getInstelling_('Email maandrapport')) : false;
     if (!optActief) {
       Logger.log('Maandrapport overgeslagen: opt-in niet actief (Email maandrapport=Nee)');
       return;

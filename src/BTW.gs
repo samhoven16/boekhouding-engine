@@ -580,9 +580,10 @@ function controleerKor() {
   }
 
   const korGrens = 20000;
-  // Case-insensitive — voorkomt dat 'ja'/'JA' niet matcht
-  const korActiefRaw = String(getInstelling_('KOR regeling actief') || '').toLowerCase().trim();
-  const korActief = korActiefRaw === 'ja' || korActiefRaw === 'true' || korActiefRaw === 'yes';
+  // CYCLE-56: isJa_ helper (consistent met andere paden)
+  const korActief = (typeof isJa_ === 'function')
+    ? isJa_(getInstelling_('KOR regeling actief'))
+    : false;
 
   const pct = totaalOmzet > 0 ? Math.round((totaalOmzet / korGrens) * 100) : 0;
   const resterende = Math.max(0, korGrens - totaalOmzet);

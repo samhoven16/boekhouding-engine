@@ -744,9 +744,10 @@ function _berekenBelastingadviesRaw_(ss) {
   }
 
   // ── 1. KOR regeling ───────────────────────────────────────────────────
-  // Case-insensitive — 'JA' / 'ja' / 'true' werken nu allemaal
-  const korActiefRaw = String(getInstelling_('KOR regeling actief') || '').toLowerCase().trim();
-  const korActief = korActiefRaw === 'ja' || korActiefRaw === 'true' || korActiefRaw === 'yes';
+  // CYCLE-56: isJa_ helper (consistent met andere paden)
+  const korActief = (typeof isJa_ === 'function')
+    ? isJa_(getInstelling_('KOR regeling actief'))
+    : false;
   if (omzet > 0 && omzet < BELASTING.KOR_GRENS) {
     if (!korActief) {
       adviezen.push({
@@ -943,8 +944,8 @@ function _berekenBelastingadviesRaw_(ss) {
   // €15.979 + €7.996 starterbonus.
   // Detectie via grootboek 7790/8050 of categorie 'R&D'/'Onderzoek' of
   // instelling 'WBSO actief'.
-  const wbsoActiefRaw = String(getInstelling_('WBSO actief') || '').toLowerCase().trim();
-  const wbsoActief = wbsoActiefRaw === 'ja' || wbsoActiefRaw === 'true';
+  // CYCLE-56: isJa_ helper (consistent + accepteert 'y'/'1'/'aan'/'on')
+  const wbsoActief = (typeof isJa_ === 'function') ? isJa_(getInstelling_('WBSO actief')) : false;
   const heeftRdGrootboek = gbData.slice(1).some(r =>
     /onderzoek|r\s*&\s*d|innovatie|s\s*&\s*o|speur/i.test(String(r[1] || ''))
   );
