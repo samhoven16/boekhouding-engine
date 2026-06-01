@@ -38,7 +38,15 @@ function genereerFactuurPdf_(ss, factuurNr, klantnaam, datum, vervaldatum, regel
     const isVrijgesteld = /Vrijgesteld/i.test(btwTariefStr);
     const isVerlegd     = /Verlegd/i.test(btwTariefStr);
     const heeftBtw = parseFloat(totalBtw) > 0.005;
-    const korVerklaring = (korActief && !isVrijgesteld && !heeftBtw)
+    // CYCLE-55: óók !isVerlegd. Een verlegde factuur heeft heeftBtw=false,
+    // dus zonder deze guard zou een KOR-ondernemer met een verlegde
+    // transactie ZOWEL de KOR-verklaring (art. 25) ALS de verleggings-
+    // verklaring (art. 12 lid 3) op één factuur krijgen — twee tegenstrijdige
+    // rechtsgronden voor "geen BTW". Verwarrend voor afnemer + audit-risico:
+    // de Belastingdienst kan bij controle stellen dat de factuur onduidelijk
+    // is over WAAROM geen BTW is geheven. Verlegging is leidend (specifieke
+    // EU-B2B-grond); de KOR-tekst hoort daar niet bij.
+    const korVerklaring = (korActief && !isVrijgesteld && !isVerlegd && !heeftBtw)
       ? `<div style="background:#FFF8E1;border:1px solid #F9A825;border-radius:4px;padding:10px 14px;margin-bottom:16px;font-size:10pt;color:#5A3F00">
            <strong>Kleineondernemersregeling (KOR)</strong> — Er is geen btw in rekening gebracht, op basis van artikel 25 Wet OB.
          </div>`
