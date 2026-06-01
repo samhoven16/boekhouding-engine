@@ -147,12 +147,26 @@ function diagnoseInstallatie() {
 
   // ── 8. Drive-mappen ────────────────────────────────────
   check('Drive-hoofdmap', function() {
-    const jaar = new Date().getFullYear();
-    const id = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + jaar);
-    if (!id) return { ok: false, melding: 'geen DRIVE_HOOFDMAP_' + jaar + ' — run setup opnieuw' };
+    // CYCLE-58: gebruik boekjaar (klant-config) ipv calendar — voorkomt
+    // false-positive "geen DRIVE_HOOFDMAP — run setup opnieuw" bij klant
+    // met afwijkend boekjaar (cf. cycle 50). Fallback: probeer calendar
+    // jaar én vorig jaar zodat we klanten net na jaarwissel niet vals
+    // alarmeren.
+    const props = PropertiesService.getScriptProperties();
+    const boekjaar = (typeof getBoekjaar_ === 'function') ? getBoekjaar_() : new Date().getFullYear();
+    const kandidaten = [boekjaar, new Date().getFullYear(), new Date().getFullYear() - 1];
+    const uniek = Array.from(new Set(kandidaten));
+    let id = null;
+    let gevondenJaar = null;
+    for (let i = 0; i < uniek.length; i++) {
+      const v = props.getProperty('DRIVE_HOOFDMAP_' + uniek[i]);
+      if (v) { id = v; gevondenJaar = uniek[i]; break; }
+    }
+    if (!id) return { ok: false, melding: 'geen DRIVE_HOOFDMAP_' + boekjaar + ' — run setup opnieuw' };
     try {
       const f = DriveApp.getFolderById(id);
-      return { detail: f.getName() };
+      const suffix = gevondenJaar !== boekjaar ? ' (jaar ' + gevondenJaar + ')' : '';
+      return { detail: f.getName() + suffix };
     } catch (_) {
       return { ok: false, melding: 'map met ID ' + id + ' niet meer toegankelijk' };
     }
