@@ -1289,7 +1289,8 @@ function setupAuditLogSheet_() {
     // Alleen aanvullen als header ontbreekt; nooit data overschrijven
     return;
   }
-  const headers = ['Tijdstip', 'Gebruiker', 'Tabblad', 'Cel', 'Oude waarde', 'Nieuwe waarde', 'Type'];
+  // Kolom 8 'Ketenhash' (cycle 69): SHA-256 hash-keten voor tamper-evidence.
+  const headers = ['Tijdstip', 'Gebruiker', 'Tabblad', 'Cel', 'Oude waarde', 'Nieuwe waarde', 'Type', 'Ketenhash'];
   zetHeaderRij_(sheet, headers);
   sheet.setColumnWidth(1, 160);
   sheet.setColumnWidth(2, 200);
@@ -1298,6 +1299,7 @@ function setupAuditLogSheet_() {
   sheet.setColumnWidth(5, 220);
   sheet.setColumnWidth(6, 220);
   sheet.setColumnWidth(7, 120);
+  sheet.setColumnWidth(8, 260);
   // Verberg standaard — gebruiker kan via menu "Audit Log tonen" openen
   try { sheet.hideSheet(); } catch (e) {}
 }

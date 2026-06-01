@@ -192,6 +192,13 @@ function schrijfAuditEdit_(e) {
     severity,
   ];
 
+  // CYCLE 69: keten dit nieuwe record aan de vorige rij vast (kolom 8).
+  // vorigeHash leest kolom 8 van de huidige laatste rij; bij een leeg
+  // veld (genesis of legacy-rij van vóór cycle 69) start de schakel op ''.
+  try {
+    rij.push(_auditKetenHash_(_laatsteAuditHash_(auditSheet), rij));
+  } catch (_) { /* hash-fout mag audit-write nooit blokkeren */ }
+
   // Voeg toe aan einde, daarna trim:
   //  • Datum-cutoff op 7 jaar (AWR art. 52 bewaarplicht — moet bewaard blijven)
   //  • Hard-cap 5000 rijen als safety-net tegen runaway-growth
@@ -256,6 +263,126 @@ function _trimAuditLog_(auditSheet) {
   const totaalTeVerwijderen = aantalTeOud + extraOver;
   if (totaalTeVerwijderen > 0) {
     auditSheet.deleteRows(2, totaalTeVerwijderen);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  CYCLE 69: HASH-KETEN OVER HET AUDIT LOG
+// ─────────────────────────────────────────────
+//
+// Elke audit-rij krijgt in kolom 8 een SHA-256 van (hash-van-vorige-rij +
+// de 7 data-cellen van deze rij). Wie achteraf een eerdere audit-regel
+// wijzigt — bijvoorbeeld om te verbergen dat een journaalpost is aangepast —
+// breekt de keten: vanaf die rij klopt geen enkele herberekende hash meer.
+// De dagelijkse check (controleerAuditKetenProactief_) flagt dit.
+//
+// EERLIJK over de grens van deze garantie: dit is tamper-EVIDENT, niet
+// tamper-PROOF. De klant is eigenaar van de sheet en kan dezelfde hash-
+// functie draaien om de hele keten te herbouwen. Het detecteert dus
+// per-ongeluk-wijziging, data-corruptie en casual manipulatie — het is
+// géén verdediging tegen een vastberaden insider met toegang tot de code.
+// Voor de bewaarplicht (art. 52 AWR) is dat precies de relevante laag:
+// bewijs dat de bewaarde regels onderling consistent en onveranderd zijn.
+
+/**
+ * Canonieke, round-trip-stabiele string-representatie van de 7 data-cellen
+ * van een audit-rij. Datums → 'yyyy-MM-dd HH:mm:ss' (seconde-precisie
+ * overleeft het opslaan/teruglezen uit de sheet; rauwe getTime() niet door
+ * serial-afronding). Gebruikt door ZOWEL writer als verifier — ze MOETEN
+ * identiek canoniseren, anders breekt de keten bij elke verificatie.
+ */
+function _auditRijCanoniek_(rij7) {
+  return rij7.map(function(c) {
+    if (c instanceof Date) {
+      return Utilities.formatDate(c, 'Europe/Amsterdam', 'yyyy-MM-dd HH:mm:ss');
+    }
+    return String(c == null ? '' : c);
+  }).join('\x1f');
+}
+
+/**
+ * Berekent de ketenhash van één rij: SHA-256( vorigeHash + canoniek(rij7) ).
+ * @param {string} vorigeHash  Hash van de vorige rij ('' voor genesis/legacy).
+ * @param {Array}  rij7        De 7 data-cellen (zonder de hash-kolom).
+ * @return {string} hex-encoded SHA-256.
+ */
+function _auditKetenHash_(vorigeHash, rij7) {
+  var payload = String(vorigeHash || '') + '\x1e' + _auditRijCanoniek_(rij7);
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, payload);
+  return bytes.map(function(b) {
+    return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0');
+  }).join('');
+}
+
+/**
+ * Leest de ketenhash (kolom 8) van de laatste data-rij. Spiegelt exact wat
+ * de verifier als 'prev' gebruikt: lege kolom 8 (legacy/genesis) → ''.
+ */
+function _laatsteAuditHash_(auditSheet) {
+  var lastRow = auditSheet.getLastRow();
+  if (lastRow <= 1) return '';
+  var v = auditSheet.getRange(lastRow, 8).getValue();
+  return v ? String(v) : '';
+}
+
+/**
+ * Verifieert de hash-keten top-down. Herberekent elke schakel en vergelijkt
+ * met de opgeslagen hash in kolom 8. Tolerant voor:
+ *   • legacy-rijen van vóór cycle 69 (lege kolom 8) — niet te verifiëren,
+ *     fungeren als her-anker (spiegelt de writer die dan prev='' gebruikte);
+ *   • de eerste aanwezige rij na een trim (predecessor verwijderd) — wordt
+ *     als anker geadopteerd, niet geverifieerd. We bewijzen de interne
+ *     consistentie van de bewaarde keten, niet het verwijderde verleden.
+ *
+ * @return {{ok:boolean, gebrokenRij:number, gecontroleerd:number}}
+ */
+function verifieerAuditKeten_(auditSheet) {
+  var sheet = auditSheet || (getSpreadsheet_() && getSpreadsheet_().getSheetByName(SHEETS.AUDIT_LOG));
+  if (!sheet) return { ok: true, gebrokenRij: 0, gecontroleerd: 0 };
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return { ok: true, gebrokenRij: 0, gecontroleerd: 0 };
+
+  var data = sheet.getRange(2, 1, lastRow - 1, 8).getValues();
+  var prev = null;          // null = nog geen anker (eerste rij / na trim)
+  var gecontroleerd = 0;
+  for (var i = 0; i < data.length; i++) {
+    var rij7 = data[i].slice(0, 7);
+    var stored = data[i][7] ? String(data[i][7]) : '';
+    if (prev !== null && stored !== '') {
+      if (_auditKetenHash_(prev, rij7) !== stored) {
+        return { ok: false, gebrokenRij: i + 2, gecontroleerd: gecontroleerd };
+      }
+      gecontroleerd++;
+    }
+    prev = stored;          // ook '' (legacy) doorgeven: writer deed dat ook
+  }
+  return { ok: true, gebrokenRij: 0, gecontroleerd: gecontroleerd };
+}
+
+/**
+ * Dagelijkse check: verifieer de keten en alarmeer de owner bij een breuk.
+ * Niet-fataal — een falende check mag de andere dagelijkse taken niet stoppen.
+ */
+function controleerAuditKetenProactief_() {
+  var ss = getSpreadsheet_();
+  if (!ss) return;
+  var auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  if (!auditSheet) return;
+
+  var r = verifieerAuditKeten_(auditSheet);
+  if (!r.ok) {
+    try {
+      schrijfAuditLog_('AUDIT_KETEN_GEBROKEN',
+        'Hash-keten wijkt af op rij ' + r.gebrokenRij + ' — eerdere audit-regel mogelijk achteraf gewijzigd');
+    } catch (_) {}
+    try {
+      if (typeof meldFataalAanOwner_ === 'function') {
+        meldFataalAanOwner_('AUDIT_KETEN_GEBROKEN',
+          'De hash-keten van het Audit Log is gebroken op rij ' + r.gebrokenRij +
+          '. Een eerder vastgelegde audit-regel is mogelijk achteraf gewijzigd of corrupt geraakt.',
+          { rij: r.gebrokenRij, gecontroleerd: r.gecontroleerd });
+      }
+    } catch (_) {}
   }
 }
 
@@ -1514,6 +1641,12 @@ function dagelijkseTaken() {
     if (typeof controleerBewaarplichtAlert_ === 'function') controleerBewaarplichtAlert_();
   });
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
+  // CYCLE 69: verifieer de hash-keten van het Audit Log. Een gebroken keten
+  // betekent dat een eerder vastgelegde audit-regel achteraf is gewijzigd
+  // of corrupt is geraakt → owner-alert. Tamper-evidence op de bewaarplicht.
+  _runTaak_('auditKeten', function() {
+    if (typeof controleerAuditKetenProactief_ === 'function') controleerAuditKetenProactief_();
+  });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   // Cycle 68: Belastingadvies-tab is een statische rendering van
   // aftrekposten + spoed-deadlines. Voorheen werd hij alleen vernieuwd
