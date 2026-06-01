@@ -455,6 +455,16 @@ function verwerkHoofdformulier(e) {
 //  INKOMSTEN (factuur aanmaken)
 // ─────────────────────────────────────────────
 function verwerkInkomstenUitHoofdformulier_(ss, data) {
+  // CYCLE 74: pre-flight op verplichte bedrijfsgegevens. Dit is de chokepoint
+  // voor ALLE factuur-paden (dialog, Google Form, API). Zonder Bedrijfsnaam/
+  // IBAN zou hier een onbetaalbare factuur ("Ons Bedrijf", geen betaalblok)
+  // ontstaan die de klant pas merkt na verzending. Throw vóór enige creatie:
+  //   • dialog → fout terug in het dialoogvenster
+  //   • Form   → verwerkHoofdformulier vangt + mailt de eigenaar (geen
+  //              gênante factuur naar de eind-klant)
+  //   • API    → JSON-foutrespons naar de caller
+  if (typeof _eisFactuurBedrijfsgegevens_ === 'function') _eisFactuurBedrijfsgegevens_();
+
   const klantnaam  = data['Klantnaam'] || '';
   const klantEmail = String(data['Klant e-mailadres'] || '').trim();
   const klantAdres = data['Factuuradres klant'] || '';
