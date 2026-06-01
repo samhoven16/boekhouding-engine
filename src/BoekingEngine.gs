@@ -690,7 +690,10 @@ function _valideerDatumString_(s) {
  * @param {string} type - 'factuur' | 'kosten' | 'declaratie'
  */
 function parseSpraakinvoer(type, tekst) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  // Zelfde sleutel-opslag als scanDocumentMetAI: versleuteld in ScriptProperties.
+  // Moet hier óók ontsleuteld worden, anders gebruikt spraak-invoer de ruwe
+  // 'enc:'-string als API-key en faalt elke Gemini-call stilletjes.
+  const apiKey = ontsleutelString_(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY'));
   if (!apiKey) return {};
 
   const schema = {

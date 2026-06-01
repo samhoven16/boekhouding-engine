@@ -105,4 +105,38 @@ describe('CYCLE 65: AI bon-scan is bereikbaar (geen valse belofte)', () => {
       expect(res.fout).not.toMatch(/niet ingesteld/i);
     }
   });
+
+  test('spraak-invoer gebruikt DEZELFDE versleutelde sleutel (geen enc:-string als key)', () => {
+    const opslag = {};
+    let gebruikteUrl = null;
+    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'BoekingEngine.gs'], {
+      SpreadsheetApp: { getUi: () => maakUiMock('AIzaSyVOICEKEY01234567890') },
+      UrlFetchApp: {
+        fetch: (url) => {
+          gebruikteUrl = url;
+          return {
+            getContentText: () => JSON.stringify({
+              candidates: [{ content: { parts: [{ text: '{"omschr":"test","bedrag":10}' }] } }],
+            }),
+            getResponseCode: () => 200,
+          };
+        },
+      },
+    });
+    augmentUtilities(ctx);
+    ctx.PropertiesService.getScriptProperties = () => ({
+      getProperty: (k) => opslag[k] || null,
+      setProperty: (k, v) => { opslag[k] = v; },
+      deleteProperty: (k) => { delete opslag[k]; },
+    });
+    ctx.zetGeminiApiKey();
+
+    const velden = ctx.parseSpraakinvoer('declaratie', 'tien euro lunch');
+    // De feature levert velden op (dus de sleutel werd correct ONTSLEUTELD)
+    expect(velden).toMatchObject({ omschr: 'test', bedrag: 10 });
+    // En de ruwe enc:-string mag NOOIT in de request-URL belanden
+    expect(gebruikteUrl).toContain('key=AIzaSyVOICEKEY01234567890');
+    expect(gebruikteUrl).not.toContain('enc%3A');
+    expect(gebruikteUrl).not.toContain('enc:');
+  });
 });
