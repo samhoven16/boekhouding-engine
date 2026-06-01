@@ -318,14 +318,20 @@ function slaansFuzzyKoppelTransacties_() {
 
     // Methode 3: Exact bedrag + datum tolerantie ±90 dagen
     if (!gevondenFactuurRij) {
-      const btDatum = btData[i][1] ? new Date(btData[i][1]) : null;
+      // CYCLE-61: parseDatum_ + isNaN — string-dated rijen (CSV-import van
+      // zowel bank als factuur) matchten anders nooit → bank-transacties
+      // werden niet auto-gekoppeld → klant koppelt handmatig (frictie).
+      const btRaw = btData[i][1];
+      const btDatum = btRaw ? ((btRaw instanceof Date) ? btRaw : parseDatum_(btRaw)) : null;
+      const btGeldig = btDatum && !isNaN(btDatum.getTime());
       for (let j = 1; j < vfData.length; j++) {
         const vfBedrag = parseFloat(vfData[j][12]) || 0;
         const status   = vfData[j][14];
         if (moetSkippen_(status)) continue;
-        if (Math.abs(vfBedrag - bedrag) < 0.005 && btDatum) {
-          const vfDatum = vfData[j][2] ? new Date(vfData[j][2]) : null;
-          if (vfDatum) {
+        if (Math.abs(vfBedrag - bedrag) < 0.005 && btGeldig) {
+          const vfRaw = vfData[j][2];
+          const vfDatum = vfRaw ? ((vfRaw instanceof Date) ? vfRaw : parseDatum_(vfRaw)) : null;
+          if (vfDatum && !isNaN(vfDatum.getTime())) {
             const dagenVerschil = Math.abs((btDatum - vfDatum) / (1000 * 60 * 60 * 24));
             if (dagenVerschil <= 90) {
               gevondenFactuurRij = j;
