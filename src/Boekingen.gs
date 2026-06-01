@@ -466,8 +466,8 @@ function boekAfschrijvingen() {
   const ui = SpreadsheetApp.getUi();
   const ss = getSpreadsheet_();
 
-  // Haal vaste activa op uit grootboek
-  const gbData = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA).getDataRange().getValues();
+  // Haal vaste activa op uit grootboek (CYCLE-51: helper voor null-safety)
+  const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);
   const vasteActiva = gbData.filter(r => r[2] === 'Actief' && r[3] === 'Vaste activa' && parseFloat(r[5]) > 0);
 
   if (vasteActiva.length === 0) {
@@ -609,7 +609,7 @@ function vernieuwDebiteurenOverzicht() {
 
   // ── Aging buckets (leeftijdsanalyse) ──────────────────────────────────
   // Eerst alle open facturen verzamelen, dan buckets berekenen.
-  const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+  const vfData = leesSheetVeilig_(ss, SHEETS.VERKOOPFACTUREN);   // CYCLE-51
   const vandaag = new Date();
   const open = [];
 
@@ -733,7 +733,7 @@ function vernieuwCrediteurenOverzicht() {
   const headers = ['Intern nr.', 'Factuurdatum', 'Vervaldatum', 'Leverancier', 'Factuurref.', 'Bedrag incl.', 'Betaald', 'Openstaand', 'Status'];
   zetHeaderRij_(sheet, headers);
 
-  const ifData = ss.getSheetByName(SHEETS.INKOOPFACTUREN).getDataRange().getValues();
+  const ifData = leesSheetVeilig_(ss, SHEETS.INKOOPFACTUREN);   // CYCLE-51
   const vandaag = new Date();
   let rij = 2;
   let totaalOpen = 0;
@@ -789,7 +789,7 @@ function vernieuwCrediteurenOverzicht() {
 function koppelTransactiesAanFacturen() {
   if (!controleerSetupGedaan_()) return;
   const ss = getSpreadsheet_();
-  const btData = ss.getSheetByName(SHEETS.BANKTRANSACTIES).getDataRange().getValues();
+  const btData = leesSheetVeilig_(ss, SHEETS.BANKTRANSACTIES);   // CYCLE-51
   let gekoppeld = 0;
 
   for (let i = 1; i < btData.length; i++) {

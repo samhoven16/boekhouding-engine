@@ -293,7 +293,7 @@ function voerGezondheidCheckUit() {
 
 function controleerBalans_(ss) {
   try {
-    const gbData = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA).getDataRange().getValues();
+    const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);   // CYCLE-51
     let totaalActiva  = 0;
     let totaalPassiva = 0;
 
@@ -475,7 +475,7 @@ function controleerJournaalposten_(ss) {
   const resultaten = [];
 
   try {
-    const data = ss.getSheetByName(SHEETS.JOURNAALPOSTEN).getDataRange().getValues();
+    const data = leesSheetVeilig_(ss, SHEETS.JOURNAALPOSTEN);   // CYCLE-51
 
     const aantalPosten     = data.length - 1;
     let zelfboekingen    = 0;
@@ -544,7 +544,7 @@ function controleerVerkoopfacturen_(ss) {
   const resultaten = [];
 
   try {
-    const data = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+    const data = leesSheetVeilig_(ss, SHEETS.VERKOOPFACTUREN);   // CYCLE-51
     const nummers = {};
     let duplicaten     = 0;
     let geenKlant      = 0;
@@ -627,7 +627,7 @@ function controleerVerkoopfacturen_(ss) {
 
 function controleerBtwConsistentie_(ss) {
   try {
-    const vfData = ss.getSheetByName(SHEETS.VERKOOPFACTUREN).getDataRange().getValues();
+    const vfData = leesSheetVeilig_(ss, SHEETS.VERKOOPFACTUREN);   // CYCLE-51
     let btwMismatch = 0;
 
     for (let i = 1; i < vfData.length; i++) {

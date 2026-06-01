@@ -20,8 +20,8 @@ function genereerBalans() {
   // Koptekst
   zetRapportKoptekst_(sheet, 'BALANS', bedrijf, `Per ${formatDatum_(peildatum)}`, 4);
 
-  // Haal saldi op uit grootboek
-  const gbData = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA).getDataRange().getValues();
+  // Haal saldi op uit grootboek (CYCLE-51: helper voor null-safety)
+  const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);
   const saldi = {};
   for (let i = 1; i < gbData.length; i++) {
     saldi[String(gbData[i][0])] = {
@@ -176,8 +176,8 @@ function genereerWvRekening() {
 
   zetRapportKoptekst_(sheet, 'WINST- EN VERLIESREKENING', bedrijf, `Boekjaar ${jaar}`, 3);
 
-  // Haal journaalposten op voor het boekjaar
-  const gbData = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA).getDataRange().getValues();
+  // Haal journaalposten op voor het boekjaar (CYCLE-51: null-safe helper)
+  const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);
   const saldi = {};
   for (let i = 1; i < gbData.length; i++) {
     if (gbData[i][4] !== 'W&V') continue;
@@ -308,8 +308,8 @@ function genereerCashflow() {
   headerRij.setValues([headers])
     .setBackground(KLEUREN.SUBHEADER_BG).setFontColor('#FFFFFF').setFontWeight('bold');
 
-  // Ontvangsten per maand
-  const btData = ss.getSheetByName(SHEETS.BANKTRANSACTIES).getDataRange().getValues();
+  // Ontvangsten per maand (CYCLE-51: null-safe)
+  const btData = leesSheetVeilig_(ss, SHEETS.BANKTRANSACTIES);
   const ontvangstenPerMaand = new Array(12).fill(0);
   const betalingenPerMaand = new Array(12).fill(0);
 

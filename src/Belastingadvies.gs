@@ -852,7 +852,7 @@ function _berekenBelastingadviesRaw_(ss) {
   }
 
   // ── 5. KIA (Kleinschaligheidsinvesteringsaftrek) ──────────────────────
-  const gbData = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA).getDataRange().getValues();
+  const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);   // CYCLE-51
   let investeringen = 0;
   gbData.slice(1).forEach(r => {
     if (r[0] && String(r[0]).startsWith('02') && parseFloat(r[5]) > 0) {
@@ -1110,7 +1110,7 @@ function _berekenBelastingadviesRaw_(ss) {
 
   // ── 8b. MIA/VAMIL (milieu-investeringen) ─────────────────────────────
   // Kijk of er milieu-gerelateerde investeringen zijn (rekening 026x/027x)
-  const gbDataMia = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA) ? ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA).getDataRange().getValues() : [[]];
+  const gbDataMia = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);   // CYCLE-51
   let milieu = 0;
   gbDataMia.slice(1).forEach(r => {
     if (r[0] && /^02[67]/.test(String(r[0])) && parseFloat(r[5]) > 0) milieu += parseFloat(r[5]);
