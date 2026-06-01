@@ -1662,6 +1662,13 @@ function dagelijkseTaken() {
     if (typeof featureAan_ === 'function' && !featureAan_('auto_backup')) return;
     if (typeof maakAutomatischeBackup_ === 'function') maakAutomatischeBackup_();
   });
+  // CYCLE 70: Noah's Ark — platform-onafhankelijke JSONL-snapshot naast de
+  // xlsx-backup. Pure text → leesbaar door elk programma in 2070, ook als
+  // Google Apps Script niet meer bestaat. Hash-keten uit cycle 69 reist mee.
+  _runTaak_('noahArk',          function() {
+    if (typeof featureAan_ === 'function' && !featureAan_('noah_ark_export')) return;
+    if (typeof maakNoahArkSnapshot_ === 'function') maakNoahArkSnapshot_();
+  });
   _runTaak_('dlqRetry',         function() {
     if (typeof featureAan_ === 'function' && !featureAan_('dlq_retry')) return;
     if (typeof dlqVerwerkRetries_ === 'function') dlqVerwerkRetries_();

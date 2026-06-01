@@ -433,6 +433,162 @@ function maakAutomatischeBackup_() {
 }
 
 // ─────────────────────────────────────────────
+//  CYCLE 70: NOAH'S ARK — PLATFORM-ONAFHANKELIJKE SNAPSHOT
+// ─────────────────────────────────────────────
+//
+// Probleem: maakAutomatischeBackup_ schrijft .xlsx — een vendor-formaat
+// dat een leesprogramma vereist (Excel, LibreOffice, een xlsx-library).
+// Als Google Apps Script over 15 jaar stopt of de klant z'n account
+// kwijtraakt, zijn die backups nog te openen, maar de bookkeeping-data
+// in machine-leesbare vorm is afhankelijk van software-survival.
+//
+// Cycle 70 voegt een TWEEDE dagelijkse backup toe: één JSONL-bestand met
+// alle bron-sheets (de data waaruit de hele administratie reconstrueert).
+// Pure text, één JSON-object per regel, leesbaar door ELK programma dat
+// tekst kan parsen — Python, Rust, awk, in 2070 nog. De hash-keten uit
+// cycle 69 reist mee, dus integriteits-bewijs blijft verifieerbaar zonder
+// Google.
+//
+// EERLIJK over wat dit wel en niet doet:
+//  • Dit IS een echte exit-strategie voor de data zelf.
+//  • Dit is GEEN exit-strategie voor de logica (BTW-berekening,
+//    journaalpost-rules) — die zit in .gs en moet bij migratie herschreven.
+//  • Afgeleide sheets (Dashboard, Balans, W&V, BTW Aangifte) staan
+//    BEWUST niet in de snapshot: die zijn berekenbaar uit de bron-sheets.
+//    Dubbel opnemen = synchronisatie-rot tussen bron en afgeleide.
+
+/** De data-sheets die de hele boekhouding reconstrueren. Niet de afgeleide. */
+function _BRON_SHEETS_NOAH_() {
+  return [
+    SHEETS.JOURNAALPOSTEN,     // canonieke grootboek-feiten
+    SHEETS.VERKOOPFACTUREN,
+    SHEETS.INKOOPFACTUREN,
+    SHEETS.BANKTRANSACTIES,
+    SHEETS.RELATIES,
+    SHEETS.HERHALENDE_KOSTEN,
+    SHEETS.INSTELLINGEN,
+    SHEETS.GROOTBOEKSCHEMA,
+    SHEETS.AUDIT_LOG,          // incl. cycle-69 hash-keten
+  ];
+}
+
+/**
+ * Serialiseert één sheet naar JSONL-regels. Eerste regel = header-record,
+ * daarna één regel per data-rij. Header-driven: elke cel wordt gekoppeld aan
+ * de kolom-naam uit rij 1, zodat schema-wijzigingen (extra kolom) door een
+ * 2070-lezer foutloos te volgen zijn (object-properties i.p.v. array-indices).
+ * Datums → ISO-8601 (UTC), zonder verlies vergeleken met sheet-serial.
+ */
+function _serialiseerSheetNaarJsonl_(sheet) {
+  if (!sheet || sheet.getLastRow() < 1) return [];
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(function(h) { return String(h || ''); });
+  const regels = [JSON.stringify({
+    _record: 'sheet-header',
+    sheet: sheet.getName(),
+    kolommen: headers,
+    rijen: Math.max(0, data.length - 1),
+  })];
+  for (var i = 1; i < data.length; i++) {
+    const obj = { _record: 'rij', sheet: sheet.getName(), rij: i + 1 };
+    const data_obj = {};
+    var leeg = true;
+    for (var k = 0; k < headers.length; k++) {
+      var v = data[i][k];
+      if (v instanceof Date) v = v.toISOString();
+      else if (v != null && v !== '') leeg = false;
+      data_obj[headers[k] || ('kolom' + (k + 1))] = v == null ? '' : v;
+    }
+    if (leeg) continue;        // sla geheel-lege staartrijen over
+    obj.data = data_obj;
+    regels.push(JSON.stringify(obj));
+  }
+  return regels;
+}
+
+/**
+ * Dagelijks: schrijf één platform-onafhankelijke JSONL-snapshot naar Drive.
+ *   manifest-regel → per-sheet header-regel → per-rij data-regels.
+ *
+ * Idempotent: skip als snapshot van vandaag al bestaat (trigger kan 2× draaien).
+ * Retentie: 30 dagen, gelijk aan xlsx-backup.
+ */
+function maakNoahArkSnapshot_() {
+  try {
+    const ss = getSpreadsheet_();
+    if (!ss) return;
+    const bedrijf = (getInstelling_('Bedrijfsnaam') || 'Boekhouding')
+      .replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+    const datum = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd');
+    const bestandsnaam = 'NoahArk_' + bedrijf + '_' + datum + '.jsonl';
+
+    // Drive-map: hergebruik de Backups-folder waar de xlsx ook in staat.
+    const huidigJaar = new Date().getFullYear();
+    var backupMap = null;
+    try {
+      const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
+      if (hoofdId) {
+        const hoofd = DriveApp.getFolderById(hoofdId);
+        const it = hoofd.getFoldersByName('Backups');
+        backupMap = it.hasNext() ? it.next() : hoofd.createFolder('Backups');
+      }
+    } catch (_) {}
+    if (!backupMap) {
+      const it = DriveApp.getFoldersByName('Boekhouding Backups');
+      backupMap = it.hasNext() ? it.next() : DriveApp.createFolder('Boekhouding Backups');
+    }
+
+    if (backupMap.getFilesByName(bestandsnaam).hasNext()) return;  // al vandaag
+
+    // Manifest = eerste regel. Bevat schema-versie + reconstructie-instructies
+    // zodat een lezer in 2070 weet hoe-en-wat zonder externe documentatie.
+    const manifest = {
+      _record: 'manifest',
+      _schema: 'noah-ark/v1',
+      formaat: 'JSONL (één JSON-object per regel, UTF-8, LF-newlines)',
+      bron: 'Boekhoudbaar — Google Sheets administratie',
+      bedrijf: bedrijf,
+      spreadsheetId: ss.getId(),
+      exportTijdstip: new Date().toISOString(),
+      reconstructieInstructie:
+        'Bron-sheets bevatten de canonieke feiten; afgeleide sheets ' +
+        '(Dashboard/Balans/W&V/BTW Aangifte) zijn berekenbaar uit Journaalposten ' +
+        'volgens dubbel-boekhouden (debet=credit). Audit Log bevat een ' +
+        'SHA-256 hash-keten in kolom Ketenhash voor tamper-evidence.',
+      sheets: _BRON_SHEETS_NOAH_(),
+    };
+    const regels = [JSON.stringify(manifest)];
+
+    const bronSheets = _BRON_SHEETS_NOAH_();
+    for (var i = 0; i < bronSheets.length; i++) {
+      const sheet = ss.getSheetByName(bronSheets[i]);
+      if (!sheet) continue;     // sheet kan ontbreken in onvoltooide setup
+      Array.prototype.push.apply(regels, _serialiseerSheetNaarJsonl_(sheet));
+    }
+
+    const inhoud = regels.join('\n') + '\n';
+    backupMap.createFile(bestandsnaam, inhoud, 'application/x-ndjson');
+    try { schrijfAuditLog_('NoahArkSnapshot',
+      bestandsnaam + ' (' + regels.length + ' records, ' +
+      Math.round(inhoud.length / 1024) + ' KB)'); } catch (_) {}
+
+    // Retentie: 30 dagen, alleen NoahArk_*.jsonl prefix (raak xlsx niet aan).
+    const grens = Date.now() - 30 * 86400000;
+    const oudIt = backupMap.getFiles();
+    while (oudIt.hasNext()) {
+      const f = oudIt.next();
+      if (f.getName().indexOf('NoahArk_') === 0 &&
+          f.getDateCreated().getTime() < grens) {
+        try { f.setTrashed(true); } catch (_) {}
+      }
+    }
+  } catch (e) {
+    Logger.log('maakNoahArkSnapshot_ fout: ' + e.message);
+    try { schrijfAuditLog_('FOUT NoahArk', e.message); } catch (_) {}
+  }
+}
+
+// ─────────────────────────────────────────────
 //  HELPER: SHEET → CSV
 // ─────────────────────────────────────────────
 
