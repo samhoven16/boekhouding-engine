@@ -470,9 +470,44 @@ function logAiAanroep_(soort, inputHash, output, status, metadata) {
  * MOET het resultaat handmatig bevestigen voor opslag — geen automatische
  * journaalpost zonder klant-actie.
  */
+/**
+ * Stelt de Gemini API-sleutel in voor de "Upload + AI" bon-scan.
+ * Opgeslagen in ScriptProperties (owner-niveau — de owner betaalt de
+ * Gemini-kosten, gedeeld voor het hele boekhoudbestand), versleuteld zodat
+ * de sleutel niet leesbaar is in de Apps Script-editor. Zonder deze setter
+ * was de AI-scan onbereikbaar voor klanten en wees de foutmelding naar een
+ * niet-bestaand menu-item.
+ */
+function zetGeminiApiKey() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getScriptProperties();
+  const huidig = ontsleutelString_(props.getProperty('GEMINI_API_KEY') || '');
+  const resp = ui.prompt(
+    'Gemini API-key instellen (AI bon-scan)',
+    'Plak hier je Google Gemini API-key (gratis aan te maken op aistudio.google.com → "Get API key").\n' +
+    'Hiermee leest "Nieuwe boeking → Upload + AI" automatisch leverancier, datum en bedrag van een bon.\n\n' +
+    'Wordt versleuteld opgeslagen — niet zichtbaar in de Apps Script-editor. Laat leeg om te wissen.\n\nHuidig: ' +
+      (huidig ? huidig.slice(0, 4) + '…' + huidig.slice(-4) : '(geen)'),
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+  const key = String(resp.getResponseText() || '').trim();
+  if (!key) {
+    props.deleteProperty('GEMINI_API_KEY');
+    ui.alert('Gemini API-key verwijderd. De AI bon-scan staat uit (handmatig invoeren blijft werken).');
+    return;
+  }
+  if (key.length < 20) {
+    ui.alert('⚠️ Ongeldige sleutel', 'Een Gemini API-key is langer. Controleer en plak de volledige sleutel.', ui.ButtonSet.OK);
+    return;
+  }
+  props.setProperty('GEMINI_API_KEY', versleutelString_(key));
+  ui.alert('✅ Gemini API-key opgeslagen (versleuteld).', 'Vanaf nu leest de AI bij "Nieuwe boeking → Upload + AI" je bonnen automatisch uit.', ui.ButtonSet.OK);
+}
+
 function scanDocumentMetAI(base64Data, mimeType) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!apiKey) return { fout: 'Gemini API-sleutel niet ingesteld (Boekhouding → Instellingen → Gemini API-sleutel).' };
+  const apiKey = ontsleutelString_(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY'));
+  if (!apiKey) return { fout: 'Gemini API-sleutel niet ingesteld (Boekhouding → Instellingen → 🤖 Gemini API-key voor bon-scan).' };
 
   // OWASP LLM10 mitigatie: rate-limit op AI-calls. Zonder limiet kan klant
   // (per ongeluk of malicious) 1000× scannen → Gemini-quota uitputten + kosten.
@@ -655,7 +690,10 @@ function _valideerDatumString_(s) {
  * @param {string} type - 'factuur' | 'kosten' | 'declaratie'
  */
 function parseSpraakinvoer(type, tekst) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  // Zelfde sleutel-opslag als scanDocumentMetAI: versleuteld in ScriptProperties.
+  // Moet hier óók ontsleuteld worden, anders gebruikt spraak-invoer de ruwe
+  // 'enc:'-string als API-key en faalt elke Gemini-call stilletjes.
+  const apiKey = ontsleutelString_(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY'));
   if (!apiKey) return {};
 
   const schema = {

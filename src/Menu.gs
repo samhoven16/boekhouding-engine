@@ -245,6 +245,7 @@ function onOpen() {
       .addItem('Website / webshop koppelen (API)', 'toonZapierInstructies')
       .addItem('KvK API-key (voor auto-fill bedrijfsgegevens)', 'zetKvkApiKey')
       .addItem('Mollie API-key (voor iDEAL-betaal-link op factuur)', 'zetMollieApiKey')
+      .addItem('🤖 Gemini API-key voor bon-scan (Upload + AI)', 'zetGeminiApiKey')
       .addSeparator()
       .addItem('Jaarafsluiting wizard', 'sluitJaarAf')
       .addItem('Nieuw boekjaar starten (alleen Drive)', 'maakNieuwBoekjaar')
