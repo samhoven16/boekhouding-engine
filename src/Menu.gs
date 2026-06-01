@@ -31,6 +31,12 @@ function onOpen() {
   try { if (typeof controleerTriggerWatchdog_ === 'function') controleerTriggerWatchdog_(); }
   catch (e) { Logger.log('Trigger-watchdog overgeslagen: ' + e.message); }
 
+  // CYCLE 73: zelfherstel als de kritieke achtergrond-trigger (dagelijkseTaken)
+  // ontbreekt na een partiële install-fout. Herstelt automatisch i.p.v. de
+  // klant naar Diagnostiek te sturen. Throttled + auth-veilig (zie Setup.gs).
+  try { if (typeof herstelKritiekeTriggersIndienNodig_ === 'function') herstelKritiekeTriggersIndienNodig_(); }
+  catch (e) { Logger.log('Trigger-zelfherstel overgeslagen: ' + e.message); }
+
   // Jaarwisseling-check: in jan-mrt waarschuwen als factuurprefix nog op
   // vorig jaar staat. Aanbieding om jaarafsluiting nu te doen.
   try { if (typeof checkJaarwisselingNodig_ === 'function') checkJaarwisselingNodig_(); }

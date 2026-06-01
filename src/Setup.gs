@@ -1270,6 +1270,63 @@ function installeelTriggers_() {
   Logger.log('Triggers geïnstalleerd (' + nieuweTriggers.length + ' actief)');
 }
 
+/**
+ * CYCLE 73: zelfherstel van de kritieke achtergrond-trigger.
+ *
+ * Probleem: installeelTriggers_ maakt de triggers sequentieel aan. Faalt het
+ * halverwege (transiënte fout, scopes nog niet volledig, trigger-quota), dan
+ * kan `dagelijkseTaken` ontbreken terwijl setup tóch SETUP_DONE='true' zet.
+ * dagelijkseTaken is de automatisering-ruggengraat: backups, betalings-
+ * herinneringen, BTW-deadlines, audit-keten-check (cycle 69), Noah's Ark
+ * (cycle 70), dashboard-refresh. Ontbreekt die, dan draait dat alles stil
+ * door — geen foutmelding, geen mail, niets.
+ *
+ * De bestaande controleerTriggerWatchdog_ ziet dit NIET: die leest de
+ * Taakstatus-tab, die leeg is als de trigger nooit liep → vroege return.
+ *
+ * Deze functie draait bij onOpen, detecteert de ontbrekende trigger direct
+ * via getProjectTriggers(), en herstelt automatisch (i.p.v. de klant naar
+ * Diagnostiek te sturen voor een handmatige herinstallatie). Zo wordt de
+ * "één klik"-reparatie een "nul klikken"-reparatie.
+ *
+ * Veilig: alleen ná voltooide setup; throttle 1×/dag; auth-veilig (in
+ * LIMITED-modus — als de installable onOpen ontbreekt — kan ScriptApp toch
+ * geen triggers maken, dus we vangen dat stil af). Hergebruikt de idempotente
+ * installeelTriggers_ (single source of truth; create-first-then-delete →
+ * geen zero-trigger-venster).
+ */
+function herstelKritiekeTriggersIndienNodig_() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    if (props.getProperty(PROP.SETUP_DONE) !== 'true') return; // alleen na setup
+
+    let bestaande;
+    try {
+      bestaande = ScriptApp.getProjectTriggers();
+    } catch (_) {
+      return; // LIMITED auth-modus: kan toch geen triggers installeren
+    }
+    const handlers = bestaande.map(function(t) { return t.getHandlerFunction(); });
+    if (handlers.indexOf('dagelijkseTaken') !== -1) return; // kritieke trigger ok
+
+    // Throttle: max 1×/dag — vermijdt herhaalde reinstall-pogingen + quota.
+    const userProps = PropertiesService.getUserProperties();
+    const KEY = 'triggerHerstelTs';
+    const last = parseInt(userProps.getProperty(KEY) || '0', 10);
+    if (Date.now() - last < 24 * 3600 * 1000) return;
+    userProps.setProperty(KEY, String(Date.now()));
+
+    installeelTriggers_();
+    try { schrijfAuditLog_('Trigger zelfherstel', 'dagelijkseTaken ontbrak — triggers automatisch opnieuw geïnstalleerd'); } catch (_) {}
+    try {
+      getSpreadsheet_().toast('Achtergrondtaken waren gestopt en zijn automatisch hersteld.', '✓ Hersteld', 8);
+    } catch (_) {}
+  } catch (e) {
+    Logger.log('herstelKritiekeTriggersIndienNodig_ faalde: ' + e.message);
+    try { schrijfAuditLog_('Trigger zelfherstel FOUT', e.message); } catch (_) {}
+  }
+}
+
 // ─────────────────────────────────────────────
 //  AUDIT LOG TABBLAD
 // ─────────────────────────────────────────────
