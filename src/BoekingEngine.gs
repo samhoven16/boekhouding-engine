@@ -210,6 +210,36 @@ function getBoekingContext() {
   };
 }
 
+/**
+ * CYCLE 74: pre-flight op de verplichte bedrijfsgegevens voor een verkoop-
+ * factuur. Zonder Bedrijfsnaam toont de PDF de fallback "Ons Bedrijf"; zonder
+ * IBAN ontbreekt het betaalblok + de SEPA-QR → de ontvanger kan niet betalen.
+ * De klant merkt dat pas nadat de factuur al verstuurd is.
+ *
+ * Single source of truth: aangeroepen vanuit de dialog (verwerkNieuweBoeking,
+ * snelle fail vóór verwerking) ÉN vanuit de chokepoint
+ * verwerkInkomstenUitHoofdformulier_, zodat ook de Google-Form- en API-paden
+ * gedekt zijn (die liepen voorheen langs de dialog-check heen).
+ *
+ * Gooit een actiegerichte fout als er iets ontbreekt; doet niets als alles
+ * aanwezig is. IBAN-key is 'Bankrekening op factuur' met 'IBAN' als alias.
+ */
+function _eisFactuurBedrijfsgegevens_() {
+  const bedrijf = getInstelling_('Bedrijfsnaam');
+  const iban    = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN');
+  const ontbrekend = [];
+  if (!bedrijf) ontbrekend.push('Bedrijfsnaam');
+  if (!iban)    ontbrekend.push('IBAN');
+  if (ontbrekend.length > 0) {
+    throw new Error(
+      'Je factuur kan niet worden gemaakt — deze bedrijfsgegevens ontbreken: ' +
+      ontbrekend.join(', ') + '.\n\n' +
+      'Vul ze eerst in via het tabblad Instellingen en probeer opnieuw. ' +
+      'Zonder IBAN kan je klant de factuur niet betalen.'
+    );
+  }
+}
+
 // ─── CENTRALE DISPATCHER ──────────────────────
 /**
  * Verwerkt een boeking na validatie.
@@ -224,23 +254,11 @@ function verwerkNieuweBoeking(type, data) {
     throw new Error(v.fouten.map(function(f) { return f.bericht; }).join('\n'));
   }
 
-  // 2. Pre-check bedrijfsgegevens voor factuur — voorkomt "Ons Bedrijf" op
-  //    de PDF en klantverwarring. Alleen bij factuur; kosten/declaratie gaan
-  //    nergens naar de klant dus zijn minder kritiek.
-  if (type === 'factuur') {
-    const bedrijf = getInstelling_('Bedrijfsnaam');
-    const iban    = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN');
-    const ontbrekend = [];
-    if (!bedrijf) ontbrekend.push('Bedrijfsnaam');
-    if (!iban)    ontbrekend.push('IBAN');
-    if (ontbrekend.length > 0) {
-      throw new Error(
-        'Je factuur kan niet worden gemaakt — deze bedrijfsgegevens ontbreken: ' +
-        ontbrekend.join(', ') + '.\n\n' +
-        'Vul ze eerst in via het tabblad Instellingen en probeer opnieuw.'
-      );
-    }
-  }
+  // 2. Pre-check bedrijfsgegevens voor factuur — snelle fail vóór verwerking.
+  //    Alleen bij factuur; kosten/declaratie gaan nergens naar de klant.
+  //    Dezelfde check draait ook in de chokepoint (zie helper) voor de
+  //    Form/API-paden — single source of truth, geen drift.
+  if (type === 'factuur') _eisFactuurBedrijfsgegevens_();
 
   const ss = getSpreadsheet_();
 
