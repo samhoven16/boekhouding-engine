@@ -328,6 +328,60 @@ function toonFout(t){var e=document.getElementById('fout');e.textContent=t;e.sty
 }
 
 // ─────────────────────────────────────────────
+//  REFERRAL — KORTING-VALIDATIE
+// ─────────────────────────────────────────────
+//
+// De refCode in de URL is de eerste 10 chars van base64-websafe(SHA-256(email))
+// van een bestaande Boekhoudbaar-klant (zie Referral.gs, klant-side dialog).
+// Pas korting toe als én alleen als de ref overeenkomt met een ACTIEVE
+// licentiehouder én NIET de koper zelf. Cycle 67: maakt de "jij €44 i.p.v.
+// €49"-belofte echt waar; voorheen werd ref alleen als Mollie-metadata
+// vastgelegd, zonder feitelijke prijsverlaging.
+
+/** Reproduceert exact dezelfde hash als Referral.gs:toonReferralDialog(). */
+function _refCodeVanEmail_(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e) return '';
+  return Utilities.base64EncodeWebSafe(
+    Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, e)
+  ).replace(/=+$/, '').slice(0, 10);
+}
+
+/**
+ * Valideert een refCode: bestaat hij als ACTIEVE licentiehouder
+ * (kolom 2 = email, kolom 4 = status startend met 'actief')? Self-referral
+ * — de koper kan zichzelf niet verwijzen — geeft altijd false. Resultaat
+ * cached 5 minuten om sheet-scans te beperken.
+ */
+function _isGeldigeRefCode_(ref, koperEmail) {
+  if (!ref) return false;
+  // Self-referral-guard: een (eerlijke) klant kan zichzelf niet €5 korting geven
+  if (ref === _refCodeVanEmail_(koperEmail)) return false;
+
+  const cache = CacheService.getScriptCache();
+  const sleutel = 'refcode_geldig_' + ref;
+  const cached = cache.get(sleutel);
+  if (cached === '1') return true;
+  if (cached === '0') return false;
+
+  let geldig = false;
+  try {
+    const sheet = getLicentieSheet_();
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const rij = data[i];
+      if (!String(rij[4] || '').toLowerCase().startsWith('actief')) continue;
+      if (_refCodeVanEmail_(rij[2]) === ref) { geldig = true; break; }
+    }
+  } catch (e) {
+    Logger.log('_isGeldigeRefCode_ fout: ' + e.message);
+    return false;  // fail-closed: bij twijfel geen korting (geen revenue-leak)
+  }
+  try { cache.put(sleutel, geldig ? '1' : '0', 300); } catch (_) {}
+  return geldig;
+}
+
+// ─────────────────────────────────────────────
 //  BETAALPAGINA: BETALING AANMAKEN (Mollie)
 // ─────────────────────────────────────────────
 function maakBetaling(klantnaam, klantEmail, refCode) {
@@ -389,18 +443,28 @@ function maakBetaling(klantnaam, klantEmail, refCode) {
 
   if (!mollieKey) return { fout: 'Betalingsprovider niet geconfigureerd. Neem contact op.' };
 
+  // Cycle 67: pas €5 referral-korting toe bij geldige ref. fail-closed →
+  // bij sheet-fout, lege/onbekende ref of self-referral blijft het volle
+  // bedrag staan (geen revenue-leak).
+  const REF_KORTING = 5;
+  const refGeldig   = _isGeldigeRefCode_(ref, klantEmail);
+  const eindprijs   = refGeldig
+    ? Math.max(0, parseFloat(prijs) - REF_KORTING).toFixed(2)
+    : parseFloat(prijs).toFixed(2);
+
   try {
     const resp = UrlFetchApp.fetch('https://api.mollie.com/v2/payments', {
       method: 'post',
       contentType: 'application/json',
       headers: { Authorization: 'Bearer ' + mollieKey },
       payload: JSON.stringify({
-        amount:      { value: parseFloat(prijs).toFixed(2), currency: 'EUR' },
-        description: productnm + ' — ' + klantnaam,
+        amount:      { value: eindprijs, currency: 'EUR' },
+        description: productnm + ' — ' + klantnaam +
+                     (refGeldig ? ' (€' + REF_KORTING + ' referral-korting)' : ''),
         redirectUrl: webAppUrl + '?actie=bedankt',
         webhookUrl:  webAppUrl,
         metadata:    ref
-          ? { naam: klantnaam, email: klantEmail, ref: ref }
+          ? { naam: klantnaam, email: klantEmail, ref: ref, refKortingToegepast: refGeldig ? REF_KORTING : 0 }
           : { naam: klantnaam, email: klantEmail },
         method:      ['ideal', 'creditcard', 'bancontact'],
       }),
