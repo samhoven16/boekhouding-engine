@@ -525,6 +525,21 @@ function verwerkMollieWebhook_(e) {
 
     if (betaling.status !== 'paid') return; // Openstaand of geannuleerd — geen actie
 
+    // CYCLE 72: hard-guard op TEMPLATE_SS_ID. Zonder template kan de copy-link
+    // niet worden opgebouwd. Throw VÓÓR enige provisioning (appendRow / cache /
+    // mail), zodat (a) er niets wordt opgeslagen en (b) doPost een HTTP 500
+    // teruggeeft → Mollie retryt de webhook (max 10× over 26u). Zodra
+    // TEMPLATE_SS_ID is gezet slaagt die retry vanzelf en krijgt de klant
+    // alsnog direct een werkende link.
+    //
+    // VOORHEEN: de licentie werd opgeslagen + er ging een valse "link volgt
+    // binnen 24 uur"-mail uit. De idempotency-cache/sheet-check blokkeerde
+    // daarna élke retry → klant had betaald, kreeg nooit een werkende link.
+    if (!props.getProperty('TEMPLATE_SS_ID')) {
+      throw new Error('TEMPLATE_SS_ID ontbreekt — provisioning afgebroken voor ' +
+        paymentId + '. Mollie retryt; zet de Script Property en de volgende poging slaagt.');
+    }
+
     // Dubbele check in sheet (CacheService kan verlopen zijn na GAS-restart)
     const sheet = getLicentieSheet_();
     const data  = sheet.getDataRange().getValues();
@@ -1160,69 +1175,33 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const btw         = props.getProperty('BTW_NUMMER')      || '';
   const privacyUrl  = props.getProperty('PRIVACY_URL')     || 'https://www.boekhoudbaar.nl/privacy';
 
-  // Guard — zonder TEMPLATE_SS_ID kan de klant de copy-link niet gebruiken.
-  // VOORHEEN: alleen alert naar eigenaar, klant kreeg NIETS → uren/dagen wachten.
-  // NU: klant krijgt OOK een mail met:
-  //   - duidelijke uitleg dat licentie actief is
-  //   - hun licentiesleutel (zodat ze niets verliezen)
-  //   - belofte: copy-link binnen 24u
-  //   - support-email om sneller te reageren
+  // CYCLE 72: geen mail zonder werkende link. Zonder TEMPLATE_SS_ID kan de
+  // copy-link niet worden opgebouwd. We sturen de klant dan BEWUST GEEN mail —
+  // de oude "installatie-link volgt binnen 24 uur"-mail was een valse belofte
+  // (klant betaalde, kreeg een mail, maar nooit een werkende link). In plaats
+  // daarvan: alert de eigenaar én throw, zodat de aanroeper niet denkt dat het
+  // gelukt is. Vanuit de webhook is dit pad onbereikbaar (de hard-guard in
+  // verwerkMollieWebhook_ throwt al eerder → Mollie-retry); deze guard beschermt
+  // de handmatige resend-paden (herstuurLicentieEndpoint_ / -Handmatig).
   if (!templateId) {
-    Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' (' + sleutel.substring(0, 8) + '…) wacht op activatielink.');
+    Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — geen activatiemail voor ' + email + ' (' + sleutel.substring(0, 8) + '…).');
     try { markeerTemplateOntbreekt_(sleutel); } catch (_) {}
-
-    // 1. Alert naar eigenaar (urgent)
     try {
       MailApp.sendEmail({
         to: vanEmail,
-        subject: '🚨 URGENT: Klant ' + email + ' wacht — TEMPLATE_SS_ID ontbreekt',
-        htmlBody: '<p>Nieuwe klant <strong>' + escHtml_(naam) + '</strong> (' + escHtml_(email) + ') heeft betaald, ' +
+        subject: '🚨 URGENT: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' kan niet activeren',
+        htmlBody: '<p>Klant <strong>' + escHtml_(naam) + '</strong> (' + escHtml_(email) + ') heeft betaald, ' +
                   'maar de copy-link kan niet worden opgebouwd omdat <code>TEMPLATE_SS_ID</code> ' +
                   'ontbreekt in Script Properties.</p>' +
-                  '<p><strong>De klant heeft zojuist een uitleg-mail ontvangen</strong> met hun licentiesleutel ' +
-                  'en de belofte dat de copy-link binnen 24 uur volgt. Reageer A.S.A.P.:</p>' +
+                  '<p>Er is <strong>bewust GEEN mail naar de klant gestuurd</strong> (geen valse belofte). Herstel:</p>' +
                   '<ol><li>Vul <code>TEMPLATE_SS_ID</code> in Script Properties</li>' +
-                  '<li>Run <code>herstuurLicentiemailHandmatig("' + escHtml_(sleutel) + '")</code> in de editor</li></ol>' +
+                  '<li>De Mollie-webhook retryt automatisch — óf run ' +
+                  '<code>herstuurLicentiemailHandmatig("' + escHtml_(sleutel) + '")</code></li></ol>' +
                   '<p>Licentiesleutel: <code>' + escHtml_(sleutel) + '</code><br>' +
                   'Klant-email: <a href="mailto:' + escHtml_(email) + '">' + escHtml_(email) + '</a></p>',
       });
     } catch (_) {}
-
-    // 2. KLANT KRIJGT OOK EEN MAIL (cruciaal — geen radio-stilte)
-    try {
-      const klantHtml =
-        '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff">' +
-        '<div style="background:#0D1B4E;color:#fff;padding:24px;border-radius:8px 8px 0 0">' +
-        '<h1 style="margin:0;font-size:22px">✅ Bedankt voor je bestelling, ' + escHtml_(naam || 'klant') + '!</h1>' +
-        '</div>' +
-        '<div style="padding:24px;border:1px solid #E5EAF2;border-top:0;border-radius:0 0 8px 8px">' +
-        '<p>Je betaling is verwerkt en je licentie is geactiveerd.</p>' +
-        '<div style="background:#F7F9FC;border:1px solid #E5EAF2;border-radius:8px;padding:16px;margin:16px 0">' +
-        '<p style="margin:0 0 4px;font-size:13px;color:#5F6B7A">Je licentiesleutel:</p>' +
-        '<code style="font-size:18px;color:#0D1B4E;font-weight:600">' + escHtml_(sleutel) + '</code>' +
-        '<p style="margin:8px 0 0;font-size:12px;color:#5F6B7A">Bewaar deze code — je hebt hem straks nodig om je boekhouding te activeren.</p>' +
-        '</div>' +
-        '<p><strong>Wat nu?</strong></p>' +
-        '<p>We sturen je <strong>binnen 24 uur</strong> de installatie-link waarmee je je eigen kopie van Boekhoudbaar krijgt. ' +
-        'We zorgen dat je vandaag of morgen kunt starten.</p>' +
-        '<p style="margin-top:24px">Heb je vragen of wil je sneller starten? Reageer op deze e-mail of stuur een bericht naar ' +
-        '<a href="mailto:' + escHtml_(vanEmail) + '" style="color:#2EC4B6">' + escHtml_(vanEmail) + '</a>. ' +
-        'Ik (Sam) lees mijn mail meerdere keren per dag.</p>' +
-        '<p style="margin-top:32px;color:#5F6B7A;font-size:13px">— ' + escHtml_(vanNaam) + '<br>' +
-        escHtml_(productnm) + (kvk ? ' · KvK ' + escHtml_(kvk) : '') + (btw ? ' · BTW ' + escHtml_(btw) : '') + '</p>' +
-        '</div></div>';
-      MailApp.sendEmail({
-        to: email,
-        subject: '✅ Boekhoudbaar — bestelling ontvangen, installatie-link volgt binnen 24u',
-        htmlBody: klantHtml,
-        replyTo: vanEmail,
-        name: vanNaam,
-      });
-      Logger.log('Klant-fallback-mail verstuurd naar ' + email);
-    } catch (klantMailErr) {
-      Logger.log('::error:: Kon ook geen klant-fallback-mail sturen naar ' + email + ': ' + klantMailErr.message);
-    }
-    return;
+    throw new Error('TEMPLATE_SS_ID ontbreekt — activatiemail niet verstuurd voor ' + email);
   }
 
   // Klant krijgt een "Maak een kopie"-link naar het master-sjabloon.
