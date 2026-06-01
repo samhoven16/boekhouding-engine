@@ -1515,6 +1515,14 @@ function dagelijkseTaken() {
   });
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
+  // Cycle 68: Belastingadvies-tab is een statische rendering van
+  // aftrekposten + spoed-deadlines. Voorheen werd hij alleen vernieuwd
+  // als de klant zelf via het menu klikte → "Bijgewerkt:"-timestamp gaf
+  // valse indruk van actualiteit. Nu 1×/dag geïsoleerd verversen zodat
+  // bij elke sheet-open de fiscale info écht klopt. genereerBelasting-
+  // advies() is idempotent (clearContents → herrender) en faalt safe bij
+  // niet-voltooide setup via controleerSetupGedaan_ (UI-alert in try/catch).
+  _runTaak_('belastingadvies',  function() { genereerBelastingadvies(); });
   _runTaak_('groottecheck',     function() { controleerSheetGrootte_(ss); });
   _runTaak_('tabbladenIntact',  function() { controleerEnHerstelTabbladen_(ss); });
   _runTaak_('autoBackup',       function() {
