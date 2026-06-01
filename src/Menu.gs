@@ -215,7 +215,10 @@ function onOpen() {
       .addItem('BTW-aangifte berekenen', 'genereerBtwAangifte')
       .addItem('Jaarrekening', 'genereerJaarrekening')
       .addSeparator()
-      .addItem('🏢 Holding-overzicht (multi-admin)', 'vernieuwHoldingOverzicht')
+      // Cycle 71: 'Holding-overzicht (multi-admin)' verwijderd — de handler
+      // vernieuwHoldingOverzicht bestond niet (ghost menu-item → "Script
+      // function not found" bij klik). Er is geen holding/multi-admin-feature;
+      // het item beloofde functionaliteit die nooit is gebouwd.
       .addItem('🇪🇺 ICP-rapport (EU B2B-leveringen)', 'genereerIcpRapport')
       .addSeparator()
       .addItem('Detailoverzicht per rekening', 'exporteerGrootboekkaart')
