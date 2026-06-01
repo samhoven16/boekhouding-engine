@@ -126,28 +126,78 @@ footer a{color:rgba(255,255,255,.7);}
        kan niet embed). Dit toont prospects exact hoe het er straks uitziet.
        Klant ziet bij aankoop een interactieve versie met eigen data. -->
   <div class="mock">
-    <!-- Tab-rij -->
+    <!-- Tab-rij — selectie uit de 16 echte tabbladen (zelfde namen + volgorde) -->
     <div class="mock-tabs">
       <button class="mock-tab actief" data-mock-tab="dashboard">Dashboard</button>
       <button class="mock-tab" data-mock-tab="verkoop">Verkoopfacturen</button>
       <button class="mock-tab" data-mock-tab="inkoop">Inkoopfacturen</button>
       <button class="mock-tab" data-mock-tab="btw">BTW Aangifte</button>
+      <button class="mock-tab" data-mock-tab="belasting">Belastingadvies</button>
       <button class="mock-tab" data-mock-tab="balans">Balans</button>
     </div>
+    <p class="mock-tabs-note">Toont 6 van de 16 tabbladen. Het echte bestand heeft ook: Banktransacties · Relaties · Grootboekschema · W&amp;V Rekening · Cashflow · Debiteuren · Crediteuren · Jaarrekening · Beleggingen.</p>
 
-    <!-- DASHBOARD -->
+    <!-- DASHBOARD — 1-op-1 met het echte Dashboard-tabblad -->
     <div class="mock-pane actief" data-mock-pane="dashboard">
-      <div class="mock-greeting">Goedemiddag, <strong>Test BV</strong> · Boekjaar 2026</div>
-      <div class="mock-status">📈 Gezond: omzet €34.250 · winstmarge 38% · BTW Q1 voorbereid</div>
+      <!-- Navy greeting-bar + subline, zoals in het product -->
+      <div class="mock-greetbar">Goedemorgen, <strong>Studio Veld</strong></div>
+      <div class="mock-subline">12-05-2026 08:05 · Boekjaar 2026 · Boekhoudbaar</div>
+
+      <!-- 9 KPI's — exact dezelfde set + volgorde als het Dashboard -->
       <div class="mock-kpi-grid">
-        <div class="mock-kpi"><span class="mock-kpi-label">OMZET (YTD)</span><span class="mock-kpi-bedrag">€34.250</span></div>
-        <div class="mock-kpi"><span class="mock-kpi-label">KOSTEN (YTD)</span><span class="mock-kpi-bedrag">€7.840</span></div>
-        <div class="mock-kpi mock-kpi-positief"><span class="mock-kpi-label">NETTOWINST</span><span class="mock-kpi-bedrag">€26.410</span></div>
-        <div class="mock-kpi"><span class="mock-kpi-label">BANKSALDO</span><span class="mock-kpi-bedrag">€18.920</span></div>
-        <div class="mock-kpi"><span class="mock-kpi-label">OPEN DEBITEUREN</span><span class="mock-kpi-bedrag">€4.235</span></div>
-        <div class="mock-kpi"><span class="mock-kpi-label">BTW SALDO Q1</span><span class="mock-kpi-bedrag">€1.872</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">Omzet (YTD)</span><span class="mock-kpi-bedrag">€ 42.180</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">Kosten (YTD)</span><span class="mock-kpi-bedrag">€ 8.940</span></div>
+        <div class="mock-kpi mock-kpi-positief"><span class="mock-kpi-label">Nettowinst</span><span class="mock-kpi-bedrag">€ 33.240</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">Winstmarge</span><span class="mock-kpi-bedrag">79%</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">Banksaldo</span><span class="mock-kpi-bedrag">€ 28.500</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">Open debiteuren</span><span class="mock-kpi-bedrag">€ 7.435</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">Open crediteuren</span><span class="mock-kpi-bedrag">€ 1.240</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">BTW saldo</span><span class="mock-kpi-bedrag">€ 6.218</span></div>
+        <div class="mock-kpi"><span class="mock-kpi-label">Verwacht (30d)</span><span class="mock-kpi-bedrag">€ 6.420</span></div>
       </div>
-      <div class="mock-besparing">💰 <strong>Belastingvoordeel dit jaar: €4.180</strong> · zelfstandigenaftrek + MKB-vrijstelling + KIA</div>
+
+      <!-- Gezondheidsscore-balk -->
+      <div class="mock-gezondheid">⚠️ Gezondheid: <strong>92/100</strong> (0 fouten · 1 let op · gecheckt vandaag) — Menu: Boekhouding → Gezondheidscheck</div>
+
+      <!-- Besparing-sectie (3 kolommen) -->
+      <div class="mock-sectiekop">💰 Wat Boekhoudbaar dit jaar voor je heeft bespaard</div>
+      <div class="mock-besparing-grid">
+        <div class="mock-besp"><span class="mock-besp-label">Al bespaard</span><span class="mock-besp-bedrag">€ 4.180</span></div>
+        <div class="mock-besp"><span class="mock-besp-label">Nog te benutten</span><span class="mock-besp-bedrag">€ 1.290</span></div>
+        <div class="mock-besp"><span class="mock-besp-label">Maximale besparing</span><span class="mock-besp-bedrag">€ 5.470</span></div>
+      </div>
+
+      <!-- BTW-reminder (kalender-gestuurd, zoals in product) -->
+      <div class="mock-reminder">
+        <strong>📅 Mei: BTW-aangifte Q1</strong><br>
+        BTW-aangifte Q1 2026 indienen vóór 30 april. Boekhouding → BTW → BTW-aangifte Q1 genereert het overzicht. Tip: zet BTW direct na ontvangst van facturen apart op een spaarrekening.
+      </div>
+
+      <!-- BTW overzicht per kwartaal -->
+      <div class="mock-sectiekop-klein">BTW OVERZICHT 2026 (per kwartaal)</div>
+      <table class="mock-table">
+        <thead><tr><th></th><th>Q1 (jan-mrt)</th><th>Q2 (apr-jun)</th><th>Q3 (jul-sep)</th><th>Q4 (okt-dec)</th><th>Jaar totaal</th></tr></thead>
+        <tbody>
+          <tr><td>Omzet (excl.)</td><td>€ 42.180</td><td>€ 0,00</td><td>€ 0,00</td><td>€ 0,00</td><td>€ 42.180</td></tr>
+          <tr><td>BTW verschuldigd</td><td>€ 8.420</td><td>€ 0,00</td><td>€ 0,00</td><td>€ 0,00</td><td>€ 8.420</td></tr>
+          <tr><td>Voorbelasting</td><td>€ 2.202</td><td>€ 0,00</td><td>€ 0,00</td><td>€ 0,00</td><td>€ 2.202</td></tr>
+          <tr class="mock-totaal"><td><strong>Saldo</strong></td><td><strong>€ 6.218</strong></td><td>€ 0,00</td><td>€ 0,00</td><td>€ 0,00</td><td><strong>€ 6.218</strong></td></tr>
+        </tbody>
+      </table>
+
+      <!-- Kengetallen -->
+      <div class="mock-sectiekop-klein">KENGETALLEN</div>
+      <table class="mock-table">
+        <thead><tr><th>Kengetal</th><th>Waarde</th><th>Norm</th><th>Beoordeling</th></tr></thead>
+        <tbody>
+          <tr><td>Winstmarge</td><td>79%</td><td>≥ 20%</td><td><span class="badge groen">Uitstekend</span></td></tr>
+          <tr><td>Current ratio (liquiditeit)</td><td>4,2</td><td>≥ 1.5</td><td><span class="badge groen">Uitstekend</span></td></tr>
+          <tr><td>Solvabiliteit</td><td>86%</td><td>≥ 25%</td><td><span class="badge groen">Uitstekend</span></td></tr>
+          <tr><td>Debiteurendagen</td><td>21</td><td>≤ 45 dagen</td><td><span class="badge groen">Goed</span></td></tr>
+          <tr><td>Cash runway</td><td>&gt; 12 mnd</td><td>≥ 3 maanden</td><td><span class="badge groen">Uitstekend</span></td></tr>
+          <tr><td>Maandelijkse burn rate</td><td>€ 2.980</td><td>&lt; maandomzet</td><td><span class="badge groen">Gezond</span></td></tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- VERKOOPFACTUREN -->
@@ -155,15 +205,16 @@ footer a{color:rgba(255,255,255,.7);}
       <table class="mock-table">
         <thead><tr><th>Nr</th><th>Datum</th><th>Klant</th><th>Bedrag incl.</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>F2026-007</td><td>05-05-2026</td><td>ACME BV</td><td>€2.420,00</td><td><span class="badge groen">Betaald</span></td></tr>
-          <tr><td>F2026-006</td><td>02-05-2026</td><td>Studio Noord</td><td>€1.815,00</td><td><span class="badge groen">Betaald</span></td></tr>
-          <tr><td>F2026-005</td><td>28-04-2026</td><td>Bakkerij van Dam</td><td>€605,00</td><td><span class="badge oranje">Open</span></td></tr>
-          <tr><td>F2026-004</td><td>20-04-2026</td><td>Tech Stichting</td><td>€3.630,00</td><td><span class="badge groen">Betaald</span></td></tr>
-          <tr><td>F2026-003</td><td>15-04-2026</td><td>Café De Hoek</td><td>€1.210,00</td><td><span class="badge groen">Betaald</span></td></tr>
-          <tr><td>F2026-002</td><td>08-04-2026</td><td>Praktijk Zorg+</td><td>€2.057,00</td><td><span class="badge oranje">Verzonden</span></td></tr>
-          <tr><td>F2026-001</td><td>02-04-2026</td><td>WebDev Solutions</td><td>€4.840,00</td><td><span class="badge groen">Betaald</span></td></tr>
+          <tr><td>2026-041</td><td>08-05-2026</td><td>Meijer &amp; Zn</td><td>€ 2.420,00</td><td><span class="badge oranje">Verzonden</span></td></tr>
+          <tr><td>2026-040</td><td>02-05-2026</td><td>Kuipers &amp; Co</td><td>€ 1.815,00</td><td><span class="badge oranje">Open</span></td></tr>
+          <tr><td>2026-039</td><td>18-03-2026</td><td>Bloem Ontwerp</td><td>€ 3.200,00</td><td><span class="badge rood">Vervallen</span></td></tr>
+          <tr><td>2026-038</td><td>12-03-2026</td><td>Tech Stichting</td><td>€ 6.534,00</td><td><span class="badge groen">Betaald</span></td></tr>
+          <tr><td>2026-037</td><td>28-02-2026</td><td>Café De Hoek</td><td>€ 1.210,00</td><td><span class="badge groen">Betaald</span></td></tr>
+          <tr><td>2026-036</td><td>14-02-2026</td><td>Praktijk Zorg+</td><td>€ 2.057,00</td><td><span class="badge groen">Betaald</span></td></tr>
+          <tr><td>2026-035</td><td>03-01-2026</td><td>WebDev Solutions</td><td>€ 4.840,00</td><td><span class="badge groen">Betaald</span></td></tr>
         </tbody>
       </table>
+      <p class="mock-note">Open debiteuren: € 7.435 (2026-039 t/m 2026-041). Vervallen factuur krijgt automatisch een betalingsherinnering.</p>
     </div>
 
     <!-- INKOOPFACTUREN -->
@@ -171,14 +222,15 @@ footer a{color:rgba(255,255,255,.7);}
       <table class="mock-table">
         <thead><tr><th>Datum</th><th>Leverancier</th><th>Categorie</th><th>BTW</th><th>Incl.</th></tr></thead>
         <tbody>
-          <tr><td>05-05-2026</td><td>Google Workspace</td><td>Software</td><td>21%</td><td>€18,15</td></tr>
-          <tr><td>02-05-2026</td><td>Adobe Creative</td><td>Software</td><td>21%</td><td>€72,57</td></tr>
-          <tr><td>28-04-2026</td><td>Tankstation Shell</td><td>Auto/vervoer</td><td>21%</td><td>€78,40</td></tr>
-          <tr><td>15-04-2026</td><td>Holland Trein NS</td><td>Auto/vervoer</td><td>9%</td><td>€32,50</td></tr>
-          <tr><td>10-04-2026</td><td>BoekHorst</td><td>Studie/opleiding</td><td>9%</td><td>€42,80</td></tr>
-          <tr><td>02-04-2026</td><td>WeWork Amsterdam</td><td>Kantoor</td><td>21%</td><td>€350,00</td></tr>
+          <tr><td>05-05-2026</td><td>Google Workspace</td><td>Software</td><td>21%</td><td>€ 18,15</td></tr>
+          <tr><td>02-05-2026</td><td>Adobe Creative</td><td>Software</td><td>21%</td><td>€ 72,57</td></tr>
+          <tr><td>28-03-2026</td><td>Tankstation Shell</td><td>Auto/vervoer</td><td>21%</td><td>€ 78,40</td></tr>
+          <tr><td>15-03-2026</td><td>NS Zakelijk</td><td>Reiskosten OV</td><td>9%</td><td>€ 32,50</td></tr>
+          <tr><td>10-02-2026</td><td>BoekHorst</td><td>Studie/opleiding</td><td>9%</td><td>€ 42,80</td></tr>
+          <tr><td>02-01-2026</td><td>WeWork Amsterdam</td><td>Kantoor/werkruimte</td><td>21%</td><td>€ 350,00</td></tr>
         </tbody>
       </table>
+      <p class="mock-note">Maak een foto van je bonnetje → bedrag, datum en BTW worden automatisch herkend en ingevuld.</p>
     </div>
 
     <!-- BTW AANGIFTE -->
@@ -187,38 +239,58 @@ footer a{color:rgba(255,255,255,.7);}
       <table class="mock-table">
         <thead><tr><th>Rubriek</th><th>Omschrijving</th><th>Grondslag</th><th>BTW</th></tr></thead>
         <tbody>
-          <tr><td>1a</td><td>Leveringen 21%</td><td>€8.500</td><td>€1.785</td></tr>
-          <tr><td>1b</td><td>Leveringen 9%</td><td>€450</td><td>€40,50</td></tr>
-          <tr><td>1d</td><td>0% / vrijgesteld</td><td>€0</td><td>—</td></tr>
-          <tr><td>1e</td><td>Verlegd</td><td>€0</td><td>—</td></tr>
-          <tr><td><strong>5a</strong></td><td><strong>Verschuldigde BTW</strong></td><td>—</td><td><strong>€1.825,50</strong></td></tr>
-          <tr><td>5b</td><td>Voorbelasting (inkoop)</td><td>—</td><td>−€124,30</td></tr>
-          <tr><td><strong>5d</strong></td><td><strong>Te betalen aan Belastingdienst</strong></td><td>—</td><td><strong>€1.701,20</strong></td></tr>
+          <tr><td>1a</td><td>Leveringen 21%</td><td>€ 39.180</td><td>€ 8.228</td></tr>
+          <tr><td>1b</td><td>Leveringen 9%</td><td>€ 2.133</td><td>€ 192</td></tr>
+          <tr><td>1d</td><td>0% / vrijgesteld</td><td>€ 867</td><td>—</td></tr>
+          <tr><td>1e</td><td>Verlegd</td><td>€ 0</td><td>—</td></tr>
+          <tr><td><strong>5a</strong></td><td><strong>Verschuldigde BTW</strong></td><td>—</td><td><strong>€ 8.420</strong></td></tr>
+          <tr><td>5b</td><td>Voorbelasting (inkoop)</td><td>—</td><td>−€ 2.202</td></tr>
+          <tr class="mock-totaal"><td><strong>5d</strong></td><td><strong>Te betalen aan Belastingdienst</strong></td><td>—</td><td><strong>€ 6.218</strong></td></tr>
         </tbody>
       </table>
-      <p class="mock-note">📋 Direct overneembaar in mijn.belastingdienst.nl. Deadline Q1: 30 april.</p>
+      <p class="mock-note">📋 Cijfers direct overneembaar in Mijn Belastingdienst Zakelijk. Deadline Q1: 30 april.</p>
+    </div>
+
+    <!-- BELASTINGADVIES -->
+    <div class="mock-pane" data-mock-pane="belasting">
+      <h3 class="mock-h3">Belastingadvies &amp; aftrekposten 2026</h3>
+      <div class="mock-besparing-grid">
+        <div class="mock-besp"><span class="mock-besp-label">Bespaard dit jaar</span><span class="mock-besp-bedrag">€ 4.180</span></div>
+        <div class="mock-besp"><span class="mock-besp-label">Mogelijk extra</span><span class="mock-besp-bedrag">€ 1.290</span></div>
+        <div class="mock-besp"><span class="mock-besp-label">Totaal potentieel</span><span class="mock-besp-bedrag">€ 5.470</span></div>
+      </div>
+      <table class="mock-table">
+        <thead><tr><th>Samenvatting</th><th>Bedrag</th></tr></thead>
+        <tbody>
+          <tr><td>Winst vóór aftrekken</td><td>€ 33.240</td></tr>
+          <tr><td>Totaal aftrekposten (zelfst.+MKB)</td><td>−€ 8.965</td></tr>
+          <tr><td>Belastbare winst</td><td>€ 24.275</td></tr>
+          <tr class="mock-totaal"><td><strong>Geschatte fiscale last (IB + Zvw)</strong></td><td><strong>€ 6.840</strong></td></tr>
+        </tbody>
+      </table>
+      <p class="mock-note">💡 Proactief: MIA/VAMIL (45,5% extra aftrek), thuiswerkaftrek (€2,40/dag), urencriterium-bewaking (1.225 u → zelfstandigenaftrek €2.470). Boekhoudbaar signaleert gemiste aftrekposten vóór je aangifte.</p>
     </div>
 
     <!-- BALANS -->
     <div class="mock-pane" data-mock-pane="balans">
-      <h3 class="mock-h3">Balans per 5 mei 2026</h3>
+      <h3 class="mock-h3">Balans per 12 mei 2026</h3>
       <div class="mock-balans-grid">
         <div>
           <h4>Activa</h4>
           <table class="mock-table">
-            <tr><td>Bank</td><td>€18.920</td></tr>
-            <tr><td>Debiteuren</td><td>€4.235</td></tr>
-            <tr><td>Voorraad</td><td>€0</td></tr>
-            <tr class="mock-totaal"><td><strong>Totaal</strong></td><td><strong>€23.155</strong></td></tr>
+            <tr><td>Bank</td><td>€ 28.500</td></tr>
+            <tr><td>Debiteuren</td><td>€ 7.435</td></tr>
+            <tr><td>Te vorderen BTW</td><td>€ 0</td></tr>
+            <tr class="mock-totaal"><td><strong>Totaal</strong></td><td><strong>€ 35.935</strong></td></tr>
           </table>
         </div>
         <div>
           <h4>Passiva</h4>
           <table class="mock-table">
-            <tr><td>Eigen vermogen</td><td>€21.283</td></tr>
-            <tr><td>BTW te betalen</td><td>€1.872</td></tr>
-            <tr><td>Crediteuren</td><td>€0</td></tr>
-            <tr class="mock-totaal"><td><strong>Totaal</strong></td><td><strong>€23.155</strong></td></tr>
+            <tr><td>Eigen vermogen</td><td>€ 28.477</td></tr>
+            <tr><td>BTW te betalen</td><td>€ 6.218</td></tr>
+            <tr><td>Crediteuren</td><td>€ 1.240</td></tr>
+            <tr class="mock-totaal"><td><strong>Totaal</strong></td><td><strong>€ 35.935</strong></td></tr>
           </table>
         </div>
       </div>
@@ -235,14 +307,30 @@ footer a{color:rgba(255,255,255,.7);}
   .mock-tab.actief { color: #0D1B4E; border-bottom-color: #2EC4B6; }
   .mock-pane { display: none; }
   .mock-pane.actief { display: block; }
+  .mock-tabs-note { font-size: 11.5px; color: #8A95A5; margin: -10px 0 18px; line-height: 1.5; }
+  /* Navy greeting-bar zoals in het echte Dashboard */
+  .mock-greetbar { background: #0D1B4E; color: #fff; font-size: 18px; font-weight: 700; text-align: center; padding: 12px 16px; border-radius: 8px 8px 0 0; }
+  .mock-greetbar strong { font-weight: 800; }
+  .mock-subline { background: #16245c; color: rgba(255,255,255,.75); font-size: 12px; text-align: center; padding: 6px 16px; border-radius: 0 0 8px 8px; margin-bottom: 16px; }
   .mock-greeting { font-size: 18px; color: #0D1B4E; margin-bottom: 6px; }
   .mock-status { font-size: 13px; color: #1B5E20; background: #E8F5E9; padding: 8px 12px; border-radius: 6px; margin-bottom: 18px; display: inline-block; }
-  .mock-kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  /* 9-KPI grid: 3 koloms desktop, 2 tablet, 1 mobiel */
+  .mock-kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
   @media (max-width: 720px) { .mock-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 440px) { .mock-kpi-grid { grid-template-columns: 1fr; } }
   .mock-kpi { background: #F7F9FC; border: 1px solid #E5EAF2; border-radius: 8px; padding: 14px 16px; }
   .mock-kpi-label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: #5F6B7A; text-transform: uppercase; margin-bottom: 4px; }
   .mock-kpi-bedrag { display: block; font-size: 22px; font-weight: 800; color: #0D1B4E; }
   .mock-kpi-positief .mock-kpi-bedrag { color: #1B5E20; }
+  .mock-gezondheid { background: #FFF8E1; border: 1px solid #FFECB3; padding: 10px 14px; border-radius: 8px; font-size: 13px; color: #5A3F00; margin-bottom: 18px; }
+  .mock-sectiekop { background: #0D1B4E; color: #fff; font-size: 14px; font-weight: 700; text-align: center; padding: 9px 16px; border-radius: 6px; margin: 4px 0 12px; }
+  .mock-sectiekop-klein { font-size: 12px; font-weight: 700; letter-spacing: 0.6px; color: #0D1B4E; text-transform: uppercase; margin: 22px 0 8px; }
+  .mock-besparing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  @media (max-width: 560px) { .mock-besparing-grid { grid-template-columns: 1fr; } }
+  .mock-besp { background: #E6F7F4; border: 1px solid #2EC4B6; border-radius: 8px; padding: 12px 16px; text-align: center; }
+  .mock-besp-label { display: block; font-size: 11px; font-weight: 600; color: #0D4F47; margin-bottom: 4px; }
+  .mock-besp-bedrag { display: block; font-size: 18px; font-weight: 800; color: #0D4F47; }
+  .mock-reminder { background: #FFF8E1; border: 1px solid #FFECB3; border-radius: 8px; padding: 14px 16px; font-size: 13px; line-height: 1.6; color: #5A3F00; margin-bottom: 18px; }
   .mock-besparing { background: #E6F7F4; border: 1px solid #2EC4B6; padding: 12px 16px; border-radius: 8px; font-size: 14px; color: #0D4F47; }
   .mock-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   .mock-table th, .mock-table td { padding: 9px 12px; text-align: left; border-bottom: 1px solid #E5EAF2; }
@@ -256,6 +344,7 @@ footer a{color:rgba(255,255,255,.7);}
   .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
   .badge.groen { background: #E8F5E9; color: #1B5E20; }
   .badge.oranje { background: #FFF3E0; color: #E65100; }
+  .badge.rood { background: #FDECEC; color: #B91C1C; }
 </style>
 
 <script>
