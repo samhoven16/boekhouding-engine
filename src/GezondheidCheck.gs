@@ -119,11 +119,19 @@ function diagnoseInstallatie() {
 
   // ── 6. Licentie-status ─────────────────────────────────
   check('Licentie', function() {
-    if (typeof controleerLicentieStatus_ !== 'function') return { detail: 'check overgeslagen (functie ontbreekt)' };
+    // CYCLE-57: was eerder dead reference 'controleerLicentieStatus_' →
+    // klant zag altijd "check overgeslagen". Nu echte check via
+    // valideerLicentieOpServer_ (Licentie.gs). Fail-open op netwerk-fout
+    // zoals voorheen — geen klant blokkeren op offline-validatie.
     try {
-      const r = controleerLicentieStatus_();
-      if (r === false) return { ok: false, melding: 'NIET ACTIEF — activeer via Boekhouding → Licentie' };
-      return { detail: 'actief' };
+      const props = PropertiesService.getScriptProperties();
+      const sleutel = props.getProperty('licentiesleutel') || '';
+      if (!sleutel) return { ok: false, melding: 'GEEN sleutel — activeer via Boekhouding → Licentie activeren' };
+      if (typeof valideerLicentieOpServer_ !== 'function') return { detail: 'check overgeslagen (functie ontbreekt)' };
+      const r = valideerLicentieOpServer_(sleutel);
+      if (r && r.geldig === false) return { ok: false, melding: r.fout || 'Licentie ongeldig' };
+      if (r && r.offline) return { detail: 'actief (offline cache — server onbereikbaar)' };
+      return { detail: 'actief' + (r && r.naam ? ' — ' + r.naam : '') };
     } catch (_) {
       return { detail: 'check overgeslagen (offline of server-fout)' };
     }
