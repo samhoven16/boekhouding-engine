@@ -172,7 +172,7 @@ function meldFataalAanOwner_(categorie, bericht, context) {
     if (!owner) owner = 'samhoven16@gmail.com';
 
     GmailApp.sendEmail(owner, onderwerp, body);
-    try { schrijfAuditLog_('FATAAL gemeld', categorie + ' | ' + String(bericht).slice(0, 100)); } catch (_) {}
+    safeAuditLog_('FATAAL gemeld', categorie + ' | ' + String(bericht).slice(0, 100));
   } catch (e) {
     Logger.log('meldFataalAanOwner_ fout: ' + e.message);
   }

@@ -133,13 +133,34 @@ function createGasRuntime(files, overrides = {}) {
     Error:      Error,
     RegExp:     RegExp,
 
+    // ── Audit-log helpers (default no-op stubs) ─────────────────────────
+    // Tests die Utils.gs niet expliciet bundelen, hebben toch code-paden
+    // die safeAuditLog_/schrijfAuditLog_ aanroepen via cross-file lookup.
+    // Default mocks voorkomen ReferenceError; bundelt een test Utils.gs
+    // expliciet dan overschrijft de échte implementatie deze stubs.
+    schrijfAuditLog_:  jest.fn(),
+    auditLog_:         jest.fn(),
+
     // ── Overschrijvingen van de aanroeper ────────────────────────────────
     ...overrides,
   };
 
   // ── Laad bronbestanden als één aaneengesloten script ──────────────────
   // Dit simuleert hoe GAS alle .gs bestanden in één gedeelde scope uitvoert.
-  const code = files
+  //
+  // Cycle 78: safeAuditLog_ leeft in Utils.gs maar wordt aangeroepen vanuit
+  // veel andere modules. Tests die Utils.gs NIET bundelen krijgen anders een
+  // ReferenceError. Deze prelude declareert een default-versie die naar
+  // schrijfAuditLog_ doorroept (mirrort productie-gedrag) en met de
+  // ctx.schrijfAuditLog_-mock matched zodat assertions blijven werken.
+  // Function-declaration hoisting: de echte Utils.gs versie overschrijft
+  // deze prelude wanneer Utils.gs wél in `files` zit.
+  const prelude = `
+function safeAuditLog_(actie, details) {
+  try { if (typeof schrijfAuditLog_ === 'function') schrijfAuditLog_(actie, details); } catch (_) {}
+}
+`;
+  const code = prelude + files
     .map(f => {
       const fullPath = path.isAbsolute(f) ? f : path.join(SRC, f);
       return `\n// ── ${path.basename(f)} ──\n` + fs.readFileSync(fullPath, 'utf8');

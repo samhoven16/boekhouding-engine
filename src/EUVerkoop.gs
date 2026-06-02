@@ -318,7 +318,7 @@ function genereerIcpRapport() {
   sheet.hideGridlines();
   ss.setActiveSheet(sheet);
 
-  try { schrijfAuditLog_('ICP-rapport gegenereerd', label + ' — ' + Object.keys(agg).length + ' afnemers, totaal ' + formatBedrag_(totaal)); } catch (_) {}
+  safeAuditLog_('ICP-rapport gegenereerd', label + ' — ' + Object.keys(agg).length + ' afnemers, totaal ' + formatBedrag_(totaal));
   ui.alert('🇪🇺 ICP-rapport klaar', 'Periode: ' + label + '\n' + Object.keys(agg).length + ' EU B2B-afnemers · totaal ' + formatBedrag_(totaal) + '\n\nDien dit binnen 1 maand na kwartaaleinde in via mijn.belastingdienst.nl.', ui.ButtonSet.OK);
 }
 

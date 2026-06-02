@@ -203,7 +203,7 @@ function exporteerAlleData() {
     }
   } catch (e) { fouten.push('PDF-index: ' + e.message); }
 
-  try { schrijfAuditLog_('Data-export GDPR-art-20', mapNaam + ' — ' + aantalBestanden + ' bestanden, ' + fouten.length + ' fouten'); } catch (_) {}
+  safeAuditLog_('Data-export GDPR-art-20', mapNaam + ' — ' + aantalBestanden + ' bestanden, ' + fouten.length + ' fouten');
 
   ui.alert(
     '✅ Data-export voltooid',

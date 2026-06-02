@@ -323,7 +323,7 @@ function _verwerkFactuur_(ss, s) {
       if (s.btwOverride !== 'Ja' && !/Verlegd/i.test(btwTarief)) {
         btwTarief = 'Verlegd';
         verlegdAuto = true;
-        try { schrijfAuditLog_('Verleggingsregeling auto-toegepast', s.klant + ' BTW-nr=' + (s.btwNrKlant || '?')); } catch (_) {}
+        safeAuditLog_('Verleggingsregeling auto-toegepast', s.klant + ' BTW-nr=' + (s.btwNrKlant || '?'));
       }
     }
   } catch (_) {}

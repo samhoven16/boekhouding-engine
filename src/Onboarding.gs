@@ -306,7 +306,7 @@ function slaFiscaalProfielOp(data) {
     try { setInstelling_(naam, waarde); }
     catch (e) { Logger.log('Profiel-veld ' + naam + ': ' + e.message); }
   });
-  try { schrijfAuditLog_('Fiscaal profiel bijgewerkt', Object.keys(veldMap).filter(function(k){return veldMap[k];}).join(', ')); } catch (_) {}
+  safeAuditLog_('Fiscaal profiel bijgewerkt', Object.keys(veldMap).filter(function(k){return veldMap[k];}).join(', '));
   return true;
 }
 
@@ -336,7 +336,7 @@ function controleerOpUpdate_() {
     try { voerMigratiesUit_(opgeslagenVersie, HUIDIGE_VERSIE); }
     catch (e) {
       Logger.log('Migratie-fout (' + opgeslagenVersie + ' → ' + HUIDIGE_VERSIE + '): ' + e.message);
-      try { schrijfAuditLog_('Migratie FOUT', e.message); } catch (_) {}
+      safeAuditLog_('Migratie FOUT', e.message);
       // Versie NIET bumpen — volgende keer opnieuw proberen
       return;
     }
@@ -634,7 +634,7 @@ const MIGRATIES_REGISTER = [
     naar: '2.1.0',
     naam: 'polish_ronde_mei_2026',
     fn: function(_ss) {
-      try { schrijfAuditLog_('Migratie 2.0→2.1', 'no-op (UX-polish only)'); } catch (_) {}
+      safeAuditLog_('Migratie 2.0→2.1', 'no-op (UX-polish only)');
     },
   },
   // 2.1 → 2.6: één gebundelde migratie omdat 2.2-2.5 nooit publieke
@@ -655,7 +655,7 @@ const MIGRATIES_REGISTER = [
           try { cache.remove(prefix); } catch (_) {}
         });
       } catch (_) {}
-      try { schrijfAuditLog_('Migratie 2.1→2.6', 'launch-ready (UX/copy/legal + FATAL-spam-fix)'); } catch (_) {}
+      safeAuditLog_('Migratie 2.1→2.6', 'launch-ready (UX/copy/legal + FATAL-spam-fix)');
     },
   },
   // 2.6 → 2.7: voeg klant-overschrijfbare belastingtarieven toe aan Instellingen.
@@ -671,7 +671,7 @@ const MIGRATIES_REGISTER = [
           voegBelastingOverridesToeAanInstellingen_();
         }
       } catch (e) { Logger.log('Migratie 2.6→2.7 fout: ' + e.message); }
-      try { schrijfAuditLog_('Migratie 2.6→2.7', 'belasting-overrides sectie in Instellingen toegevoegd'); } catch (_) {}
+      safeAuditLog_('Migratie 2.6→2.7', 'belasting-overrides sectie in Instellingen toegevoegd');
     },
   },
 ];
@@ -743,7 +743,7 @@ function _maakPreMigratieBackup_(vanaf, naar) {
       backupMap.addFile(file);
       DriveApp.getRootFolder().removeFile(file);
     } catch (_) {}
-    try { schrijfAuditLog_('Pre-migratie backup', naam + ' (' + copy.getId() + ')'); } catch (_) {}
+    safeAuditLog_('Pre-migratie backup', naam + ' (' + copy.getId() + ')');
   } catch (e) {
     Logger.log('_maakPreMigratieBackup_ fout: ' + e.message);
     throw e;

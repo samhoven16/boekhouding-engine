@@ -52,7 +52,7 @@ function markeerEmailOngeldig_(email, reden) {
         raken++;
       }
     }
-    try { schrijfAuditLog_('Email gemarkeerd ongeldig', email + (reden ? ' — ' + reden : '') + ' (' + raken + ' relaties)'); } catch (_) {}
+    safeAuditLog_('Email gemarkeerd ongeldig', email + (reden ? ' — ' + reden : '') + ' (' + raken + ' relaties)');
     return raken > 0;
   } catch (e) {
     Logger.log('markeerEmailOngeldig_ fout: ' + e.message);
@@ -90,7 +90,7 @@ function detecteerBounceType_(foutTekst) {
  */
 function stuurEmailVeilig_(naar, onderwerp, body, opties) {
   if (!naar || !isGeldigEmail_(naar)) {
-    try { schrijfAuditLog_('Email OVERGESLAGEN', naar + ' — ongeldig formaat'); } catch (_) {}
+    safeAuditLog_('Email OVERGESLAGEN', naar + ' — ongeldig formaat');
     return false;
   }
   // Quota pre-flight
@@ -113,7 +113,7 @@ function stuurEmailVeilig_(naar, onderwerp, body, opties) {
     const bounceType = detecteerBounceType_(err.message);
     if (bounceType === 'hard') {
       markeerEmailOngeldig_(naar, err.message);
-      try { schrijfAuditLog_('Hard-bounce', naar + ' — ' + err.message.slice(0, 120)); } catch (_) {}
+      safeAuditLog_('Hard-bounce', naar + ' — ' + err.message.slice(0, 120));
     } else if (bounceType === 'soft' && opts.dlqType) {
       // Soft-bounce: schedule retry in DLQ
       try {
@@ -123,7 +123,7 @@ function stuurEmailVeilig_(naar, onderwerp, body, opties) {
         }
       } catch (_) {}
     } else {
-      try { schrijfAuditLog_('Email-fout', naar + ' — ' + err.message.slice(0, 120)); } catch (_) {}
+      safeAuditLog_('Email-fout', naar + ' — ' + err.message.slice(0, 120));
     }
     return false;
   }

@@ -597,7 +597,7 @@ function boekReiskosten(data) {
     bedrag: bedrag,
     type: BOEKING_TYPE.MEMORIAAL,
   });
-  try { schrijfAuditLog_('Reiskosten geboekt', km + ' km × ' + tariefStr + ' = ' + formatBedrag_(bedrag)); } catch (_) {}
+  safeAuditLog_('Reiskosten geboekt', km + ' km × ' + tariefStr + ' = ' + formatBedrag_(bedrag));
   try { invalideerKpiSnapshot_(); } catch (_) {}
   return { bedrag: formatBedrag_(bedrag), km: km, tarief: tarief };
 }

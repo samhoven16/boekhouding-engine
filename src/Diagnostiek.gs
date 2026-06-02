@@ -83,7 +83,7 @@ function controleerAutorisaties() {
     advies = '\n\n✅ Alle services geautoriseerd en bereikbaar. Triggers + dialogs werken correct.';
   }
 
-  try { schrijfAuditLog_('Diagnostiek', aantalOk + ' OK / ' + aantalAutorisatie + ' auth-nodig / ' + aantalFout + ' fout'); } catch (_) {}
+  safeAuditLog_('Diagnostiek', aantalOk + ' OK / ' + aantalAutorisatie + ' auth-nodig / ' + aantalFout + ' fout');
 
   ui.alert(
     '🔧 Autorisatie-diagnostiek',
@@ -157,7 +157,7 @@ function controleerTriggerWatchdog_() {
         15
       );
     } catch (_) {}
-    try { schrijfAuditLog_('Trigger-watchdog', 'dagelijkseTaken ' + Math.round(urenTerug) + 'u geleden'); } catch (_) {}
+    safeAuditLog_('Trigger-watchdog', 'dagelijkseTaken ' + Math.round(urenTerug) + 'u geleden');
   } catch (e) {
     Logger.log('controleerTriggerWatchdog_ silent fail: ' + e.message);
   }

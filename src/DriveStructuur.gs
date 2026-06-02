@@ -35,12 +35,12 @@ function maakDriveStructuur_(jaar) {
     if (hoofdmap) {
       props.setProperty(hoofdmapKey, hoofdmap.getId());
       Logger.log('Drive hoofdmap hergebruikt (collision-detect): ' + hoofdmap.getUrl());
-      try { schrijfAuditLog_('Drive map hergebruikt', naam + ' (' + hoofdmap.getId() + ')'); } catch (_) {}
+      safeAuditLog_('Drive map hergebruikt', naam + ' (' + hoofdmap.getId() + ')');
     } else {
       hoofdmap = DriveApp.createFolder(naam);
       props.setProperty(hoofdmapKey, hoofdmap.getId());
       Logger.log('Drive hoofdmap aangemaakt: ' + hoofdmap.getUrl());
-      try { schrijfAuditLog_('Drive map aangemaakt', naam + ' (' + hoofdmap.getId() + ')'); } catch (_) {}
+      safeAuditLog_('Drive map aangemaakt', naam + ' (' + hoofdmap.getId() + ')');
     }
   }
 
@@ -445,7 +445,7 @@ function checkJaarwisselingNodig_() {
       if (resp === ui.Button.YES) {
         sluitJaarAf();
       } else {
-        try { schrijfAuditLog_('Jaarwisseling uitgesteld door klant', prefix + ' → ' + huidigJaar); } catch (_) {}
+        safeAuditLog_('Jaarwisseling uitgesteld door klant', prefix + ' → ' + huidigJaar);
       }
     }
   } catch (e) {

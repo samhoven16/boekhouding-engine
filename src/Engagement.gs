@@ -76,7 +76,7 @@ function checkAchievements_() {
     nieuwe.forEach(function(a) { reedsBehaald.push(a); });
     props.setProperty(ACHIEVEMENT_PROP, JSON.stringify(reedsBehaald));
     nieuwe.forEach(function(a) {
-      try { schrijfAuditLog_('Achievement unlocked', a); } catch (_) {}
+      safeAuditLog_('Achievement unlocked', a);
     });
     return nieuwe.map(function(a) { return Object.assign({ id: a }, ACHIEVEMENTS[a]); });
   } catch (e) {
@@ -238,7 +238,7 @@ function slaNpsResponseOp(score, opmerking) {
   });
   if (responses.length > 50) responses.splice(0, responses.length - 50);
   props.setProperty(NPS_PROP_RESPONSE, JSON.stringify(responses));
-  try { schrijfAuditLog_('NPS response', score + (opmerking ? ' — ' + String(opmerking).slice(0, 80) : '')); } catch (_) {}
+  safeAuditLog_('NPS response', score + (opmerking ? ' — ' + String(opmerking).slice(0, 80) : ''));
   // Forward naar owner (anoniem) via meldFataalAanOwner_-pattern
   try {
     if (score >= 9 && typeof meldFataalAanOwner_ === 'function') {
@@ -320,7 +320,7 @@ function toonJaaroverzicht() {
   `).setWidth(720).setHeight(800).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, '🎬 ' + vorigJaar + ' — jaaroverzicht');
 
-  try { schrijfAuditLog_('Jaaroverzicht getoond', String(vorigJaar)); } catch (_) {}
+  safeAuditLog_('Jaaroverzicht getoond', String(vorigJaar));
 }
 
 function _berekenJaarStats_(ss, jaar) {

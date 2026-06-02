@@ -76,7 +76,7 @@ function genereerBalans() {
       .setFontStyle('italic').setFontSize(10)
       .setHorizontalAlignment('center').setWrap(true);
     sheet.setRowHeight(rij, 36);
-    try { schrijfAuditLog_('Balans-mismatch', 'Verschil ' + formatBedrag_(verschil) + ' Activa=' + formatBedrag_(totaalActiva) + ' Passiva=' + formatBedrag_(totaalPassiva)); } catch (_) {}
+    safeAuditLog_('Balans-mismatch', 'Verschil ' + formatBedrag_(verschil) + ' Activa=' + formatBedrag_(totaalActiva) + ' Passiva=' + formatBedrag_(totaalPassiva));
   }
 
   // Kolom opmaak

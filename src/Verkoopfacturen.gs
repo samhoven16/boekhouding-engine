@@ -264,7 +264,7 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   const bezigSinds = parseInt(props.getProperty(flagKey) || '0');
   if (bezigSinds && (nu - bezigSinds) < 30000) {  // 30s mutex-window
     Logger.log('stuurFactuurNaarEmailAdres: SKIPPED — al bezig met ' + factuurnummer + ' (' + Math.round((nu - bezigSinds)/1000) + 's)');
-    try { schrijfAuditLog_('Factuur dubbel-versturen geblokkeerd', factuurnummer + ' (' + Math.round((nu - bezigSinds)/1000) + 's)'); } catch (_) {}
+    safeAuditLog_('Factuur dubbel-versturen geblokkeerd', factuurnummer + ' (' + Math.round((nu - bezigSinds)/1000) + 's)');
     return false;
   }
   props.setProperty(flagKey, String(nu));
@@ -278,7 +278,7 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
     const remaining = MailApp.getRemainingDailyQuota();
     if (remaining < 1) {
       props.deleteProperty(flagKey);
-      try { schrijfAuditLog_('Email quota uitgeput', factuurnummer + ' rem=0'); } catch (_) {}
+      safeAuditLog_('Email quota uitgeput', factuurnummer + ' rem=0');
       throw new Error('Dagelijkse e-maillimiet bereikt — probeer morgen opnieuw of upgrade naar Workspace.');
     }
   } catch (e) {
@@ -310,7 +310,7 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   const propsIdem = PropertiesService.getScriptProperties();
   if (propsIdem.getProperty(idemKey) === 'DONE') {
     Logger.log('stuurFactuurNaarEmailAdres: SKIP — al gemarkeerd DONE voor ' + factuurnummer);
-    try { schrijfAuditLog_('Email DUBBEL geblokkeerd', factuurnummer + ' (factuurlijst)'); } catch (_) {}
+    safeAuditLog_('Email DUBBEL geblokkeerd', factuurnummer + ' (factuurlijst)');
     try { props.deleteProperty(flagKey); } catch (_) {}
     return true;  // optimistisch — caller hoeft niet opnieuw te proberen
   }
@@ -608,7 +608,7 @@ function verwerkBankCsvImport(csvTekst, scheidingsteken, kolommen) {
     aantalImport++;
   }
 
-  try { schrijfAuditLog_('Bank CSV geïmporteerd', 'transacties: ' + aantalImport + ' | overgeslagen: ' + overgeslagen); } catch (_) {}
+  safeAuditLog_('Bank CSV geïmporteerd', 'transacties: ' + aantalImport + ' | overgeslagen: ' + overgeslagen);
   return { aantal: aantalImport, overgeslagen };
 }
 
@@ -629,7 +629,7 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
   // Voorkomt GmailApp.sendEmail crash + audit-trail van geweigerde mails.
   if (!isGeldigEmail_(klantEmail)) {
     Logger.log('stuurFactuurEmailNaarKlant_: e-mail niet geldig formaat: ' + klantEmail);
-    try { schrijfAuditLog_('Factuur-mail geweigerd', 'Ongeldig e-mailformaat: ' + klantEmail); } catch (_) {}
+    safeAuditLog_('Factuur-mail geweigerd', 'Ongeldig e-mailformaat: ' + klantEmail);
     return false;
   }
   const fileId = extractFileId_(pdfUrl);
@@ -810,7 +810,7 @@ function haalSepaQrBase64_(iban, bedrijfNaam, bedrag, referentie) {
     if (typeof valideerIban_ === 'function') {
       const v = valideerIban_(ibanClean);
       if (!v.geldig) {
-        try { schrijfAuditLog_('SEPA QR overgeslagen', 'ongeldig IBAN: ' + ibanClean.slice(0, 8) + '… (MOD-97 controle gefaald)'); } catch (_) {}
+        safeAuditLog_('SEPA QR overgeslagen', 'ongeldig IBAN: ' + ibanClean.slice(0, 8) + '… (MOD-97 controle gefaald)');
         return null;
       }
     }
@@ -1046,11 +1046,11 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
             // schrijfAuditLog_ kan ook falen → eerst naar noodLog_, dan
             // re-throw zodat caller ZIET dat het stuk is.
             try { if (typeof noodLog_ === 'function') noodLog_('FACTUUR_ROLLBACK_FATAAL', factuurnr + ' — ' + (rollbackFout && rollbackFout.message || rollbackFout)); } catch (_) {}
-            try { schrijfAuditLog_('FATAAL: rollback factuur-betaald faalde', factuurnr + ' — handmatig herstel nodig — ' + (rollbackFout && rollbackFout.message || rollbackFout)); } catch (_) {}
+            safeAuditLog_('FATAAL: rollback factuur-betaald faalde', factuurnr + ' — handmatig herstel nodig — ' + (rollbackFout && rollbackFout.message || rollbackFout));
             // Re-throw zodat klant niet denkt "alles OK"
             throw new Error('KRITIEK: factuur ' + factuurnr + ' in inconsistente staat — neem direct contact op met support. Foutdetails: journaalpost=' + (jpFout && jpFout.message || jpFout) + ' / rollback=' + (rollbackFout && rollbackFout.message || rollbackFout));
           }
-          try { schrijfAuditLog_('Factuur betaald → journaalpost FAALDE, rollback uitgevoerd', factuurnr + ' — ' + (jpFout && jpFout.message || jpFout)); } catch (_) {}
+          safeAuditLog_('Factuur betaald → journaalpost FAALDE, rollback uitgevoerd', factuurnr + ' — ' + (jpFout && jpFout.message || jpFout));
           throw new Error('Markeer-betaald faalde tijdens journaalpost: ' + (jpFout && jpFout.message || jpFout) + ' — factuur-status teruggezet.');
         }
       }
