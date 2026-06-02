@@ -1784,6 +1784,15 @@
   </div>
   <div class="footer-bottom">
     <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
+    <!-- Cycle 85: levenssignaal. version.json wordt door .husky/pre-commit
+         bijgewerkt naar de laatste git-commit-datum. /status is een statische
+         pagina met operational state. -->
+    <p class="footer-leefsignaal" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.6)">
+      <span class="status-dot" aria-hidden="true" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2EC4B6;margin-right:6px;vertical-align:1px"></span>
+      <a href="/status/" style="color:rgba(255,255,255,.75);text-decoration:none">Systeemstatus: alles operationeel</a>
+      <span style="margin:0 8px;color:rgba(255,255,255,.3)">·</span>
+      <span>Laatste update: <span data-laatste-update>—</span></span>
+    </p>
     <p style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.5);max-width:780px;line-height:1.6">
       <strong style="color:rgba(255,255,255,.7)">Disclaimer:</strong> Boekhoudbaar is een softwarematige tool voor boekhouding en fiscale berekeningen.
       De fiscale signaleringen en kengetallen zijn informatief, gebaseerd op publieke bronnen
@@ -2138,5 +2147,25 @@
   })();
 </script>
 <script src="/consent.js" defer></script>
+
+<!-- Cycle 85: footer-timestamp uit version.json. Faalt stil als de fetch
+     niet lukt — er blijft dan "—" staan, niet kapot. -->
+<script>
+  (function() {
+    var el = document.querySelector('[data-laatste-update]');
+    if (!el) return;
+    fetch('/version.json', { cache: 'no-store' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(j) {
+        if (!j || !j.lastUpdate) return;
+        // Toon als 'dd mmm yyyy' (NL) — kort en menselijk
+        var d = new Date(j.lastUpdate + 'T00:00:00Z');
+        if (isNaN(d.getTime())) { el.textContent = j.lastUpdate; return; }
+        var maanden = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+        el.textContent = d.getUTCDate() + ' ' + maanden[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+      })
+      .catch(function() { /* houd "—" bij netwerkfout */ });
+  })();
+</script>
 </body>
 </html>

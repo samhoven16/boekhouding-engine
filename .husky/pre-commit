@@ -1,1 +1,9 @@
 npx lint-staged
+
+# Cycle 85: update website/version.json met laatste commit-datum + short hash.
+# De HEAD bij dit pre-commit moment is de VORIGE commit; dat is precies wat we
+# willen tonen ("laatste gedeployde update"). De net-te-committen wijziging
+# wordt zelf de "laatste update" zodra de volgende commit draait — eenvoudig
+# en zelf-corrigerend.
+node scripts/update-version.js
+git add website/version.json
