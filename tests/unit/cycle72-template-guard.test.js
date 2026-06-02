@@ -51,6 +51,11 @@ function maakCtx(opts) {
         getResponseCode: () => 200,
         getContentText: () => JSON.stringify({
           status: opts.betaalStatus || 'paid',
+          // Cycle 77: webhook eist mode + bedrag. test_key → mode 'test',
+          // bedrag €49 EUR. Cycle 72 test alleen de template-guard, dus
+          // we leveren hier een verder valide payload.
+          mode: 'test',
+          amount: { value: '49.00', currency: 'EUR' },
           metadata: { naam: 'Test Klant', email: 'klant@example.nl', ref: '' },
         }),
       }),
