@@ -25,6 +25,15 @@ const LICENTIE_VERSIE_KEY = 'licentieVersie';
 const LICENTIE_SS_ID_KEY  = 'licentieSsId';        // Gebonden spreadsheet-ID
 const LICENTIE_CACHE_UREN = 24;
 
+// Cycle 82: stale-while-revalidate. Track wanneer de licence-server voor het
+// laatst succesvol bereikt werd, zodat we een BOUNDED offline-fallback hebben.
+// Voorheen viel de validatie terug op LICENTIE_PROP_KEY-matching zonder enige
+// tijdslimiet — bij permanente server-outage werd elke licentie eindeloos
+// "geldig" verklaard, óók ingetrokken/refund-bestaande sleutels.
+const LICENTIE_LAATST_GELUKT_KEY = 'licentieLaatstGelukt';
+const LICENTIE_OFFLINE_GRACE_DAGEN = 7;
+const LICENTIE_OFFLINE_BANNER_KEY = 'licentieOfflineBannerLaatst'; // UserProp
+
 function getLicentieServerUrl_() {
   return PropertiesService.getScriptProperties()
     .getProperty('LICENTIE_SERVER_URL') || '';
@@ -588,8 +597,14 @@ function isLicentieGeldig_() {
 
   const resultaat = valideerLicentieOpServer_(sleutel);
   if (resultaat.geldig) {
-    props.setProperty(LICENTIE_CACHE_KEY,
-      String(Date.now() + LICENTIE_CACHE_UREN * 3600 * 1000));
+    // Cycle 82: bij offline-grace de cache slechts 1 uur geldig houden ipv 24u,
+    // zodat we snel weer een echte server-call doen zodra die bereikbaar is.
+    // Plus: toon banner zodat de klant niet verrast wordt door een blokkade.
+    const ttlMs = resultaat.offline
+      ? 3600 * 1000
+      : LICENTIE_CACHE_UREN * 3600 * 1000;
+    props.setProperty(LICENTIE_CACHE_KEY, String(Date.now() + ttlMs));
+    if (resultaat.offline) toonOfflineLicentieBannerIndienNieuw_(resultaat.dagenResterend);
   }
   return resultaat.geldig;
 }
@@ -800,22 +815,87 @@ function valideerLicentieOpServer_(sleutel) {
       muteHttpExceptions: true, followRedirects: true,
       headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
     });
-    if (resp.getResponseCode() === 200) return parseServerJson_(resp.getContentText());
-
-    // Server niet bereikbaar → vertrouw lokale cache
-    const props = PropertiesService.getScriptProperties();
-    if (props.getProperty(LICENTIE_PROP_KEY) === sleutel) {
-      return { geldig: true, naam: props.getProperty(LICENTIE_KLANT_KEY) || '', offline: true };
+    if (resp.getResponseCode() === 200) {
+      const json = parseServerJson_(resp.getContentText());
+      // Cycle 82: track laatste succesvolle server-call ALLEEN als de licentie
+      // ook daadwerkelijk geldig is. Een server-200 met geldig=false (revoke,
+      // verlopen, ingetrokken) mag de offline-grace niet verlengen.
+      if (json && json.geldig) {
+        try { PropertiesService.getScriptProperties().setProperty(
+          LICENTIE_LAATST_GELUKT_KEY, String(Date.now())); } catch (_) {}
+      }
+      return json;
     }
-    return { geldig: false, fout: 'Server niet bereikbaar.' };
+    return _offlineFallback_(sleutel, 'HTTP ' + resp.getResponseCode());
   } catch (err) {
     Logger.log('Licentievalidatie fout: ' + err.message);
-    const props = PropertiesService.getScriptProperties();
-    if (props.getProperty(LICENTIE_PROP_KEY) === sleutel) {
-      return { geldig: true, naam: props.getProperty(LICENTIE_KLANT_KEY) || '', offline: true };
-    }
-    return { geldig: false, fout: 'Validatie mislukt: ' + err.message };
+    return _offlineFallback_(sleutel, err.message);
   }
+}
+
+/**
+ * Cycle 82: bounded stale-while-revalidate. Bij onbereikbare server kijken we
+ * naar LICENTIE_LAATST_GELUKT_KEY:
+ *   - <7 dagen sinds laatste geldig-OK   → licentie blijft geldig, offline:true
+ *   - >=7 dagen sinds laatste geldig-OK  → licentie ongeldig, klant moet handelen
+ *   - geen timestamp ooit gezet          → ongeldig (eerste validatie kan niet
+ *                                          uit cache worden vervalst)
+ *
+ * Het terugkeer-veld dagenResterend wordt door isLicentieGeldig_ gebruikt om
+ * een banner aan de klant te tonen.
+ */
+function _offlineFallback_(sleutel, reden) {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty(LICENTIE_PROP_KEY) !== sleutel) {
+    return { geldig: false, fout: 'Validatie mislukt: ' + reden };
+  }
+  const laatstGelukt = parseInt(props.getProperty(LICENTIE_LAATST_GELUKT_KEY) || '0');
+  if (!laatstGelukt) {
+    return { geldig: false, fout: 'Licentie kan niet geverifieerd worden (server niet bereikbaar).' };
+  }
+  const msPerDag = 86400000;
+  const dagenSinds = Math.floor((Date.now() - laatstGelukt) / msPerDag);
+  if (dagenSinds >= LICENTIE_OFFLINE_GRACE_DAGEN) {
+    return {
+      geldig: false,
+      fout: 'Licentie kan al ' + dagenSinds + ' dagen niet geverifieerd worden. ' +
+        'Controleer je internetverbinding of neem contact op met support@boekhoudbaar.nl.',
+    };
+  }
+  const dagenResterend = LICENTIE_OFFLINE_GRACE_DAGEN - dagenSinds;
+  return {
+    geldig: true,
+    naam: props.getProperty(LICENTIE_KLANT_KEY) || '',
+    versie: props.getProperty(LICENTIE_VERSIE_KEY) || 'Standaard',
+    offline: true,
+    dagenSinds: dagenSinds,
+    dagenResterend: dagenResterend,
+  };
+}
+
+/**
+ * Toont een non-intrusieve toast wanneer de licentie in offline-grace draait.
+ * Eén keer per dag per resterend-dagen-stand (zodat de melding niet spamt
+ * maar wel met urgentie escaleert: "nog 6 dagen" → "nog 5 dagen" → ...).
+ *
+ * Aangeroepen vanuit isLicentieGeldig_ wanneer het server-resultaat
+ * offline:true bevatte.
+ */
+function toonOfflineLicentieBannerIndienNieuw_(dagenResterend) {
+  if (typeof dagenResterend !== 'number') return;
+  try {
+    const userProps = PropertiesService.getUserProperties();
+    const vandaag = new Date().toISOString().slice(0, 10);
+    const fingerprint = vandaag + '|' + dagenResterend;
+    if (userProps.getProperty(LICENTIE_OFFLINE_BANNER_KEY) === fingerprint) return;
+    const bericht = dagenResterend === 1
+      ? 'We kunnen je licentie even niet verifiëren. Nog 1 dag offline-toegang ' +
+        '— controleer je internet of neem contact op met support.'
+      : 'We kunnen je licentie even niet verifiëren. Nog ' + dagenResterend +
+        ' dagen offline-toegang. Je kunt gewoon doorwerken.';
+    SpreadsheetApp.getActiveSpreadsheet().toast(bericht, 'Boekhoudbaar', 12);
+    userProps.setProperty(LICENTIE_OFFLINE_BANNER_KEY, fingerprint);
+  } catch (_) { /* toast niet beschikbaar in trigger-context, OK */ }
 }
 
 // ─────────────────────────────────────────────
