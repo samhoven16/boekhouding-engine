@@ -1,0 +1,98 @@
+/*
+ * Cycle 89/90: "Levendig maar Nuchter" — CSS-only animatielaag.
+ *
+ * Drie effecten, 0kb JS, native browser:
+ *   1. Reveal-on-scroll (opt-in via .reveal-on-scroll class)
+ *   2. Scroll-shadow op sticky navigatie (animatie-only, geen layout)
+ *   3. Glow op interactieve knoppen ([class*="btn-"]:hover)
+ *
+ * Bewust geen overrides van bestaande inline-styles: dit bestand voegt alleen
+ * *nieuw* gedrag toe. Respecteert prefers-reduced-motion.
+ */
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * 1. Reveal-on-scroll (scroll-driven animation, opt-in)
+ *    Element komt subtiel omhoog + faded in als het in de viewport scrolt.
+ *    Vereist scroll-driven animations (Chrome 115+, Edge 115+, Safari 26+).
+ *    @supports-guard zorgt dat oudere browsers het element gewoon tonen.
+ * ────────────────────────────────────────────────────────────────────────── */
+@supports (animation-timeline: view()) {
+  .reveal-on-scroll {
+    opacity: 0;
+    transform: translateY(30px);
+    animation: bb-reveal linear forwards;
+    animation-timeline: view();
+    animation-range: entry 10% cover 30%;
+  }
+
+  @keyframes bb-reveal {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * 2. Scroll-shadow op sticky navigatie (animatie-only)
+ *    Pagina's die al een sticky <nav aria-label="Hoofdnavigatie"> hebben,
+ *    krijgen een subtiele schaduw die meegroeit met de scroll-positie.
+ *    Geen position/background/blur — dat respecteert bestaande nav-styling.
+ * ────────────────────────────────────────────────────────────────────────── */
+@supports (animation-timeline: scroll()) {
+  nav[aria-label="Hoofdnavigatie"] {
+    animation: bb-nav-shadow linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 120px;
+  }
+
+  @keyframes bb-nav-shadow {
+    to {
+      box-shadow: 0 4px 20px -8px rgba(13, 27, 78, 0.18);
+    }
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * 3. Glow + lift op knoppen
+ *    btn-primair / btn-secundair / btn-koop krijgen bij hover/focus een
+ *    zachte gloed in de primaire kleur en bewegen 1px omhoog. "Alive" gevoel
+ *    zonder de bestaande achtergrondkleur of border te raken.
+ * ────────────────────────────────────────────────────────────────────────── */
+a[class*="btn-"],
+button[class*="btn-"] {
+  transition: box-shadow 220ms ease, transform 220ms ease;
+}
+
+a[class*="btn-"]:hover,
+a[class*="btn-"]:focus-visible,
+button[class*="btn-"]:hover,
+button[class*="btn-"]:focus-visible {
+  box-shadow: 0 10px 30px -10px rgba(13, 27, 78, 0.45);
+  transform: translateY(-1px);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * 4. prefers-reduced-motion — alles uit voor gebruikers die beweging weren.
+ * ────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  nav[aria-label="Hoofdnavigatie"] {
+    animation: none;
+  }
+
+  a[class*="btn-"],
+  button[class*="btn-"] {
+    transition: none;
+  }
+
+  a[class*="btn-"]:hover,
+  button[class*="btn-"]:hover {
+    transform: none;
+  }
+}
