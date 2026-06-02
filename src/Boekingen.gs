@@ -250,7 +250,7 @@ function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
     lockHeld = true;
   } catch (e) {
     Logger.log('updateGrootboekSaldo_: kon geen lock krijgen voor ' + rekeningCode + ': ' + e.message);
-    try { schrijfAuditLog_('GROOTBOEK LOCK', 'Lock timeout op ' + rekeningCode); } catch (_) {}
+    safeAuditLog_('GROOTBOEK LOCK', 'Lock timeout op ' + rekeningCode);
     return;
   }
 
@@ -258,7 +258,7 @@ function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
     const sheet = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
     if (!sheet) {
       Logger.log('updateGrootboekSaldo_: GROOTBOEKSCHEMA tabblad ontbreekt');
-      try { schrijfAuditLog_('GROOTBOEK SHEET ONTBREEKT', 'updateGrootboekSaldo_ kon ' + rekeningCode + ' niet bijwerken'); } catch (_) {}
+      safeAuditLog_('GROOTBOEK SHEET ONTBREEKT', 'updateGrootboekSaldo_ kon ' + rekeningCode + ' niet bijwerken');
       return;
     }
     const data = sheet.getDataRange().getValues();

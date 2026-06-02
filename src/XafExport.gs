@@ -76,7 +76,7 @@ function exporteerXaf() {
     const bestand = exportsFolder.createFile(blob);
     driveUrl = bestand.getUrl();
 
-    try { schrijfAuditLog_('XAF-export gemaakt', bestandsnaam + ' (' + Math.round(xml.length / 1024) + ' KB) → ' + driveUrl); } catch (_) {}
+    safeAuditLog_('XAF-export gemaakt', bestandsnaam + ' (' + Math.round(xml.length / 1024) + ' KB) → ' + driveUrl);
   } catch (driveFout) {
     Logger.log('XAF-export naar Drive mislukt: ' + driveFout.message);
     // Fallback: toon XML in dialog zodat klant het kan kopiëren

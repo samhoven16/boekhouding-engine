@@ -61,7 +61,7 @@ function doPost(e) {
       // Replay-protection: timestamp moet binnen 5 min zijn
       const nu = Math.floor(Date.now() / 1000);
       if (!ts || Math.abs(nu - ts) > 300) {
-        try { schrijfAuditLog_('API replay-block', 'ts=' + ts + ' (now=' + nu + ')'); } catch (_) {}
+        safeAuditLog_('API replay-block', 'ts=' + ts + ' (now=' + nu + ')');
         return jsonResponse_({ succes: false, fout: 'Ongeldige of verlopen timestamp (max 5 min skew). Stuur ?ts=<unix-seconds> mee.' });
       }
       // Nonce-protection: zelfde signature mag niet 2× binnen 10 min
@@ -69,7 +69,7 @@ function doPost(e) {
       try {
         const cache = CacheService.getScriptCache();
         if (cache.get(nonceKey)) {
-          try { schrijfAuditLog_('API replay-detected', 'nonce reuse sig=' + sig.slice(0, 12)); } catch (_) {}
+          safeAuditLog_('API replay-detected', 'nonce reuse sig=' + sig.slice(0, 12));
           return jsonResponse_({ succes: false, fout: 'Replay detected — deze signature is al verwerkt.' });
         }
         cache.put(nonceKey, '1', 600);  // 10 min
@@ -77,7 +77,7 @@ function doPost(e) {
 
       const verwacht = _hmacSha256Hex_(ts + '.' + rawBody, hmacSecret);
       if (!sig || !veiligVergelijkApi_(sig, verwacht)) {
-        try { schrijfAuditLog_('API HMAC mismatch', 'sig=' + sig.slice(0, 12) + '... bodyLen=' + rawBody.length); } catch (_) {}
+        safeAuditLog_('API HMAC mismatch', 'sig=' + sig.slice(0, 12) + '... bodyLen=' + rawBody.length);
         return jsonResponse_({ succes: false, fout: 'Ongeldige of ontbrekende handtekening' });
       }
     } else if (apiSleutel) {
@@ -202,7 +202,7 @@ function verwerkFactuurWebhook_(ss, p) {
     const cached = cache.get(cacheKey);
     if (cached) {
       // Replay van eerdere call — return zelfde resultaat (idempotent)
-      try { schrijfAuditLog_('Webhook idempotent replay', cacheKey); } catch (_) {}
+      safeAuditLog_('Webhook idempotent replay', cacheKey);
       return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
     }
     // Markeer "in behandeling" — voorkomt dat 2 parallelle replays beide doorgaan

@@ -64,7 +64,7 @@ function controleerEersteKlantReady() {
     rijen;
 
   // Audit-log voor history
-  try { schrijfAuditLog_('Eerste-klant-check', 'score=' + score + '% ok=' + okN + ' warn=' + warnN + ' fout=' + foutN); } catch (_) {}
+  safeAuditLog_('Eerste-klant-check', 'score=' + score + '% ok=' + okN + ' warn=' + warnN + ' fout=' + foutN);
 
   if (ui) {
     ui.alert(klaar ? '✅ Werkt-alles-test geslaagd' : '⚠️ Werkt-alles-test: actie nodig', samenvatting, ui.ButtonSet.OK);

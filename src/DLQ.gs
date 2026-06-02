@@ -53,7 +53,7 @@ function dlqVoegToe_(type, payload, foutTekst) {
     const last = sheet.getLastRow();
     if (last > DLQ_MAX_RIJEN + 1) sheet.deleteRows(2, last - DLQ_MAX_RIJEN - 1);
 
-    try { schrijfAuditLog_('DLQ added', type + ' | ' + String(foutTekst).slice(0, 100)); } catch (_) {}
+    safeAuditLog_('DLQ added', type + ' | ' + String(foutTekst).slice(0, 100));
   } catch (e) {
     Logger.log('dlqVoegToe_ silent fail: ' + e.message);
   }
@@ -99,14 +99,14 @@ function dlqVerwerkRetries_() {
       if (success) {
         sheet.getRange(i + 1, 6).setValue('SUCCES');
         hervatGelukt++;
-        try { schrijfAuditLog_('DLQ retry succes', type + ' (poging ' + (retries + 1) + ')'); } catch (_) {}
+        safeAuditLog_('DLQ retry succes', type + ' (poging ' + (retries + 1) + ')');
       } else {
         const nieuwRetries = retries + 1;
         sheet.getRange(i + 1, 5).setValue(nieuwRetries);
         if (nieuwRetries >= DLQ_MAX_RETRIES) {
           sheet.getRange(i + 1, 6).setValue('FAILED');
           if (nieuweFout) sheet.getRange(i + 1, 4).setValue(String(nieuweFout).slice(0, 500));
-          try { schrijfAuditLog_('DLQ FAILED definitief', type + ' na ' + nieuwRetries + ' pogingen'); } catch (_) {}
+          safeAuditLog_('DLQ FAILED definitief', type + ' na ' + nieuwRetries + ' pogingen');
           try { meldFataalAanOwner_('DLQ_FAILED', type + ' na ' + DLQ_MAX_RETRIES + ' retries opgegeven', { payload: payload }); } catch (_) {}
         } else {
           // Exponential backoff: +1u, +4u, +12u

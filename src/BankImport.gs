@@ -460,7 +460,7 @@ function verwerkBankImport_public(csv) {
   const transacties = parseBankCsv_(csv);
   const gematcht = matchTransactiesMetFacturen_(ss, transacties);
   const resultaat = verwerkBankImport_(ss, gematcht);
-  try { schrijfAuditLog_('Bank CSV geïmporteerd', resultaat.toegevoegd + ' transacties, ' + resultaat.gematcht + ' gematcht'); } catch (_) {}
+  safeAuditLog_('Bank CSV geïmporteerd', resultaat.toegevoegd + ' transacties, ' + resultaat.gematcht + ' gematcht');
   return resultaat;
 }
 

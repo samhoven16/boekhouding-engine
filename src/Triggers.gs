@@ -30,7 +30,7 @@ function _parseFormDatumStrikt_(raw, veldnaam, fallback) {
   if (raw === null || raw === undefined || raw === '') return fallback || new Date();
   if (raw instanceof Date) {
     if (isNaN(raw.getTime())) {
-      try { schrijfAuditLog_(label + ' ongeldig', 'Invalid Date-object ontvangen'); } catch (_) {}
+      safeAuditLog_(label + ' ongeldig', 'Invalid Date-object ontvangen');
       throw new Error(label + ' is ongeldig. Vul een datum in (formaat dd-mm-jjjj of jjjj-mm-dd).');
     }
     return raw;
@@ -38,12 +38,12 @@ function _parseFormDatumStrikt_(raw, veldnaam, fallback) {
   const s = String(raw).trim();
   if (!s) return fallback || new Date();
   if (!/^(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[-./]\d{1,2}[-./]\d{4})$/.test(s)) {
-    try { schrijfAuditLog_(label + ' ongeldig', 'invoer: "' + s.slice(0, 40) + '"'); } catch (_) {}
+    safeAuditLog_(label + ' ongeldig', 'invoer: "' + s.slice(0, 40) + '"');
     throw new Error(label + ' is ongeldig: "' + s.slice(0, 40) + '". Gebruik formaat dd-mm-jjjj of jjjj-mm-dd.');
   }
   const d = parseDatum_(s);
   if (!d || isNaN(d.getTime())) {
-    try { schrijfAuditLog_(label + ' parse-fout', 'invoer: "' + s.slice(0, 40) + '"'); } catch (_) {}
+    safeAuditLog_(label + ' parse-fout', 'invoer: "' + s.slice(0, 40) + '"');
     throw new Error(label + ' kon niet geparsed worden. Controleer de invoer.');
   }
   return d;
@@ -481,9 +481,9 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   const _maxToekomst = new Date(_nu.getTime() + 90 * 86400000);
   const _maxVerleden = new Date(_nu.getFullYear() - 7, _nu.getMonth(), _nu.getDate());
   if (datum > _maxToekomst) {
-    try { schrijfAuditLog_('Factuur datum-waarschuwing', 'datum > 90 dagen toekomst: ' + formatDatum_(datum)); } catch (_) {}
+    safeAuditLog_('Factuur datum-waarschuwing', 'datum > 90 dagen toekomst: ' + formatDatum_(datum));
   } else if (datum < _maxVerleden) {
-    try { schrijfAuditLog_('Factuur datum-waarschuwing', 'datum > 7 jaar verleden (bewaarplicht): ' + formatDatum_(datum)); } catch (_) {}
+    safeAuditLog_('Factuur datum-waarschuwing', 'datum > 7 jaar verleden (bewaarplicht): ' + formatDatum_(datum));
   }
   const termijn    = parseInt(data['Betalingstermijn (dagen)'] || '30') || 30;
   if (termijn <= 0) {
@@ -492,7 +492,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   if (termijn > 365) {
     // Belastingdienst-stelling: betalingstermijnen > 12 maanden zijn ongebruikelijk
     // en kunnen op een typo wijzen (3650 i.p.v. 365). Niet blokkeren — wel loggen.
-    try { schrijfAuditLog_('Factuur termijn-waarschuwing', 'termijn > 1 jaar: ' + termijn); } catch (_) {}
+    safeAuditLog_('Factuur termijn-waarschuwing', 'termijn > 1 jaar: ' + termijn);
   }
   const vervaldatum = new Date(datum.getTime() + termijn * 86400000);
   const directMailen = String(data['Factuur direct e-mailen naar klant?'] || '').includes('Ja');
@@ -540,7 +540,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
     throw new Error('Geen geldige factuurregels gevonden. Vul minimaal één regel met omschrijving, aantal > 0 en prijs > €0.' + detail);
   }
   if (overgeslagenRegels.length) {
-    try { schrijfAuditLog_('Factuur regels overgeslagen', overgeslagenRegels.join(' | ')); } catch (_) {}
+    safeAuditLog_('Factuur regels overgeslagen', overgeslagenRegels.join(' | '));
   }
 
   // Klant-BTW-nr formaat-check (niet-blokkerend) — bij verleggingsregeling
@@ -548,7 +548,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   // alleen via audit-log, blokkeren niet (B2C-facturen hebben geen BTW-nr).
   const klantBtwNr = String(data['BTW-nummer klant'] || '').trim();
   if (klantBtwNr && !isGeldigEuBTWNummer_(klantBtwNr)) {
-    try { schrijfAuditLog_('Factuur klant-BTW-waarschuwing', 'Onbekend BTW-nr-formaat: ' + klantBtwNr); } catch (_) {}
+    safeAuditLog_('Factuur klant-BTW-waarschuwing', 'Onbekend BTW-nr-formaat: ' + klantBtwNr);
   }
 
   // Pas NA validatie nummer claimen — voorkomt gap in factuurreeks
@@ -1067,7 +1067,7 @@ function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
 
   if (!isGeldigEmail_(ontvanger)) {
     Logger.log('Hoge-uitgave alert overgeslagen: ongeldig e-mailadres "' + ontvanger + '"');
-    try { schrijfAuditLog_('Hoge uitgave alert OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger); } catch (_) {}
+    safeAuditLog_('Hoge uitgave alert OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger);
     return;
   }
   try {
@@ -1075,7 +1075,7 @@ function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
     schrijfAuditLog_('Hoge uitgave alert', `${leverancier} ${formatBedrag_(bedrag)} → ${ontvanger}`);
   } catch (e) {
     Logger.log('Hoge-uitgave alert niet verzonden: ' + e.message);
-    try { schrijfAuditLog_('Hoge uitgave alert MISLUKT', e.message); } catch (_) {}
+    safeAuditLog_('Hoge uitgave alert MISLUKT', e.message);
   }
 }
 
@@ -1722,7 +1722,7 @@ function _runTaak_(naam, fn) {
     status = 'FOUT';
     foutBericht = e.message;
     Logger.log('dagelijkse taak FOUT ' + naam + ': ' + e.message);
-    try { schrijfAuditLog_('FOUT dagelijkse taak', naam + ': ' + e.message); } catch (_) {}
+    safeAuditLog_('FOUT dagelijkse taak', naam + ': ' + e.message);
   } finally {
     const durMs = Date.now() - t0;
     try { metricsLog_('taak.' + naam, durMs, status === 'OK', { fout: foutBericht || undefined }); } catch (_) {}
@@ -1889,14 +1889,14 @@ function stuurWeeklySamenvatting_() {
 
     if (!isGeldigEmail_(ontvanger)) {
       Logger.log('Weekly summary overgeslagen: ongeldig e-mailadres "' + ontvanger + '"');
-      try { schrijfAuditLog_('Weekly summary OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger); } catch (_) {}
+      safeAuditLog_('Weekly summary OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger);
       return;
     }
     GmailApp.sendEmail(ontvanger, onderwerp, body);
     schrijfAuditLog_('Weekly summary verzonden', `naar ${ontvanger} – omzet ${formatBedrag_(omzetWeek)}`);
   } catch (e) {
     Logger.log('stuurWeeklySamenvatting_ fout: ' + e.message);
-    try { schrijfAuditLog_('FOUT weekly summary', e.message); } catch (_) {}
+    safeAuditLog_('FOUT weekly summary', e.message);
   }
 }
 
@@ -1932,7 +1932,7 @@ function controleerSheetGrootte_(ss) {
     'Dit werkt prima, maar het Dashboard-refresh wordt merkbaar trager. ' +
     'Overweeg om een nieuw boekjaar te starten via Boekhouding → Instellingen → Nieuw boekjaar.';
 
-  try { schrijfAuditLog_('Sheet-grootte waarschuwing', bericht); } catch (_) {}
+  safeAuditLog_('Sheet-grootte waarschuwing', bericht);
   if (eigenEmail && isGeldigEmail_(eigenEmail)) {
     try {
       GmailApp.sendEmail(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
@@ -1965,7 +1965,7 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
     resterendQuota = MailApp.getRemainingDailyQuota();
     if (resterendQuota <= 5) {
       Logger.log('Dunning OVERGESLAGEN: quota bijna op (' + resterendQuota + ' over). Reserveer voor handmatige acties.');
-      try { schrijfAuditLog_('Dunning overgeslagen', 'Quota bijna op: ' + resterendQuota + ' over'); } catch (_) {}
+      safeAuditLog_('Dunning overgeslagen', 'Quota bijna op: ' + resterendQuota + ' over');
       try { meldFataalAanOwner_('QUOTA', 'Email-quota bijna op (' + resterendQuota + ' over)', { module: 'dunning' }); } catch (_) {}
       return;
     }
@@ -1996,7 +1996,7 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       // Pauzeer hier — volgende run hervat
       props.setProperty(CURSOR_KEY, String(i));
       Logger.log('Dunning batch-pauze bij rij ' + i + ' (max ' + MAX_PER_RUN + ' per run)');
-      try { schrijfAuditLog_('Dunning batch-pauze', 'rij ' + i + ' van ' + data.length); } catch (_) {}
+      safeAuditLog_('Dunning batch-pauze', 'rij ' + i + ' van ' + data.length);
       return;
     }
     const status = data[i][14];
@@ -2042,7 +2042,7 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
 
     if (!isGeldigEmail_(klantEmail)) {
       Logger.log(`Herinnering ${factuurnummer} overgeslagen: ongeldig e-mailadres "${klantEmail}"`);
-      try { schrijfAuditLog_('Herinnering OVERGESLAGEN', factuurnummer + ' – ongeldig e-mailadres: ' + klantEmail); } catch (_) {}
+      safeAuditLog_('Herinnering OVERGESLAGEN', factuurnummer + ' – ongeldig e-mailadres: ' + klantEmail);
       continue;
     }
     try {
@@ -2058,7 +2058,7 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       Logger.log(`Herinnering stap ${volgendeStap}/3 verstuurd voor ${factuurnummer} naar ${klantEmail}`);
     } catch (err) {
       Logger.log(`Herinnering fout voor ${factuurnummer}: ${err.message}`);
-      try { schrijfAuditLog_('Herinnering MISLUKT', factuurnummer + ' – ' + err.message); } catch (_) {}
+      safeAuditLog_('Herinnering MISLUKT', factuurnummer + ' – ' + err.message);
       // DLQ: voeg toe voor auto-retry. Opzettelijk geen pdfUrl-attachment in
       // payload — die kan groter zijn dan cell-limit. Retry-handler haalt PDF
       // opnieuw op via factuurnummer.
@@ -2211,7 +2211,7 @@ function controleerBtwDeadlines_() {
   if (!email || !isGeldigEmail_(email)) {
     if (email) {
       Logger.log('BTW-deadline check: ongeldig e-mailadres "' + email + '"');
-      try { schrijfAuditLog_('BTW deadline check OVERGESLAGEN', 'Ongeldig e-mailadres: ' + email); } catch (_) {}
+      safeAuditLog_('BTW deadline check OVERGESLAGEN', 'Ongeldig e-mailadres: ' + email);
     }
     return;
   }
@@ -2229,7 +2229,7 @@ function controleerBtwDeadlines_() {
         );
       } catch (err) {
         Logger.log('BTW deadline reminder mislukt: ' + err.message);
-        try { schrijfAuditLog_('BTW reminder MISLUKT', kwLabel + ' – ' + err.message); } catch (_) {}
+        safeAuditLog_('BTW reminder MISLUKT', kwLabel + ' – ' + err.message);
       }
     }
   }
@@ -2311,7 +2311,7 @@ function stuurBetalingsherinneringen() {
 
     if (!isGeldigEmail_(klantEmail)) {
       Logger.log('Herinnering ' + fnr + ' overgeslagen: ongeldig e-mailadres "' + klantEmail + '"');
-      try { schrijfAuditLog_('Herinnering OVERGESLAGEN', fnr + ' – ongeldig e-mailadres: ' + klantEmail); } catch (_) {}
+      safeAuditLog_('Herinnering OVERGESLAGEN', fnr + ' – ongeldig e-mailadres: ' + klantEmail);
       continue;
     }
     try {
@@ -2323,7 +2323,7 @@ function stuurBetalingsherinneringen() {
       aantalVerstuurd++;
     } catch (err) {
       Logger.log('Herinnering ' + fnr + ' mislukt: ' + err.message);
-      try { schrijfAuditLog_('Herinnering MISLUKT', fnr + ' – ' + err.message); } catch (_) {}
+      safeAuditLog_('Herinnering MISLUKT', fnr + ' – ' + err.message);
     }
   }
 

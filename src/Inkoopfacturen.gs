@@ -83,14 +83,14 @@ function markeerInkoopfactuurBetaald() {
           sheet.getRange(i + 1, 15).setValue('');
           SpreadsheetApp.flush();
         } catch (rollbackFout) {
-          try { schrijfAuditLog_('FATAAL: rollback inkoop-betaald faalde', zoekNr + ' — ' + (rollbackFout && rollbackFout.message)); } catch (_) {}
+          safeAuditLog_('FATAAL: rollback inkoop-betaald faalde', zoekNr + ' — ' + (rollbackFout && rollbackFout.message));
         }
-        try { schrijfAuditLog_('Inkoop betaald → journaalpost FAALDE, rollback uitgevoerd', zoekNr + ' — ' + (jpFout && jpFout.message)); } catch (_) {}
+        safeAuditLog_('Inkoop betaald → journaalpost FAALDE, rollback uitgevoerd', zoekNr + ' — ' + (jpFout && jpFout.message));
         ui.alert('Markeer-betaald faalde tijdens journaalpost: ' + (jpFout && jpFout.message) + '\n\nFactuur-status is teruggezet. Controleer en probeer opnieuw.');
         return;
       }
 
-      try { schrijfAuditLog_('Inkoop betaald', zoekNr + ' — ' + leverancier + ' ' + formatBedrag_(bedrag)); } catch (_) {}
+      safeAuditLog_('Inkoop betaald', zoekNr + ' — ' + leverancier + ' ' + formatBedrag_(bedrag));
       try { invalideerKpiSnapshot_(); bustCache_('kpi'); } catch (_) {}
       vernieuwDashboard();
       ui.alert(`Inkoopfactuur ${zoekNr} gemarkeerd als betaald.`);

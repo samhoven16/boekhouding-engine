@@ -168,7 +168,7 @@ function setup() {
       // Toast + audit-log + WEL SETUP_DONE markeren (zodat klant niet vastloopt)
       // maar klant krijgt direct te zien wat er ontbreekt.
       try { ss.toast('Setup grotendeels OK, maar: ' + watchdogFouten[0] + (watchdogFouten.length > 1 ? ' + ' + (watchdogFouten.length - 1) + ' meer' : ''), 'Setup waarschuwing', 30); } catch (_) {}
-      try { schrijfAuditLog_('Setup watchdog WAARSCHUWING', watchdogFouten.join(' | ')); } catch (_) {}
+      safeAuditLog_('Setup watchdog WAARSCHUWING', watchdogFouten.join(' | '));
       Logger.log('Setup watchdog vond ontbrekende componenten: ' + watchdogFouten.join(' | '));
     }
 
@@ -701,7 +701,7 @@ function zetInstellingen_(ss) {
     }
   }
   if (aantalBehouden > 0) {
-    try { schrijfAuditLog_('Setup instellingen samengevoegd', aantalBehouden + ' bestaande veld(en) behouden bij re-init'); } catch (_) {}
+    safeAuditLog_('Setup instellingen samengevoegd', aantalBehouden + ' bestaande veld(en) behouden bij re-init');
   }
 
   sheet.getRange(1, 1, data.length, 2).setValues(data);
@@ -1339,13 +1339,13 @@ function herstelKritiekeTriggersIndienNodig_() {
     userProps.setProperty(KEY, String(Date.now()));
 
     installeelTriggers_();
-    try { schrijfAuditLog_('Trigger zelfherstel', 'dagelijkseTaken ontbrak — triggers automatisch opnieuw geïnstalleerd'); } catch (_) {}
+    safeAuditLog_('Trigger zelfherstel', 'dagelijkseTaken ontbrak — triggers automatisch opnieuw geïnstalleerd');
     try {
       getSpreadsheet_().toast('Achtergrondtaken waren gestopt en zijn automatisch hersteld.', '✓ Hersteld', 8);
     } catch (_) {}
   } catch (e) {
     Logger.log('herstelKritiekeTriggersIndienNodig_ faalde: ' + e.message);
-    try { schrijfAuditLog_('Trigger zelfherstel FOUT', e.message); } catch (_) {}
+    safeAuditLog_('Trigger zelfherstel FOUT', e.message);
   }
 }
 

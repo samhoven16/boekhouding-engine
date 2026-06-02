@@ -359,10 +359,10 @@ function maakBackup() {
       ui.ButtonSet.OK);
 
     Logger.log('Backup aangemaakt: ' + fileUrl);
-    try { schrijfAuditLog_('Backup', 'XLSX gemaakt: ' + bestandsnaam + ' (' + Math.round(blob.getBytes().length / 1024) + ' KB)'); } catch (_) {}
+    safeAuditLog_('Backup', 'XLSX gemaakt: ' + bestandsnaam + ' (' + Math.round(blob.getBytes().length / 1024) + ' KB)');
   } catch (e) {
     Logger.log('Backup mislukt: ' + e.message);
-    try { schrijfAuditLog_('FOUT Backup', e.message); } catch (_) {}
+    safeAuditLog_('FOUT Backup', e.message);
     ui.alert('Backup mislukt',
       'Er ging iets mis:\n\n' + e.message +
       '\n\nMogelijke oorzaken:\n\u2022 Drive-quota vol \u2014 ruim ruimte op\n\u2022 Geen schrijfrechten op Drive\n\u2022 Tijdelijke Google API-fout \u2014 probeer over een minuut opnieuw',
@@ -415,7 +415,7 @@ function maakAutomatischeBackup_() {
     }
     const blob = resp.getBlob().setName(bestandsnaam);
     backupMap.createFile(blob);
-    try { schrijfAuditLog_('AutoBackup', bestandsnaam + ' (' + Math.round(blob.getBytes().length / 1024) + ' KB)'); } catch (_) {}
+    safeAuditLog_('AutoBackup', bestandsnaam + ' (' + Math.round(blob.getBytes().length / 1024) + ' KB)');
 
     // Retentie: verwijder backups ouder dan 30 dagen
     const grens = Date.now() - 30 * 86400000;
@@ -428,7 +428,7 @@ function maakAutomatischeBackup_() {
     }
   } catch (e) {
     Logger.log('maakAutomatischeBackup_ fout: ' + e.message);
-    try { schrijfAuditLog_('FOUT AutoBackup', e.message); } catch (_) {}
+    safeAuditLog_('FOUT AutoBackup', e.message);
   }
 }
 
@@ -584,7 +584,7 @@ function maakNoahArkSnapshot_() {
     }
   } catch (e) {
     Logger.log('maakNoahArkSnapshot_ fout: ' + e.message);
-    try { schrijfAuditLog_('FOUT NoahArk', e.message); } catch (_) {}
+    safeAuditLog_('FOUT NoahArk', e.message);
   }
 }
 
@@ -682,7 +682,7 @@ function mailMaandrapport() {
     Logger.log('Maandrapport verstuurd naar: ' + ontvangers.join(', '));
   } catch (e) {
     Logger.log('mailMaandrapport FOUT: ' + e.message + '\n' + (e.stack || ''));
-    try { schrijfAuditLog_('FOUT maandrapport', e.message); } catch (_) {}
+    safeAuditLog_('FOUT maandrapport', e.message);
   }
 }
 

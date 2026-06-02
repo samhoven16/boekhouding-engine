@@ -78,7 +78,7 @@ function controleerBtwDeadline_() {
   const email = getInstelling_('Email') || Session.getActiveUser().getEmail();
   if (!email || !isGeldigEmail_(email)) {
     Logger.log('BTW reminder overgeslagen: geen of ongeldig e-mailadres (' + email + ')');
-    try { schrijfAuditLog_('BTW reminder OVERGESLAGEN', 'Ongeldig e-mailadres: ' + email); } catch (_) {}
+    safeAuditLog_('BTW reminder OVERGESLAGEN', 'Ongeldig e-mailadres: ' + email);
     return;
   }
 
@@ -127,7 +127,7 @@ Uw boekhoudprogramma`;
         try { GmailApp.sendEmail(email, onderwerp, body); return true; }
         catch (e) {
           Logger.log('BTW herinnering MISLUKT: ' + e.message);
-          try { schrijfAuditLog_('BTW reminder MISLUKT', e.message); } catch (_) {}
+          safeAuditLog_('BTW reminder MISLUKT', e.message);
           return false;
         }
       })();

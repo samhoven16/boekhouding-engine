@@ -309,7 +309,7 @@ function verwerkHerhalendeKosten_() {
         // expliciet zichtbaar: zet status op "FOUT — datum ongeldig" zodat
         // klant in de sheet ziet dat er aandacht nodig is.
         Logger.log('Herhalende kosten rij ' + (i + 1) + ': ongeldige datum, overgeslagen.');
-        try { schrijfAuditLog_('Herhalende kost OVERGESLAGEN', 'Rij ' + (i + 1) + ' – ongeldige volgende datum: ' + data[i][6]); } catch (_) {}
+        safeAuditLog_('Herhalende kost OVERGESLAGEN', 'Rij ' + (i + 1) + ' – ongeldige volgende datum: ' + data[i][6]);
         try {
           const huidigeStatus = String(data[i][8] || '');
           if (huidigeStatus.indexOf('FOUT') === -1) {

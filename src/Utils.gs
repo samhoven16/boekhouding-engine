@@ -280,7 +280,7 @@ function vertaalFout_(e) {
   // Klant kan dit ID copieren in support-ticket; owner zoekt daarmee in
   // audit-log naar exacte details + tenant-hash + tijdstip.
   const reqId = _genereerRequestId_();
-  try { schrijfAuditLog_('FOUT_VERTAALD [' + reqId + ']', raw.slice(0, 240)); } catch (_) {}
+  safeAuditLog_('FOUT_VERTAALD [' + reqId + ']', raw.slice(0, 240));
   if (!raw) return 'Er ging iets mis. Probeer opnieuw of bekijk de Audit Log. (ref: ' + reqId + ')';
   const suffix = ' (ref: ' + reqId + ')';
   if (/too many times|rate.?limit|service invoked/i.test(raw)) return 'Te veel acties achter elkaar — wacht een minuut en probeer opnieuw.' + suffix;
@@ -361,7 +361,7 @@ function exporteerAuditLogJson() {
   const naam = 'audit-log_' + new Date().toISOString().slice(0, 10) + '.jsonl';
   const file = map.createFile(naam, jsonl, 'application/x-ndjson');
   ui.alert('📁 Audit-log geëxporteerd', events.length + ' events naar ' + naam + '\n\nLocatie: ' + file.getUrl(), ui.ButtonSet.OK);
-  try { schrijfAuditLog_('Audit-log JSON-export', naam + ' (' + events.length + ' events)'); } catch (_) {}
+  safeAuditLog_('Audit-log JSON-export', naam + ' (' + events.length + ' events)');
 }
 
 // ─────────────────────────────────────────────
@@ -989,7 +989,7 @@ function guillotineCheck_(startTs, taakNaam, hervatData, drempelMs) {
       .after(60 * 1000)
       .create();
     Logger.log('Guillotine: ' + taakNaam + ' gepauzeerd na ' + Math.round(verstreken/1000) + 's, hervat over 1 min');
-    try { schrijfAuditLog_('Guillotine pauze', taakNaam + ' na ' + Math.round(verstreken/1000) + 's'); } catch (_) {}
+    safeAuditLog_('Guillotine pauze', taakNaam + ' na ' + Math.round(verstreken/1000) + 's');
   } catch (e) {
     Logger.log('guillotine trigger-create fout: ' + e.message);
   }
@@ -1040,6 +1040,29 @@ function guillotineKlaar_(taakNaam) {
 // Bij critical writes (factuur in sheet, journaalpost, betaling) waar de
 // hoofd-audit-log faalt (sheet locked, quota), schrijven we direct naar
 // ScriptProperties als laatste-redmiddel. Bewaart laatste 50 entries.
+
+/**
+ * Veilige wrapper rond schrijfAuditLog_.
+ *
+ * Cycle 78: vervangt het patroon `safeAuditLog_(X, Y);`
+ * dat 50+ keer in de codebase staat. schrijfAuditLog_ heeft zelf al een
+ * internal try/catch, maar callers wrap_ten "voor de zekerheid" toch nog een
+ * keer — voornamelijk als bescherming tegen ReferenceError (functie niet
+ * geladen, theoretisch in GAS). Deze helper centraliseert die guard en haalt
+ * 50× boilerplate uit de business-logic.
+ *
+ * Gedrag: NOOIT crashen. Bij geen schrijfAuditLog_ valt het terug op
+ * Logger.log zodat het signaal toch ergens te zien is.
+ */
+function safeAuditLog_(actie, details) {
+  try {
+    if (typeof schrijfAuditLog_ === 'function') {
+      schrijfAuditLog_(actie, details);
+    } else {
+      Logger.log('[AUDIT-FALLBACK] ' + actie + ' | ' + (details || ''));
+    }
+  } catch (_) { /* nooit crashen om audit */ }
+}
 
 function noodLog_(actie, details) {
   try {
@@ -1398,7 +1421,7 @@ function _isToegestaneUrl_(url) {
  */
 function veiligFetch_(url, opties) {
   if (!_isToegestaneUrl_(url)) {
-    try { schrijfAuditLog_('Outbound URL geblokkeerd', String(url).slice(0, 200)); } catch (_) {}
+    safeAuditLog_('Outbound URL geblokkeerd', String(url).slice(0, 200));
     throw new Error('Externe URL niet toegestaan — staat niet in de uitgaande-allowlist.');
   }
   return UrlFetchApp.fetch(url, opties || {});
@@ -1527,7 +1550,7 @@ function haalDataKvK_(kvkNummer) {
     };
 
     if (cache) try { cache.put('kvk_' + schoon, JSON.stringify(result), 86400); } catch (_) {}
-    try { schrijfAuditLog_('KvK API', 'autofill voor ' + schoon); } catch (_) {}
+    safeAuditLog_('KvK API', 'autofill voor ' + schoon);
     return result;
   } catch (e) {
     Logger.log('haalDataKvK_ fout: ' + e.message);
@@ -1548,7 +1571,7 @@ function _kvkBreakerTrip_() {
     cache.put(counterKey, String(huidig), 60);  // 60s window
     if (huidig >= 5) {
       cache.put('_kvk_breaker_open', '1', 300);  // 5 min open
-      try { schrijfAuditLog_('KvK circuit-breaker', 'Open na ' + huidig + ' fouten in 60s — KvK uit voor 5 min'); } catch (_) {}
+      safeAuditLog_('KvK circuit-breaker', 'Open na ' + huidig + ' fouten in 60s — KvK uit voor 5 min');
     }
   } catch (_) {}
 }
@@ -1622,7 +1645,7 @@ function withLock_(naam, timeoutMs, fn) {
   const wachttijd = parseInt(timeoutMs, 10) || 30000;
   if (!lock.tryLock(wachttijd)) {
     const msg = 'Lock-timeout voor ' + naam + ' na ' + wachttijd + 'ms — andere actie is bezig met dezelfde data. Probeer over enkele seconden opnieuw.';
-    try { schrijfAuditLog_('LOCK TIMEOUT', naam + ' (wachttijd ' + wachttijd + 'ms)'); } catch (_) {}
+    safeAuditLog_('LOCK TIMEOUT', naam + ' (wachttijd ' + wachttijd + 'ms)');
     throw new Error(msg);
   }
   try {
@@ -1725,7 +1748,7 @@ function withCheckpoint_(taak, stappen) {
       setCheckpoint_(taak, stap.naam);
     } catch (e) {
       Logger.log('withCheckpoint_ stap "' + stap.naam + '" faalde: ' + e.message);
-      try { schrijfAuditLog_('CHECKPOINT FOUT', taak + ' bij stap "' + stap.naam + '": ' + e.message); } catch (_) {}
+      safeAuditLog_('CHECKPOINT FOUT', taak + ' bij stap "' + stap.naam + '": ' + e.message);
       throw e;
     }
   }

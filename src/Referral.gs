@@ -174,5 +174,5 @@ function toonReferralDialog() {
   ui.showModalDialog(html, '🎁 Verwijs een vriend');
 
   // Audit-log voor support-tracking
-  try { schrijfAuditLog_('Referral-dialog geopend', 'code=' + refCode); } catch (_) {}
+  safeAuditLog_('Referral-dialog geopend', 'code=' + refCode);
 }

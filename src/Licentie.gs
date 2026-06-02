@@ -136,7 +136,7 @@ function activeerEigenaarLicentie() {
     Logger.log('activeerEigenaarLicentie: kon SS-ID niet binden: ' + e.message);
   }
 
-  try { schrijfAuditLog_('Eigenaar-bypass geactiveerd', Session.getActiveUser().getEmail() || 'onbekend'); } catch (_) {}
+  safeAuditLog_('Eigenaar-bypass geactiveerd', Session.getActiveUser().getEmail() || 'onbekend');
 
   try {
     SpreadsheetApp.getUi().alert(
@@ -159,7 +159,7 @@ function deactiveerEigenaarLicentie() {
   const props = PropertiesService.getScriptProperties();
   props.deleteProperty(OWNER_BYPASS_KEY);
   // Licentie-token + binding NIET wissen — dat zou klant-data raken
-  try { schrijfAuditLog_('Eigenaar-bypass uitgeschakeld', ''); } catch (_) {}
+  safeAuditLog_('Eigenaar-bypass uitgeschakeld', '');
   try {
     SpreadsheetApp.getUi().alert(
       'Bypass uit',

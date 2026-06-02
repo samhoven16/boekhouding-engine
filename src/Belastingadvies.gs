@@ -425,11 +425,11 @@ function _parseOverrideWaarde_(raw, veldDef) {
 
   // Range-validatie. Out-of-range = log + null (vat de fout op, val terug op default).
   if (typeof veldDef.min === 'number' && waarde < veldDef.min) {
-    try { schrijfAuditLog_('Belasting-override REJECT', veldDef.sleutel + '=' + raw + ' (< min=' + veldDef.min + ')'); } catch (_) {}
+    safeAuditLog_('Belasting-override REJECT', veldDef.sleutel + '=' + raw + ' (< min=' + veldDef.min + ')');
     return null;
   }
   if (typeof veldDef.max === 'number' && waarde > veldDef.max) {
-    try { schrijfAuditLog_('Belasting-override REJECT', veldDef.sleutel + '=' + raw + ' (> max=' + veldDef.max + ')'); } catch (_) {}
+    safeAuditLog_('Belasting-override REJECT', veldDef.sleutel + '=' + raw + ' (> max=' + veldDef.max + ')');
     return null;
   }
 
@@ -502,7 +502,7 @@ function voegBelastingOverridesToeAanInstellingen_() {
     // Houden we voor later — eerst basic functionaliteit.
   });
 
-  try { schrijfAuditLog_('Belasting-overrides sectie toegevoegd', BELASTING_OVERRIDE_VELDEN.length + ' velden'); } catch (_) {}
+  safeAuditLog_('Belasting-overrides sectie toegevoegd', BELASTING_OVERRIDE_VELDEN.length + ' velden');
 }
 
 // ─────────────────────────────────────────────
@@ -701,7 +701,7 @@ function _berekenBelastingadviesRaw_(ss) {
     kg = berekenKengetallen_(ss);
   } catch (e) {
     Logger.log('berekenBelastingadvies_ kon kengetallen niet berekenen: ' + e.message);
-    try { schrijfAuditLog_('Belastingadvies FOUT', 'Kengetallen niet beschikbaar: ' + e.message); } catch (_) {}
+    safeAuditLog_('Belastingadvies FOUT', 'Kengetallen niet beschikbaar: ' + e.message);
     return {
       adviezen: [{
         type: 'WAARSCHUWING',
@@ -1381,7 +1381,7 @@ function genereerBelastingadvies() {
   } catch (e) {
     // Voorheen silent — klant zag dan geen voordeel-banner zonder te weten waarom
     Logger.log('Belastingvoordeel-banner berekening: ' + e.message);
-    try { schrijfAuditLog_('Belastingvoordeel banner FOUT', e.message); } catch (_) {}
+    safeAuditLog_('Belastingvoordeel banner FOUT', e.message);
   }
 
   if (voordeel) {

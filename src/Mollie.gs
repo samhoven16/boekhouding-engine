@@ -96,13 +96,13 @@ function genereerMolliePaymentLink_(factuur) {
     const code = resp.getResponseCode();
     if (code !== 201) {
       Logger.log('Mollie create-payment status ' + code + ': ' + resp.getContentText().slice(0, 300));
-      try { schrijfAuditLog_('Mollie payment-link MISLUKT', factuur.factuurnummer + ' status=' + code); } catch (_) {}
+      safeAuditLog_('Mollie payment-link MISLUKT', factuur.factuurnummer + ' status=' + code);
       return null;
     }
     const json = JSON.parse(resp.getContentText());
     const link = (json._links && json._links.checkout && json._links.checkout.href) || null;
     if (!link) return null;
-    try { schrijfAuditLog_('Mollie payment-link', factuur.factuurnummer + ' → ' + link.slice(0, 80)); } catch (_) {}
+    safeAuditLog_('Mollie payment-link', factuur.factuurnummer + ' → ' + link.slice(0, 80));
     return link;
   } catch (e) {
     Logger.log('genereerMolliePaymentLink_ fout: ' + e.message);
@@ -164,7 +164,7 @@ function verwerkMollieWebhook_(payload) {
       return raw.map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); }).join('');
     })();
     if (!sig || sig !== verwacht) {
-      try { schrijfAuditLog_('Mollie webhook sig mismatch', paymentId.slice(0, 12) + '…'); } catch (_) {}
+      safeAuditLog_('Mollie webhook sig mismatch', paymentId.slice(0, 12) + '…');
       return { succes: false, fout: 'Ongeldige signature' };
     }
   }
@@ -206,7 +206,7 @@ function verwerkMollieWebhook_(payload) {
   }
 
   if (status !== 'paid' || !factuurnummer) {
-    try { schrijfAuditLog_('Mollie webhook (geen actie)', paymentId.slice(0, 12) + ' status=' + status); } catch (_) {}
+    safeAuditLog_('Mollie webhook (geen actie)', paymentId.slice(0, 12) + ' status=' + status);
     return { succes: true, status: status };
   }
 
@@ -214,7 +214,7 @@ function verwerkMollieWebhook_(payload) {
   try {
     if (typeof markeerVerkoopfactuurBetaald === 'function') {
       const r = markeerVerkoopfactuurBetaald(factuurnummer, new Date().toISOString().slice(0, 10));
-      try { schrijfAuditLog_('Mollie webhook → factuur betaald', factuurnummer + ' (' + paymentId.slice(0, 12) + ')'); } catch (_) {}
+      safeAuditLog_('Mollie webhook → factuur betaald', factuurnummer + ' (' + paymentId.slice(0, 12) + ')');
       return Object.assign({ succes: true, factuurnummer: factuurnummer, status: status }, r);
     }
   } catch (e) {
