@@ -525,6 +525,37 @@ function verwerkMollieWebhook_(e) {
 
     if (betaling.status !== 'paid') return; // Openstaand of geannuleerd — geen actie
 
+    // CYCLE 77: defense-in-depth — verifieer mode + bedrag voordat we provisionen.
+    // VOORHEEN: een attacker die een test-payment van €0,01 op dezelfde Mollie-
+    // account aanmaakt, kon dat tr_-id naar de prod-webhook POSTen. De API gaf
+    // status='paid' terug → licentie geactiveerd zonder dat er €49 was betaald.
+    // Nu: een live-API-key eist mode='live', en het bedrag moet minimaal de
+    // referral-korte prijs zijn (PRODUCT_PRIJS − REF_KORTING). Currency moet
+    // EUR zijn (Mollie kan multi-currency; onze checkout doet alleen EUR).
+    //
+    // Falen = return (HTTP 200) i.p.v. throw: Mollie stopt direct met retryen
+    // van een onterecht aangeleverd payment-id, en de log toont waarom.
+    const verwachteMode = String(mollieKey).startsWith('live_') ? 'live' : 'test';
+    if (betaling.mode !== verwachteMode) {
+      Logger.log('Mollie webhook afgewezen: mode=' + betaling.mode +
+        ' (verwacht ' + verwachteMode + ') voor ' + paymentId);
+      return;
+    }
+    const prijsRw = props.getProperty('PRODUCT_PRIJS') || '49.00';
+    const verwachtPrijs = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
+      ? parseFloat(prijsRw) / 100
+      : parseFloat(prijsRw);
+    const REF_KORTING = 5; // identiek aan maakBetaling()
+    const minPrijs = Math.max(0, verwachtPrijs - REF_KORTING);
+    const amount = betaling.amount || {};
+    const betaaldBedrag = parseFloat(amount.value || '0');
+    if (amount.currency !== 'EUR' || betaaldBedrag < minPrijs) {
+      Logger.log('Mollie webhook afgewezen: bedrag €' + betaaldBedrag + ' ' +
+        (amount.currency || '?') + ' < minimum €' + minPrijs.toFixed(2) +
+        ' EUR voor ' + paymentId);
+      return;
+    }
+
     // CYCLE 72: hard-guard op TEMPLATE_SS_ID. Zonder template kan de copy-link
     // niet worden opgebouwd. Throw VÓÓR enige provisioning (appendRow / cache /
     // mail), zodat (a) er niets wordt opgeslagen en (b) doPost een HTTP 500
