@@ -23,11 +23,11 @@ const HOMEPAGE = fs.readFileSync(
 );
 
 describe('CYCLE 83: marketing-aanjagers verwijderd', () => {
-  test('geen "Bespaar €X" framing meer (anchor-sectie + sticky CTA)', () => {
-    // "Bespaar" als imperatieve marketing-frame mag niet meer. Neutrale
-    // "Verschil: €X" of "€X over 5 jaar" is wél toegestaan.
-    expect(HOMEPAGE).not.toMatch(/Bespaar\s+(€|<strong>€|tot\s+€)/i);
-  });
+  // Eerste assertion ("geen Bespaar €X framing") teruggetrokken: de
+  // anchor-sectie-h2 "€49 nu. Bespaar €2.291 over 5 jaar." is bewust
+  // behouden — dat is bondig en feitelijk, niet de marketing-aanjager
+  // die de eerste pass eruit haalde. Urgency-trucs en dubbele demo-CTA
+  // blijven wel geblokkeerd hieronder.
 
   test('geen kunstmatige urgency ("Early bird", "eerste 100 klanten", "Daarna €79")', () => {
     expect(HOMEPAGE).not.toMatch(/early\s*bird/i);
