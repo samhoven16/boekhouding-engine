@@ -50,6 +50,9 @@ function doGet(e) {
   if (actie === 'admin')         return rateLimit_(e, { actie: 'admin-login', globaal: 20, windowMin: 60 }) || adminPaneel_(e);
   if (actie === 'roteer')        return rateLimit_(e, { actie: 'roteer', perEmail: 3, globaal: 100, windowMin: 60 }) || roteerEndpoint_(e);
   if (actie === 'revoke')        return revokeEndpoint_(e);
+  // Cycle 80: GDPR Art. 17 — recht op vergetelheid. OTP-gated zodat alleen
+  // de licentiehouder zelf z'n data kan laten pseudonymiseren.
+  if (actie === 'verwijder')     return rateLimit_(e, { actie: 'verwijder', perEmail: 3, globaal: 50, windowMin: 60 }) || verwijderEndpoint_(e);
 
   // Standaard: betaalpagina tonen
   return betaalPagina_(e);
@@ -1828,6 +1831,73 @@ function _verwijderDripKeys_(sleutel) {
     }
     return verwijderd;
   } catch (_) { return 0; }
+}
+
+/**
+ * GDPR Art. 17 — recht op vergetelheid (klant-getriggerd).
+ *
+ * Cycle 80: licentiehouder vraagt een OTP aan via 'aanvraag-otp', voert die
+ * in, en stuurt vervolgens hier zijn e-mail + OTP. Bij geldige OTP:
+ *   - Pseudonymiseer naam/email/spreadsheet-id/laatste-validatie/ref-code
+ *     op de Licenties-sheet (kolommen 1, 2, 6, 9, 11)
+ *   - Status wordt 'Verwijderd op verzoek (Art. 17)' — uitgesloten van alle
+ *     drips, validatie levert geldig=false op
+ *   - PaymentId BLIJFT staan: AWR art. 52 verplicht 7-jaars financiële
+ *     administratie. Mollie bewaart het origineel los van ons.
+ *   - License-sleutel (kolom 0) blijft als hash voor het geval er ooit een
+ *     refund-webhook binnen kan komen op een verwijderde rij.
+ *
+ * Niet hier: klant's eigen Google-Drive spreadsheet. Die kan klant zelf
+ * verwijderen — wij hebben geen toegang.
+ */
+function verwijderEndpoint_(e) {
+  const email = String((e.parameter.email || '')).trim().toLowerCase();
+  const otp   = String((e.parameter.otp   || '')).trim();
+  if (!email || !otp) return jsonResp_({ ok: false, fout: 'E-mail en code zijn verplicht.' });
+
+  const props = PropertiesService.getScriptProperties();
+  const otpRaw = props.getProperty('otp_' + email);
+  if (!otpRaw) return jsonResp_({ ok: false, fout: 'Geen geldige code. Vraag eerst een nieuwe code aan via "Mijn account verwijderen".' });
+
+  let otpObj;
+  try { otpObj = JSON.parse(otpRaw); } catch (_) { return jsonResp_({ ok: false, fout: 'Ongeldige code.' }); }
+  if (Date.now() > otpObj.expiry) {
+    props.deleteProperty('otp_' + email);
+    return jsonResp_({ ok: false, fout: 'Code verlopen — vraag een nieuwe aan.' });
+  }
+  if (!veiligVergelijk_(otpObj.code, otp)) {
+    return jsonResp_({ ok: false, fout: 'Onjuiste code.' });
+  }
+  // Eenmalig gebruik
+  props.deleteProperty('otp_' + email);
+  props.deleteProperty('otp_ts_' + email);
+  props.deleteProperty('otp_pogingen_' + email);
+
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  let geraakt = 0;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][2] || '').toLowerCase() !== email) continue;
+    const rij = i + 1;
+    // Pseudonymiseer kolommen (1-based):
+    //   2 Naam, 3 Email, 5 Status, 7 SpreadsheetId, 10 LaatsteValidatie, 12 Verwijzer
+    sheet.getRange(rij, 2).setValue('— verwijderd —');
+    sheet.getRange(rij, 3).setValue('deleted+' + (i + 1) + '@anonymized.local');
+    sheet.getRange(rij, 5).setValue('Verwijderd op verzoek (Art. 17)');
+    sheet.getRange(rij, 7).setValue('');
+    sheet.getRange(rij, 10).setValue(new Date());
+    sheet.getRange(rij, 12).setValue('');
+    geraakt++;
+  }
+
+  if (geraakt === 0) {
+    return jsonResp_({ ok: false, fout: 'Geen licentie gevonden voor dit e-mailadres.' });
+  }
+  Logger.log('GDPR Art. 17 pseudonymisering: ' + geraakt + ' rij(en) voor ' +
+    email.slice(0, 3) + '***');
+  try { schrijfAuditLog_('GDPR Art. 17 — pseudonymisering',
+    email.slice(0, 3) + '*** — ' + geraakt + ' rij(en)'); } catch (_) {}
+  return jsonResp_({ ok: true, bericht: 'Je gegevens zijn gepseudonymiseerd. Je behoudt 14 dagen toegang via de grace-period; daarna vervalt je licentie. De fiscale gegevens (factuurnummers, bedragen) blijven 7 jaar bewaard conform AWR art. 52.' });
 }
 
 function revokeEndpoint_(e) {
