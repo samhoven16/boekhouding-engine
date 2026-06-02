@@ -528,6 +528,38 @@ function verwerkMollieWebhook_(e) {
 
     if (betaling.status !== 'paid') return; // Openstaand of geannuleerd — geen actie
 
+    // CYCLE 79: refund/chargeback-flow. Mollie stuurt de webhook OPNIEUW
+    // op hetzelfde paymentId zodra er een refund of chargeback plaatsvindt.
+    // De payment-status blijft 'paid' maar amountRefunded/amountChargedBack
+    // bevat dan een waarde. We trekken de licentie in zodra geld terug is.
+    // Komt VOOR de mode/amount-check uit cycle 77: een refund-webhook hoeft
+    // niet door provisioning-guards heen — we revoken alleen.
+    //
+    // VOORHEEN: refund-webhook werd genegeerd — klant kreeg geld terug maar
+    // hield toegang. Financieel + reputatie-risico (precedent voor misbruik).
+    //
+    // Beleid:
+    //   chargeback        → altijd revoke (bank heeft de transactie omgekeerd)
+    //   volledige refund  → revoke (klant heeft geld terug)
+    //   partiële refund   → laat licentie staan, log waarschuwing aan owner
+    //
+    // Idempotent: een rij die al 'Ingetrokken — …' is wordt niet opnieuw
+    // bijgewerkt.
+    const refunded    = parseFloat((betaling.amountRefunded   || {}).value || '0');
+    const chargedBack = parseFloat((betaling.amountChargedBack || {}).value || '0');
+    const betaaldVal  = parseFloat((betaling.amount            || {}).value || '0');
+    if (chargedBack > 0 || (refunded > 0 && refunded >= betaaldVal - 0.001)) {
+      const reden = chargedBack > 0 ? 'chargeback' : 'refund';
+      trekLicentieIn_(paymentId, reden);
+      cache.put(cacheKey, 'done', 21600); // geen verdere retries voor dit id
+      return;
+    }
+    if (refunded > 0) {
+      // Partiële refund — laat licentie actief maar log voor handmatige opvolging.
+      try { schrijfAuditLog_('Mollie partiële refund', 'paymentId=' + paymentId +
+        ' refunded=€' + refunded.toFixed(2) + ' van €' + betaaldVal.toFixed(2)); } catch (_) {}
+    }
+
     // CYCLE 77: defense-in-depth — verifieer mode + bedrag voordat we provisionen.
     // VOORHEEN: een attacker die een test-payment van €0,01 op dezelfde Mollie-
     // account aanmaakt, kon dat tr_-id naar de prod-webhook POSTen. De API gaf
@@ -846,7 +878,24 @@ function valideerEndpoint_(e) {
       // konden bereiken voor support.
       if (status.startsWith('ingetrokken')) return jsonResp_({ geldig: false, fout: 'Licentie is ingetrokken.' });
       if (status === 'bounce') return jsonResp_({ geldig: false, fout: 'E-mailadres ontvangt geen post. Neem contact op via support@boekhoudbaar.nl.' });
-      if (vervaldat && vervaldat < new Date()) return jsonResp_({ geldig: false, fout: 'Licentie is verlopen.' });
+
+      // CYCLE 79: grace-period bij verlopen licentie. Een harde cut-off op
+      // de exacte vervaldatum drukt klanten midden in hun werkflow eruit
+      // (factuur half klaar → toegang weg → support-ticket). 14 dagen
+      // verlenging geeft tijd om te verlengen met een banner-waarschuwing.
+      // Past nu alleen op licenties mét vervaldatum (trials, expliciete
+      // setting); €49-eenmalig heeft geen vervaldatum dus blijft geldig.
+      const GRACE_DAGEN = 14;
+      let graceWaarschuwing = null;
+      if (vervaldat && vervaldat < new Date()) {
+        const dagenVerlopen = Math.floor((new Date() - vervaldat) / 86400000);
+        if (dagenVerlopen > GRACE_DAGEN) {
+          return jsonResp_({ geldig: false, fout: 'Licentie is verlopen.' });
+        }
+        const dagenResterend = GRACE_DAGEN - dagenVerlopen;
+        graceWaarschuwing = 'Je licentie is verlopen. Je hebt nog ' + dagenResterend +
+          ' dag' + (dagenResterend === 1 ? '' : 'en') + ' om te verlengen.';
+      }
 
       // Registreer installatie-ID bij eerste activatie (één installatie per sleutel)
       const huidigInstId = String(data[i][6] || '');
@@ -859,7 +908,9 @@ function valideerEndpoint_(e) {
       // Update laatste validatie
       sheet.getRange(i + 1, 10).setValue(new Date());
 
-      return jsonResp_({ geldig: true, naam: data[i][1], versie: data[i][3] || 'Standaard' });
+      const resp = { geldig: true, naam: data[i][1], versie: data[i][3] || 'Standaard' };
+      if (graceWaarschuwing) resp.waarschuwing = graceWaarschuwing;
+      return jsonResp_(resp);
     }
     return jsonResp_({ geldig: false, fout: 'Licentiesleutel niet gevonden.' });
   } catch (err) {
@@ -1898,6 +1949,51 @@ function verwijderEndpoint_(e) {
   try { schrijfAuditLog_('GDPR Art. 17 — pseudonymisering',
     email.slice(0, 3) + '*** — ' + geraakt + ' rij(en)'); } catch (_) {}
   return jsonResp_({ ok: true, bericht: 'Je gegevens zijn gepseudonymiseerd. Je behoudt 14 dagen toegang via de grace-period; daarna vervalt je licentie. De fiscale gegevens (factuurnummers, bedragen) blijven 7 jaar bewaard conform AWR art. 52.' });
+}
+
+/**
+ * Trek de licentie in die hoort bij een Mollie payment-id.
+ *
+ * Cycle 79: aangeroepen vanuit de webhook bij refund of chargeback. Looked
+ * up op kolom 9 (PaymentId, 0-based 8). Idempotent: een rij die al
+ * 'Ingetrokken — ...' heeft wordt niet opnieuw bijgewerkt. Logt audit-event
+ * + Logger.log; gooit nooit (audit-log mag nooit de webhook breken).
+ *
+ * @param {string} paymentId Mollie tr_-id
+ * @param {string} reden     'refund' | 'chargeback'
+ * @return {boolean} true = er is een rij bijgewerkt, false = niet gevonden of al ingetrokken
+ */
+function trekLicentieIn_(paymentId, reden) {
+  try {
+    const sheet = getLicentieSheet_();
+    const data  = sheet.getDataRange().getValues();
+    const headers = data[0] || [];
+    const statusCol = headers.indexOf('Status');
+    const payCol    = headers.indexOf('PaymentId');
+    // Fallback voor sheets zonder headers of met afwijkende naamgeving:
+    // we weten dat de webhook-appendRow PaymentId op index 8 en Status op
+    // index 4 zet (zie verwerkMollieWebhook_).
+    const sCol = statusCol >= 0 ? statusCol : 4;
+    const pCol = payCol    >= 0 ? payCol    : 8;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][pCol] || '') !== String(paymentId)) continue;
+      const huidig = String(data[i][sCol] || '').toLowerCase();
+      if (huidig.startsWith('ingetrokken')) return false; // idempotent
+      const nieuweStatus = 'Ingetrokken — ' + reden;
+      sheet.getRange(i + 1, sCol + 1).setValue(nieuweStatus);
+      Logger.log('Licentie ingetrokken (' + reden + ') voor paymentId ' + paymentId +
+        ' rij ' + (i + 1));
+      try { schrijfAuditLog_('Licentie ingetrokken (' + reden + ')',
+        'paymentId=' + paymentId + ' rij=' + (i + 1)); } catch (_) {}
+      return true;
+    }
+    Logger.log('trekLicentieIn_: geen rij gevonden voor paymentId ' + paymentId +
+      ' (' + reden + ')');
+    return false;
+  } catch (err) {
+    Logger.log('trekLicentieIn_ FOUT (' + reden + ' ' + paymentId + '): ' + err.message);
+    return false;
+  }
 }
 
 function revokeEndpoint_(e) {
