@@ -31,6 +31,34 @@ function genereerBtwAangifte(kwartaal) {
 
   const aangifte = berekenBtwAangifte_(ss, periode.van, periode.tot);
 
+  // Cycle 80: sanity-check vóór indiening. Vangt drie veelvoorkomende
+  // klassen van fouten op:
+  //   - Alle bedragen op nul → klant heeft een verkeerde periode gekozen
+  //     of de boekingen vallen niet in dit kwartaal (sluitdatum mis)
+  //   - Negatieve grondslag-bedragen → corrupte data (zonder creditnota)
+  //   - >50% afwijking van vorig kwartaal → mogelijk dubbel-geboekte facturen
+  //     of een vergeten maand
+  // Geen blokker maar een verplichte expliciete bevestiging via UI-confirm,
+  // zodat klant niet per ongeluk €0,- of een corrupt aangifte indient.
+  const vorigeAangifte = _vorigeAangifteOphalen_(ss, kwartaal, jaar);
+  const issues = valideerAangifteVoorIndiening_(aangifte, vorigeAangifte);
+  if (issues.length > 0) {
+    const ui = SpreadsheetApp.getUi();
+    const respons = ui.alert(
+      'Aangifte controleren — ' + issues.length + ' waarschuwing(en)',
+      'Voor je de aangifte indient bij de Belastingdienst: controleer de ' +
+      'onderstaande punten. Verkeerde aangifte = correctie + boete-risico.\n\n' +
+      '• ' + issues.join('\n• ') + '\n\n' +
+      'Doorgaan met deze aangifte?',
+      ui.ButtonSet.YES_NO
+    );
+    if (respons !== ui.Button.YES) {
+      try { schrijfAuditLog_('BTW aangifte geannuleerd (validatie)',
+        kwartaal + ' ' + jaar + ' — ' + issues.length + ' issue(s)'); } catch (_) {}
+      return;
+    }
+  }
+
   zetBtwAangifteOpSheet_(ss, aangifte, kwartaal, periode);
 
   // Samenvatting in begrijpelijke taal (geen rubriekcodes)
@@ -319,6 +347,96 @@ function valideerBtwInvariants_(a) {
   }
 
   return issues;
+}
+
+// ─────────────────────────────────────────────
+//  PRE-SUBMISSION VALIDATIE (Cycle 80)
+// ─────────────────────────────────────────────
+/**
+ * Sanity-check op een berekende aangifte vóór indiening bij de Belastingdienst.
+ *
+ * Vangt drie veelvoorkomende fout-patronen op:
+ *   - Alle bedragen op nul (verkeerde periode of boekingen mis)
+ *   - Negatieve grondslag-bedragen zonder creditnota (data-corruptie)
+ *   - >50% afwijking van vorig kwartaal (mogelijk dubbel-geboekte facturen
+ *     of een vergeten maand)
+ *
+ * Pure functie zonder side-effects — input → array van strings. Lege array =
+ * geen issues. De aanroeper besluit zelf wat te doen (confirm-dialog,
+ * blokkeren, audit-log).
+ *
+ * @param {Object} aangifte        Resultaat van berekenBtwAangifte_
+ * @param {Object} [vorigeAangifte] Optioneel: vorig kwartaal voor afwijking-check
+ * @returns {string[]} Lijst van menselijk-leesbare waarschuwingen
+ */
+function valideerAangifteVoorIndiening_(aangifte, vorigeAangifte) {
+  const issues = [];
+  if (!aangifte) return ['Geen aangifte-data beschikbaar.'];
+
+  // 1. Alle bedragen nul → klant heeft waarschijnlijk verkeerde periode
+  const totaal = Math.abs(aangifte.r1a_grondslag || 0) +
+                 Math.abs(aangifte.r1b_grondslag || 0) +
+                 Math.abs(aangifte.r1c_grondslag || 0) +
+                 Math.abs(aangifte.r1d || 0) +
+                 Math.abs(aangifte.r1e_grondslag || 0) +
+                 Math.abs(aangifte.r5a || 0) +
+                 Math.abs(aangifte.r5b || 0);
+  if (totaal < 0.005) {
+    issues.push('Alle bedragen zijn €0 — controleer of je de juiste periode hebt ' +
+      'gekozen en of de boekingen in deze periode vallen.');
+  }
+
+  // 2. Negatieve grondslag-bedragen zonder verwachte tegenboeking
+  // Verkoop-grondslagen horen positief te zijn (creditnota's verlagen de totaal,
+  // niet één rij). Als de SOM negatief is, is er iets mis met de data.
+  const negVelden = [
+    ['r1a_grondslag', 'Omzet 21%'],
+    ['r1b_grondslag', 'Omzet 9%'],
+    ['r1d',           'Omzet 0%/vrijgesteld'],
+  ];
+  negVelden.forEach(function(pair) {
+    const v = aangifte[pair[0]];
+    if (typeof v === 'number' && v < -0.005) {
+      issues.push('"' + pair[1] + '" is negatief (' + v.toFixed(2) +
+        '). Vaak een teken van een ontbrekende of dubbele creditnota.');
+    }
+  });
+
+  // 3. >50% afwijking van vorig kwartaal (alleen als er een vorige is met data)
+  if (vorigeAangifte && (vorigeAangifte.r5a > 0 || vorigeAangifte.r5b > 0)) {
+    const huidigSaldoAbs  = Math.abs(aangifte.saldo || 0);
+    const vorigSaldoAbs   = Math.abs(vorigeAangifte.saldo || 0);
+    if (vorigSaldoAbs > 50 && huidigSaldoAbs > 50) {
+      const afwijking = Math.abs(huidigSaldoAbs - vorigSaldoAbs) / vorigSaldoAbs;
+      if (afwijking > 0.5) {
+        issues.push('Saldo wijkt ' + Math.round(afwijking * 100) + '% af van vorig kwartaal ' +
+          '(€' + huidigSaldoAbs.toFixed(2) + ' vs €' + vorigSaldoAbs.toFixed(2) +
+          '). Controleer of er geen facturen dubbel of een maand vergeten zijn.');
+      }
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Probeert de aangifte van het vorige kwartaal op te halen uit het BTW
+ * Aangifte-tabblad. Faalt stil (return null) als er geen snapshot is —
+ * de validator gebruikt 'm alleen voor de afwijking-check.
+ */
+function _vorigeAangifteOphalen_(ss, huidigKwartaal, huidigJaar) {
+  try {
+    const map = { Q1: { k: 'Q4', j: huidigJaar - 1 },
+                  Q2: { k: 'Q1', j: huidigJaar },
+                  Q3: { k: 'Q2', j: huidigJaar },
+                  Q4: { k: 'Q3', j: huidigJaar } };
+    const vorig = map[huidigKwartaal];
+    if (!vorig) return null;
+    const periode = bepaalBtwPeriode_(vorig.k, vorig.j);
+    return berekenBtwAangifte_(ss, periode.van, periode.tot);
+  } catch (_) {
+    return null;
+  }
 }
 
 // ─────────────────────────────────────────────
