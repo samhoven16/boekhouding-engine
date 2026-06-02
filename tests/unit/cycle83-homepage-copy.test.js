@@ -23,11 +23,10 @@ const HOMEPAGE = fs.readFileSync(
 );
 
 describe('CYCLE 83: marketing-aanjagers verwijderd', () => {
-  // Eerste assertion ("geen Bespaar €X framing") teruggetrokken: de
-  // anchor-sectie-h2 "€49 nu. Bespaar €2.291 over 5 jaar." is bewust
-  // behouden — dat is bondig en feitelijk, niet de marketing-aanjager
-  // die de eerste pass eruit haalde. Urgency-trucs en dubbele demo-CTA
-  // blijven wel geblokkeerd hieronder.
+  // Eerste assertion ("geen Bespaar €X framing") teruggetrokken in cycle 84:
+  // de anchor-h2 "€49 nu. Bespaar €2.291 over 5 jaar." is bewust behouden —
+  // bondig en feitelijk, niet de marketing-aanjager die de eerste pass eruit
+  // haalde. Urgency-trucs en dubbele demo-CTA blijven wel geblokkeerd.
 
   test('geen kunstmatige urgency ("Early bird", "eerste 100 klanten", "Daarna €79")', () => {
     expect(HOMEPAGE).not.toMatch(/early\s*bird/i);
@@ -63,5 +62,35 @@ describe('CYCLE 83: CTA-aantal binnen redelijke grens', () => {
   test('maximaal 6 /kopen-links op de homepage (nav-desktop+mobile, hero, pricing, footer, sticky)', () => {
     const matches = HOMEPAGE.match(/href="\/kopen"/g) || [];
     expect(matches.length).toBeLessThanOrEqual(6);
+  });
+});
+
+describe('CYCLE 84: €49-herhaling onder controle', () => {
+  // Vóór cycle 84 stond €49 16+ keer zichtbaar op de homepage — te veel.
+  // Nu: alleen op betekenisvolle plekken (hero-badge, anchor-vergelijking,
+  // pricing-card, FAQ-antwoorden, sticky CTA). Nav/footer/CTA-buttons zijn
+  // generiek ("Kopen", "Koop nu →") zonder prijs-tag — die staat overal
+  // anders al genoeg.
+  test('CTA-button-teksten bevatten geen prijs meer', () => {
+    expect(HOMEPAGE).not.toMatch(/Koop voor €49/);
+    expect(HOMEPAGE).not.toMatch(/Koop nu voor €49/);
+  });
+
+  test('Nav-CTAs zijn "Kopen" zonder prijs-suffix', () => {
+    expect(HOMEPAGE).not.toMatch(/class="nav-cta">Kopen · €49/);
+    expect(HOMEPAGE).toMatch(/class="nav-cta">Kopen<\/a>/);
+  });
+
+  test('Footer-link is "Prijs" zonder bedrag-tag', () => {
+    expect(HOMEPAGE).not.toMatch(/<a href="\/#prijs">Prijs · €49<\/a>/);
+  });
+
+  test('Aantal "€49" in het body (post-</head>) blijft <= 12', () => {
+    // Soft cap. Houdt herintroductie van marketing-spam ("Koop voor €49!"
+    // op meer plekken) in de gaten. Verhogen vereist motivatie in commit.
+    const headEnd = HOMEPAGE.indexOf('</head>');
+    const body = HOMEPAGE.slice(headEnd);
+    const matches = body.match(/€\s*49\b/g) || [];
+    expect(matches.length).toBeLessThanOrEqual(12);
   });
 });
