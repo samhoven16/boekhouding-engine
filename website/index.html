@@ -1252,6 +1252,47 @@
   }
   .agenda-feed-knop:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(46,196,182,.32); }
 
+  /* ── RECENTE UPDATES (cycle 88) — changelog-feed onder FAQ ── */
+  .recente-updates {
+    padding: 60px 32px;
+    background: var(--licht);
+    border-top: 1px solid var(--rand);
+  }
+  .recente-updates .container { max-width: 720px; margin: 0 auto; }
+  .recente-updates h2 {
+    color: var(--blauw);
+    font-size: 28px;
+    line-height: 1.25;
+    margin-bottom: 18px;
+  }
+  .updates-lijst {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+    border-top: 1px solid var(--rand);
+  }
+  .updates-lijst li {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rand);
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+  }
+  .update-datum {
+    font-size: 13px;
+    color: var(--grijs);
+    flex-shrink: 0;
+    width: 90px;
+  }
+  .update-titel { font-size: 15px; color: #1A1A1A; line-height: 1.5; }
+  .update-cycle { color: var(--grijs); font-weight: 600; margin-right: 6px; }
+  .updates-leeg { color: var(--grijs); font-style: italic; }
+  .updates-meta { font-size: 13px; color: var(--grijs); line-height: 1.6; margin-top: 16px; }
+  @media (max-width: 640px) {
+    .updates-lijst li { flex-direction: column; gap: 4px; }
+    .update-datum { width: auto; }
+  }
+
   /* ── CTA BANNER ── */
   .cta-banner {
     position: relative;
@@ -1754,6 +1795,23 @@
   </div>
 </section>
 
+<!-- ── RECENTE UPDATES (cycle 88) — leefsignaal #2: laat zien dat het
+     product nog ontwikkeld wordt. Data uit /changelog.json, gegenereerd
+     door scripts/update-changelog.js bij elke pre-commit. ── -->
+<section id="recente-updates" class="recente-updates" aria-labelledby="updates-heading">
+  <div class="container">
+    <p class="section-label">Wat er onlangs is gebeurd</p>
+    <h2 id="updates-heading">Recente updates</h2>
+    <ul class="updates-lijst" data-updates-lijst>
+      <li class="updates-leeg">Laden…</li>
+    </ul>
+    <p class="updates-meta">
+      Boekhoudbaar wordt actief onderhouden. Alle updates worden automatisch
+      naar je spreadsheet gepushed — je hoeft niets te doen.
+    </p>
+  </div>
+</section>
+
 </main>
 
 <!-- ── FOOTER ── (rijke sitemap voor SEO + crawl-budget) -->
@@ -2184,6 +2242,44 @@
         el.textContent = d.getUTCDate() + ' ' + maanden[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
       })
       .catch(function() { /* houd "—" bij netwerkfout */ });
+  })();
+</script>
+
+<!-- Cycle 88: recente updates renderen uit /changelog.json. Toont max 5
+     entries. Faalt stil bij netwerk- of parse-fout — sectie blijft dan
+     met "(geen recente updates)" of geheel verborgen staan. -->
+<script>
+  (function() {
+    var lijst = document.querySelector('[data-updates-lijst]');
+    if (!lijst) return;
+    fetch('/changelog.json', { cache: 'no-store' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(j) {
+        var entries = (j && Array.isArray(j.entries)) ? j.entries.slice(0, 5) : [];
+        if (entries.length === 0) {
+          lijst.innerHTML = '<li class="updates-leeg">Geen recente updates.</li>';
+          return;
+        }
+        var maanden = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+        lijst.innerHTML = entries.map(function(e) {
+          var d = new Date(e.date + 'T00:00:00Z');
+          var datum = isNaN(d.getTime())
+            ? (e.date || '')
+            : (d.getUTCDate() + ' ' + maanden[d.getUTCMonth()] + ' ' + d.getUTCFullYear());
+          // Sanitize: titel staat in een textNode, geen HTML-rendering
+          var titel = document.createElement('span');
+          titel.className = 'update-titel';
+          var cyc = document.createElement('span');
+          cyc.className = 'update-cycle';
+          cyc.textContent = 'Cycle ' + (e.cycle || '?') + ':';
+          titel.appendChild(cyc);
+          titel.appendChild(document.createTextNode(' ' + (e.titel || '')));
+          return '<li><span class="update-datum">' + datum + '</span>' + titel.outerHTML + '</li>';
+        }).join('');
+      })
+      .catch(function() {
+        lijst.innerHTML = '<li class="updates-leeg">Updates niet beschikbaar.</li>';
+      });
   })();
 </script>
 </body>
