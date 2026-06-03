@@ -180,12 +180,16 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
 </style>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
 <link rel="stylesheet" href="/animations.css">
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
 </head>
 <body>
 
 <nav aria-label="Hoofdnavigatie">
   <div class="nav-inner">
-    <a href="/" class="logo" aria-label="Boekhoudbaar — home"><img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52"></a>
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home">
+      <img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52">
+    </a>
     <ul class="nav-links" id="nav-menu" role="list">
       <li><a href="/functies/" aria-current="page">Functies</a></li>
       <li><a href="/vergelijking/">Vergelijking</a></li>
@@ -439,19 +443,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
 </footer>
 
 <script>
-  (function(){
-    var btn=document.querySelector('.nav-toggle');
-    var menu=document.getElementById('nav-menu');
-    if(!btn||!menu)return;
-    btn.addEventListener('click',function(){
-      var open=menu.classList.toggle('open');
-      btn.setAttribute('aria-expanded',open?'true':'false');
-    });
-    menu.querySelectorAll('a').forEach(function(a){
-      a.addEventListener('click',function(){menu.classList.remove('open');btn.setAttribute('aria-expanded','false');});
-    });
-  })();
-</script>
+  </script>
 <script src="/consent.js" defer></script>
 </body>
 </html>

@@ -134,18 +134,22 @@
 </style>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
 <link rel="stylesheet" href="/animations.css">
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
 </head>
 <body>
 
 <nav aria-label="Hoofdnavigatie">
   <div class="nav-inner">
-    <a href="/" class="logo" aria-label="Boekhoudbaar — home"><img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52"></a>
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home">
+      <img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52">
+    </a>
     <ul class="nav-links" id="nav-menu" role="list">
-      <li><a href="/#functies">Product</a></li>
-      <li><a href="/#prijs">Prijs</a></li>
+      <li><a href="/functies/">Functies</a></li>
+      <li><a href="/vergelijking/">Vergelijking</a></li>
       <li><a href="/gids/">Gidsen</a></li>
       <li><a href="/over/" aria-current="page">Over</a></li>
-      <li><a href="/#faq">FAQ</a></li>
+      <li><a href="/faq/">FAQ</a></li>
       <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen</a></li>
     </ul>
     <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
@@ -244,19 +248,7 @@
 </footer>
 
 <script>
-  (function(){
-    var btn=document.querySelector('.nav-toggle');
-    var menu=document.getElementById('nav-menu');
-    if(!btn||!menu)return;
-    btn.addEventListener('click',function(){
-      var open=menu.classList.toggle('open');
-      btn.setAttribute('aria-expanded',open?'true':'false');
-    });
-    menu.querySelectorAll('a').forEach(function(a){
-      a.addEventListener('click',function(){menu.classList.remove('open');btn.setAttribute('aria-expanded','false');});
-    });
-  })();
-</script>
+  </script>
 <script src="/consent.js" defer></script>
 </body>
 </html>

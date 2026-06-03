@@ -1510,6 +1510,8 @@
 </style>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
 <link rel="stylesheet" href="/animations.css">
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
 </head>
 <body>
 
@@ -1529,9 +1531,6 @@
       <li><a href="/gids/">Gidsen</a></li>
       <li><a href="/over/">Over</a></li>
       <li><a href="/faq/">FAQ</a></li>
-      <li><button class="thema-toggle" id="themaToggle" type="button" aria-label="Donker/licht wisselen">
-        <span id="themaIcon" aria-hidden="true">🌙</span><span id="themaTekst">Donker</span>
-      </button></li>
       <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen</a></li>
     </ul>
     <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
@@ -2167,22 +2166,6 @@
         el.classList.remove('swap');
       }, 350);
     }, 3200);
-  })();
-
-  (function() {
-    var btn = document.querySelector('.nav-toggle');
-    var menu = document.getElementById('nav-menu');
-    if (!btn || !menu) return;
-    btn.addEventListener('click', function() {
-      var open = menu.classList.toggle('open');
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-    menu.querySelectorAll('a').forEach(function(a) {
-      a.addEventListener('click', function() {
-        menu.classList.remove('open');
-        btn.setAttribute('aria-expanded', 'false');
-      });
-    });
   })();
 
   /* Scroll-progress bar — geeft Apple/Notion 'voortgang'-gevoel */

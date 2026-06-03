@@ -2,6 +2,11 @@
   "entries": [
     {
       "date": "2026-06-02",
+      "cycle": 88,
+      "titel": "Recente updates sectie + cross-page schema-link"
+    },
+    {
+      "date": "2026-06-02",
       "cycle": 87,
       "titel": "breakpoints 9→3 + agenda-feed sectie inline-styles weg"
     },
