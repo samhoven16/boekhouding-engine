@@ -112,7 +112,7 @@ function stripNav(css) {
     }
     i = close + 1;
   }
-  return out;
+  return out.replace(/(?:[ \t]*\n){3,}/g, '\n\n');
 }
 
 function processHtml(html) {
