@@ -37,39 +37,21 @@
   }
 
   /* ── NAV ── */
-  body > nav {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(255,255,255,.97);
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--rand);
-    padding: 0 24px;
-  }
-  .nav-inner {
-    max-width: 1180px; margin: 0 auto;
-    display: flex; align-items: center; justify-content: space-between;
-    height: 64px;
-  }
+  
+  
   .logo { font-weight: 800; font-size: 20px; color: var(--blauw); text-decoration: none; }
   .logo span { color: var(--accent); }
-  .nav-links { display: flex; gap: 28px; list-style: none; }
-  .nav-links a { text-decoration: none; color: var(--grijs); font-size: 15px; font-weight: 500; }
-  .nav-links a:hover { color: var(--blauw); }
-  .nav-cta {
-    background: var(--blauw); color: var(--wit) !important;
-    padding: 9px 20px; border-radius: 8px; font-weight: 600 !important;
-    font-size: 14px !important;
-  }
+  
+  
+  
+  
   .nav-cta:hover { background: var(--blauw-licht) !important; color: var(--wit) !important; }
 
   /* ── HAMBURGERMENU ── */
-  .nav-toggle {
-    display: none;
-    background: none; border: none; cursor: pointer;
-    padding: 8px; color: var(--blauw);
-  }
-  .nav-toggle svg { display: block; }
-  .nav-toggle[aria-expanded="true"] .icon-open  { display: none; }
-  .nav-toggle[aria-expanded="false"] .icon-close { display: none; }
+  
+  
+  
+  
 
   /* ── 404 CONTENT ── */
   .main-content {
@@ -151,23 +133,14 @@
 
   /* ── RESPONSIVE ── */
   @media (max-width: 768px) {
-    body>nav { background: #ffffff; box-shadow: 0 1px 0 rgba(13,27,78,.06), 0 6px 20px rgba(13,27,78,.05); border-bottom: none; }
-    .nav-toggle { display: flex; align-items: center; }
+    
+    
 
-    .nav-links {
-      display: none; flex-direction: column; gap: 0;
-      position: absolute; top: 64px; left: 0; right: 0;
-      background: var(--wit); border-bottom: 1px solid var(--rand);
-      padding: 8px 0; box-shadow: 0 8px 24px rgba(0,0,0,.08);
-      z-index: 99;
-    }
-    .nav-links.open { display: flex; }
-    .nav-links a { padding: 14px 24px; font-size: 16px; border-bottom: 1px solid var(--rand); }
-    .nav-links li:last-child a { border-bottom: none; }
-    .nav-cta {
-      margin: 8px 20px 4px; border-radius: 8px;
-      text-align: center; display: block;
-    }
+    
+    
+    
+    
+    
 
     .error-actions { flex-direction: column; align-items: stretch; }
     .btn-primair, .btn-secundair { justify-content: center; }
