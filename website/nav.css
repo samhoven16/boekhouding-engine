@@ -1,0 +1,123 @@
+/* ── Canonieke header-navigatie ────────────────────────────
+ * Eén bron-van-waarheid voor de hoofdnav over alle 48 pagina's.
+ * Geëxtraheerd uit homepage (index.html) zodat drift onmogelijk wordt:
+ * pagina's includeren dit bestand; HTML-blok blijft identiek.
+ *
+ * Selector-scope: `body > nav` raakt alleen de header-nav (footer-nav
+ * zit in <footer> en wordt dus niet aangetast).
+ * ────────────────────────────────────────────────────────── */
+
+body > nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,.92);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid rgba(229,234,242,.8);
+  padding: 0 32px;
+}
+body > nav .nav-inner {
+  max-width: 1180px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 76px;
+  gap: 32px;
+}
+body > nav .logo {
+  text-decoration: none; display: inline-flex; align-items: center;
+  height: 40px; flex-shrink: 0;
+  border-bottom: none;
+}
+body > nav .logo img {
+  height: 36px; width: auto; display: block;
+  transition: opacity .2s ease, transform .2s ease;
+}
+body > nav .logo:hover img { opacity: .9; transform: scale(1.02); }
+body > nav .nav-links {
+  display: flex; gap: 36px; list-style: none; align-items: center;
+  margin: 0; padding: 0;
+}
+body > nav .nav-mobile-actions {
+  display: none; list-style: none; align-items: center; gap: 8px;
+  margin: 0; padding: 0;
+}
+body > nav .nav-mobile-actions li { list-style: none; }
+body > nav .nav-links a {
+  text-decoration: none; color: #475569; font-size: 15px; font-weight: 500;
+  letter-spacing: -0.01em; transition: color .15s ease;
+  border-bottom: none;
+}
+body > nav .nav-links a:not(.nav-cta):hover { color: var(--blauw, #0d1b4e); }
+body > nav .nav-links a[aria-current="page"] { color: var(--blauw, #0d1b4e); font-weight: 600; }
+body > nav .nav-cta {
+  background: var(--blauw, #0d1b4e); color: var(--wit, #fff) !important;
+  padding: 10px 20px; border-radius: 10px; font-weight: 600 !important;
+  font-size: 14px !important; letter-spacing: -0.01em;
+  transition: background .18s ease, transform .18s ease, box-shadow .25s ease;
+  box-shadow: 0 1px 2px rgba(13,27,78,.08);
+  border-bottom: none;
+}
+body > nav .nav-cta:hover {
+  background: var(--blauw-licht, #1a2a6c) !important; color: var(--wit, #fff) !important;
+}
+
+/* ── Hamburger-button (mobile only) ── */
+body > nav .nav-toggle {
+  display: none;
+  background: none; border: none; cursor: pointer;
+  padding: 8px; color: var(--blauw, #0d1b4e);
+}
+body > nav .nav-toggle svg { display: block; }
+body > nav .nav-toggle[aria-expanded="true"] .icon-open  { display: none; }
+body > nav .nav-toggle[aria-expanded="false"] .icon-close { display: none; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  body > nav .nav-inner { gap: 20px; }
+  body > nav .nav-links { gap: 26px; }
+}
+
+@media (max-width: 768px) {
+  body > nav {
+    background: #ffffff;
+    padding: 0 20px;
+    box-shadow: 0 1px 0 rgba(13,27,78,.06), 0 6px 20px rgba(13,27,78,.05);
+    border-bottom: none;
+  }
+  body > nav .nav-inner { height: 68px; gap: 12px; }
+  body > nav .logo { height: 32px; }
+  body > nav .logo img { height: 30px; }
+
+  body > nav .nav-mobile-actions { display: inline-flex; }
+  body > nav .nav-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 44px; min-height: 44px; margin-left: 4px;
+    color: var(--blauw, #0d1b4e); border-radius: 8px;
+    transition: background .15s ease;
+  }
+  body > nav .nav-toggle:hover,
+  body > nav .nav-toggle:active { background: rgba(13,27,78,.06); }
+
+  body > nav .nav-links {
+    display: none; flex-direction: column; gap: 0;
+    position: absolute; top: 68px; left: 0; right: 0;
+    background: var(--wit, #fff); border-bottom: 1px solid var(--rand, #e5eaf2);
+    padding: 4px 0; box-shadow: 0 12px 32px rgba(13,27,78,.1);
+    z-index: 99;
+  }
+  body > nav .nav-links.open { display: flex; }
+  body > nav .nav-links li { width: 100%; }
+  body > nav .nav-links li:not(.nav-cta-mobile) a {
+    padding: 14px 20px; font-size: 16px; display: block;
+    border-bottom: 1px solid var(--rand, #e5eaf2);
+  }
+  body > nav .nav-links li:last-child a { border-bottom: none; }
+
+  body > nav .nav-cta-mobile {
+    display: inline-flex !important; align-items: center;
+    order: 2; list-style: none;
+  }
+  body > nav .nav-cta-mobile a.nav-cta {
+    padding: 9px 14px !important; font-size: 13px !important;
+    border-radius: 8px; display: inline-flex;
+  }
+  body > nav .nav-links .nav-cta-desktop { display: none; }
+}
