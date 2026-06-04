@@ -348,12 +348,12 @@ function sluitJaarAf() {
     return;
   }
 
-  // 2. Reset tellers (alleen na geslaagd archief)
-  props.setProperty(PROP.VOLGEND_FACTUUR_NR, '1');
-  props.setProperty(PROP.VOLGEND_INKOOP_NR,  '1');
+  // 2. Factuurprefix + boekjaarinstellingen bijwerken in sheet
+  // Volgorde-invariant: prefix MOET bijgewerkt zijn vóór de tellers
+  // resetten. Zo voorkomen we dat een mislukte prefix-update de tellers
+  // op '1' achterlaat met de oude prefix → duplicaat factuurnummers
+  // tegenover vorig boekjaar (Wet OB art. 35a schending).
   _instellingenCache = null; // invalidate cache before writes
-
-  // 3. Factuurprefix + boekjaarinstellingen bijwerken in sheet
   const instSheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
   if (instSheet) {
     const data = instSheet.getDataRange().getValues();
@@ -372,6 +372,10 @@ function sluitJaarAf() {
     }
     _instellingenCache = null; // invalidate na writes
   }
+
+  // 3. Reset tellers — pas NA succesvolle prefix-update
+  props.setProperty(PROP.VOLGEND_FACTUUR_NR, '1');
+  props.setProperty(PROP.VOLGEND_INKOOP_NR,  '1');
 
   // 4. Drive-structuur nieuw boekjaar
   try {

@@ -41,7 +41,6 @@ function vernieuwDashboard() {
   // Geen 'Mijn Bedrijf' default — dat is een placeholder-tekst die klant verwart.
   // Liever: vraag actief om in te vullen via Instellingen-tabblad.
   if (!bedrijf) bedrijf = '← Vul je bedrijfsnaam in op Instellingen-tabblad';
-  const jaar = new Date().getFullYear();
   const nu = new Date();
 
   // Bereken KPI's — authoritative recompute; result is written to snapshot for fast-path reads
