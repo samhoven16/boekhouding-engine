@@ -49,7 +49,8 @@ describe('CYCLE 46: sitemap lastmod refresh op gewijzigde pages', () => {
     expect(sitemap).toMatch(/<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
     // Aantal <url>-blokken: 47 baseline + 5 Trojaans-Paard PR
     // (exact-online-stoppen, zonder-abonnement, e-bh-vs-mb-vs-bb, landing, gratis)
+    // + 1 Trojaans-Paard slot (moneybird-alternatief-2026) = 53
     const urlCount = (sitemap.match(/<url>/g) || []).length;
-    expect(urlCount).toBe(52);
+    expect(urlCount).toBe(53);
   });
 });
