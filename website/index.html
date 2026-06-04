@@ -81,7 +81,8 @@
       "name": "Boekhoudbaar",
       "description": "Boekhouding voor ZZP'ers in Google Sheets — eenmalig €49, geen abonnement.",
       "inLanguage": "nl-NL",
-      "publisher": { "@id": "https://www.boekhoudbaar.nl/#org" }
+      "publisher": { "@id": "https://www.boekhoudbaar.nl/#org" },
+      "about": { "@id": "https://www.boekhoudbaar.nl/#org" }
     },
     {
       "@type": "SoftwareApplication",
@@ -130,7 +131,19 @@
       "foundingLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressCountry": "NL" } },
       "vatID": "NL004384587B39",
       "taxID": "87254697",
-      "sameAs": ["https://www.linkedin.com/company/boekhoudbaar"]
+      "slogan": "Jouw boekhouding hoort van jou te zijn — eenmalig €49.",
+      "knowsAbout": [
+        "Boekhouding voor ZZP'ers",
+        "BTW-aangifte",
+        "Facturen maken",
+        "Google Sheets boekhouding",
+        "Eenmalig betalen boekhoudpakket",
+        "UBL en Peppol e-facturatie"
+      ],
+      "sameAs": [
+        "https://www.linkedin.com/company/boekhoudbaar",
+        "https://github.com/samhoven16/boekhouding-engine"
+      ]
     },
     {
       "@type": "BreadcrumbList",
@@ -514,6 +527,16 @@
     line-height: 1.05;
     letter-spacing: -0.025em;
     max-width: 880px; margin: 0 auto 20px;
+  }
+  .hero h1 .hero-brand {
+    display: block;
+    font-size: clamp(12px, 1.2vw, 14px);
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+    line-height: 1;
   }
   .hero h1 em {
     font-style: normal; color: var(--accent);
@@ -1478,7 +1501,7 @@
         <span class="hero-badge-dot" aria-hidden="true"></span>
         Eenmalig €49 · geen abonnement
       </div>
-      <h1 id="hero-heading">Doe je boekhouding in <em>15 minuten</em> per maand.</h1>
+      <h1 id="hero-heading"><span class="hero-brand">Boekhoudbaar</span>Doe je boekhouding in <em>15 minuten</em> per maand.</h1>
       <p class="hero-sub">
         Facturen, BTW-aangifte en overzicht — in jouw eigen Google Drive.
       </p>
