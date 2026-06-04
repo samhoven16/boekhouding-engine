@@ -41,13 +41,8 @@
 html{scroll-behavior:smooth;}
 body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--wit);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;}
 
-body>nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid rgba(229,234,242,.8);padding:0 32px;}
-.nav-inner{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:76px;gap:32px;}
 .logo{text-decoration:none;display:inline-flex;align-items:center;height:40px;font-weight:800;color:var(--blauw);font-size:20px;letter-spacing:-0.02em;}
 .logo::before{content:'📊';margin-right:8px;font-size:24px;}
-.nav-links{display:flex;gap:36px;list-style:none;align-items:center;}
-.nav-links a{text-decoration:none;color:#475569;font-size:15px;font-weight:500;}
-.nav-cta{background:var(--blauw);color:var(--wit)!important;padding:10px 20px;border-radius:10px;font-weight:600!important;}
 
 main{max-width:880px;margin:0 auto;padding:60px 32px 80px;}
 .head{margin-bottom:48px;}
@@ -93,17 +88,30 @@ footer .disc{margin-top:16px;font-size:12px;color:rgba(255,255,255,.5);max-width
 footer a{color:rgba(255,255,255,.7);}
 </style>
 <link rel="stylesheet" href="/animations.css">
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
 </head>
 <body>
 
-<nav>
+<nav aria-label="Hoofdnavigatie">
   <div class="nav-inner">
-    <a class="logo" href="/">Boekhoudbaar</a>
-    <ul class="nav-links">
-      <li><a href="/">Home</a></li>
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home">
+      <img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52">
+    </a>
+    <ul class="nav-links" id="nav-menu" role="list">
       <li><a href="/functies/">Functies</a></li>
+      <li><a href="/vergelijking/">Vergelijking</a></li>
+      <li><a href="/gids/">Gidsen</a></li>
+      <li><a href="/over/">Over</a></li>
       <li><a href="/faq/">FAQ</a></li>
-      <li><a href="/kopen" class="nav-cta">Kopen · €49</a></li>
+      <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen</a></li>
+    </ul>
+    <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
+      <li class="nav-cta-mobile"><a href="/kopen" class="nav-cta">Kopen</a></li>
+      <li><button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
+        <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      </button></li>
     </ul>
   </div>
 </nav>

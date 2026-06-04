@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Gratis ZZP-boekhouding template (Google Sheets) — Boekhoudbaar Light</title>
+<meta name="description" content="Download gratis een Google Sheets template voor je ZZP-boekhouding. Factuursjabloon, BTW-calculator en jaaroverzicht. Eenvoudig, geen account, direct beginnen.">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="keywords" content="gratis boekhoudprogramma zzp, boekhouding excel template zzp, google sheets boekhouding template, gratis btw calculator zzp, zzp administratie template, boekhouding zelf doen template">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/gratis">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gratis ZZP-boekhouding template — Boekhoudbaar Light">
+<meta property="og:description" content="Google Sheets template voor je ZZP-boekhouding. Gratis. Geen account vereist.">
+<meta property="og:url" content="https://www.boekhoudbaar.nl/gratis">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:image" content="https://www.boekhoudbaar.nl/og-image.svg">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://www.boekhoudbaar.nl/gratis#page",
+      "url": "https://www.boekhoudbaar.nl/gratis",
+      "name": "Gratis ZZP-boekhouding template",
+      "description": "Download gratis een Google Sheets template voor ZZP-boekhouding."
+    },
+    {
+      "@type": "Offer",
+      "name": "Boekhoudbaar Light",
+      "price": "0",
+      "priceCurrency": "EUR",
+      "description": "Gratis Google Sheets template met factuursjabloon, BTW-calculator en jaaroverzicht."
+    }
+  ]
+}
+</script>
+
+<link rel="stylesheet" href="/animations.css">
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
+<style>
+:root{
+  --blauw:#0D1B4E; --blauw-licht:#1A2A6B; --accent:#2EC4B6; --accent-soft:rgba(46,196,182,.10);
+  --tekst:#1A1A1A; --grijs:#5F6B7A; --bg:#F7F9FC; --wit:#ffffff; --rand:#E5EAF2;
+  --groen:#059669; --amber:#D97706;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--wit);line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased;}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px;}
+main{max-width:1080px;margin:0 auto;padding:56px 24px 64px;}
+h1{font-size:clamp(30px,4.5vw,44px);color:var(--blauw);font-weight:800;letter-spacing:-0.02em;line-height:1.15;margin-bottom:14px;}
+h2{font-size:24px;color:var(--blauw);font-weight:700;margin:36px 0 14px;}
+h3{font-size:17px;color:var(--blauw);font-weight:700;margin:20px 0 8px;}
+p{margin-bottom:14px;color:#333;}
+a{color:var(--blauw);}
+
+.layout{display:grid;grid-template-columns:1.2fr 1fr;gap:48px;align-items:start;}
+.intro p{font-size:17px;color:#444;line-height:1.65;}
+.lead-strong{color:var(--blauw);font-weight:600;}
+
+.bevat-blok{background:var(--bg);border:1px solid var(--rand);border-radius:12px;padding:20px 22px;margin:20px 0;}
+.bevat-blok h2{margin-top:0;font-size:18px;}
+.bevat-blok ul{list-style:none;margin:0;}
+.bevat-blok li{padding:6px 0;font-size:14.5px;color:#444;}
+.bevat-blok li::before{content:'✓';color:var(--groen);font-weight:700;margin-right:10px;}
+
+.niet-bevat{background:#FFF7ED;border:1px solid #FDE68A;border-radius:12px;padding:18px 22px;margin:14px 0 24px;}
+.niet-bevat h3{color:#92400E;margin:0 0 8px;font-size:15px;}
+.niet-bevat ul{list-style:none;margin:0;}
+.niet-bevat li{padding:3px 0;font-size:13.5px;color:#78350F;}
+.niet-bevat li::before{content:'—';margin-right:10px;color:#A16207;}
+.niet-bevat .upsell{margin-top:12px;font-size:13.5px;color:#78350F;}
+.niet-bevat .upsell a{color:#92400E;font-weight:600;}
+
+.formulier{position:sticky;top:88px;background:var(--blauw);color:var(--wit);border-radius:14px;padding:30px 28px;box-shadow:0 14px 40px rgba(13,27,78,.18);}
+.formulier h2{color:var(--wit);font-size:22px;margin:0 0 6px;}
+.formulier p.sub{color:rgba(255,255,255,.8);font-size:14.5px;margin-bottom:24px;}
+.formulier label{display:block;font-size:13px;color:rgba(255,255,255,.8);margin-bottom:6px;}
+.formulier input[type=email],.formulier input[type=text]{width:100%;padding:13px 14px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:var(--wit);border-radius:8px;font-size:15px;font-family:inherit;margin-bottom:14px;}
+.formulier input::placeholder{color:rgba(255,255,255,.5);}
+.formulier input:focus{outline:none;border-color:var(--accent);background:rgba(255,255,255,.12);}
+.formulier button{width:100%;padding:14px;background:var(--accent);color:var(--blauw);border:none;border-radius:8px;font-weight:700;font-size:16px;cursor:pointer;font-family:inherit;transition:transform .15s ease;}
+.formulier button:hover{transform:translateY(-1px);background:#26b3a6;}
+.formulier .privacy-note{margin-top:14px;font-size:12px;color:rgba(255,255,255,.55);line-height:1.5;}
+.formulier .privacy-note a{color:rgba(255,255,255,.8);}
+.formulier .status{margin-top:12px;font-size:13.5px;display:none;padding:10px 12px;border-radius:6px;}
+.formulier .status.success{display:block;background:rgba(46,196,182,.2);color:#A7F3D0;}
+.formulier .status.error{display:block;background:rgba(220,38,38,.2);color:#FECACA;}
+
+.vergelijking-kort{margin:36px 0;padding:24px;background:var(--bg);border-radius:12px;border:1px solid var(--rand);}
+.vergelijking-kort h2{margin-top:0;font-size:20px;text-align:center;}
+.vk-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px;}
+.vk-card{background:var(--wit);border:1px solid var(--rand);border-radius:10px;padding:18px;}
+.vk-card.featured{border-color:var(--accent);background:linear-gradient(180deg,rgba(46,196,182,.08) 0%,var(--wit) 100%);}
+.vk-card h3{margin:0 0 6px;font-size:16px;}
+.vk-card .prijs{font-size:24px;font-weight:800;color:var(--blauw);margin-bottom:4px;}
+.vk-card .prijs span{font-size:13px;color:var(--grijs);font-weight:500;}
+.vk-card ul{list-style:none;margin:12px 0 0;font-size:13.5px;color:#444;}
+.vk-card li{padding:3px 0;}
+.vk-card .upgrade{margin-top:14px;display:block;text-align:center;font-size:13px;color:var(--accent);font-weight:600;text-decoration:none;}
+
+.faq-list{margin-top:36px;}
+.faq-list details{background:var(--bg);border:1px solid var(--rand);border-radius:10px;padding:14px 18px;margin-bottom:10px;}
+.faq-list summary{font-weight:600;color:var(--blauw);cursor:pointer;list-style:none;font-size:15px;}
+.faq-list summary::-webkit-details-marker{display:none;}
+.faq-list summary::after{content:'+';float:right;color:var(--accent);font-size:20px;font-weight:700;}
+.faq-list details[open] summary::after{content:'−';}
+.faq-list details p{margin:12px 0 0;font-size:14.5px;color:#444;}
+
+footer{background:#0A132F;color:rgba(255,255,255,.55);padding:48px 24px 32px;font-size:13.5px;text-align:center;margin-top:64px;}
+footer a{color:rgba(255,255,255,.75);text-decoration:none;margin:0 10px;}
+
+@media(max-width:880px){
+  .layout{grid-template-columns:1fr;}
+  .formulier{position:static;}
+  .vk-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<nav aria-label="Hoofdnavigatie">
+  <div class="nav-inner">
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home">
+      <img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52">
+    </a>
+    <ul class="nav-links" id="nav-menu" role="list">
+      <li><a href="/functies/">Functies</a></li>
+      <li><a href="/vergelijking/">Vergelijking</a></li>
+      <li><a href="/gids/">Gidsen</a></li>
+      <li><a href="/over/">Over</a></li>
+      <li><a href="/faq/">FAQ</a></li>
+      <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen</a></li>
+    </ul>
+    <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
+      <li class="nav-cta-mobile"><a href="/kopen" class="nav-cta">Kopen</a></li>
+      <li><button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
+        <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      </button></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+
+  <div class="layout">
+    <div class="intro">
+      <h1>Gratis ZZP-boekhouding template — Boekhoudbaar Light</h1>
+      <p><span class="lead-strong">Een Google Sheets template voor je ZZP-administratie.</span> Factuursjabloon, BTW-calculator per kwartaal en een jaaroverzicht. Helemaal van jou, voor altijd, gratis.</p>
+
+      <p>Het is het eerlijke startpunt voor ZZP'ers die zelf hun boekhouding willen doen, zonder direct €30 per maand neer te tellen voor software waarvan ze de helft niet gebruiken.</p>
+
+      <div class="bevat-blok">
+        <h2>Wat zit er in Boekhoudbaar Light?</h2>
+        <ul>
+          <li>Factuursjabloon met BTW-berekening (21%, 9%, 0%, vrijgesteld)</li>
+          <li>Verkoopfacturen-tabblad (datum, klant, bedrag, BTW, status)</li>
+          <li>Inkoopfacturen-tabblad (zelfde structuur)</li>
+          <li>BTW-calculator per kwartaal — rubrieken 1a, 1b, 1c, 5a, 5b</li>
+          <li>Jaaroverzicht (omzet, kosten, winst)</li>
+          <li>Korte uitleg over hoe je het zelf invult</li>
+        </ul>
+      </div>
+
+      <div class="niet-bevat">
+        <h3>Wat zit er bewust níét in</h3>
+        <ul>
+          <li>Geen factuur-PDF + automatische e-mail (alles handmatig)</li>
+          <li>Geen CSV-bankafschrift-import</li>
+          <li>Geen automatische BTW-aangifte voor de Belastingdienst</li>
+          <li>Geen audit-log, geen XAF-export, geen kilometerregistratie</li>
+          <li>Geen dashboard, geen herinneringen, geen recurring kosten</li>
+        </ul>
+        <p class="upsell">Heb je dat wel nodig? Bekijk de volledige <a href="/kopen">Boekhoudbaar voor €49 eenmalig →</a></p>
+      </div>
+
+      <h2>Wanneer is Light genoeg?</h2>
+      <p>Light is perfect als je:</p>
+      <ul style="margin:12px 0 20px 24px;color:#444;font-size:15px;">
+        <li>Net begonnen bent als ZZP'er en eerst wilt voelen of zelfboekhouden bij je past</li>
+        <li>Maar enkele facturen per maand stuurt (1–10)</li>
+        <li>Geen complexe administratie hebt (geen voorraad, geen EU-klanten met verlegde BTW, geen meerdere bankrekeningen)</li>
+        <li>Tijd hebt om elk kwartaal 1–2 uur te besteden aan handmatig invoeren</li>
+      </ul>
+      <p>Voor wat zwaarder werk — meer dan 5 facturen per week, automatische BTW-aangifte, bankafschrift inlezen — pak de <a href="/kopen">volledige versie voor €49</a>.</p>
+
+      <div class="vergelijking-kort">
+        <h2>Light vs. Volledig</h2>
+        <div class="vk-grid">
+          <div class="vk-card">
+            <h3>Boekhoudbaar Light</h3>
+            <div class="prijs">Gratis</div>
+            <ul>
+              <li>✓ Factuursjabloon</li>
+              <li>✓ BTW-calculator</li>
+              <li>✓ Jaaroverzicht</li>
+              <li>— Handmatig invoeren</li>
+              <li>— Geen automatisering</li>
+            </ul>
+          </div>
+          <div class="vk-card featured">
+            <h3>Boekhoudbaar Volledig</h3>
+            <div class="prijs">€49 <span>eenmalig</span></div>
+            <ul>
+              <li>✓ Alles van Light</li>
+              <li>✓ Factuur-PDF + auto-e-mail</li>
+              <li>✓ Bankafschrift CSV-import</li>
+              <li>✓ BTW-aangifte met één klik</li>
+              <li>✓ Dashboard + herinneringen</li>
+            </ul>
+            <a href="/kopen" class="upgrade">Upgrade voor €49 →</a>
+          </div>
+        </div>
+      </div>
+
+      <h2>Veelgestelde vragen</h2>
+      <div class="faq-list">
+        <details>
+          <summary>Is dit echt gratis? Wat is de catch?</summary>
+          <p>Geen catch. Ik geef Light weg om je te laten ervaren of zelfboekhouden bij je past. Wie meer wil, kan upgraden naar de volledige versie voor eenmalig €49 — maar je bent op geen enkele manier verplicht om dat te doen.</p>
+        </details>
+        <details>
+          <summary>Waarom vraag je dan mijn e-mailadres?</summary>
+          <p>Eerlijk: zodat ik je kan helpen als je vragen hebt over zelfboekhouden, en je kan vertellen wanneer er een nieuwe versie is. Eens per maand, maximaal. Uitschrijven kan met één klik onderaan elke mail.</p>
+        </details>
+        <details>
+          <summary>Heb ik een Google-account nodig?</summary>
+          <p>Ja — Boekhoudbaar Light is een Google Sheet. Een gratis Google-account is voldoende (Gmail, Workspace, of via je eigen domein). Je krijgt de sheet in jouw eigen Google Drive. Ik heb er geen toegang toe.</p>
+        </details>
+        <details>
+          <summary>Mag ik Light gebruiken voor mijn officiële boekhouding?</summary>
+          <p>Ja. De Belastingdienst stelt geen eisen aan welk pakket je gebruikt, zolang je administratie sluitend is, BTW-aangifte op tijd, en je 7 jaar kunt aantonen wat er gebeurd is. Light voldoet daaraan als je het zorgvuldig invult.</p>
+        </details>
+        <details>
+          <summary>Wat als ik later wil overstappen naar de volledige versie?</summary>
+          <p>Eenvoudig. Je sheet blijft van jou; bij upgrade krijg je een nieuwe sheet met alle automatisering, en de uitleg om je oude data te importeren. Geen vendor lock-in, ooit.</p>
+        </details>
+      </div>
+
+    </div>
+
+    <aside>
+      <form class="formulier" id="signup-form" method="post" action="/api/subscribe">
+        <h2>Stuur de gratis sheet</h2>
+        <p class="sub">Vul je e-mailadres in. Je ontvangt een link naar de Google Sheet en mag direct beginnen.</p>
+
+        <label for="email">E-mailadres</label>
+        <input type="email" id="email" name="email" placeholder="naam@voorbeeld.nl" required autocomplete="email">
+
+        <label for="naam">Voornaam (optioneel)</label>
+        <input type="text" id="naam" name="naam" placeholder="Sam" autocomplete="given-name">
+
+        <input type="hidden" name="bron" value="gratis-light">
+
+        <button type="submit">Stuur me de sheet →</button>
+        <p class="privacy-note">We gebruiken je e-mailadres alleen om je de sheet te sturen + max. 1 tip per maand. Uitschrijven met één klik. <a href="/privacy">Privacybeleid</a>.</p>
+        <div class="status" id="form-status" role="alert" aria-live="polite"></div>
+      </form>
+    </aside>
+  </div>
+
+</main>
+
+<footer>
+  <a href="/">Home</a>
+  <a href="/functies/">Functies</a>
+  <a href="/vergelijking/">Vergelijking</a>
+  <a href="/gids/">Gidsen</a>
+  <a href="/privacy">Privacy</a>
+  <a href="/voorwaarden">Voorwaarden</a>
+  <p style="margin-top:16px;color:rgba(255,255,255,.4);font-size:12px;">© 2026 Boekhoudbaar · Hoven Strategy &amp; Solutions · KVK 87254697</p>
+</footer>
+
+<script>
+(function(){
+  var form = document.getElementById('signup-form');
+  var status = document.getElementById('form-status');
+  if (!form) return;
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    status.className = 'status';
+    status.textContent = '';
+    var data = new FormData(form);
+    var payload = {};
+    data.forEach(function(v,k){ payload[k] = v; });
+    try {
+      var resp = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      if (resp.ok) {
+        form.reset();
+        status.className = 'status success';
+        status.textContent = '✓ Check je inbox. De sheet komt eraan.';
+      } else {
+        var msg = await resp.text();
+        status.className = 'status error';
+        status.textContent = msg || 'Er ging iets mis. Probeer het opnieuw of mail info@boekhoudbaar.nl.';
+      }
+    } catch (err) {
+      status.className = 'status error';
+      status.textContent = 'Geen verbinding. Probeer het opnieuw.';
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

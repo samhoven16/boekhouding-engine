@@ -47,8 +47,9 @@ describe('CYCLE 46: sitemap lastmod refresh op gewijzigde pages', () => {
   test('Sitemap blijft valide XML-structuur', () => {
     expect(sitemap).toMatch(/^<\?xml version="1\.0" encoding="UTF-8"\?>/);
     expect(sitemap).toMatch(/<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
-    // Aantal <url>-blokken ongewijzigd
+    // Aantal <url>-blokken: 47 baseline + 5 Trojaans-Paard PR
+    // (exact-online-stoppen, zonder-abonnement, e-bh-vs-mb-vs-bb, landing, gratis)
     const urlCount = (sitemap.match(/<url>/g) || []).length;
-    expect(urlCount).toBe(47);
+    expect(urlCount).toBe(52);
   });
 });

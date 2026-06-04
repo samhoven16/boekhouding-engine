@@ -7,3 +7,9 @@ npx lint-staged
 # en zelf-corrigerend.
 node scripts/update-version.js
 git add website/version.json
+
+# Cycle 88: update website/changelog.json met de meest recente "Cycle N: ..."
+# commits voor de "Recente updates"-sectie op de homepage. Zelfde principe:
+# loopt op pre-commit, stage't het resultaat.
+node scripts/update-changelog.js
+git add website/changelog.json

@@ -337,20 +337,7 @@
 
   /* ── NAV ── Stripe/Linear stijl: rustig, luchtig, solid ── */
   /* body > nav = alleen header-nav, niet footer-nav */
-  body > nav {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(255,255,255,.92);
-    -webkit-backdrop-filter: saturate(180%) blur(14px);
-    backdrop-filter: saturate(180%) blur(14px);
-    border-bottom: 1px solid rgba(229,234,242,.8);
-    padding: 0 32px;
-  }
-  .nav-inner {
-    max-width: 1180px; margin: 0 auto;
-    display: flex; align-items: center; justify-content: space-between;
-    height: 76px;
-    gap: 32px;
-  }
+
   .logo {
     text-decoration: none; display: inline-flex; align-items: center;
     height: 40px; flex-shrink: 0;
@@ -360,24 +347,9 @@
     transition: opacity .2s ease, transform .2s ease;
   }
   .logo:hover img { opacity: .9; transform: scale(1.02); }
-  .nav-links {
-    display: flex; gap: 36px; list-style: none; align-items: center;
-    margin: 0; padding: 0;
-  }
-  .nav-mobile-actions { display: none; list-style: none; align-items: center; gap: 8px; margin: 0; padding: 0; }
+
   .nav-mobile-actions li { list-style: none; }
-  .nav-links a {
-    text-decoration: none; color: #475569; font-size: 15px; font-weight: 500;
-    letter-spacing: -0.01em; transition: color .15s ease;
-  }
-  .nav-links a:not(.nav-cta):hover { color: var(--blauw); }
-  .nav-cta {
-    background: var(--blauw); color: var(--wit) !important;
-    padding: 10px 20px; border-radius: 10px; font-weight: 600 !important;
-    font-size: 14px !important; letter-spacing: -0.01em;
-    transition: background .18s ease, transform .18s ease, box-shadow .25s ease;
-    box-shadow: 0 1px 2px rgba(13,27,78,.08);
-  }
+
   .nav-cta:hover {
     background: var(--blauw-licht) !important; color: var(--wit) !important;
     transform: translateY(-1px);
@@ -1275,6 +1247,47 @@
   }
   .agenda-feed-knop:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(46,196,182,.32); }
 
+  /* ── RECENTE UPDATES (cycle 88) — changelog-feed onder FAQ ── */
+  .recente-updates {
+    padding: 60px 32px;
+    background: var(--licht);
+    border-top: 1px solid var(--rand);
+  }
+  .recente-updates .container { max-width: 720px; margin: 0 auto; }
+  .recente-updates h2 {
+    color: var(--blauw);
+    font-size: 28px;
+    line-height: 1.25;
+    margin-bottom: 18px;
+  }
+  .updates-lijst {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+    border-top: 1px solid var(--rand);
+  }
+  .updates-lijst li {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rand);
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+  }
+  .update-datum {
+    font-size: 13px;
+    color: var(--grijs);
+    flex-shrink: 0;
+    width: 90px;
+  }
+  .update-titel { font-size: 15px; color: #1A1A1A; line-height: 1.5; }
+  .update-cycle { color: var(--grijs); font-weight: 600; margin-right: 6px; }
+  .updates-leeg { color: var(--grijs); font-style: italic; }
+  .updates-meta { font-size: 13px; color: var(--grijs); line-height: 1.6; margin-top: 16px; }
+  @media (max-width: 640px) {
+    .updates-lijst li { flex-direction: column; gap: 4px; }
+    .update-datum { width: auto; }
+  }
+
   /* ── CTA BANNER ── */
   .cta-banner {
     position: relative;
@@ -1359,20 +1372,8 @@
   }
 
   /* ── HAMBURGERMENU ── */
-  .nav-toggle {
-    display: none;
-    background: none; border: none; cursor: pointer;
-    padding: 8px; color: var(--blauw);
-  }
-  .nav-toggle svg { display: block; }
-  .nav-toggle[aria-expanded="true"] .icon-open  { display: none; }
-  .nav-toggle[aria-expanded="false"] .icon-close { display: none; }
 
   /* ── RESPONSIVE ── */
-  @media (max-width: 1024px) {
-    .nav-inner { gap: 20px; }
-    .nav-links { gap: 26px; }
-  }
 
   @media (max-width: 768px) {
     section { padding: 44px 20px; }
@@ -1382,49 +1383,16 @@
     .trust-sectie { padding: 40px 20px; }
 
     /* Solid bg op mobiel — duidelijk afgebakend, nooit transparent */
-    body > nav {
-      background: #ffffff;
-      padding: 0 20px;
-      box-shadow: 0 1px 0 rgba(13,27,78,.06), 0 6px 20px rgba(13,27,78,.05);
-      border-bottom: none;
-    }
-    .nav-inner { height: 68px; gap: 12px; }
+
     /* Logo op mobiel: iets kleiner maar duidelijk zichtbaar */
     .logo { height: 32px; }
     .logo img { height: 30px; }
 
     /* Mobile: CTA + hamburger rechts altijd zichtbaar — andere items via menu */
-    .nav-mobile-actions { display: inline-flex; }
-    .nav-toggle {
-      display: inline-flex; align-items: center; justify-content: center;
-      min-width: 44px; min-height: 44px; margin-left: 4px;
-      color: var(--blauw); border-radius: 8px;
-      transition: background .15s ease;
-    }
+
     .nav-toggle:hover, .nav-toggle:active { background: rgba(13,27,78,.06); }
 
-    .nav-links {
-      display: none; flex-direction: column; gap: 0;
-      position: absolute; top: 68px; left: 0; right: 0;
-      background: var(--wit); border-bottom: 1px solid var(--rand);
-      padding: 4px 0; box-shadow: 0 12px 32px rgba(13,27,78,.1);
-      z-index: 99;
-    }
-    .nav-links.open { display: flex; }
-    .nav-links li { width: 100%; }
-    .nav-links li:not(.nav-cta-mobile) a {
-      padding: 14px 20px; font-size: 16px; display: block;
-      border-bottom: 1px solid var(--rand);
-    }
-    .nav-links li:last-child a { border-bottom: none; }
     /* CTA blijft altijd zichtbaar naast hamburger */
-    .nav-cta-mobile { display: inline-flex !important; align-items: center;
-                      order: 2; list-style: none; }
-    .nav-cta-mobile a.nav-cta {
-      padding: 9px 14px !important; font-size: 13px !important;
-      border-radius: 8px; display: inline-flex;
-    }
-    .nav-links .nav-cta-desktop { display: none; }
 
     .hero { padding: 32px 20px 40px; }
     .hero-grid { gap: 24px; }
@@ -1492,6 +1460,8 @@
 </style>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
 <link rel="stylesheet" href="/animations.css">
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
 </head>
 <body>
 
@@ -1511,9 +1481,6 @@
       <li><a href="/gids/">Gidsen</a></li>
       <li><a href="/over/">Over</a></li>
       <li><a href="/faq/">FAQ</a></li>
-      <li><button class="thema-toggle" id="themaToggle" type="button" aria-label="Donker/licht wisselen">
-        <span id="themaIcon" aria-hidden="true">🌙</span><span id="themaTekst">Donker</span>
-      </button></li>
       <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen</a></li>
     </ul>
     <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
@@ -1773,6 +1740,23 @@
     </div>
     <p style="text-align:center;margin-top:24px;">
       <a href="/faq/" class="btn-secundair">Bekijk alle 30+ vragen →</a>
+    </p>
+  </div>
+</section>
+
+<!-- ── RECENTE UPDATES (cycle 88) — leefsignaal #2: laat zien dat het
+     product nog ontwikkeld wordt. Data uit /changelog.json, gegenereerd
+     door scripts/update-changelog.js bij elke pre-commit. ── -->
+<section id="recente-updates" class="recente-updates" aria-labelledby="updates-heading">
+  <div class="container">
+    <p class="section-label">Wat er onlangs is gebeurd</p>
+    <h2 id="updates-heading">Recente updates</h2>
+    <ul class="updates-lijst" data-updates-lijst>
+      <li class="updates-leeg">Laden…</li>
+    </ul>
+    <p class="updates-meta">
+      Boekhoudbaar wordt actief onderhouden. Alle updates worden automatisch
+      naar je spreadsheet gepushed — je hoeft niets te doen.
     </p>
   </div>
 </section>
@@ -2134,22 +2118,6 @@
     }, 3200);
   })();
 
-  (function() {
-    var btn = document.querySelector('.nav-toggle');
-    var menu = document.getElementById('nav-menu');
-    if (!btn || !menu) return;
-    btn.addEventListener('click', function() {
-      var open = menu.classList.toggle('open');
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-    menu.querySelectorAll('a').forEach(function(a) {
-      a.addEventListener('click', function() {
-        menu.classList.remove('open');
-        btn.setAttribute('aria-expanded', 'false');
-      });
-    });
-  })();
-
   /* Scroll-progress bar — geeft Apple/Notion 'voortgang'-gevoel */
   (function() {
     var bar = document.getElementById('scrollProgressBar');
@@ -2207,6 +2175,44 @@
         el.textContent = d.getUTCDate() + ' ' + maanden[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
       })
       .catch(function() { /* houd "—" bij netwerkfout */ });
+  })();
+</script>
+
+<!-- Cycle 88: recente updates renderen uit /changelog.json. Toont max 5
+     entries. Faalt stil bij netwerk- of parse-fout — sectie blijft dan
+     met "(geen recente updates)" of geheel verborgen staan. -->
+<script>
+  (function() {
+    var lijst = document.querySelector('[data-updates-lijst]');
+    if (!lijst) return;
+    fetch('/changelog.json', { cache: 'no-store' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(j) {
+        var entries = (j && Array.isArray(j.entries)) ? j.entries.slice(0, 5) : [];
+        if (entries.length === 0) {
+          lijst.innerHTML = '<li class="updates-leeg">Geen recente updates.</li>';
+          return;
+        }
+        var maanden = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+        lijst.innerHTML = entries.map(function(e) {
+          var d = new Date(e.date + 'T00:00:00Z');
+          var datum = isNaN(d.getTime())
+            ? (e.date || '')
+            : (d.getUTCDate() + ' ' + maanden[d.getUTCMonth()] + ' ' + d.getUTCFullYear());
+          // Sanitize: titel staat in een textNode, geen HTML-rendering
+          var titel = document.createElement('span');
+          titel.className = 'update-titel';
+          var cyc = document.createElement('span');
+          cyc.className = 'update-cycle';
+          cyc.textContent = 'Cycle ' + (e.cycle || '?') + ':';
+          titel.appendChild(cyc);
+          titel.appendChild(document.createTextNode(' ' + (e.titel || '')));
+          return '<li><span class="update-datum">' + datum + '</span>' + titel.outerHTML + '</li>';
+        }).join('');
+      })
+      .catch(function() {
+        lijst.innerHTML = '<li class="updates-leeg">Updates niet beschikbaar.</li>';
+      });
   })();
 </script>
 </body>
