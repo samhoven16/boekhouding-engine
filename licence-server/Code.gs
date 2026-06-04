@@ -2505,3 +2505,227 @@ function setupBrevoWebhookToken() {
   Logger.log('Brevo webhook URL (plak in Brevo dashboard):\n' + url);
   return url;
 }
+
+// ─────────────────────────────────────────────
+//  DAGELIJKSE OCHTEND-STATUSMAIL
+// ─────────────────────────────────────────────
+//
+// Eén keer per dag stuurt deze handler een korte status-mail naar de owner
+// met:  nieuwe licenties (24u), totaal actief, bounces, recente validaties
+// (= signaal dat klanten daadwerkelijk de server raken), Mollie-tracking.
+//
+// Doel: observability zonder dashboard. Klanten merken vaak voor Sam dat
+// er iets mis is — deze mail draait die situatie om.
+//
+// Geadresseerde:
+//   - ScriptProperty OWNER_STATUS_EMAIL als die gezet is
+//   - Anders: Session.getEffectiveUser() (deploy-account, meestal Sam zelf)
+//
+// Mail-quota: MailApp = 100/dag (consumer-account) of 1500/dag (Workspace).
+// Eén mail/dag = verwaarloosbare quota-impact.
+
+/**
+ * Verzamelt status en stuurt mail. Aangeroepen door dagelijkse trigger.
+ *
+ * @returns {Object} { verstuurd, ontvanger, nieuw24u, totaal, bounces, recenteValidaties }
+ */
+function verstuurDagelijkseStatusmail_() {
+  const props = PropertiesService.getScriptProperties();
+  const ontvanger = props.getProperty('OWNER_STATUS_EMAIL') ||
+    (function() {
+      try { return Session.getEffectiveUser().getEmail() || ''; }
+      catch (_) { return ''; }
+    })();
+
+  if (!ontvanger) {
+    Logger.log('verstuurDagelijkseStatusmail_: geen OWNER_STATUS_EMAIL en geen effective user — overslaan.');
+    return { verstuurd: false, reden: 'geen-ontvanger' };
+  }
+
+  const stats = verzamelStatusmailStats_();
+  const html  = bouwStatusmailHtml_(stats);
+  const onderwerp = '📊 Boekhoudbaar status — ' +
+    Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'd MMM') +
+    ' · ' + stats.nieuw24u + ' nieuw, ' + stats.totaalActief + ' actief';
+
+  try {
+    MailApp.sendEmail({
+      to: ontvanger,
+      subject: onderwerp,
+      htmlBody: html,
+      name: 'Boekhoudbaar Status',
+    });
+    return Object.assign({ verstuurd: true, ontvanger: ontvanger }, stats);
+  } catch (e) {
+    Logger.log('verstuurDagelijkseStatusmail_ MailApp fout: ' + e.message);
+    return Object.assign({ verstuurd: false, reden: e.message }, stats);
+  }
+}
+
+/**
+ * Verzamelt rauwe getallen uit de licentie-sheet. Pure data-extractie,
+ * losgekoppeld van presentatie + mail-versturen zodat het apart testbaar is.
+ *
+ * @returns {{
+ *   nieuw24u:           number,
+ *   totaalActief:       number,
+ *   totaalIngetrokken:  number,
+ *   bounces:            number,
+ *   recenteValidaties:  number,
+ *   recenteNamen:       string[]
+ * }}
+ */
+function verzamelStatusmailStats_() {
+  let sheet;
+  try { sheet = getLicentieSheet_(); }
+  catch (e) {
+    return {
+      nieuw24u: 0, totaalActief: 0, totaalIngetrokken: 0,
+      bounces: 0, recenteValidaties: 0, recenteNamen: [],
+      fout: 'Sheet niet bereikbaar: ' + e.message,
+    };
+  }
+
+  const data = sheet.getDataRange().getValues();
+  // header-rij overslaan; lege sheet → alleen kop, 1 rij
+  if (data.length <= 1) {
+    return {
+      nieuw24u: 0, totaalActief: 0, totaalIngetrokken: 0,
+      bounces: 0, recenteValidaties: 0, recenteNamen: [],
+    };
+  }
+
+  // Kolommen volgens setupLicentieSheet:
+  //   1 Sleutel, 2 Naam, 3 Email, 4 Versie, 5 Status, 6 Vervaldatum,
+  //   7 Installatie-ID, 8 Aangemaakt op, 9 Mollie betaling ID,
+  //   10 Laatste validatie, 11 Onboarded op
+  // (1-based; in array 0-based)
+  const I_NAAM        = 1;
+  const I_STATUS      = 4;
+  const I_AANGEMAAKT  = 7;
+  const I_LAATSTE_VAL = 9;
+
+  // Bounce-kolom is dynamisch via kolomIndex_ (0-based via headers.indexOf;
+  // -1 als niet aanwezig — sheet kan ouder zijn dan borgExtraKolommen_).
+  let iBounce = -1;
+  try {
+    const k = kolomIndex_(sheet, 'Bouncestatus');
+    if (k >= 0) iBounce = k;
+  } catch (_) {}
+
+  const grens24u = Date.now() - 24 * 60 * 60 * 1000;
+  let nieuw24u = 0, totaalActief = 0, totaalIngetrokken = 0;
+  let bounces = 0, recenteValidaties = 0;
+  const recenteNamen = [];
+
+  for (let r = 1; r < data.length; r++) {
+    const row = data[r];
+    const status = String(row[I_STATUS] || '').toLowerCase();
+
+    if (status.indexOf('actief') === 0 || status === '' || status === 'gemaakt') {
+      totaalActief++;
+    } else if (status.indexOf('ingetrokken') === 0 || status.indexOf('refund') >= 0) {
+      totaalIngetrokken++;
+    }
+
+    const aangemaakt = row[I_AANGEMAAKT];
+    if (aangemaakt instanceof Date && aangemaakt.getTime() >= grens24u) {
+      nieuw24u++;
+      const naam = String(row[I_NAAM] || '').trim();
+      if (naam && recenteNamen.length < 10) recenteNamen.push(naam);
+    }
+
+    const laatsteVal = row[I_LAATSTE_VAL];
+    if (laatsteVal instanceof Date && laatsteVal.getTime() >= grens24u) {
+      recenteValidaties++;
+    }
+
+    if (iBounce >= 0) {
+      const b = String(row[iBounce] || '').toLowerCase();
+      if (b.indexOf('bounce') >= 0 || b.indexOf('hard') >= 0) bounces++;
+    }
+  }
+
+  return {
+    nieuw24u: nieuw24u,
+    totaalActief: totaalActief,
+    totaalIngetrokken: totaalIngetrokken,
+    bounces: bounces,
+    recenteValidaties: recenteValidaties,
+    recenteNamen: recenteNamen,
+  };
+}
+
+/**
+ * Bouwt HTML-body voor de status-mail. Pure stringbouw — geen side-effects,
+ * trivially testbaar.
+ *
+ * Stats kunnen een .fout-veld bevatten als data-extractie faalde; dan wordt
+ * dat als waarschuwing bovenaan getoond.
+ */
+function bouwStatusmailHtml_(stats) {
+  const datum = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'EEEE d MMMM yyyy');
+  const waarschuwing = stats.fout
+    ? '<div style="background:#fee;border:1px solid #c00;padding:12px;border-radius:6px;margin:0 0 16px;color:#900">' +
+      '⚠️ ' + escHtml_(stats.fout) + '</div>'
+    : '';
+
+  const namenLijst = (stats.recenteNamen && stats.recenteNamen.length)
+    ? '<ul style="margin:8px 0 0;padding-left:20px;color:#5F6B7A;font-size:13px">' +
+      stats.recenteNamen.map(function(n) { return '<li>' + escHtml_(n) + '</li>'; }).join('') +
+      '</ul>'
+    : '';
+
+  function rij(label, waarde, extra) {
+    return '<tr>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid #eee;color:#5F6B7A">' + escHtml_(label) + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:600;color:#0D1B4E">' + escHtml_(String(waarde)) + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid #eee;color:#9ca3af;font-size:12px">' + escHtml_(extra || '') + '</td>' +
+    '</tr>';
+  }
+
+  const bouncesRij = stats.bounces > 0
+    ? rij('E-mail bounces', stats.bounces, 'CRM checken — bouncestatus-kolom')
+    : rij('E-mail bounces', 0, 'geen');
+
+  return '<!DOCTYPE html><html lang="nl"><body style="font-family:-apple-system,Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#f8fafc;color:#1A1A1A">' +
+    '<div style="background:#0D1B4E;padding:20px 24px;border-radius:10px 10px 0 0">' +
+      '<h2 style="color:#fff;margin:0;font-size:17px;font-weight:700">Boekhoudbaar — dagelijkse status</h2>' +
+      '<div style="color:#9ca3af;font-size:13px;margin-top:4px">' + escHtml_(datum) + '</div>' +
+    '</div>' +
+    '<div style="background:#fff;padding:20px 24px;border:1px solid #E5EAF2;border-top:none;border-radius:0 0 10px 10px">' +
+      waarschuwing +
+      '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
+        rij('Nieuwe licenties (24u)', stats.nieuw24u, 'sinds gisteren') +
+        rij('Totaal actieve licenties', stats.totaalActief, '') +
+        rij('Ingetrokken / refund', stats.totaalIngetrokken, 'cumulatief') +
+        rij('Actieve validaties (24u)', stats.recenteValidaties, 'klant-spreadsheets die contact maakten') +
+        bouncesRij +
+      '</table>' +
+      (namenLijst
+        ? '<div style="margin-top:18px;font-size:13px;color:#0D1B4E"><strong>Nieuwe klanten:</strong>' + namenLijst + '</div>'
+        : '') +
+      '<div style="margin-top:24px;font-size:12px;color:#9ca3af;border-top:1px solid #eee;padding-top:12px">' +
+        'Automatische dagelijkse status. Trigger uitschakelen via Apps Script editor (verstuurDagelijkseStatusmail_).' +
+      '</div>' +
+    '</div>' +
+  '</body></html>';
+}
+
+/**
+ * Installeert dagelijkse trigger voor verstuurDagelijkseStatusmail_.
+ * Idempotent: oude triggers met dezelfde handler worden eerst verwijderd.
+ *
+ * Eenmalig runnen vanuit de Apps Script editor.
+ */
+function installeerDagelijkseStatusmailTrigger_() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'verstuurDagelijkseStatusmail_') {
+      try { ScriptApp.deleteTrigger(t); }
+      catch (err) { Logger.log('deleteTrigger statusmail faalde: ' + err.message); }
+    }
+  });
+  ScriptApp.newTrigger('verstuurDagelijkseStatusmail_')
+    .timeBased().everyDays(1).atHour(7).create();
+  Logger.log('Dagelijkse-statusmail-trigger geïnstalleerd: 07:00 Europe/Amsterdam');
+}
