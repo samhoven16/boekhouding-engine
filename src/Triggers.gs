@@ -1688,6 +1688,9 @@ function dagelijkseTaken() {
   _runTaak_('cleanupHerhIdem',  function() {
     if (typeof cleanupHerhalendeKostenIdempotency_ === 'function') cleanupHerhalendeKostenIdempotency_();
   });
+  _runTaak_('cleanupMollieIdem', function() {
+    if (typeof ruimMollieIdempotencyOp_ === 'function') ruimMollieIdempotencyOp_();
+  });
 
   // Aggregaat: totale duur dagelijkseTaken
   const totaleDuur = Date.now() - dagelijksTotaal0;

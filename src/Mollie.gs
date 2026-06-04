@@ -169,16 +169,15 @@ function verwerkMollieWebhook_(payload) {
     }
   }
 
-  // Replay-protection per payment-id (cache 24u)
-  try {
-    const cache = CacheService.getScriptCache();
-    const replayKey = 'mollie_webhook_' + paymentId;
-    if (cache.get(replayKey)) {
-      // Replay → idempotent succes
-      return { succes: true, fout: null, dupe: true };
-    }
-    cache.put(replayKey, '1', 86400);
-  } catch (_) {}
+  // Replay-protection per payment-id. CRITICAL: cache wordt pas gezet NA
+  // succesvolle markeer-betaald (zie einde van functie). Voorheen werd hij
+  // hier al gezet — gevolg: als markeer-betaald faalde, blokkeerde de cache
+  // Mollie's automatische retry → factuur bleef onbetaald, journaalpost
+  // ontbreekt, klant ziet niets. Persistente backup in ScriptProperties
+  // overleeft script-restarts (cache wist dan).
+  if (isMollieReedsVerwerkt_(paymentId)) {
+    return { succes: true, fout: null, dupe: true };
+  }
 
   // Haal payment-status op via Mollie API (we vertrouwen NIET op webhook-body
   // voor finale waarheid — altijd verificatie via API-call)
@@ -206,19 +205,105 @@ function verwerkMollieWebhook_(payload) {
   }
 
   if (status !== 'paid' || !factuurnummer) {
+    // Statuses zoals 'open', 'pending', 'canceled', 'expired' verdienen géén
+    // idempotency-marker — Mollie kan later wél met 'paid' terugkomen.
     safeAuditLog_('Mollie webhook (geen actie)', paymentId.slice(0, 12) + ' status=' + status);
     return { succes: true, status: status };
   }
 
-  // Markeer factuur betaald via bestaande functie (idempotent + LockService)
+  // Markeer factuur betaald via bestaande functie (idempotent + LockService +
+  // rollback bij journaalpost-fout). Pas NA succes idempotency-marker zetten
+  // — anders blokkeren we Mollie's automatische retry van een mislukte run.
   try {
     if (typeof markeerVerkoopfactuurBetaald === 'function') {
       const r = markeerVerkoopfactuurBetaald(factuurnummer, new Date().toISOString().slice(0, 10));
+      markeerMollieVerwerkt_(paymentId);
       safeAuditLog_('Mollie webhook → factuur betaald', factuurnummer + ' (' + paymentId.slice(0, 12) + ')');
       return Object.assign({ succes: true, factuurnummer: factuurnummer, status: status }, r);
     }
   } catch (e) {
+    // GEEN idempotency-marker → volgende Mollie-retry probeert opnieuw.
     return { succes: false, fout: 'Markeer-betaald faalde: ' + e.message };
   }
+  markeerMollieVerwerkt_(paymentId);
   return { succes: true, status: status };
+}
+
+/**
+ * Idempotency-check: is deze Mollie payment al verwerkt?
+ *
+ * Twee lagen:
+ *   1. CacheService — snelle hit, ~6h horizon (Apps Script kan eerder wissen)
+ *   2. ScriptProperties — persistente backup; overleeft script-restart
+ *
+ * Cache-miss + Properties-hit: cache wordt opnieuw gewarmd zodat volgende
+ * checks weer via de snelle laag gaan.
+ *
+ * @param {string} paymentId  Mollie payment-id (tr_xxx)
+ * @returns {boolean} true als al verwerkt (binnen retention-window)
+ */
+function isMollieReedsVerwerkt_(paymentId) {
+  if (!paymentId) return false;
+  const cacheKey = 'mollie_webhook_' + paymentId;
+  const propKey  = 'mollie_completed_' + paymentId;
+  try {
+    if (CacheService.getScriptCache().get(cacheKey)) return true;
+  } catch (_) {}
+  try {
+    if (PropertiesService.getScriptProperties().getProperty(propKey)) {
+      try { CacheService.getScriptCache().put(cacheKey, '1', 21600); } catch (_) {}
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+/**
+ * Markeer Mollie payment-id als afgerond. Tweeledig:
+ *   1. Cache — 6h horizon voor snelle dedup binnen Mollie's retry-window
+ *   2. ScriptProperties — persistent met timestamp; later opruimbaar via
+ *      ruimMollieIdempotencyOp_ (zie onder)
+ *
+ * Best-effort: failures hier mogen de webhook-flow niet breken. Worst case
+ * is een dubbele markeer-betaald-poging, maar die is op zijn beurt
+ * idempotent (zie markeerVerkoopfactuurBetaald in Verkoopfacturen.gs).
+ *
+ * @param {string} paymentId  Mollie payment-id (tr_xxx)
+ */
+function markeerMollieVerwerkt_(paymentId) {
+  if (!paymentId) return;
+  try {
+    CacheService.getScriptCache().put('mollie_webhook_' + paymentId, '1', 21600);
+  } catch (_) {}
+  try {
+    PropertiesService.getScriptProperties().setProperty(
+      'mollie_completed_' + paymentId,
+      new Date().toISOString()
+    );
+  } catch (_) {}
+}
+
+/**
+ * Opruimen van oude Mollie-idempotency-markers in ScriptProperties.
+ *
+ * Aangeroepen vanuit dagelijkseTaken. ScriptProperties heeft een 500KB-quota;
+ * bij ~80 bytes per entry kunnen we ~5000 actieve markers houden. We bewaren
+ * 90 dagen — ruim boven Mollie's retry-window (max enkele dagen) maar genoeg
+ * voor forensische tracing bij disputen.
+ *
+ * @returns {{verwijderd: number}}
+ */
+function ruimMollieIdempotencyOp_() {
+  const cutoffMs = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  const props = PropertiesService.getScriptProperties();
+  const all = props.getProperties();
+  let verwijderd = 0;
+  Object.keys(all).forEach(function(k) {
+    if (k.indexOf('mollie_completed_') !== 0) return;
+    const ts = Date.parse(all[k] || '');
+    if (!isFinite(ts) || ts < cutoffMs) {
+      try { props.deleteProperty(k); verwijderd++; } catch (_) {}
+    }
+  });
+  return { verwijderd: verwijderd };
 }
