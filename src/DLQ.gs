@@ -107,7 +107,7 @@ function dlqVerwerkRetries_() {
           sheet.getRange(i + 1, 6).setValue('FAILED');
           if (nieuweFout) sheet.getRange(i + 1, 4).setValue(String(nieuweFout).slice(0, 500));
           safeAuditLog_('DLQ FAILED definitief', type + ' na ' + nieuwRetries + ' pogingen');
-          try { meldFataalAanOwner_('DLQ_FAILED', type + ' na ' + DLQ_MAX_RETRIES + ' retries opgegeven', { payload: payload }); } catch (_) {}
+          escaleerDlqFataal_(sheet, ss, type, payload, nieuweFout);
         } else {
           // Exponential backoff: +1u, +4u, +12u
           const wachtUren = Math.pow(4, nieuwRetries - 1);
@@ -194,4 +194,89 @@ function forceerDlqRetry() {
   }
   dlqVerwerkRetries_();
   SpreadsheetApp.getUi().alert('✅ Forced retry voltooid', 'Bekijk DLQ-tab voor resultaten.', SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Escaleert een definitief gefaalde DLQ-entry via meerdere onafhankelijke
+ * kanalen. Sinds CYCLE 92: één kanaal (mail) was onvoldoende — mail-quota
+ * kan op zijn op precies het moment dat er veel faalt, of de owner-mail
+ * zelf is de gefaalde actie. Vier kanalen, in volgorde van robuustheid:
+ *
+ *   1. Audit-log (al in calling-site geschreven; hier nogmaals voor zekerheid)
+ *   2. ScriptProperty 'DLQ_LAATSTE_FATAAL' — persistente JSON, leesbaar in
+ *      Apps Script editor zelfs als sheet onbereikbaar is
+ *   3. DLQ-tab zichtbaar maken (showSheet) — gebruiker ziet automatisch een
+ *      nieuwe tab in z'n spreadsheet en gaat kijken
+ *   4. meldFataalAanOwner_ — best-effort mail-alert, kan zelf falen
+ *
+ * Kanalen 1-3 zijn quota-vrij en script-restart-bestendig. Kanaal 4 is de
+ * meest zichtbare maar minst betrouwbare.
+ *
+ * Best-effort: elke kanaal-fout wordt apart gevangen. Geen kanaal mag de
+ * andere blokkeren.
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet  DLQ-sheet (al geopend)
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} ss  parent spreadsheet
+ * @param {string} type       DLQ-type (bv. 'EMAIL_FACTUUR')
+ * @param {Object} payload    item-payload (kan gevoelige info bevatten — niet in alert-mail meesturen)
+ * @param {string} foutTekst  laatste error-message
+ */
+function escaleerDlqFataal_(sheet, ss, type, payload, foutTekst) {
+  // Kanaal 1 — audit-log nogmaals (cheap, al gedaan in caller)
+  try {
+    safeAuditLog_('DLQ FATAAL-escalatie', type + ' — ' + String(foutTekst || '(onbekend)').slice(0, 120));
+  } catch (_) {}
+
+  // Kanaal 2 — persistente ScriptProperty
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const totaalFailed = telDlqFailed_(sheet);
+    props.setProperty('DLQ_LAATSTE_FATAAL', JSON.stringify({
+      tijdstip: new Date().toISOString(),
+      type: String(type || ''),
+      fout: String(foutTekst || '').slice(0, 200),
+      totaalFailed: totaalFailed,
+    }));
+  } catch (_) {}
+
+  // Kanaal 3 — DLQ-tab zichtbaar maken zodat klant 'm niet kan missen
+  try { if (sheet && typeof sheet.showSheet === 'function') sheet.showSheet(); } catch (_) {}
+
+  // Kanaal 4 — best-effort mail-alert. Laatste omdat het kan falen.
+  try {
+    if (typeof meldFataalAanOwner_ === 'function') {
+      meldFataalAanOwner_('DLQ_FAILED', type + ' na ' + DLQ_MAX_RETRIES + ' retries opgegeven', { payload: payload });
+    }
+  } catch (_) {}
+}
+
+/**
+ * Telt aantal rijen met status FAILED in de DLQ. Goedkoop: één read.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
+ * @returns {number}
+ */
+function telDlqFailed_(sheet) {
+  if (!sheet || sheet.getLastRow() < 2) return 0;
+  const data = sheet.getDataRange().getValues();
+  let n = 0;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][5] || '').toUpperCase() === 'FAILED') n++;
+  }
+  return n;
+}
+
+/**
+ * Read-only inspectie van de laatste fatale DLQ-escalatie via ScriptProperty.
+ * Bedoeld voor support-debugging: ook als de spreadsheet niet bereikbaar is
+ * kun je in de editor `Logger.log(JSON.stringify(getDlqLaatsteFataalProp_()))`
+ * draaien voor de meest recente staat.
+ *
+ * @returns {Object|null} { tijdstip, type, fout, totaalFailed } of null
+ */
+function getDlqLaatsteFataalProp_() {
+  try {
+    const raw = PropertiesService.getScriptProperties().getProperty('DLQ_LAATSTE_FATAAL');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (_) { return null; }
 }
