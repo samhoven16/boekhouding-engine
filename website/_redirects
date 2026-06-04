@@ -9,6 +9,14 @@
 # maar veel scanners checken óók /security.txt — redirect voor compat.
 /security.txt /.well-known/security.txt 301
 
+# Trailing-slash canonicalisering: de .html-bestanden serveren op /voorwaarden
+# zonder slash; mét slash gaf 404. Veel pagina's linkten naar de slash-vorm.
+# 301 zodat oude links + getypte URL's alsnog landen, en SEO-canoniek wordt
+# één URL per pagina.
+/voorwaarden/ /voorwaarden 301
+/privacy/ /privacy 301
+/transparantie/ /transparantie 301
+
 # ── Affiliate tracking (/go/ routes) ──────────────────────────
 # 302 = tijdelijk, zodat target-URL bijgewerkt kan worden zonder SEO-impact.
 # Vervang door echte affiliate-links zodra goedgekeurd.
