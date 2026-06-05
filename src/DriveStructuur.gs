@@ -313,6 +313,8 @@ function sluitJaarAf() {
     'Jaarafsluiting ' + huidigJaar,
     'Dit doet het volgende:\n\n' +
     '✓ Archief-kopie van huidige spreadsheet opslaan in Drive\n' +
+    '✓ Resultaat verwerken: omzet en kosten van ' + huidigJaar + ' naar Eigen Vermogen\n' +
+    '✓ Jaaroverdracht: resultaat van ' + huidigJaar + ' naar Onverdeelde winst voorgaande jaren\n' +
     '✓ Factuurnummerteller resetten naar 1 (voor ' + nieuwJaar + ')\n' +
     '✓ Factuurprefix bijwerken naar F' + nieuwJaar + '-\n' +
     '✓ Boekjaar-instellingen bijwerken naar ' + nieuwJaar + '\n' +
@@ -325,6 +327,20 @@ function sluitJaarAf() {
   const ss    = getSpreadsheet_();
   const props = PropertiesService.getScriptProperties();
   const fouten = [];
+
+  // Pre-flight idempotency: voorkom dubbele resultaatverwerking voordat
+  // we Drive-quota verbruiken aan een archief dat we niet kunnen gebruiken.
+  if (jaarAlAfgesloten_(ss, huidigJaar)) {
+    ui.alert(
+      'Jaarafsluiting al voltooid',
+      'Boekjaar ' + huidigJaar + ' is al afgesloten.\n\n' +
+      'In Journaalposten staan al boekingen met referentie JA-' + huidigJaar + '. ' +
+      'Een tweede afsluiting zou de resultaatverwerking dubbel boeken en de balans verstoren.\n\n' +
+      'Neem contact op met je accountant als je een correctie wilt doorvoeren.',
+      ui.ButtonSet.OK
+    );
+    return;
+  }
 
   // 1. Archiveer huidige spreadsheet — KRITISCH: zonder backup geen reset
   let archiefUrl = '';
@@ -348,7 +364,27 @@ function sluitJaarAf() {
     return;
   }
 
-  // 2. Factuurprefix + boekjaarinstellingen bijwerken in sheet
+  // 2. Resultaatverwerking + jaaroverdracht (balanscontinuiteit RJ 160/170)
+  // FATAL bij failure: zonder geslaagde resultaatverwerking mogen we de
+  // factuurnummering NIET resetten — boekjaar N is dan boekhoudkundig
+  // niet afgesloten, terwijl de tellers wel naar N+1 zouden wijzen.
+  let afsluitResultaat = null;
+  try {
+    afsluitResultaat = voerJaarafsluitingResultaatUit_(ss, huidigJaar);
+  } catch (e) {
+    schrijfAuditLog_('Jaarafsluiting AFGEBROKEN', 'Resultaatverwerking faalde: ' + e.message);
+    ui.alert(
+      'Jaarafsluiting afgebroken',
+      'De resultaatverwerking kon niet voltooid worden:\n\n' + e.message + '\n\n' +
+      'Archief blijft beschikbaar: ' + archiefUrl + '\n\n' +
+      'Factuurnummers en boekjaar-instellingen zijn NIET aangepast. ' +
+      'Controleer de Journaalposten en neem contact op met support als dit aanhoudt.',
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+  // 3. Factuurprefix + boekjaarinstellingen bijwerken in sheet
   // Volgorde-invariant: prefix MOET bijgewerkt zijn vóór de tellers
   // resetten. Zo voorkomen we dat een mislukte prefix-update de tellers
   // op '1' achterlaat met de oude prefix → duplicaat factuurnummers
@@ -373,11 +409,11 @@ function sluitJaarAf() {
     _instellingenCache = null; // invalidate na writes
   }
 
-  // 3. Reset tellers — pas NA succesvolle prefix-update
+  // 4. Reset tellers — pas NA succesvolle prefix-update
   props.setProperty(PROP.VOLGEND_FACTUUR_NR, '1');
   props.setProperty(PROP.VOLGEND_INKOOP_NR,  '1');
 
-  // 4. Drive-structuur nieuw boekjaar
+  // 5. Drive-structuur nieuw boekjaar
   try {
     maakDriveStructuur_(nieuwJaar);
     slaDriverLinksOpInInstellingen_(nieuwJaar);
@@ -388,10 +424,14 @@ function sluitJaarAf() {
   schrijfAuditLog_('Jaarafsluiting voltooid', huidigJaar + ' → ' + nieuwJaar);
 
   const foutTekst = fouten.length ? '\n\nWaarschuwingen:\n' + fouten.join('\n') : '';
+  const resultaatTekst = afsluitResultaat
+    ? '\n• Resultaat ' + huidigJaar + ': € ' + formatBedrag_(afsluitResultaat.resultaat) +
+      ' (' + afsluitResultaat.boekingenCount + ' afsluitboekingen)'
+    : '';
   ui.alert(
     'Jaarafsluiting voltooid',
     'Boekjaar ' + huidigJaar + ' is afgesloten.\n\n' +
-    '• Archief opgeslagen in Google Drive\n' +
+    '• Archief opgeslagen in Google Drive' + resultaatTekst + '\n' +
     '• Factuurnummers beginnen opnieuw bij 1\n' +
     '• Factuurprefix: F' + nieuwJaar + '-\n' +
     '• Drive-mappen aangemaakt voor ' + nieuwJaar + foutTekst,

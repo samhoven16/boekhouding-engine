@@ -200,7 +200,8 @@
 | `InvoerenDialog.gs` | Form/dialog rendering |
 | `SmartCategorisatie.gs` | AI-assisted categorization |
 | `Belastingadvies.gs` | Tax optimization advice |
-| `DriveStructuur.gs` | Drive folder management |
+| `DriveStructuur.gs` | Drive folder management + `sluitJaarAf()` UI-wrapper |
+| `Jaarafsluiting.gs` | Resultaatverwerking + jaaroverdracht (balanscontinuiteit RJ 160/170) |
 | `Prive.gs` | Private finance module |
 | `GezondheidCheck.gs` | Data quality checks |
 | `ExportAccountant.gs` | Accountant export |

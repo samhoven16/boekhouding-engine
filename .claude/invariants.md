@@ -191,3 +191,41 @@ On duplicate blocked: schrijfAuditLog_('Factuur DUBBEL geblokkeerd', '...')
 On daily task fail: schrijfAuditLog_('FOUT dagelijkse taak', '...')
 ```
 INVARIANT: no silent failure. Every non-trivial failure has an audit log entry.
+
+---
+
+## JAARAFSLUITING INVARIANTS (Jaarafsluiting.gs)
+
+### Constants — pinned to RGS NL grootboekschema
+```
+REKENING_RESULTAAT_BOEKJAAR = '2500'  // Resultaat boekjaar (Passief, EV)
+REKENING_ONVERDEELDE_WINST  = '2600'  // Onverdeelde winst voorgaande jaren (Passief, EV)
+```
+INVARIANT: both must exist in GROOTBOEKSCHEMA before `voerJaarafsluitingResultaatUit_` runs.
+Pre-flight check throws if either missing.
+
+### Resultaatverwerking (genereerResultaatverwerkingsBoekingen_):
+- Only W&V accounts (bw === 'W&V') generate bookings
+- Opbrengst → debet=code, credit=2500 (zero out + accumulate profit)
+- Kosten → debet=2500, credit=code (zero out + accumulate cost)
+- Saldo < 0.005 rounded → skip
+- All bookings: datum=31-12-{jaar}, dagboek='Memoriaal', type='Resultaatverwerking', ref='JA-{jaar}'
+
+### Jaaroverdracht (genereerJaarOverdrachtBoeking_):
+- Profit (>0): debet=2500, credit=2600
+- Loss (<0): debet=2600, credit=2500 (absolute amount)
+- Zero result → returns null (no booking)
+- Date = 01-01-{nieuwJaar}, ref='JO-{nieuwJaar}', type='Beginbalans'
+
+### Idempotency (jaarAlAfgesloten_):
+- Detection via Referentie-column [11] in JOURNAALPOSTEN matching `JA-{jaar}`
+- `voerJaarafsluitingResultaatUit_` throws on repeat
+- `sluitJaarAf()` UI-wrapper does additional pre-flight before archief, to avoid wasted Drive-quota
+
+### Order invariants in sluitJaarAf() (DriveStructuur.gs):
+1. Pre-flight idempotency (before any side-effect)
+2. Archief copy (kritisch: rollback-basis bij latere failure)
+3. Resultaatverwerking + jaaroverdracht (fatal bij failure — geen teller-reset)
+4. Prefix + boekjaar-instellingen update
+5. Reset factuurnr-tellers (NA prefix, anders duplicate facturen)
+6. Drive-mappen (non-fatal: alleen waarschuwing)
