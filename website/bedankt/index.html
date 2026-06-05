@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Bedankt voor je aankoop — Boekhoudbaar</title>
+<meta name="description" content="Je Boekhoudbaar staat klaar in je Drive. 5 stappen voor je eerste factuur — met screenshots en uitleg van het 'niet-geverifieerde app'-scherm.">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/bedankt/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+
+<style>
+:root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--bg:#F7F9FC;--wit:#fff;--rand:#E5EAF2;--groen:#1B5E20;--groen-bg:#E8F5E9;--oranje:#E65100;--oranje-bg:#FFF3E0;--rood:#B91C1C;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--bg);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;}
+.hero{padding:64px 32px 36px;text-align:center;background:linear-gradient(180deg,#fff 0%,var(--bg) 100%);}
+.hero-vink{width:64px;height:64px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:32px;color:#fff;font-weight:800;box-shadow:0 8px 24px rgba(46,196,182,.35);}
+.hero h1{font-size:36px;color:var(--blauw);letter-spacing:-0.02em;margin-bottom:10px;font-weight:800;}
+.hero p{font-size:17px;color:var(--grijs);max-width:640px;margin:0 auto;line-height:1.6;}
+.order-info{max-width:580px;margin:24px auto 0;background:#fff;border:1px solid var(--rand);border-radius:12px;padding:18px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;font-size:14px;}
+@media (max-width:520px){.order-info{grid-template-columns:1fr;}}
+.order-info .lbl{color:var(--grijs);font-size:12px;text-transform:uppercase;letter-spacing:0.6px;font-weight:700;}
+.order-info .val{color:var(--blauw);font-weight:600;}
+.belangrijk{background:var(--oranje-bg);border:1px solid #FFCC80;border-radius:10px;padding:14px 18px;margin:24px auto 0;max-width:780px;font-size:14px;color:#5A3F00;line-height:1.6;}
+.belangrijk strong{color:var(--oranje);}
+
+main{max-width:880px;margin:0 auto;padding:8px 24px 48px;}
+.stap{background:#fff;border:1px solid var(--rand);border-radius:14px;padding:28px 30px;margin-top:18px;}
+.stap-kop{display:flex;gap:18px;align-items:flex-start;margin-bottom:14px;}
+.stap-num{flex-shrink:0;width:40px;height:40px;background:var(--blauw);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;}
+.stap-titel{flex:1;}
+.stap-titel h2{font-size:19px;color:var(--blauw);margin-bottom:4px;font-weight:700;line-height:1.3;}
+.stap-titel .stap-tijd{font-size:12.5px;color:var(--grijs);text-transform:uppercase;letter-spacing:0.6px;font-weight:600;}
+.stap p{font-size:14.5px;color:var(--tekst);line-height:1.7;margin-bottom:12px;}
+.stap p strong{color:var(--blauw);}
+.stap a{color:var(--blauw);font-weight:600;}
+
+/* Walkthrough box voor het Google-warning-scherm — kritieke onboarding-friction */
+.walkthrough{background:var(--bg);border:1px solid var(--rand);border-radius:10px;padding:18px 20px;margin-top:14px;}
+.walkthrough-titel{font-size:13px;font-weight:700;color:var(--blauw);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.walkthrough-titel::before{content:"📸";font-size:14px;}
+.mockup-chrome{background:#dadce0;border-radius:8px;padding:8px 12px 0;}
+.mockup-tab{background:#fff;display:inline-block;padding:5px 10px;border-radius:6px 6px 0 0;font-size:11.5px;color:#3c4043;}
+.mockup-balk{background:#f1f3f4;border-radius:14px;padding:4px 12px;margin:4px 0;font-size:11px;color:#5f6368;font-family:monospace;}
+.mockup-warn{background:#fff;border-radius:8px;padding:22px 24px;color:#3c4043;font-size:13px;line-height:1.6;}
+.mockup-warn .warn-titel{color:#d93025;font-weight:700;font-size:16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.mockup-warn .warn-titel::before{content:"⚠️";}
+.mockup-warn .warn-uitleg{color:#5f6368;font-size:12.5px;margin:8px 0;}
+.mockup-warn .warn-link{color:#1a73e8;font-size:12.5px;text-decoration:underline;cursor:pointer;}
+.mockup-warn .warn-link-na{color:#1a73e8;font-size:12.5px;text-decoration:underline;cursor:pointer;display:none;}
+.mockup-warn.uitgeklapt .warn-link{display:none;}
+.mockup-warn.uitgeklapt .warn-link-na{display:block;}
+.mockup-warn .warn-knoppen{margin-top:12px;display:flex;gap:8px;justify-content:flex-end;}
+.mockup-warn .warn-btn-sec{padding:7px 14px;background:#fff;border:1px solid #dadce0;color:#1a73e8;border-radius:4px;font-size:12.5px;font-weight:600;cursor:pointer;}
+.mockup-warn .warn-btn-pri{padding:7px 14px;background:#1a73e8;color:#fff;border:none;border-radius:4px;font-size:12.5px;font-weight:600;cursor:pointer;}
+.toggle-rij{text-align:center;margin-top:10px;}
+.toggle-rij button{background:none;border:1px dashed var(--rand);color:var(--blauw);font-size:13px;font-family:inherit;font-weight:600;padding:8px 16px;border-radius:6px;cursor:pointer;}
+.toggle-rij button:hover{border-color:var(--accent);color:var(--accent);}
+.walkthrough-uitleg{margin-top:14px;background:var(--groen-bg);border-left:3px solid var(--accent);padding:12px 16px;border-radius:0 6px 6px 0;font-size:13.5px;color:#0D4F47;line-height:1.65;}
+.walkthrough-uitleg strong{color:var(--blauw);}
+
+.cta-volgende{background:linear-gradient(135deg,var(--blauw) 0%,var(--blauw-licht) 100%);color:#fff;border-radius:14px;padding:32px;text-align:center;margin-top:32px;}
+.cta-volgende h3{font-size:22px;margin-bottom:8px;}
+.cta-volgende p{font-size:15px;color:rgba(255,255,255,.85);margin-bottom:18px;}
+.cta-volgende a{display:inline-block;background:var(--accent);color:var(--blauw);padding:13px 26px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;}
+
+.hulp{margin-top:32px;background:#fff;border:1px solid var(--rand);border-radius:14px;padding:24px 26px;}
+.hulp h3{font-size:16px;color:var(--blauw);margin-bottom:12px;}
+.hulp ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;}
+.hulp li{font-size:14px;color:var(--tekst);line-height:1.6;}
+.hulp li strong{color:var(--blauw);}
+.hulp a{color:var(--blauw);font-weight:600;}
+
+footer{background:var(--blauw);color:#fff;padding:32px;text-align:center;font-size:13px;}
+footer a{color:rgba(255,255,255,.7);}
+</style>
+<link rel="stylesheet" href="/animations.css">
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
+</head>
+<body>
+
+<nav aria-label="Hoofdnavigatie">
+  <div class="nav-inner">
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home">
+      <img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52">
+    </a>
+    <ul class="nav-links" id="nav-menu" role="list">
+      <li><a href="/functies/">Functies</a></li>
+      <li><a href="/demo/">Demo</a></li>
+      <li><a href="/faq/">FAQ</a></li>
+      <li><a href="/mijn/">Mijn boekhouding</a></li>
+    </ul>
+    <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
+      <li><button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
+        <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      </button></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-vink" aria-hidden="true">✓</div>
+  <h1>Bedankt! Je Boekhoudbaar is onderweg.</h1>
+  <p>Binnen 2 minuten ontvang je een welkomstmail met de link naar jouw eigen Boekhoudbaar-Sheet. Hieronder lees je wat er nu gebeurt — en hoe je door het ene scherm heenkomt waar 90% van de nieuwe klanten over struikelt.</p>
+  <div class="order-info">
+    <div><div class="lbl">Bestelnummer</div><div class="val" id="order-num">BHB-2026-—</div></div>
+    <div><div class="lbl">Bedrag</div><div class="val">€ 49,00 — eenmalig</div></div>
+    <div><div class="lbl">Mail naar</div><div class="val" id="order-mail">je e-mailadres</div></div>
+    <div><div class="lbl">Geldig voor</div><div class="val">Onbeperkt — geen abonnement</div></div>
+  </div>
+  <div class="belangrijk">
+    <strong>⏰ Let op:</strong> de welkomstmail komt soms in de map "Reclame" of "Updates" terecht (vooral bij Gmail). Check daar als je hem niet binnen 5 minuten in je inbox ziet. Markeer hem dan als "Belangrijk" zodat updates wél bovenaan komen.
+  </div>
+</section>
+
+<main>
+
+<div class="stap">
+  <div class="stap-kop">
+    <span class="stap-num">1</span>
+    <div class="stap-titel">
+      <h2>Open de welkomstmail van Boekhoudbaar</h2>
+      <span class="stap-tijd">~ 30 seconden</span>
+    </div>
+  </div>
+  <p>Onderwerp: <strong>"Welkom bij Boekhoudbaar — open hier jouw administratie"</strong>. Daarin staat een directe link naar jouw eigen Sheet in Google Drive. Klik die en je komt in stap 2 terecht.</p>
+  <p><strong>Tip:</strong> sla die mail op als bladwijzer (Ctrl+D / Cmd+D) of voeg toe aan je favorieten. Je opent jouw boekhouding voortaan met één klik. Of gebruik <a href="/mijn/">/mijn boekhouding</a> als snelkoppeling.</p>
+</div>
+
+<div class="stap">
+  <div class="stap-kop">
+    <span class="stap-num">2</span>
+    <div class="stap-titel">
+      <h2>Geef Boekhoudbaar toegang tot jouw Drive</h2>
+      <span class="stap-tijd">~ 1 minuut · belangrijkste stap</span>
+    </div>
+  </div>
+  <p>De eerste keer dat je een actie uitvoert (bijv. "Eerste factuur maken") vraagt Google: <strong>"Geef Boekhoudbaar toegang tot Google Drive."</strong> Klik <strong>Doorgaan</strong> en kies jouw account.</p>
+  <p>Daarna verschijnt een scherm dat zegt: <strong>"Google heeft deze app niet geverifieerd."</strong> Dat klinkt eng — maar het is normaal voor scripts die jij installeert in je eigen Drive (Google verifieert alleen apps die door miljoenen gebruikt worden).</p>
+
+  <div class="walkthrough">
+    <div class="walkthrough-titel">Walkthrough — zo klik je erdoor</div>
+    <div class="mockup-chrome">
+      <div class="mockup-tab">accounts.google.com</div>
+    </div>
+    <div class="mockup-balk">🔒 https://accounts.google.com/o/oauth2/auth</div>
+    <div class="mockup-warn" id="mockup-warn">
+      <div class="warn-titel">Google heeft deze app niet geverifieerd</div>
+      <p>De app verzoekt om toegang tot gevoelige informatie in je Google-account. Totdat de ontwikkelaar (Boekhoudbaar) zijn app verifieert bij Google, moet je deze nieuwe app voorzichtig gebruiken.</p>
+      <p class="warn-uitleg">Ga alleen door als je de ontwikkelaar kent en vertrouwt.</p>
+      <div class="warn-link" id="warn-link" role="button" tabindex="0">Geavanceerd</div>
+      <div class="warn-link-na">Ga naar Boekhoudbaar (onveilig)</div>
+      <div class="warn-knoppen">
+        <button type="button" class="warn-btn-sec">Terug naar veiligheid</button>
+      </div>
+    </div>
+    <div class="toggle-rij">
+      <button type="button" id="toggle-warn">Klik "Geavanceerd" om te zien wat er gebeurt →</button>
+    </div>
+  </div>
+  <div class="walkthrough-uitleg">
+    <strong>Wat doet de "onveilig"-tekst?</strong> Google zet die er bij alle scripts die niet door honderden klanten worden gebruikt. Het betekent <em>niet</em> dat Boekhoudbaar onveilig is — het betekent dat Google's verificatieproces (€75/jaar audit + 6 weken doorlooptijd) nog niet doorlopen is. Je geeft toegang aan een script dat <strong>jouw eigen Google Drive</strong> beheert; wij hebben geen kopie van je data, alles staat bij jou. Klik <strong>"Ga naar Boekhoudbaar (onveilig)"</strong> om door te gaan.
+  </div>
+</div>
+
+<div class="stap">
+  <div class="stap-kop">
+    <span class="stap-num">3</span>
+    <div class="stap-titel">
+      <h2>Vul je bedrijfsgegevens in (Instellingen-tab)</h2>
+      <span class="stap-tijd">~ 2 minuten</span>
+    </div>
+  </div>
+  <p>In de Sheet klik je linksonder op het <strong>Instellingen</strong>-tabblad. Vul in: bedrijfsnaam, KvK-nummer, BTW-nummer, IBAN. Boekhoudbaar gebruikt deze velden automatisch op elke factuur, BTW-aangifte en rapport. Geen handwerk meer in afzonderlijke documenten.</p>
+  <p><strong>Tip:</strong> belasting-tarieven (zelfstandigenaftrek, MKB-vrijstelling, KIA) zijn al ingevuld voor 2026 en worden automatisch bijgewerkt bij Prinsjesdag. Je hoeft daar niks aan te doen.</p>
+</div>
+
+<div class="stap">
+  <div class="stap-kop">
+    <span class="stap-num">4</span>
+    <div class="stap-titel">
+      <h2>Maak je eerste factuur</h2>
+      <span class="stap-tijd">~ 1 minuut</span>
+    </div>
+  </div>
+  <p>Klik bovenin op <strong>Boekhoudbaar ▾ → Nieuwe boeking → Factuur</strong>. Of gebruik de Spraak-knop: zeg <em>"factuur 500 euro advies aan Janssen"</em> en alles wordt ingevuld. PDF wordt automatisch gemaakt, mail staat klaar om te versturen, factuurnummer wordt opgehoogd.</p>
+  <p>Je dashboard ververst zich vanzelf met je eerste omzet, BTW-saldo en open debiteuren.</p>
+</div>
+
+<div class="stap">
+  <div class="stap-kop">
+    <span class="stap-num">5</span>
+    <div class="stap-titel">
+      <h2>Klaar — kom morgenochtend terug</h2>
+      <span class="stap-tijd">~ 0 minuten</span>
+    </div>
+  </div>
+  <p>Boekhoudbaar draait elke nacht een gezondheidscheck: balans-controle, BTW-deadlines, openstaande debiteuren, belasting-besparingstips. Morgenochtend zie je bij het openen direct wat er voor jou belangrijk is — niets meer, niets minder.</p>
+  <p>Vanaf nu: 2-3× per maand inloggen voor 5-10 minuten is genoeg voor een complete administratie.</p>
+</div>
+
+<div class="cta-volgende">
+  <h3>Eerst Boekhoudbaar zien voordat je begint?</h3>
+  <p>De interactieve demo laat alle tabbladen, dialogen en het Boekhoudbaar-menu zien met test-data.</p>
+  <a href="/demo/">Bekijk de demo →</a>
+</div>
+
+<div class="hulp">
+  <h3>Iets niet duidelijk? Mail werkt het beste.</h3>
+  <ul>
+    <li><strong>Welkomstmail kwijt?</strong> Stuur een berichtje naar <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a> met je bestelnummer — je krijgt binnen 1 werkdag een nieuwe link.</li>
+    <li><strong>Werkt het Boekhoudbaar-menu niet?</strong> Sluit de Sheet, wacht 5 sec, open opnieuw. De eerste keer kan het menu 10-15 sec nodig hebben om te laden (Apps Script-init).</li>
+    <li><strong>Garantie-claim?</strong> Lukt het je niet om binnen 7 dagen je eerste factuur te maken, mail dan support — geld terug, geen vragen.</li>
+    <li><strong>Vind je je Sheet later niet meer?</strong> Zie <a href="/mijn/">/mijn boekhouding</a> — drie manieren om hem terug te vinden in je Drive.</li>
+  </ul>
+</div>
+
+</main>
+
+<footer>
+  <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
+  <p style="margin-top:8px;"><a href="/">Home</a> · <a href="/demo/">Demo</a> · <a href="/faq/">FAQ</a> · <a href="/mijn/">Mijn boekhouding</a> · <a href="/voorwaarden">Voorwaarden</a> · <a href="/privacy">Privacy</a></p>
+</footer>
+
+<script>
+  // Pak ordernr + email uit URL query (Mollie-redirect kan deze meegeven)
+  (function() {
+    var p = new URLSearchParams(window.location.search);
+    var nr = p.get('order') || p.get('o');
+    var em = p.get('mail') || p.get('email');
+    if (nr) document.getElementById('order-num').textContent = 'BHB-' + nr;
+    if (em) document.getElementById('order-mail').textContent = em;
+  })();
+
+  // Walkthrough-interactie: klik op "Geavanceerd" toont het 2e linkje
+  (function() {
+    var btn = document.getElementById('toggle-warn');
+    var warn = document.getElementById('mockup-warn');
+    var link = document.getElementById('warn-link');
+    if (!btn || !warn) return;
+    function toggle() {
+      warn.classList.toggle('uitgeklapt');
+      btn.textContent = warn.classList.contains('uitgeklapt')
+        ? '← Reset walkthrough'
+        : 'Klik "Geavanceerd" om te zien wat er gebeurt →';
+    }
+    btn.addEventListener('click', toggle);
+    if (link) link.addEventListener('click', toggle);
+  })();
+</script>
+
+</body></html>
