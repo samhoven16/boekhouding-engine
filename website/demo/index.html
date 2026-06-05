@@ -420,22 +420,37 @@ footer a{color:rgba(255,255,255,.7);}
       <p class="mock-note">Maak een foto van je bonnetje → bedrag, datum en BTW worden automatisch herkend en ingevuld.</p>
     </div>
 
-    <!-- BTW AANGIFTE -->
+    <!-- BTW AANGIFTE — matches het AANGIFTE OMZETBELASTING-tabblad in het product -->
     <div class="mock-pane" data-mock-pane="btw">
-      <h3 class="mock-h3">BTW-aangifte Q1 2026 · jan-mrt</h3>
-      <table class="mock-table">
-        <thead><tr><th>Rubriek</th><th>Omschrijving</th><th>Grondslag</th><th>BTW</th></tr></thead>
+      <div class="mock-btw-kop">AANGIFTE OMZETBELASTING</div>
+      <div class="mock-btw-meta">Studio Veld · BTW-nr: NL001234567B01 · Periode: Q1 2026 · 01-01-2026 t/m 31-03-2026</div>
+      <table class="mock-table mock-table-btw">
+        <thead><tr><th style="width:80px;">RUBRIEK</th><th>OMSCHRIJVING</th><th style="text-align:right;">GRONDSLAG</th><th style="text-align:right;">BTW BEDRAG</th></tr></thead>
         <tbody>
-          <tr><td>1a</td><td>Leveringen 21%</td><td>€ 39.180</td><td>€ 8.228</td></tr>
-          <tr><td>1b</td><td>Leveringen 9%</td><td>€ 2.133</td><td>€ 192</td></tr>
-          <tr><td>1d</td><td>0% / vrijgesteld</td><td>€ 867</td><td>—</td></tr>
-          <tr><td>1e</td><td>Verlegd</td><td>€ 0</td><td>—</td></tr>
-          <tr><td><strong>5a</strong></td><td><strong>Verschuldigde BTW</strong></td><td>—</td><td><strong>€ 8.420</strong></td></tr>
-          <tr><td>5b</td><td>Voorbelasting (inkoop)</td><td>—</td><td>−€ 2.202</td></tr>
-          <tr class="mock-totaal"><td><strong>5d</strong></td><td><strong>Te betalen aan Belastingdienst</strong></td><td>—</td><td><strong>€ 6.218</strong></td></tr>
+          <tr class="mock-btw-sectie"><td colspan="4">SECTIE A — PRESTATIES BINNENLAND</td></tr>
+          <tr><td>1a</td><td>Leveringen/diensten belast met hoog tarief 21%</td><td style="text-align:right;">€ 39.180,00</td><td style="text-align:right;">€ 8.228,00</td></tr>
+          <tr><td>1b</td><td>Leveringen/diensten belast met laag tarief 9%</td><td style="text-align:right;">€ 2.133,00</td><td style="text-align:right;">€ 192,00</td></tr>
+          <tr><td>1c</td><td>Leveringen/diensten belast met overige tarieven</td><td style="text-align:right;">€ 0,00</td><td style="text-align:right;">€ 0,00</td></tr>
+          <tr><td>1d</td><td>Leveringen/diensten belast met 0% of vrijgesteld</td><td style="text-align:right;">€ 867,00</td><td style="text-align:right;">—</td></tr>
+          <tr><td>1e</td><td>Omzet waarbij BTW is verlegd naar de afnemer</td><td style="text-align:right;">€ 0,00</td><td style="text-align:right;">—</td></tr>
+
+          <tr class="mock-btw-sectie"><td colspan="4">SECTIE B — PRESTATIES BUITEN NEDERLAND</td></tr>
+          <tr><td>2a</td><td>Leveringen buiten de EU (export)</td><td style="text-align:right;">€ 0,00</td><td style="text-align:right;">—</td></tr>
+          <tr><td>3a</td><td>Leveringen binnen de EU (ICL)</td><td style="text-align:right;">€ 0,00</td><td style="text-align:right;">—</td></tr>
+
+          <tr class="mock-btw-sectie"><td colspan="4">SECTIE C — VOORBELASTING EN SALDO</td></tr>
+          <tr><td>4a</td><td>Inkopen waarbij BTW verlegd is</td><td style="text-align:right;">€ 0,00</td><td style="text-align:right;">€ 0,00</td></tr>
+          <tr><td><strong>5a</strong></td><td><strong>Subtotaal verschuldigde BTW (= som 1a t/m 4a)</strong></td><td style="text-align:right;">—</td><td style="text-align:right;"><strong>€ 8.420,00</strong></td></tr>
+          <tr><td>5b</td><td>Voorbelasting: aftrekbare inkoop-BTW</td><td style="text-align:right;">—</td><td style="text-align:right;">−€ 2.202,00</td></tr>
+          <tr><td>5c</td><td>Terug te vragen (alleen als 5b &gt; 5a)</td><td style="text-align:right;">—</td><td style="text-align:right;">€ 0,00</td></tr>
+
+          <tr class="mock-btw-saldo"><td><strong>SALDO</strong></td><td><strong>TE BETALEN aan Belastingdienst</strong></td><td>—</td><td style="text-align:right;"><strong>€ 6.218,00</strong></td></tr>
         </tbody>
       </table>
-      <p class="mock-note">📋 Cijfers direct overneembaar in Mijn Belastingdienst Zakelijk. Deadline Q1: 30 april.</p>
+      <div class="mock-btw-onder">
+        <div><strong>Deadline:</strong> 30-04-2026 &nbsp;·&nbsp; <strong>Status:</strong> <span class="badge oranje">Concept (nog niet ingediend)</span></div>
+        <div class="mock-btw-tip">📋 Cijfers direct overneembaar in Mijn Belastingdienst Zakelijk · BTW-spaarpot bevat momenteel € 6.420 (genoeg gereserveerd ✓)</div>
+      </div>
     </div>
 
     <!-- BELASTINGADVIES -->
@@ -510,12 +525,23 @@ footer a{color:rgba(255,255,255,.7);}
           <tr><td>BTW-aangifte-herinnering</td><td>Ja</td></tr>
           <tr><td>Webhook API-sleutel</td><td>•••••••• <em>(verborgen)</em></td></tr>
 
-          <tr class="mock-rij-kop"><td colspan="2">BELASTING-TARIEVEN (overschrijfbaar; leeg = automatisch via Prinsjesdag-update)</td></tr>
-          <tr><td>Zelfstandigenaftrek (€)</td><td>2.470 <em>(auto)</em></td></tr>
+          <tr class="mock-rij-kop"><td colspan="2">BELASTING-TARIEVEN 2026 (auto-update bij Prinsjesdag · laatste check: 19-09-2025)</td></tr>
+          <tr><td>Zelfstandigenaftrek (€)</td><td>2.470 <em>(auto · Belastingdienst.nl)</em></td></tr>
           <tr><td>Startersaftrek (€)</td><td>2.123 <em>(auto)</em></td></tr>
-          <tr><td>MKB-winstvrijstelling (%)</td><td>13,31% <em>(auto)</em></td></tr>
-          <tr><td>KIA-percentage (%)</td><td>28% <em>(auto)</em></td></tr>
+          <tr><td>Stakingsaftrek (€)</td><td>3.630 <em>(auto)</em></td></tr>
+          <tr><td>MKB-winstvrijstelling (%)</td><td>12,70% <em>(auto)</em></td></tr>
+          <tr><td>KIA-percentage (%)</td><td>28% <em>(over €2.901–€63.716)</em></td></tr>
+          <tr><td>KIA-minimum investering (€)</td><td>2.901 <em>(auto)</em></td></tr>
           <tr><td>Urencriterium (uur/jr)</td><td>1.225 <em>(auto)</em></td></tr>
+          <tr><td>Reiskosten zakelijk (€/km)</td><td>0,23 <em>(auto)</em></td></tr>
+          <tr><td>Thuiswerkvergoeding (€/dag)</td><td>2,40 <em>(auto)</em></td></tr>
+          <tr><td>Box 3 heffingsvrij vermogen (€)</td><td>57.684 <em>(auto)</em></td></tr>
+          <tr><td>Box 3 belastingtarief (%)</td><td>36,00% <em>(auto)</em></td></tr>
+          <tr><td>Box 3 forfait beleggingen (%)</td><td>6,17% <em>(auto)</em></td></tr>
+          <tr><td>Zvw inkomensafh. bijdrage (%)</td><td>5,32% <em>(auto)</em></td></tr>
+          <tr><td>Zvw max inkomen (€)</td><td>75.864 <em>(auto)</em></td></tr>
+          <tr><td>DGA gebruikelijk loon (€)</td><td>56.000 <em>(auto)</em></td></tr>
+          <tr class="mock-rij-reminder"><td colspan="2">📅 Volgende auto-update: 16-09-2026 (Prinsjesdag). Wijzigingen worden automatisch overgenomen — jij krijgt een notificatie met de delta.</td></tr>
         </tbody>
       </table>
       <p class="mock-note">Eén plek voor alle instellingen. Belastingtarieven worden jaarlijks automatisch ververst — laat leeg om de wettelijke waarde te gebruiken, vul in om te overschrijven.</p>
@@ -661,6 +687,7 @@ footer a{color:rgba(255,255,255,.7);}
   .mock-actie-lbl { font-size: 12.5px; font-weight: 600; color: #0D1B4E; }
   /* Instellingen-tabel — labels links, waarden rechts, sectie-koppen donker */
   .mock-table-instellingen tr.mock-rij-kop td { background: #0D1B4E; color: #fff; font-weight: 700; font-size: 12px; letter-spacing: 0.4px; padding: 8px 12px; }
+  .mock-table-instellingen tr.mock-rij-reminder td { background: #FFF8E1; color: #5A3F00; font-size: 12px; font-style: italic; padding: 8px 12px; border-top: 1px solid #FFECB3; }
   .mock-table-instellingen td:first-child { font-weight: 600; color: #0D1B4E; width: 42%; }
   .mock-table-instellingen td em { color: #5F6B7A; font-size: 11.5px; font-style: italic; }
   /* Google Sheets-stijl tabbladen ONDERAAN */
@@ -703,6 +730,13 @@ footer a{color:rgba(255,255,255,.7);}
   .mock-table th { background: #F7F9FC; font-weight: 700; color: #0D1B4E; font-size: 12px; }
   .mock-table .mock-totaal td { background: #F7F9FC; border-top: 2px solid #0D1B4E; }
   .mock-h3 { color: #0D1B4E; font-size: 16px; margin-bottom: 12px; }
+  /* BTW Aangifte sheet — matched het AANGIFTE OMZETBELASTING tabblad */
+  .mock-btw-kop { background: #0D1B4E; color: #fff; text-align: center; font-weight: 700; font-size: 16px; padding: 12px 16px; border-radius: 6px 6px 0 0; letter-spacing: 0.8px; }
+  .mock-btw-meta { background: #1A2A6B; color: rgba(255,255,255,.82); font-size: 12px; text-align: center; padding: 6px 16px; border-radius: 0 0 6px 6px; margin-bottom: 14px; }
+  .mock-table-btw tr.mock-btw-sectie td { background: #E8EEF7; color: #0D1B4E; font-weight: 700; font-size: 12px; letter-spacing: 0.4px; padding: 8px 12px; border-bottom: 2px solid #0D1B4E; }
+  .mock-table-btw tr.mock-btw-saldo td { background: #FDECEC; color: #B91C1C; font-weight: 700; border-top: 2px solid #B91C1C; padding: 11px 12px; }
+  .mock-btw-onder { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; padding: 12px 14px; background: #F7F9FC; border: 1px solid #E5EAF2; border-radius: 8px; font-size: 13px; color: #0D1B4E; }
+  .mock-btw-tip { font-size: 12px; color: #5F6B7A; font-style: italic; }
   .mock-balans-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 14px; }
   @media (max-width: 720px) { .mock-balans-grid { grid-template-columns: 1fr; } }
   .mock-balans-grid h4 { color: #0D1B4E; font-size: 14px; margin-bottom: 8px; }
