@@ -100,6 +100,7 @@ const BOEKING_TYPE = {
   JOURNAALPOST:    'Journaalpost',
   MEMORIAAL:       'Memoriaal',
   BEGINBALANS:     'Beginbalans',
+  RESULTAATVERWERKING: 'Resultaatverwerking',
 };
 
 // ─────────────────────────────────────────────
