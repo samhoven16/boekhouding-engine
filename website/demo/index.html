@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0D1B4E">
-<title>Live demo — Boekhoudbaar | Klik door zonder te kopen</title>
-<meta name="description" content="Bekijk Boekhoudbaar in actie zonder te betalen. Klik door een live demo-spreadsheet met test-data: facturen, BTW-aangifte, dashboard. Zo werkt het écht.">
+<title>Bekijk Boekhoudbaar — interactief voorbeeld zonder account</title>
+<meta name="description" content="Interactief voorbeeld van Boekhoudbaar met test-data: Dashboard, facturen, BTW-aangifte, balans. Zo ziet je administratie eruit zodra je het in je eigen Drive opent.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://www.boekhoudbaar.nl/demo/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -18,12 +18,12 @@
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="Live demo — Boekhoudbaar">
-<meta property="og:description" content="Bekijk Boekhoudbaar in actie zonder te betalen. Live demo met test-data.">
+<meta property="og:title" content="Bekijk Boekhoudbaar — interactief voorbeeld">
+<meta property="og:description" content="Klik door een voorbeeld-administratie met test-data. Geen account, geen aankoop nodig.">
 <meta property="og:url" content="https://www.boekhoudbaar.nl/demo/">
 <meta property="og:image" content="https://www.boekhoudbaar.nl/og-image.svg">
 <meta property="og:image:type" content="image/svg+xml">
-<meta property="og:image:alt" content="Boekhoudbaar live demo — klik door zonder te kopen">
+<meta property="og:image:alt" content="Boekhoudbaar interactief voorbeeld — klik door zonder account">
 
 <style>
 :root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--grijs-licht:#8A95A5;--bg:#F7F9FC;--wit:#fff;--rand:#E5EAF2;}
@@ -34,24 +34,83 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-
 .logo{text-decoration:none;display:inline-flex;align-items:center;height:40px;font-weight:800;color:var(--blauw);font-size:20px;letter-spacing:-0.02em;}
 .logo::before{content:'📊';margin-right:8px;font-size:24px;}
 
-.hero{padding:60px 32px 40px;text-align:center;background:var(--bg);}
-.hero .container{max-width:780px;margin:0 auto;}
+.hero{padding:56px 32px 36px;text-align:center;background:var(--bg);}
+.hero .container{max-width:820px;margin:0 auto;}
 .eyebrow{font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin-bottom:14px;}
 h1{font-size:42px;font-weight:800;color:var(--blauw);letter-spacing:-0.02em;line-height:1.15;margin-bottom:14px;}
-.lede{font-size:18px;color:var(--grijs);line-height:1.6;margin-bottom:24px;}
-.cta-rij{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
-.btn{padding:13px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:8px;transition:all .15s;}
-.btn-pri{background:var(--blauw);color:#fff;}
-.btn-pri:hover{background:var(--blauw-licht);transform:translateY(-1px);box-shadow:0 8px 20px rgba(13,27,78,.22);}
-.btn-sec{background:var(--wit);color:var(--blauw);border:1px solid var(--rand);}
-.btn-sec:hover{border-color:var(--accent);color:var(--accent);}
+.lede{font-size:18px;color:var(--grijs);line-height:1.6;margin-bottom:22px;}
+.hero-trust{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;justify-content:center;gap:8px 22px;font-size:13.5px;color:var(--grijs);}
+.hero-trust li{display:inline-flex;align-items:center;gap:6px;}
+.hero-trust li span{color:var(--accent);font-weight:800;}
+
+/* Magic Moments-band — staat tussen hero en mock, toont de "wow"-momenten */
+.magic-band{background:#fff;padding:42px 24px 18px;}
+.magic-inner{max-width:1100px;margin:0 auto;}
+.magic-eyebrow{text-align:center;font-size:13px;font-weight:700;color:var(--blauw);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:24px;}
+.magic-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+@media (max-width:880px){.magic-grid{grid-template-columns:1fr;}}
+.magic-card{background:var(--bg);border:1px solid var(--rand);border-radius:14px;padding:20px;}
+.magic-flow{display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:nowrap;}
+.magic-step{flex:1;background:#fff;border:1px solid var(--rand);border-radius:10px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;}
+.magic-step-end{border-color:var(--accent);background:#E6F7F4;}
+.magic-ic{font-size:22px;}
+.magic-lbl{font-size:11px;font-weight:600;color:var(--blauw);line-height:1.25;}
+.magic-arrow{color:var(--accent);font-weight:800;font-size:18px;flex-shrink:0;}
+.magic-txt{font-size:13.5px;color:var(--grijs);line-height:1.55;margin:0;}
+
+/* Bewijs-strook: validatie/foutpreventie — concrete dingen die het script doet */
+.bewijs-strook{background:linear-gradient(180deg,#F7F9FC 0%,#fff 100%);border:1px solid var(--rand);border-radius:16px;padding:42px 32px;margin:48px 0;}
+.bewijs-titel{font-size:26px;color:var(--blauw);text-align:center;margin-bottom:8px;}
+.bewijs-sub{font-size:15px;color:var(--grijs);text-align:center;max-width:680px;margin:0 auto 28px;line-height:1.6;}
+.bewijs-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+@media (max-width:720px){.bewijs-grid{grid-template-columns:1fr;}}
+.bewijs-kaart{background:#fff;border:1px solid var(--rand);border-left:3px solid var(--accent);border-radius:10px;padding:18px 20px;}
+.bewijs-ic{font-size:24px;margin-bottom:6px;}
+.bewijs-kaart h3{font-size:15.5px;color:var(--blauw);margin-bottom:6px;}
+.bewijs-kaart p{font-size:13.5px;color:var(--grijs);line-height:1.6;margin:0;}
+
+/* Lock-in-strook: data-soevereiniteit — anti-Moneybird argument */
+.lockin-strook{background:#0D1B4E;color:#fff;border-radius:16px;padding:42px 32px;margin:48px 0;}
+.lockin-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:center;max-width:1000px;margin:0 auto;}
+@media (max-width:780px){.lockin-grid{grid-template-columns:1fr;}}
+.lockin-eyebrow{font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin-bottom:10px;}
+.lockin-titel{font-size:26px;color:#fff;margin-bottom:12px;line-height:1.2;}
+.lockin-txt{font-size:14.5px;color:rgba(255,255,255,.85);line-height:1.65;margin-bottom:18px;}
+.lockin-txt strong{color:#fff;font-weight:700;}
+.lockin-lijst{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;}
+.lockin-lijst li{font-size:13.5px;color:rgba(255,255,255,.92);display:flex;align-items:start;gap:8px;}
+.lockin-lijst li span{color:var(--accent);font-weight:800;flex-shrink:0;}
+.lockin-vergelijk{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:14px;}
+.lockin-tabel{width:100%;font-size:13px;border-collapse:collapse;}
+.lockin-tabel th,.lockin-tabel td{padding:8px 10px;text-align:left;border-bottom:1px solid rgba(255,255,255,.1);}
+.lockin-tabel th{font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:0.6px;font-weight:700;}
+.lockin-tabel td:nth-child(2){color:rgba(255,255,255,.65);}
+.lockin-tabel td:nth-child(3){color:var(--accent);font-weight:700;}
+.lockin-tabel tr:last-child td{border-bottom:none;}
 
 main{max-width:1100px;margin:0 auto;padding:32px;}
 
-.demo-frame{background:var(--wit);border:1px solid var(--rand);border-radius:14px;padding:0;overflow:hidden;box-shadow:0 4px 24px rgba(13,27,78,.08);margin-bottom:32px;}
-.demo-frame .balk{background:#0D1B4E;color:#fff;padding:10px 18px;font-size:13px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
-.demo-frame .balk .titel{font-weight:600;}
-.demo-frame .balk .rechts{font-size:12px;color:rgba(255,255,255,.7);}
+/* Browser-frame: maakt visueel duidelijk dat de demo straks in een browser draait */
+.browser-frame{background:#dadce0;border-radius:12px 12px 14px 14px;overflow:hidden;box-shadow:0 8px 32px rgba(13,27,78,.12);margin-bottom:32px;border:1px solid #c4c7cc;}
+.browser-chrome{background:#dadce0;padding:10px 14px 0;display:flex;align-items:center;gap:14px;flex-wrap:nowrap;}
+.browser-dots{display:flex;gap:6px;flex-shrink:0;}
+.browser-dots span{width:11px;height:11px;border-radius:50%;background:#bdc1c6;display:block;}
+.browser-dots span:nth-child(1){background:#ed6a5e;}
+.browser-dots span:nth-child(2){background:#f4c150;}
+.browser-dots span:nth-child(3){background:#5fcb43;}
+.browser-tab{background:#fff;padding:8px 14px 10px;border-radius:8px 8px 0 0;font-size:13px;color:#3c4043;display:flex;align-items:center;gap:8px;max-width:340px;flex-shrink:0;font-weight:500;}
+.browser-tab-icon{font-size:14px;}
+.browser-tab-titel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.browser-url{flex:1;background:#f1f3f4;border-radius:18px;padding:6px 14px;font-size:12.5px;color:#5f6368;display:flex;align-items:center;gap:8px;min-width:0;margin-bottom:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',monospace;}
+.browser-lock{font-size:11px;flex-shrink:0;}
+.browser-url-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+@media (max-width:640px){.browser-url{display:none;}.browser-tab{max-width:none;flex:1;}}
+
+/* Google Sheets toolbar — laat het echt-product-gevoel zien */
+.sheets-toolbar{background:#fff;border-bottom:1px solid #e5eaf2;padding:8px 14px;display:flex;gap:18px;align-items:center;font-size:13px;color:#5f6368;flex-wrap:wrap;}
+.sheets-menu{cursor:default;padding:3px 4px;border-radius:4px;}
+.sheets-menu-pri{color:var(--blauw);font-weight:600;background:#e8f0fe;padding:3px 10px;}
+@media (max-width:640px){.sheets-toolbar{gap:10px;font-size:12px;padding:6px 10px;}}
 
 .uitleg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:32px 0;}
 @media (max-width:780px){.uitleg-grid{grid-template-columns:1fr;}}
@@ -65,15 +124,13 @@ main{max-width:1100px;margin:0 auto;padding:32px;}
 .tab-row button.actief{background:var(--blauw);color:#fff;border-color:var(--blauw);}
 .tab-row button:hover{border-color:var(--accent);color:var(--blauw);}
 
-.scenario-blok{background:var(--bg);border:1px solid var(--rand);border-radius:14px;padding:22px 26px;margin-bottom:18px;}
-.scenario-blok h3{font-size:18px;color:var(--blauw);margin-bottom:8px;}
-.scenario-blok p{font-size:14px;color:var(--grijs);line-height:1.6;margin-bottom:0;}
-.scenario-blok ol{margin:8px 0 0 22px;font-size:14px;color:var(--grijs);line-height:1.8;}
-
-.cta-onderaan{background:linear-gradient(135deg,#0D1B4E 0%,#1A2A6B 100%);color:#fff;padding:48px 32px;text-align:center;border-radius:16px;margin:48px 0;}
-.cta-onderaan h2{color:#fff;font-size:28px;margin-bottom:10px;}
-.cta-onderaan p{color:rgba(255,255,255,.85);margin-bottom:20px;font-size:16px;}
-.cta-onderaan a{display:inline-block;background:var(--accent);color:#0D1B4E;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;}
+.cta-onderaan{background:linear-gradient(135deg,#0D1B4E 0%,#1A2A6B 100%);color:#fff;padding:56px 32px;text-align:center;border-radius:16px;margin:48px 0;}
+.cta-eyebrow{font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--accent);margin-bottom:10px;}
+.cta-onderaan h2{color:#fff;font-size:30px;margin-bottom:14px;line-height:1.2;}
+.cta-onderaan p{color:rgba(255,255,255,.85);margin-bottom:24px;font-size:16px;line-height:1.55;max-width:520px;margin-left:auto;margin-right:auto;}
+.cta-btn-pri{display:inline-block;background:var(--accent);color:#0D1B4E;padding:16px 36px;border-radius:10px;text-decoration:none;font-weight:800;font-size:17px;transition:transform .15s,box-shadow .15s;}
+.cta-btn-pri:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(46,196,182,.35);}
+.cta-disclaimer{margin-top:18px !important;font-size:13px !important;color:rgba(255,255,255,.6) !important;}
 
 footer{background:var(--blauw);color:#fff;padding:40px 32px;}
 footer .inner{max-width:1180px;margin:0 auto;text-align:center;}
@@ -111,29 +168,87 @@ footer a{color:rgba(255,255,255,.7);}
 
 <section class="hero">
   <div class="container">
-    <p class="eyebrow">Live demo · Geen account nodig</p>
-    <h1>Klik door Boekhoudbaar zonder te kopen</h1>
-    <p class="lede">Hieronder zie je een live demo-spreadsheet met test-data — zo zie je hoe het écht werkt voor jouw ZZP-administratie. Klik tabbladen, scroll door facturen, bekijk het dashboard. Zonder login.</p>
-    <div class="cta-rij">
-      <a href="#demo" class="btn btn-pri">Bekijk demo →</a>
-      <a href="/kopen" class="btn btn-sec">Of koop direct €49</a>
+    <p class="eyebrow">Interactief voorbeeld · Geen account nodig</p>
+    <h1>Geen template. Een boekhoud-engine in jouw Drive.</h1>
+    <p class="lede">Voor ZZP'ers die klaar zijn met €30/maand voor software die hun data gijzelt. Boekhoudbaar verstuurt facturen, berekent je BTW en houdt je dashboard up-to-date — automatisch, vanuit een Google Sheet die voor altijd van jou is. Hieronder zie je precies hoe het straks in jouw eigen browser draait.</p>
+    <ul class="hero-trust" aria-label="Belangrijke zekerheden">
+      <li><span>✓</span> Jouw data in jouw Drive — niet bij ons</li>
+      <li><span>✓</span> Export naar Excel/CSV — altijd, met één klik</li>
+      <li><span>✓</span> Eenmalig €49 — geen abonnement, geen verrassingen</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Magic Moments: 3 momenten waar het verschil van een normale sheet zichtbaar wordt -->
+<section class="magic-band">
+  <div class="magic-inner">
+    <p class="magic-eyebrow">Wat normaal 20 minuten kost, doet Boekhoudbaar in 2 seconden</p>
+    <div class="magic-grid">
+      <div class="magic-card">
+        <div class="magic-flow">
+          <div class="magic-step"><span class="magic-ic">📱</span><span class="magic-lbl">Foto van bonnetje</span></div>
+          <div class="magic-arrow">→</div>
+          <div class="magic-step"><span class="magic-ic">✨</span><span class="magic-lbl">AI leest het uit</span></div>
+          <div class="magic-arrow">→</div>
+          <div class="magic-step magic-step-end"><span class="magic-ic">📊</span><span class="magic-lbl">Regel staat in je sheet</span></div>
+        </div>
+        <p class="magic-txt">Bedrag, datum, BTW-tarief en leverancier — automatisch herkend en op de juiste rij geboekt. Geen overtypen.</p>
+      </div>
+      <div class="magic-card">
+        <div class="magic-flow">
+          <div class="magic-step"><span class="magic-ic">🖱️</span><span class="magic-lbl">Klik "Maak factuur"</span></div>
+          <div class="magic-arrow">→</div>
+          <div class="magic-step"><span class="magic-ic">📄</span><span class="magic-lbl">PDF + e-mail klaar</span></div>
+          <div class="magic-arrow">→</div>
+          <div class="magic-step magic-step-end"><span class="magic-ic">💸</span><span class="magic-lbl">Status: Verzonden</span></div>
+        </div>
+        <p class="magic-txt">Eén klik. PDF in je Drive, mail in je outbox met betaallink, factuurnummer automatisch opgehoogd. Geen formules.</p>
+      </div>
+      <div class="magic-card">
+        <div class="magic-flow">
+          <div class="magic-step"><span class="magic-ic">📅</span><span class="magic-lbl">Open Dashboard</span></div>
+          <div class="magic-arrow">→</div>
+          <div class="magic-step"><span class="magic-ic">⚡</span><span class="magic-lbl">Auto-ververst</span></div>
+          <div class="magic-arrow">→</div>
+          <div class="magic-step magic-step-end"><span class="magic-ic">✅</span><span class="magic-lbl">Vandaag op orde</span></div>
+        </div>
+        <p class="magic-txt">KPI's, gezondheidsscore en BTW-deadlines worden elke ochtend ververst. Jij ziet meteen: alles klopt — of: dit moet je vandaag doen.</p>
+      </div>
     </div>
   </div>
 </section>
 
 <main>
 
-<div id="demo" class="demo-frame">
-  <div class="balk">
-    <span class="titel">📊 Boekhoudbaar — Demo (test-data)</span>
-    <div class="rechts">
-      <span>statische voorbeeldweergave</span>
+<!-- Browser-frame om duidelijk te maken: dit is hoe het er straks in jouw browser uitziet -->
+<div id="demo" class="browser-frame">
+  <div class="browser-chrome">
+    <div class="browser-dots"><span></span><span></span><span></span></div>
+    <div class="browser-tab">
+      <span class="browser-tab-icon">📊</span>
+      <span class="browser-tab-titel">Boekhoudbaar 2026 — Google Sheets</span>
+    </div>
+    <div class="browser-url">
+      <span class="browser-lock">🔒</span>
+      <span class="browser-url-text">docs.google.com/spreadsheets/d/…/edit</span>
     </div>
   </div>
+  <!-- Google Sheets toolbar (statisch — laat product-context zien) -->
+  <div class="sheets-toolbar">
+    <span class="sheets-menu">Bestand</span>
+    <span class="sheets-menu">Bewerken</span>
+    <span class="sheets-menu">Weergeven</span>
+    <span class="sheets-menu">Invoegen</span>
+    <span class="sheets-menu">Opmaak</span>
+    <span class="sheets-menu sheets-menu-pri">📚 Boekhouding</span>
+    <span class="sheets-menu sheets-menu-pri">📊 Dashboard</span>
+    <span class="sheets-menu sheets-menu-pri">⚙️ Setup</span>
+    <span class="sheets-menu sheets-menu-pri">❓ Help</span>
+  </div>
 
-  <!-- Statische HTML-mock van het Dashboard. Geen iframe (private spreadsheet
-       kan niet embed). Dit toont prospects exact hoe het er straks uitziet.
-       Klant ziet bij aankoop een interactieve versie met eigen data. -->
+  <!-- Statische HTML-mock. Geen iframe (private spreadsheet kan niet embed).
+       Browser-frame + Sheets-toolbar maken duidelijk: dit is hoe het er in
+       jouw Drive uitziet. -->
   <div class="mock">
     <!-- Tab-rij — selectie uit de 16 echte tabbladen (zelfde namen + volgorde) -->
     <div class="mock-tabs">
@@ -377,7 +492,7 @@ footer a{color:rgba(255,255,255,.7);}
   <div class="kaart">
     <div class="ic">📊</div>
     <h3>Dashboard</h3>
-    <p>Live KPI's: omzet YTD, kosten, winstmarge, banksaldo, openstaande debiteuren. Met persoonlijke greeting en status-banner "wat is er nu belangrijk".</p>
+    <p>Alle KPI's op één scherm: omzet YTD, kosten, winstmarge, banksaldo, openstaande debiteuren. Met persoonlijke greeting en status-banner "wat is er nu belangrijk".</p>
   </div>
   <div class="kaart">
     <div class="ic">🧾</div>
@@ -406,36 +521,73 @@ footer a{color:rgba(255,255,255,.7);}
   </div>
 </div>
 
-<h2 style="font-size:24px;color:var(--blauw);margin:48px 0 18px;">Wat zie je in deze demo?</h2>
+<!-- "Dit is GEEN gewone Excel" — concrete validatie-bewijzen die het script doet -->
+<section class="bewijs-strook">
+  <h2 class="bewijs-titel">Wat een normale sheet niet voor je doet</h2>
+  <p class="bewijs-sub">Een template laat je elke fout maken. Boekhoudbaar blokkeert ze voordat ze in je boekhouding belanden — automatisch, zonder dat jij iets hoeft te checken.</p>
+  <div class="bewijs-grid">
+    <div class="bewijs-kaart">
+      <div class="bewijs-ic">🚫</div>
+      <h3>Dubbele factuurnummers worden geweigerd</h3>
+      <p>Probeer je een factuur op te slaan met een nummer dat al bestaat? Het script blokkeert het en stelt het eerstvolgende vrije nummer voor. Geen gemiste BTW-aangifte door overlap.</p>
+    </div>
+    <div class="bewijs-kaart">
+      <div class="bewijs-ic">⚖️</div>
+      <h3>Balans klopt altijd — of je krijgt een melding</h3>
+      <p>Activa ≠ Passiva? De Gezondheidscheck meldt het binnen 24 uur en wijst de afwijking aan. Bij een normale sheet ontdek je het pas bij je jaarrekening.</p>
+    </div>
+    <div class="bewijs-kaart">
+      <div class="bewijs-ic">📋</div>
+      <h3>BTW-tarief vóór het opslaan gevalideerd</h3>
+      <p>Alleen geldige tarieven (0%, 9%, 21%, vrijgesteld, verlegd) worden geaccepteerd. Het script weet het verschil — verlegd is geen 0%, en dat is wettelijk belangrijk.</p>
+    </div>
+    <div class="bewijs-kaart">
+      <div class="bewijs-ic">🔒</div>
+      <h3>Afgesloten boekjaren zijn afgesloten</h3>
+      <p>Een boeking met datum vóór je jaarafsluiting wordt geweigerd. Geen "ik wijzig snel even iets in 2024" dat je vorige aangifte breekt.</p>
+    </div>
+  </div>
+</section>
 
-<div class="scenario-blok">
-  <h3>Dashboard</h3>
-  <p>Live KPI's: omzet, kosten, winst, banksaldo, openstaande debiteuren. Plus belastingvoordeel-banner met geschatte besparing dit jaar.</p>
-</div>
-
-<div class="scenario-blok">
-  <h3>Verkoop- en inkoopfacturen</h3>
-  <p>Voorbeeld-rijen met factuurnummer, klant/leverancier, bedrag, BTW-tarief en status. In de échte versie klik je een rij voor de bijbehorende PDF.</p>
-</div>
-
-<div class="scenario-blok">
-  <h3>BTW-aangifte</h3>
-  <p>Per kwartaal: rubriek 1a/1b/1d/1e/5a/5b/5d direct overneembaar in mijn.belastingdienst.nl. Geen handwerk meer.</p>
-</div>
-
-<div class="scenario-blok">
-  <h3>Balans</h3>
-  <p>Activa = Passiva. Wordt automatisch berekend uit alle journaalposten. In de échte versie zie je ook W&amp;V, cashflow en jaarrekening.</p>
-</div>
+<!-- Data-soevereiniteit: anti-lock-in. Vendor lock-in is de #1 reden om weg te gaan bij Moneybird. -->
+<section class="lockin-strook">
+  <div class="lockin-grid">
+    <div>
+      <p class="lockin-eyebrow">Geen vendor lock-in</p>
+      <h2 class="lockin-titel">Stop ermee wanneer je wilt. Je data blijft van jou.</h2>
+      <p class="lockin-txt">Boekhoudbaar draait in <strong>jouw eigen Google Drive</strong>. Wij hebben geen kopie. Stop je morgen? Dan blijft je hele administratie staan in jouw Drive. Geen "exporteer voor 30 september" — geen "je abonnement is afgelopen, log uit". Gewoon: jouw bestand, voor altijd.</p>
+      <ul class="lockin-lijst">
+        <li><span>✓</span> Eén klik export naar Excel (.xlsx) of CSV</li>
+        <li><span>✓</span> Volledige boekhouding-export voor je accountant (XAF/RGS-formaat)</li>
+        <li><span>✓</span> Versiegeschiedenis altijd beschikbaar via Google Drive</li>
+        <li><span>✓</span> 30 dagen geld-terug, geen vragen — wel je sheet</li>
+      </ul>
+    </div>
+    <div class="lockin-vergelijk">
+      <table class="lockin-tabel">
+        <thead><tr><th></th><th>Moneybird/Exact</th><th>Boekhoudbaar</th></tr></thead>
+        <tbody>
+          <tr><td>Waar staat je data?</td><td>Bij hun server</td><td>Jouw Drive</td></tr>
+          <tr><td>Stoppen = data weg?</td><td>Na 30 dagen ja</td><td>Nee, blijft staan</td></tr>
+          <tr><td>Maandelijkse kosten</td><td>€18–€30</td><td>€0</td></tr>
+          <tr><td>Eenmalige kosten</td><td>€0</td><td>€49</td></tr>
+          <tr><td>Vendor-risico</td><td>Hoog</td><td>Geen</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
 <div class="cta-onderaan">
-  <h2>Bevalt het? Eenmalig €49 en je hebt alles</h2>
-  <p>Activatie-garantie: lukt het niet binnen 7 dagen, geld terug. Geen abonnement. Jouw data in jouw Drive.</p>
-  <a href="/kopen">Koop nu voor €49 →</a>
+  <p class="cta-eyebrow">Klaar om te beginnen?</p>
+  <h2>Boekhoudbaar voor €49 — vandaag in jouw Drive</h2>
+  <p>Activatie binnen 5 minuten. Eerste factuur deze middag. Werkt het niet binnen 7 dagen? Geld terug, geen vragen.</p>
+  <a href="/kopen" class="cta-btn-pri">Begin nu — €49 eenmalig →</a>
+  <p class="cta-disclaimer">Geen abonnement. Geen creditcard nodig voor de demo. Jouw data blijft altijd in jouw Drive — ook als je stopt.</p>
 </div>
 
 <p style="text-align:center;color:var(--grijs);font-size:13px;margin-bottom:32px;font-style:italic">
-  Dit is een statische voorbeeldweergave met test-data. De échte versie die jij krijgt is interactief — je kunt klikken, invoeren, BTW-aangiftes genereren, en alles draait in jouw eigen Google Drive.
+  Dit is een interactieve voorbeeldweergave met test-data. Het echte bestand dat jij krijgt draait in jouw eigen Google Drive, met jouw eigen administratie — alle tabbladen, alle automatiseringen, alle BTW-aangiftes.
 </p>
 
 </main>
