@@ -155,10 +155,30 @@ main{max-width:1100px;margin:0 auto;padding:32px;}
 @media (max-width:640px){.browser-url{display:none;}.browser-tab{max-width:none;flex:1;}}
 
 /* Google Sheets toolbar — laat het echt-product-gevoel zien */
-.sheets-toolbar{background:#fff;border-bottom:1px solid #e5eaf2;padding:8px 14px;display:flex;gap:18px;align-items:center;font-size:13px;color:#5f6368;flex-wrap:wrap;}
+.sheets-toolbar{background:#fff;border-bottom:1px solid #e5eaf2;padding:8px 14px;display:flex;gap:18px;align-items:center;font-size:13px;color:#5f6368;flex-wrap:wrap;font-family:'Roboto','Inter',Arial,sans-serif;}
 .sheets-menu{cursor:default;padding:3px 4px;border-radius:4px;}
 .sheets-menu-pri{color:var(--blauw);font-weight:600;background:#e8f0fe;padding:3px 10px;}
 @media (max-width:640px){.sheets-toolbar{gap:10px;font-size:12px;padding:6px 10px;}}
+
+/* Formula-bar: cellreferentie + fx + waarde — zoals in echte Google Sheets */
+.sheets-formula-bar{background:#fff;border-bottom:1px solid #e5eaf2;padding:5px 14px;display:flex;align-items:center;gap:10px;font-family:'Roboto','Inter',Arial,sans-serif;font-size:13px;color:#3c4043;}
+.sheets-cellref{background:#fff;border:1px solid #dadce0;border-radius:3px;padding:3px 10px;font-size:12px;color:#3c4043;font-weight:500;min-width:48px;text-align:center;}
+.sheets-fx{font-style:italic;color:#5f6368;font-size:14px;padding:0 6px;border-left:1px solid #dadce0;border-right:1px solid #dadce0;}
+.sheets-cellval{color:#3c4043;font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Kolom-header A B C D... + corner — exact Sheets-styling */
+.sheets-colheader{display:flex;background:#f8f9fa;border-bottom:1px solid #dadce0;font-family:'Roboto','Inter',Arial,sans-serif;}
+.sheets-corner{width:46px;height:22px;background:#f8f9fa;border-right:1px solid #dadce0;flex-shrink:0;}
+.sheets-col{flex:1;text-align:center;padding:3px 0;font-size:11px;color:#5f6368;font-weight:500;border-right:1px solid #dadce0;line-height:16px;min-width:0;}
+.sheets-col:last-child{border-right:none;}
+
+/* Rij-nummer strip + content rechts; sheets-area zorgt voor side-by-side */
+.sheets-area{display:flex;background:#fff;}
+.sheets-rowheader{background:#f8f9fa;border-right:1px solid #dadce0;flex-shrink:0;width:46px;font-family:'Roboto','Inter',Arial,sans-serif;display:flex;flex-direction:column;}
+.sheets-rowheader span{text-align:center;font-size:11px;color:#5f6368;font-weight:500;padding:8px 0;border-bottom:1px solid #e8eaed;line-height:1;}
+.sheets-area .mock{flex:1;min-width:0;font-family:'Roboto','Inter',Arial,sans-serif;background-image:linear-gradient(to right,transparent calc(100% - 1px),#f1f3f4 100%),linear-gradient(to bottom,transparent calc(100% - 1px),#f1f3f4 100%);background-size:140px 30px;}
+/* Mobiel: verberg rij-nummers + kolomletters om ruimte te besparen */
+@media (max-width:560px){.sheets-rowheader,.sheets-corner{display:none;}.sheets-colheader{display:none;}.sheets-formula-bar{display:none;}}
 
 .uitleg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:32px 0;}
 @media (max-width:780px){.uitleg-grid{grid-template-columns:1fr;}}
@@ -295,10 +315,42 @@ footer a{color:rgba(255,255,255,.7);}
     <span class="sheets-menu sheets-menu-pri" title="Custom-menu van Boekhoudbaar">Boekhoudbaar ▾</span>
   </div>
 
+  <!-- Formula-bar: cellreferentie + fx + cell-waarde, exact zoals Google Sheets -->
+  <div class="sheets-formula-bar">
+    <span class="sheets-cellref">A1</span>
+    <span class="sheets-fx">𝑓𝑥</span>
+    <span class="sheets-cellval" id="mock-cellval">Goedemorgen, Studio Veld</span>
+  </div>
+
+  <!-- Kolomletters A, B, C, D... net als in Sheets -->
+  <div class="sheets-colheader">
+    <span class="sheets-corner"></span>
+    <span class="sheets-col">A</span>
+    <span class="sheets-col">B</span>
+    <span class="sheets-col">C</span>
+    <span class="sheets-col">D</span>
+    <span class="sheets-col">E</span>
+    <span class="sheets-col">F</span>
+    <span class="sheets-col">G</span>
+    <span class="sheets-col">H</span>
+  </div>
+
   <!-- Statische HTML-mock. Geen iframe (private spreadsheet kan niet embed).
        Browser-frame + Sheets-toolbar maken duidelijk: dit is hoe het er in
        jouw Drive uitziet. -->
-  <div class="mock">
+  <!-- Sheets-area: rijnummers links + content rechts (in een gridlines-achtergrond) -->
+  <div class="sheets-area">
+    <div class="sheets-rowheader" aria-hidden="true">
+      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+      <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+      <span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+      <span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+      <span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
+      <span>26</span><span>27</span><span>28</span><span>29</span><span>30</span>
+      <span>31</span><span>32</span><span>33</span><span>34</span><span>35</span>
+      <span>36</span><span>37</span><span>38</span><span>39</span><span>40</span>
+    </div>
+    <div class="mock">
     <!-- DASHBOARD — 1-op-1 met het echte Dashboard-tabblad -->
     <div class="mock-pane actief" data-mock-pane="dashboard">
       <!-- Navy greeting-bar + subline, exact zoals in het product -->
@@ -499,6 +551,111 @@ footer a{color:rgba(255,255,255,.7);}
       <p class="mock-note">✓ Activa = Passiva. Klopt altijd door dubbel boekhouden.</p>
     </div>
 
+    <!-- WINST & VERLIES — periodiek resultaat -->
+    <div class="mock-pane" data-mock-pane="wenv">
+      <h3 class="mock-h3">Winst- &amp; Verliesrekening · 01-01-2026 t/m 12-05-2026</h3>
+      <table class="mock-table">
+        <thead><tr><th>Omschrijving</th><th style="text-align:right;">Bedrag</th><th style="text-align:right;">% van omzet</th></tr></thead>
+        <tbody>
+          <tr class="mock-btw-sectie"><td colspan="3">OPBRENGSTEN</td></tr>
+          <tr><td>Omzet diensten (21%)</td><td style="text-align:right;">€ 39.180,00</td><td style="text-align:right;">92,9%</td></tr>
+          <tr><td>Omzet diensten (9%)</td><td style="text-align:right;">€ 2.133,00</td><td style="text-align:right;">5,1%</td></tr>
+          <tr><td>Omzet vrijgesteld</td><td style="text-align:right;">€ 867,00</td><td style="text-align:right;">2,1%</td></tr>
+          <tr class="mock-totaal"><td><strong>Totaal omzet</strong></td><td style="text-align:right;"><strong>€ 42.180,00</strong></td><td style="text-align:right;"><strong>100%</strong></td></tr>
+
+          <tr class="mock-btw-sectie"><td colspan="3">KOSTEN</td></tr>
+          <tr><td>Software &amp; abonnementen</td><td style="text-align:right;">€ 1.420,00</td><td style="text-align:right;">3,4%</td></tr>
+          <tr><td>Kantoor &amp; werkruimte</td><td style="text-align:right;">€ 2.100,00</td><td style="text-align:right;">5,0%</td></tr>
+          <tr><td>Auto &amp; vervoer</td><td style="text-align:right;">€ 1.640,00</td><td style="text-align:right;">3,9%</td></tr>
+          <tr><td>Reiskosten OV</td><td style="text-align:right;">€ 520,00</td><td style="text-align:right;">1,2%</td></tr>
+          <tr><td>Studie &amp; opleiding</td><td style="text-align:right;">€ 880,00</td><td style="text-align:right;">2,1%</td></tr>
+          <tr><td>Telefoon &amp; internet</td><td style="text-align:right;">€ 480,00</td><td style="text-align:right;">1,1%</td></tr>
+          <tr><td>Overig</td><td style="text-align:right;">€ 1.900,00</td><td style="text-align:right;">4,5%</td></tr>
+          <tr class="mock-totaal"><td><strong>Totaal kosten</strong></td><td style="text-align:right;"><strong>€ 8.940,00</strong></td><td style="text-align:right;"><strong>21,2%</strong></td></tr>
+
+          <tr class="mock-btw-saldo"><td><strong>NETTOWINST (voor IB)</strong></td><td style="text-align:right;"><strong>€ 33.240,00</strong></td><td style="text-align:right;"><strong>78,8%</strong></td></tr>
+        </tbody>
+      </table>
+      <p class="mock-note">Winstmarge 78,8% — uitstekend (norm: ≥ 20%). Met zelfstandigenaftrek + MKB-vrijstelling daalt belastbaar bedrag naar circa € 24.275.</p>
+    </div>
+
+    <!-- CASHFLOW — geldstromen per maand -->
+    <div class="mock-pane" data-mock-pane="cashflow">
+      <h3 class="mock-h3">Cashflow 2026 · maand-voor-maand</h3>
+      <table class="mock-table">
+        <thead><tr><th>Maand</th><th style="text-align:right;">Inkomend</th><th style="text-align:right;">Uitgaand</th><th style="text-align:right;">Netto</th><th style="text-align:right;">Banksaldo eind</th></tr></thead>
+        <tbody>
+          <tr><td>Januari</td><td style="text-align:right;color:#1B5E20;">€ 7.260,00</td><td style="text-align:right;color:#B91C1C;">−€ 1.880,00</td><td style="text-align:right;">€ 5.380,00</td><td style="text-align:right;">€ 11.380,00</td></tr>
+          <tr><td>Februari</td><td style="text-align:right;color:#1B5E20;">€ 4.479,00</td><td style="text-align:right;color:#B91C1C;">−€ 1.420,00</td><td style="text-align:right;">€ 3.059,00</td><td style="text-align:right;">€ 14.439,00</td></tr>
+          <tr><td>Maart</td><td style="text-align:right;color:#1B5E20;">€ 9.734,00</td><td style="text-align:right;color:#B91C1C;">−€ 2.100,00</td><td style="text-align:right;">€ 7.634,00</td><td style="text-align:right;">€ 22.073,00</td></tr>
+          <tr><td>April</td><td style="text-align:right;color:#1B5E20;">€ 8.290,00</td><td style="text-align:right;color:#B91C1C;">−€ 1.860,00</td><td style="text-align:right;">€ 6.430,00</td><td style="text-align:right;">€ 28.503,00</td></tr>
+          <tr><td>Mei (tm 12-05)</td><td style="text-align:right;color:#1B5E20;">€ 0,00</td><td style="text-align:right;color:#B91C1C;">−€ 5,00</td><td style="text-align:right;">−€ 5,00</td><td style="text-align:right;">€ 28.500,00</td></tr>
+          <tr class="mock-totaal"><td><strong>YTD</strong></td><td style="text-align:right;"><strong>€ 29.763,00</strong></td><td style="text-align:right;"><strong>−€ 7.265,00</strong></td><td style="text-align:right;"><strong>€ 22.498,00</strong></td><td style="text-align:right;"><strong>€ 28.500,00</strong></td></tr>
+        </tbody>
+      </table>
+      <div class="mock-sectiekop-klein">FORECAST KOMENDE 30 DAGEN</div>
+      <table class="mock-table">
+        <thead><tr><th>Bron</th><th style="text-align:right;">Verwacht</th><th>Vervaldatum</th></tr></thead>
+        <tbody>
+          <tr><td>Factuur 2026-041 (Meijer &amp; Zn)</td><td style="text-align:right;">€ 2.420,00</td><td>05-06-2026</td></tr>
+          <tr><td>Factuur 2026-040 (Kuipers &amp; Co)</td><td style="text-align:right;">€ 1.815,00</td><td>02-06-2026</td></tr>
+          <tr><td>Factuur 2026-039 (Bloem Ontwerp)</td><td style="text-align:right;color:#B91C1C;">€ 3.200,00</td><td>17-04-2026 ⚠️ vervallen</td></tr>
+          <tr><td>BTW Q2-aangifte (gereserveerd)</td><td style="text-align:right;color:#B91C1C;">−€ 1.015,00</td><td>31-07-2026</td></tr>
+          <tr class="mock-totaal"><td><strong>Verwacht banksaldo over 30d</strong></td><td style="text-align:right;"><strong>€ 34.920,00</strong></td><td></td></tr>
+        </tbody>
+      </table>
+      <p class="mock-note">Cash runway &gt; 12 maanden bij huidige burn-rate van € 2.980/mnd. Geen liquiditeitsrisico.</p>
+    </div>
+
+    <!-- DEBITEUREN — wie betaalt nog niet -->
+    <div class="mock-pane" data-mock-pane="debiteuren">
+      <h3 class="mock-h3">Debiteuren · openstaande verkoopfacturen per 12-05-2026</h3>
+      <div class="mock-besparing-grid">
+        <div class="mock-besp"><span class="mock-besp-label">Totaal open</span><span class="mock-besp-bedrag">€ 7.435</span></div>
+        <div class="mock-besp"><span class="mock-besp-label">Waarvan vervallen</span><span class="mock-besp-bedrag">€ 3.200</span></div>
+        <div class="mock-besp"><span class="mock-besp-label">Gem. dagen tot betaling</span><span class="mock-besp-bedrag">21</span></div>
+      </div>
+      <table class="mock-table">
+        <thead><tr><th>Factuur</th><th>Klant</th><th>Datum</th><th>Vervalt</th><th style="text-align:right;">Bedrag</th><th>Leeftijd</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>2026-039</td><td>Bloem Ontwerp</td><td>18-03-2026</td><td>17-04-2026</td><td style="text-align:right;">€ 3.200,00</td><td>56 dagen</td><td><span class="badge rood">Herinnering #3 (vandaag)</span></td></tr>
+          <tr><td>2026-040</td><td>Kuipers &amp; Co</td><td>02-05-2026</td><td>02-06-2026</td><td style="text-align:right;">€ 1.815,00</td><td>10 dagen</td><td><span class="badge oranje">Open</span></td></tr>
+          <tr><td>2026-041</td><td>Meijer &amp; Zn</td><td>08-05-2026</td><td>05-06-2026</td><td style="text-align:right;">€ 2.420,00</td><td>4 dagen</td><td><span class="badge oranje">Verzonden</span></td></tr>
+        </tbody>
+      </table>
+      <div class="mock-sectiekop-klein">HERINNERING-CADANS (automatisch)</div>
+      <table class="mock-table">
+        <thead><tr><th>Stap</th><th>Wanneer</th><th>Toon</th><th>Kanaal</th></tr></thead>
+        <tbody>
+          <tr><td>#1 Vriendelijke reminder</td><td>+3 dagen na vervaldatum</td><td>Beleefd</td><td>E-mail</td></tr>
+          <tr><td>#2 Tweede herinnering</td><td>+10 dagen</td><td>Zakelijk</td><td>E-mail</td></tr>
+          <tr><td>#3 Aanmaning</td><td>+21 dagen</td><td>Direct, met opmerking renteclausule</td><td>E-mail</td></tr>
+          <tr><td>#4 Incasso-voorbereiding</td><td>+45 dagen</td><td>Stop, owner-melding</td><td>E-mail + dashboard</td></tr>
+        </tbody>
+      </table>
+      <p class="mock-note">Boekhoudbaar stuurt automatisch tot stap #3. Stap #4 vraagt jouw bevestiging (geen ongewenste escalatie).</p>
+    </div>
+
+    <!-- CREDITEUREN — wat moet je betalen -->
+    <div class="mock-pane" data-mock-pane="crediteuren">
+      <h3 class="mock-h3">Crediteuren · openstaande inkoopfacturen per 12-05-2026</h3>
+      <div class="mock-besparing-grid">
+        <div class="mock-besp"><span class="mock-besp-label">Totaal te betalen</span><span class="mock-besp-bedrag">€ 1.240</span></div>
+        <div class="mock-besp"><span class="mock-besp-label">Waarvan deze week</span><span class="mock-besp-bedrag">€ 480</span></div>
+        <div class="mock-besp"><span class="mock-besp-label">Volgende grote post</span><span class="mock-besp-bedrag">€ 350</span></div>
+      </div>
+      <table class="mock-table">
+        <thead><tr><th>Leverancier</th><th>Categorie</th><th>Datum factuur</th><th>Vervalt</th><th style="text-align:right;">Bedrag incl.</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>WeWork Amsterdam</td><td>Kantoor/werkruimte</td><td>02-05-2026</td><td>01-06-2026</td><td style="text-align:right;">€ 350,00</td><td><span class="badge oranje">Open</span></td></tr>
+          <tr><td>KPN Zakelijk</td><td>Telefoon/internet</td><td>05-05-2026</td><td>15-05-2026</td><td style="text-align:right;">€ 480,00</td><td><span class="badge oranje">Deze week</span></td></tr>
+          <tr><td>BoekHorst</td><td>Studie/opleiding</td><td>10-04-2026</td><td>10-05-2026</td><td style="text-align:right;">€ 200,00</td><td><span class="badge rood">Verlopen</span></td></tr>
+          <tr><td>Adobe Creative</td><td>Software</td><td>02-05-2026</td><td>02-06-2026</td><td style="text-align:right;">€ 210,00</td><td><span class="badge oranje">Open</span></td></tr>
+        </tbody>
+      </table>
+      <p class="mock-note">Tip: alle facturen met "Bank importeren" automatisch matchen — bij betaling vandaag stuurt Boekhoudbaar de bevestiging.</p>
+    </div>
+
     <!-- INSTELLINGEN — toont dat alles in één tabblad configureerbaar is -->
     <div class="mock-pane" data-mock-pane="instellingen">
       <table class="mock-table mock-table-instellingen">
@@ -546,6 +703,7 @@ footer a{color:rgba(255,255,255,.7);}
       </table>
       <p class="mock-note">Eén plek voor alle instellingen. Belastingtarieven worden jaarlijks automatisch ververst — laat leeg om de wettelijke waarde te gebruiken, vul in om te overschrijven.</p>
     </div>
+    </div>
   </div>
 
   <!-- Sheets-stijl tabbladen ONDERAAN, zoals in echte Google Sheets -->
@@ -561,12 +719,14 @@ footer a{color:rgba(255,255,255,.7);}
     <button class="sheets-tab" data-mock-tab="btw">BTW Aangifte ▾</button>
     <button class="sheets-tab sheets-tab-grijs">Grootboekschema</button>
     <button class="sheets-tab" data-mock-tab="balans">Balans ▾</button>
-    <button class="sheets-tab sheets-tab-grijs">W&amp;V Rekening</button>
-    <button class="sheets-tab sheets-tab-grijs">Cashflow</button>
+    <button class="sheets-tab" data-mock-tab="wenv">W&amp;V Rekening ▾</button>
+    <button class="sheets-tab" data-mock-tab="cashflow">Cashflow ▾</button>
+    <button class="sheets-tab" data-mock-tab="debiteuren">Debiteuren ▾</button>
+    <button class="sheets-tab" data-mock-tab="crediteuren">Crediteuren ▾</button>
     <button class="sheets-tab" data-mock-tab="belasting">Belastingadvies ▾</button>
-    <button class="sheets-tab sheets-tab-meer">+3 ▸</button>
+    <button class="sheets-tab sheets-tab-grijs">Jaarrekening</button>
   </div>
-  <p class="mock-tabs-note">Toont 8 van de 15 tabbladen. Tabs met ▾ zijn klikbaar in deze demo.</p>
+  <p class="mock-tabs-note">12 klikbare tabbladen. Alle data is voorbeeld — in jouw eigen versie staan jouw cijfers. Grijze tabs zijn in het product wel beschikbaar (Banktransacties, Relaties, Grootboekschema, Jaarrekening), in deze demo niet uitgewerkt.</p>
 </div>
 
 <!-- "Boekhoudbaar"-menu preview — toont 1-op-1 wat in het echte custom-menu zit.
@@ -749,6 +909,27 @@ footer a{color:rgba(255,255,255,.7);}
 
 <script>
   (function() {
+    // Wat de fx-balk toont per pane: cellref + waarde — versterkt de Sheets-feel
+    var formuleBalk = {
+      dashboard:   { ref: 'A1', val: 'Goedemorgen, Studio Veld' },
+      instellingen:{ ref: 'A1', val: 'START HIER — Vul deze velden eenmalig in' },
+      verkoop:     { ref: 'A2', val: 'Factuurnummer · Datum · Klant · Bedrag · Status' },
+      inkoop:      { ref: 'A2', val: 'Datum · Leverancier · Categorie · BTW · Incl.' },
+      btw:         { ref: 'A1', val: 'AANGIFTE OMZETBELASTING' },
+      balans:      { ref: 'A1', val: 'Balans per 12 mei 2026' },
+      wenv:        { ref: 'A1', val: 'Winst- & Verliesrekening · 01-01-2026 t/m 12-05-2026' },
+      cashflow:    { ref: 'A1', val: 'Cashflow 2026 · maand-voor-maand' },
+      debiteuren:  { ref: 'A1', val: 'Debiteuren · openstaande verkoopfacturen per 12-05-2026' },
+      crediteuren: { ref: 'A1', val: 'Crediteuren · openstaande inkoopfacturen per 12-05-2026' },
+      belasting:   { ref: 'A1', val: 'Belastingadvies & aftrekposten 2026' }
+    };
+    function updateFormuleBalk(doel) {
+      var fb = formuleBalk[doel] || { ref: 'A1', val: '' };
+      var refEl = document.querySelector('.sheets-cellref');
+      var valEl = document.querySelector('.sheets-cellval');
+      if (refEl) refEl.textContent = fb.ref;
+      if (valEl) valEl.textContent = fb.val;
+    }
     document.querySelectorAll('.sheets-tab[data-mock-tab]').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var doel = btn.getAttribute('data-mock-tab');
@@ -757,7 +938,8 @@ footer a{color:rgba(255,255,255,.7);}
         btn.classList.add('actief');
         var pane = document.querySelector('[data-mock-pane="' + doel + '"]');
         if (pane) pane.classList.add('actief');
-        // Scroll de mock-content naar top zodat klik 1-op-1 voelt als product
+        updateFormuleBalk(doel);
+        // Scroll mock-content naar top zodat klik 1-op-1 voelt als product
         var mock = document.querySelector('.mock');
         if (mock) mock.scrollTop = 0;
       });

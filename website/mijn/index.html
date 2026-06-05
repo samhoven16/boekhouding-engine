@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Open mijn Boekhoudbaar — Boekhoudbaar</title>
+<meta name="description" content="Open jouw eigen Boekhoudbaar-administratie in Google Drive. Drie manieren om er direct bij te komen.">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/mijn/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+
+<style>
+:root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--bg:#F7F9FC;--wit:#fff;--rand:#E5EAF2;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--bg);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;}
+.hero{padding:60px 32px 24px;text-align:center;}
+.hero h1{font-size:36px;color:var(--blauw);letter-spacing:-0.02em;margin-bottom:10px;font-weight:800;}
+.hero p{font-size:17px;color:var(--grijs);max-width:640px;margin:0 auto 8px;line-height:1.6;}
+main{max-width:780px;margin:0 auto;padding:8px 24px 48px;}
+.kaart-rij{display:flex;flex-direction:column;gap:18px;margin-top:32px;}
+.kaart{background:var(--wit);border:1px solid var(--rand);border-radius:14px;padding:24px 26px;display:flex;gap:20px;align-items:flex-start;transition:border-color .15s,transform .15s;}
+.kaart:hover{border-color:var(--accent);transform:translateY(-1px);}
+.kaart-num{flex-shrink:0;width:36px;height:36px;background:var(--blauw);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;}
+.kaart-inh{flex:1;}
+.kaart h2{font-size:17px;color:var(--blauw);margin-bottom:6px;font-weight:700;}
+.kaart p{font-size:14.5px;color:var(--grijs);line-height:1.6;margin-bottom:12px;}
+.kaart a{display:inline-flex;align-items:center;gap:8px;background:var(--blauw);color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;transition:background .15s;}
+.kaart a:hover{background:var(--blauw-licht);}
+.kaart a.alt{background:var(--wit);color:var(--blauw);border:1px solid var(--rand);}
+.kaart a.alt:hover{border-color:var(--accent);color:var(--accent);background:var(--wit);}
+.kaart-bold{color:var(--blauw);font-weight:600;}
+.faq{margin-top:48px;background:var(--wit);border:1px solid var(--rand);border-radius:14px;padding:24px 26px;}
+.faq h3{font-size:15px;color:var(--blauw);margin-bottom:10px;}
+.faq p{font-size:14px;color:var(--grijs);line-height:1.6;margin-bottom:14px;}
+.faq p:last-child{margin-bottom:0;}
+.faq a{color:var(--blauw);font-weight:600;}
+footer{background:var(--blauw);color:#fff;padding:32px;text-align:center;font-size:13px;}
+footer a{color:rgba(255,255,255,.7);}
+</style>
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
+</head>
+<body>
+
+<nav aria-label="Hoofdnavigatie">
+  <div class="nav-inner">
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home">
+      <img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52">
+    </a>
+    <ul class="nav-links" id="nav-menu" role="list">
+      <li><a href="/functies/">Functies</a></li>
+      <li><a href="/vergelijking/">Vergelijking</a></li>
+      <li><a href="/demo/">Demo</a></li>
+      <li><a href="/faq/">FAQ</a></li>
+      <li class="nav-cta-desktop"><a href="/kopen" class="nav-cta">Kopen</a></li>
+    </ul>
+    <ul class="nav-mobile-actions" role="list" aria-label="Snelle acties">
+      <li class="nav-cta-mobile"><a href="/kopen" class="nav-cta">Kopen</a></li>
+      <li><button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" aria-label="Menu openen">
+        <svg class="icon-open" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg class="icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+      </button></li>
+    </ul>
+  </div>
+</nav>
+
+<section class="hero">
+  <h1>Open mijn Boekhoudbaar</h1>
+  <p>Jouw administratie staat in jouw eigen Google Drive. Drie manieren om er direct bij te komen — kies wat het snelst is.</p>
+</section>
+
+<main>
+
+<div class="kaart-rij">
+  <div class="kaart">
+    <span class="kaart-num">1</span>
+    <div class="kaart-inh">
+      <h2>Via Google Drive — zoek op naam</h2>
+      <p>Open Google Drive en typ <span class="kaart-bold">"Boekhoudbaar"</span> in het zoekvenster. Je bestand verschijnt als eerste resultaat. Klik om te openen.</p>
+      <a href="https://drive.google.com/drive/search?q=Boekhoudbaar" target="_blank" rel="noopener">
+        📂 Open Google Drive
+      </a>
+    </div>
+  </div>
+
+  <div class="kaart">
+    <span class="kaart-num">2</span>
+    <div class="kaart-inh">
+      <h2>Via je bookmark — direct openen</h2>
+      <p>In de welkomstmail die je na aankoop kreeg staat een directe link naar jouw Boekhoudbaar-Sheet. Sla die op als bladwijzer (Ctrl+D / Cmd+D) en open hem voortaan met één klik.</p>
+      <a href="#" class="alt" onclick="alert('Tip: zoek in Gmail op \\'Welkom bij Boekhoudbaar\\' — de directe link staat onderaan die mail.');return false;">
+        💌 Vind de welkomstmail
+      </a>
+    </div>
+  </div>
+
+  <div class="kaart">
+    <span class="kaart-num">3</span>
+    <div class="kaart-inh">
+      <h2>Via Google Sheets — recente bestanden</h2>
+      <p>Open Google Sheets en kijk in <span class="kaart-bold">"Onlangs"</span>. Als je vandaag of deze week Boekhoudbaar gebruikte, staat hij bovenaan. Werkt het beste vanaf desktop.</p>
+      <a href="https://docs.google.com/spreadsheets/u/0/" target="_blank" rel="noopener">
+        📊 Open Google Sheets
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="faq">
+  <h3>Kan ik niet gewoon op één knop klikken en direct bij mijn bestand komen?</h3>
+  <p>We werken eraan. Voor een directe deeplink ("Open mijn Boekhoudbaar") moet je inloggen met je Google-account zodat we jouw specifieke Drive-bestand kunnen openen. Dat zit in de roadmap voor Q3-2026. Tot dan: de drie wegen hierboven zijn altijd binnen 10 seconden.</p>
+
+  <h3>Wat als ik mijn bestand niet kan vinden?</h3>
+  <p>Je hebt mogelijk je Drive opgeruimd of het bestand per ongeluk verplaatst. Stuur een berichtje naar <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a> — we sturen je een nieuwe link binnen 1 werkdag. Je data is veilig: niets is weg, alleen verplaatst.</p>
+
+  <h3>Werkt dit ook op telefoon?</h3>
+  <p>Ja, via de Google Sheets-app op iOS/Android. Maar de meeste functies (BTW-aangifte genereren, dialogen, dashboard met grafieken) werken beter op desktop. Voor onderweg-bonnetje-fotograferen is mobiel perfect.</p>
+</div>
+
+</main>
+
+<footer>
+  <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
+  <p style="margin-top:8px;"><a href="/">Home</a> · <a href="/demo/">Demo</a> · <a href="/faq/">FAQ</a> · <a href="/voorwaarden">Voorwaarden</a> · <a href="/privacy">Privacy</a></p>
+</footer>
+
+</body></html>
