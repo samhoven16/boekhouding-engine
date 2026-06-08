@@ -385,22 +385,16 @@ function maakAutomatischeBackup_() {
     const datum = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd');
     const bestandsnaam = 'AutoBackup_' + bedrijf + '_' + datum + '.xlsx';
 
-    // Skip als backup van vandaag al bestaat (dagelijkse trigger kan 2\u00d7 runnen
-    // bij retry \u2014 voorkom Drive-vervuiling)
-    const huidigJaar = new Date().getFullYear();
-    let backupMap = null;
-    try {
-      const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
-      if (hoofdId) {
-        const hoofd = DriveApp.getFolderById(hoofdId);
-        const it = hoofd.getFoldersByName('Backups');
-        backupMap = it.hasNext() ? it.next() : hoofd.createFolder('Backups');
-      }
-    } catch (_) {}
+    // Cycle-95: backup-folder met onmiskenbare naam + README. Klant kan
+    // ze altijd nog verwijderen (folder zit in zijn Drive), maar:
+    //   - "\ud83d\udd12"-prefix + caps + "NIET WIJZIGEN" maakt intent duidelijk
+    //   - README.txt staat er ALTIJD in: bij elke run check + recreate
+    //   - Eventueel verwijderen leidt tot dagelijkse owner-alert via audit
+    const backupMap = _zoekOfMaakBackupFolder_();
     if (!backupMap) {
-      const it = DriveApp.getFoldersByName('Boekhouding Backups');
-      backupMap = it.hasNext() ? it.next() : DriveApp.createFolder('Boekhouding Backups');
+      throw new Error('Geen backup-folder beschikbaar (geen DRIVE_HOOFDMAP gevonden en Drive-create faalde)');
     }
+    _zorgVoorBackupReadme_(backupMap);
 
     const bestaand = backupMap.getFilesByName(bestandsnaam);
     if (bestaand.hasNext()) return;  // al gemaakt vandaag
@@ -417,19 +411,206 @@ function maakAutomatischeBackup_() {
     backupMap.createFile(blob);
     safeAuditLog_('AutoBackup', bestandsnaam + ' (' + Math.round(blob.getBytes().length / 1024) + ' KB)');
 
-    // Retentie: verwijder backups ouder dan 30 dagen
-    const grens = Date.now() - 30 * 86400000;
+    // Cycle-95: Grandfather-Father-Son retention. Voorheen: 30 dagen rolling
+    // (30 backups). Probleem (Sam): backup van 7 jun maakt die van 6 jun
+    // overbodig \u2014 pure Drive-vervuiling. GFS-strategie geeft je dezelfde
+    // recovery-capability met circa 20 backups voor \u00e9lke datum tot 5 jaar:
+    //   - Laatste 7 dagelijkse (recente granulaire recovery)
+    //   - Eerste-van-de-maand backups (oneindig bewaard \u2014 perfect voor
+    //     BTW-aangifte audit, jaarrekening, Belastingdienst-controle)
+    //   - Andere backups worden veilig opgeschoond
+    const teBehouden = _bepaalBehoudenBackups_(backupMap);
     const oudIt = backupMap.getFilesByType(MimeType.MICROSOFT_EXCEL);
+    let opgeschoond = 0;
     while (oudIt.hasNext()) {
       const f = oudIt.next();
-      if (f.getName().startsWith('AutoBackup_') && f.getDateCreated().getTime() < grens) {
-        try { f.setTrashed(true); } catch (_) {}
-      }
+      const naam = f.getName();
+      if (!naam.startsWith('AutoBackup_')) continue;
+      if (teBehouden[f.getId()]) continue;
+      try {
+        f.setTrashed(true);
+        opgeschoond++;
+      } catch (_) {}
+    }
+    if (opgeschoond > 0) {
+      safeAuditLog_('AutoBackup retentie', opgeschoond + ' oude backup(s) opgeschoond (GFS-strategie)');
     }
   } catch (e) {
     Logger.log('maakAutomatischeBackup_ fout: ' + e.message);
     safeAuditLog_('FOUT AutoBackup', e.message);
   }
+}
+
+/**
+ * Vindt of maakt de backup-folder. Locatie-voorkeur:
+ *   1. DRIVE_HOOFDMAP_<jaar>/\ud83d\udd12 Boekhouding Backups (NIET WIJZIGEN)
+ *   2. (fallback) Drive root/\ud83d\udd12 Boekhouding Backups (NIET WIJZIGEN)
+ *
+ * Voor bestaande klanten met oude "Backups"-folder: die wordt nog
+ * herkend (folder-merge), zodat er geen verlies van historische backups
+ * optreedt bij upgrade.
+ *
+ * @private
+ */
+function _zoekOfMaakBackupFolder_() {
+  const NIEUWE_NAAM = '\ud83d\udd12 Boekhouding Backups (NIET WIJZIGEN)';
+  const OUDE_NAMEN  = ['Backups', 'Boekhouding Backups'];
+  const huidigJaar  = new Date().getFullYear();
+  const props       = PropertiesService.getScriptProperties();
+
+  // Locatie 1: subfolder van DRIVE_HOOFDMAP van huidig jaar
+  let parent = null;
+  try {
+    const hoofdId = props.getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
+    if (hoofdId) parent = DriveApp.getFolderById(hoofdId);
+  } catch (_) {}
+
+  function vindOfMaakIn_(parentFolder) {
+    if (!parentFolder) return null;
+    // Probeer nieuwe naam
+    let it = parentFolder.getFoldersByName(NIEUWE_NAAM);
+    if (it.hasNext()) return it.next();
+    // Probeer oude namen \u2014 als gevonden, hernoemen
+    for (let i = 0; i < OUDE_NAMEN.length; i++) {
+      it = parentFolder.getFoldersByName(OUDE_NAMEN[i]);
+      if (it.hasNext()) {
+        const oud = it.next();
+        try { oud.setName(NIEUWE_NAAM); } catch (_) {}
+        return oud;
+      }
+    }
+    // Maak nieuwe
+    return parentFolder.createFolder(NIEUWE_NAAM);
+  }
+
+  let folder = vindOfMaakIn_(parent);
+  if (folder) return folder;
+
+  // Fallback: Drive root
+  try {
+    const rootIt = DriveApp.getFoldersByName(NIEUWE_NAAM);
+    if (rootIt.hasNext()) return rootIt.next();
+    for (let i = 0; i < OUDE_NAMEN.length; i++) {
+      const oudIt = DriveApp.getFoldersByName(OUDE_NAMEN[i]);
+      if (oudIt.hasNext()) {
+        const oud = oudIt.next();
+        try { oud.setName(NIEUWE_NAAM); } catch (_) {}
+        return oud;
+      }
+    }
+    return DriveApp.createFolder(NIEUWE_NAAM);
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Schrijft een README.txt in de backup-folder met instructies en
+ * waarschuwing. Idempotent: als README bestaat \u00e9n geen wijziging nodig,
+ * wordt niets aangeraakt. Doel: klant ziet bij openen direct dat hier
+ * iets kritisch staat.
+ *
+ * @private
+ */
+function _zorgVoorBackupReadme_(folder) {
+  try {
+    const README_NAAM = '\u26a0\ufe0f LEES MIJ \u2014 Wat is deze folder.txt';
+    const it = folder.getFilesByName(README_NAAM);
+    if (it.hasNext()) return; // al aanwezig
+
+    const inhoud =
+      '\u26a0\ufe0f NIET VERWIJDEREN OF VERPLAATSEN\n' +
+      '==================================\n\n' +
+      'Deze folder bevat automatische dagelijkse backups van je\n' +
+      'Boekhoudbaar-administratie. Boekhoudbaar maakt elke nacht\n' +
+      'een veilige kopie (.xlsx) zodat je nooit data kunt kwijtraken.\n\n' +
+      'Wat staat hier?\n' +
+      '  \u2022 AutoBackup_<bedrijf>_<datum>.xlsx \u2014 \u00e9\u00e9n per dag\n' +
+      '  \u2022 Oude backups worden automatisch opgeschoond:\n' +
+      '      - Laatste 7 dagen: ALLE dagelijkse backups\n' +
+      '      - Daarna: alleen de eerste van elke maand (oneindig)\n\n' +
+      '\u26a0\ufe0f NIET DOEN:\n' +
+      '  \u2022 Deze folder verwijderen of hernoemen\n' +
+      '  \u2022 Backups handmatig verwijderen (laat het systeem dit doen)\n' +
+      '  \u2022 De folder verplaatsen naar een andere Drive-locatie\n\n' +
+      '\u2713 WEL DOEN:\n' +
+      '  \u2022 Open een backup-bestand als je een eerdere versie nodig hebt\n' +
+      '  \u2022 Download maandelijks een kopie naar lokale schijf als extra ZEKERHEID\n\n' +
+      'Per ongeluk verwijderd?\n' +
+      '  \u2192 Check je Prullenbak in Google Drive (30 dagen recovery)\n' +
+      '  \u2192 Of mail support@boekhoudbaar.nl met je licentiesleutel\n\n' +
+      'Boekhoudbaar \u2014 gegenereerd op ' + new Date().toISOString().slice(0, 10);
+
+    folder.createFile(README_NAAM, inhoud, MimeType.PLAIN_TEXT);
+  } catch (e) {
+    Logger.log('Backup-README schrijven faalde: ' + e.message);
+  }
+}
+
+/**
+ * Grandfather-Father-Son retentie. Returnt een object {fileId: true}
+ * met alle backups die BEHOUDEN moeten worden. Caller verwijdert alle
+ * andere AutoBackup-bestanden.
+ *
+ * Strategie:
+ *   1. Laatste 7 dagelijkse backups (granulair voor recente fouten)
+ *   2. Eerste-van-de-maand backup voor elke afgelopen maand (oneindig
+ *      bewaard \u2014 kritiek voor BTW-audit en jaarrekening)
+ *
+ * Bij gelijke datum-keuze: vroegste backup-bestand-creatie wint (=
+ * meest stabiel ankerpunt).
+ *
+ * @private
+ * @returns {Object<string, boolean>} map van fileId naar true
+ */
+function _bepaalBehoudenBackups_(folder) {
+  const teBehouden = {};
+  const nu = new Date();
+  const nu7d = new Date(nu.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  // Verzamel alle AutoBackup-bestanden + parse datum uit naam
+  const it = folder.getFilesByType(MimeType.MICROSOFT_EXCEL);
+  const bestanden = [];
+  while (it.hasNext()) {
+    const f = it.next();
+    const naam = f.getName();
+    if (!naam.startsWith('AutoBackup_')) continue;
+    // Naam: AutoBackup_<bedrijf>_<yyyy-MM-dd>.xlsx
+    const m = naam.match(/AutoBackup_.+?_(\d{4})-(\d{2})-(\d{2})\.xlsx$/);
+    if (!m) {
+      // Geen datum in naam \u2192 behoud altijd (legacy / handmatig)
+      teBehouden[f.getId()] = true;
+      continue;
+    }
+    bestanden.push({
+      id: f.getId(),
+      jaar: parseInt(m[1], 10),
+      maand: parseInt(m[2], 10),
+      dag: parseInt(m[3], 10),
+      datumStr: m[1] + '-' + m[2] + '-' + m[3],
+      gemaakt: f.getDateCreated().getTime(),
+    });
+  }
+
+  // Regel 1: laatste 7 dagen volledig
+  bestanden.forEach(function(b) {
+    const bd = new Date(b.jaar, b.maand - 1, b.dag);
+    if (bd >= nu7d) teBehouden[b.id] = true;
+  });
+
+  // Regel 2: \u00e9\u00e9n per (jaar, maand) \u2014 voorkeur voor vroegste datum in die maand
+  const perMaand = {};
+  bestanden.forEach(function(b) {
+    const sleutel = b.jaar + '-' + b.maand;
+    if (!perMaand[sleutel] || b.dag < perMaand[sleutel].dag) {
+      perMaand[sleutel] = b;
+    }
+  });
+  Object.keys(perMaand).forEach(function(k) {
+    teBehouden[perMaand[k].id] = true;
+  });
+
+  return teBehouden;
 }
 
 // ─────────────────────────────────────────────
