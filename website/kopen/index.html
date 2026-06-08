@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Doorsturen naar veilige checkout — Boekhoudbaar</title>
+<meta name="description" content="Je wordt doorgestuurd naar de veilige Boekhoudbaar-checkout via Google Apps Script.">
+<meta name="robots" content="noindex,follow">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+<link rel="stylesheet" href="/animations.css">
+<!-- Server-side meta-redirect als fallback bij no-JS: na 2 sec doorklikken. -->
+<meta http-equiv="refresh" content="2;url=https://script.google.com/macros/s/AKfycbyq5Xrvh4bFXkcjpjsdaPS-UJm3b7h-X7kGyfdTnDNcNS2brUX0q86pRU7Q2nSMCOWsMg/exec">
+
+<style>
+:root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--bg:#F7F9FC;--wit:#fff;--rand:#E5EAF2;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--bg);line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.box{background:var(--wit);max-width:480px;width:100%;border:1px solid var(--rand);border-radius:14px;padding:36px 32px;text-align:center;box-shadow:0 8px 32px rgba(13,27,78,.08);}
+.logo{display:flex;justify-content:center;margin-bottom:20px;}
+.logo img{height:40px;}
+.spinner{width:44px;height:44px;margin:0 auto 18px;border:3px solid var(--rand);border-top-color:var(--accent);border-radius:50%;animation:spin 0.9s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+h1{font-size:22px;color:var(--blauw);margin-bottom:8px;font-weight:700;}
+p{font-size:14.5px;color:var(--grijs);margin-bottom:18px;line-height:1.6;}
+.btn{display:inline-block;background:var(--blauw);color:#fff;padding:12px 26px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14.5px;margin-bottom:14px;transition:background .15s;}
+.btn:hover{background:var(--blauw-licht);}
+.uitleg{font-size:12.5px;color:var(--grijs);background:var(--bg);border-radius:8px;padding:12px 14px;text-align:left;line-height:1.55;margin-top:14px;}
+.uitleg strong{color:var(--blauw);}
+.terug{display:inline-block;margin-top:16px;font-size:13px;color:var(--grijs);text-decoration:none;}
+.terug:hover{color:var(--blauw);}
+</style>
+</head>
+<body>
+
+<div class="box">
+  <div class="logo"><img src="/logo.svg" alt="Boekhoudbaar" width="180" height="36"></div>
+  <div class="spinner" aria-hidden="true"></div>
+  <h1>Je gaat naar de veilige checkout</h1>
+  <p>Boekhoudbaar gebruikt Google Apps Script + Mollie voor de betaling. Volkomen veilig — je betaalt via iDEAL, creditcard of Apple/Google Pay.</p>
+  <a href="https://script.google.com/macros/s/AKfycbyq5Xrvh4bFXkcjpjsdaPS-UJm3b7h-X7kGyfdTnDNcNS2brUX0q86pRU7Q2nSMCOWsMg/exec" class="btn" id="ga-naar-checkout">Direct doorgaan →</a>
+  <div class="uitleg">
+    <strong>Waarom een tussenpagina?</strong> Boekhoudbaar's checkout draait op Google Apps Script (een Google-product). De URL wordt automatisch gegenereerd door Google en kan er technisch uitzien. Dat is normaal en veilig — je gegevens gaan rechtstreeks naar Mollie, niet naar Google.
+  </div>
+  <a href="/" class="terug">← Terug naar boekhoudbaar.nl</a>
+</div>
+
+<script>
+  // Auto-redirect na 1.5s — sneller dan meta-refresh, en met fallback als JS uit staat
+  (function() {
+    var doel = 'https://script.google.com/macros/s/AKfycbyq5Xrvh4bFXkcjpjsdaPS-UJm3b7h-X7kGyfdTnDNcNS2brUX0q86pRU7Q2nSMCOWsMg/exec';
+    // Behoud eventuele query-params (bijv. ?ref=affiliate-code voor partner-tracking)
+    var qs = window.location.search || '';
+    setTimeout(function() {
+      window.location.href = doel + qs;
+    }, 1500);
+  })();
+</script>
+
+</body></html>

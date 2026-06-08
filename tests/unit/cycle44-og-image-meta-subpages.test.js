@@ -19,7 +19,7 @@ const PAGES = [
   { file: 'website/over/index.html',          type: 'jpeg',    altPattern: /Sam Hoven/i },
   { file: 'website/faq/index.html',           type: 'svg+xml', altPattern: /Boekhoudbaar/i },
   { file: 'website/functies/index.html',      type: 'svg+xml', altPattern: /Boekhoudbaar/i },
-  { file: 'website/transparantie.html',       type: 'svg+xml', altPattern: /Boekhoudbaar/i },
+  { file: 'website/transparantie/index.html',       type: 'svg+xml', altPattern: /Boekhoudbaar/i },
   { file: 'website/vergelijking/index.html',  type: 'svg+xml', altPattern: /Boekhoudbaar/i },
   { file: 'website/en/index.html',            type: 'svg+xml', altPattern: /Boekhoudbaar/i },
 ];
@@ -49,7 +49,7 @@ describe('CYCLE 44: og:image meta op 7 sub-pages', () => {
   });
 
   test('Transparantie krijgt ook twitter:image:alt', () => {
-    const html = fs.readFileSync(path.resolve(__dirname, '../../website/transparantie.html'), 'utf8');
+    const html = fs.readFileSync(path.resolve(__dirname, '../../website/transparantie/index.html'), 'utf8');
     expect(html).toMatch(/<meta name="twitter:image:alt" content="[^"]{10,}"/);
   });
 
