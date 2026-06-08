@@ -24,7 +24,7 @@ const path = require('path');
 const SUBPAGES = [
   'website/vergelijking/index.html',
   'website/over/index.html',
-  'website/transparantie.html',
+  'website/transparantie/index.html',
   'website/functies/index.html',
 ];
 
