@@ -522,9 +522,22 @@ function _zorgVoorBackupReadme_(folder) {
       '\u26a0\ufe0f NIET VERWIJDEREN OF VERPLAATSEN\n' +
       '==================================\n\n' +
       'Deze folder bevat automatische dagelijkse backups van je\n' +
-      'Boekhoudbaar-administratie. Boekhoudbaar maakt elke nacht\n' +
-      'een veilige kopie (.xlsx) zodat je nooit data kunt kwijtraken.\n\n' +
-      'Wat staat hier?\n' +
+      'Boekhoudbaar-administratie.\n\n' +
+      'WAT ZIT ER WEL IN ELKE BACKUP (.xlsx)\n' +
+      '  \u2713 Alle data: facturen, journaalposten, grootboek, BTW,\n' +
+      '    klanten, instellingen \u2014 alles wat je hebt ingevoerd\n' +
+      '  \u2713 Formules en cel-format\n\n' +
+      'WAT ZIT ER NIET IN (eerlijk gezegd)\n' +
+      '  \u2717 De Apps Script code (knoppen, dialogen, automatisering).\n' +
+      '    Reden: de Drive .xlsx-export neemt ALLEEN de spreadsheet\n' +
+      '    mee, niet het gekoppelde script-project.\n\n' +
+      'WAT BETEKENT DIT VOOR RECOVERY?\n' +
+      '  Bij verlies van je hoofd-Sheet kun je je data 100% herstellen:\n' +
+      '   1. Open de meest recente backup \u2192 je hebt al je cijfers\n' +
+      '   2. Mail support@boekhoudbaar.nl met je licentiesleutel\n' +
+      '      \u2192 wij sturen een verse template (met de code erin)\n' +
+      '   3. Kopieer je data uit de backup naar de nieuwe template\n\n' +
+      'Wat staat hier exact?\n' +
       '  \u2022 AutoBackup_<bedrijf>_<datum>.xlsx \u2014 \u00e9\u00e9n per dag\n' +
       '  \u2022 Oude backups worden automatisch opgeschoond:\n' +
       '      - Laatste 7 dagen: ALLE dagelijkse backups\n' +
