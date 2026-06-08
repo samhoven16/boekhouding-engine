@@ -259,6 +259,7 @@ function onOpen() {
     .addSeparator()
     .addSubMenu(ui.createMenu('Instellingen')
       .addItem('Eerste keer instellen (setup)', 'setup')
+      .addItem('🦅 Migreer vanuit Moneybird (XAF-import)', 'openMoneybirdImportDialoog')
       .addSeparator()
       .addItem('Bedrijfsstijl (logo & kleur)', 'openBrandingInstellingen')
       .addItem('Google Drive mappen', 'toonDriveStructuur')

@@ -216,6 +216,18 @@ function _bouwGrootboekXml_(ss) {
     const eersteCijfer = code.charAt(0);
     const accTp = (eersteCijfer >= '4' && eersteCijfer <= '9') ? 'P' : 'B';
     xml += '        <accTp>' + accTp + '</accTp>\n';
+    // K2-Accountant (criticus-rapport): RGS NL-codering toevoegen zodat
+    // Caseware/Visma/Twinfield/Pinkweb/Exact direct kunnen mappen
+    // zonder handmatige rekening-koppeling per cliënt. RGS-tabel staat
+    // in src/RgsMapping.gs. Niet-gemapte rekeningen krijgen geen tag —
+    // accountant kan die handmatig invullen in zijn ontvangst-systeem.
+    if (typeof getRgsCode_ === 'function') {
+      const rgs = getRgsCode_(code);
+      if (rgs) {
+        xml += '        <leadCode>' + _xafEsc_(rgs) + '</leadCode>\n';
+        xml += '        <leadDescription>RGS NL 3.5</leadDescription>\n';
+      }
+    }
     xml += '      </ledgerAccount>\n';
   }
   return xml;

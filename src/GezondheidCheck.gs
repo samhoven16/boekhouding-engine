@@ -354,9 +354,56 @@ function controleerBalans_(ss) {
   }
 }
 
-// ─────────────────────────────────────────────
-//  CHECK: REFERENTIËLE INTEGRITEIT
-// ─────────────────────────────────────────────
+/**
+ * Strikte balans-controle voor jaarrekening-context.
+ *
+ * Verschil met controleerBalans_:
+ *   - controleerBalans_       : dagelijkse gezondheids-check, drempel €0,05
+ *                               (tolereert floating-point ruis tijdens lopend jaar)
+ *   - controleerBalansStrikt_ : jaarrekening-eis, drempel €0,005
+ *                               (boekingen worden al op €0,01 afgerond;
+ *                                meer drift betekent dat er ergens een
+ *                                journaalpost scheef loopt)
+ *
+ * Aanroepen vóór jaarafsluiting / accountant-export / SBR-deponering.
+ * Returns hetzelfde shape als controleerBalans_: { check, status, bericht }.
+ */
+function controleerBalansStrikt_() {
+  try {
+    const ss = getSpreadsheet_();
+    const gb = ss && ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
+    if (!gb) return { check: 'Balans (strikt)', status: 'INFO', bericht: 'Grootboekschema niet gevonden.' };
+
+    const data = gb.getDataRange().getValues();
+    let totaalActiva = 0;
+    let totaalPassiva = 0;
+    for (let i = 1; i < data.length; i++) {
+      const bw = String(data[i][4] || '');
+      const saldo = parseFloat(data[i][5]) || 0;
+      if (bw === 'Activa')  totaalActiva  += saldo;
+      if (bw === 'Passiva') totaalPassiva += saldo;
+    }
+    const verschil = Math.abs(totaalActiva - totaalPassiva);
+
+    if (verschil < 0.005) {
+      return {
+        check: 'Balans (strikt — jaarrekening)',
+        status: 'OK',
+        bericht: `Activa en passiva sluiten exact (${formatBedrag_(totaalActiva)}).`,
+      };
+    }
+    return {
+      check: 'Balans (strikt — jaarrekening)',
+      status: 'KRITIEK',
+      bericht: `Verschil ${formatBedrag_(verschil)} tussen activa (${formatBedrag_(totaalActiva)}) ` +
+               `en passiva (${formatBedrag_(totaalPassiva)}). Voor jaarrekening MOET dit < €0,005 zijn. ` +
+               `Loop de journaalposten van december na — er staat ergens een afgerond bedrag scheef. ` +
+               `Tip: Boekhoudbaar → Geavanceerd → Saldi herberekenen.`,
+    };
+  } catch (e) {
+    return { check: 'Balans (strikt — jaarrekening)', status: 'FOUT', bericht: e.message };
+  }
+}
 //
 // Controleert of alle factuur-verwijzingen naar Relaties geldig zijn.
 // Verweesde facturen (klantId niet in Relaties) ontstaan als klant een
