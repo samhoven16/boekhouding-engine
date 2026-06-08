@@ -62,10 +62,10 @@ function toonWelkomstWizard() {
   // Stap 1: Welkom
   const stap1 = ui.alert(
     '🎉 Welkom bij Boekhoudbaar!',
-    'Fijn dat u ons programma heeft gekozen.\n\n' +
-    'In de volgende stappen helpen we u in 3 minuten op weg:\n\n' +
-    '  ✅ Stap 1: Uw licentie activeren\n' +
-    '  ✅ Stap 2: Uw bedrijfsgegevens invullen\n' +
+    'Fijn dat je voor Boekhoudbaar hebt gekozen.\n\n' +
+    'In de volgende stappen helpen we je in 3 minuten op weg:\n\n' +
+    '  ✅ Stap 1: Je licentie activeren\n' +
+    '  ✅ Stap 2: Je bedrijfsgegevens invullen\n' +
     '  ✅ Stap 3: Klaar voor gebruik!\n\n' +
     'Druk op OK om te beginnen.',
     ui.ButtonSet.OK_CANCEL
@@ -80,9 +80,9 @@ function toonWelkomstWizard() {
 
   // Stap 3: Bedrijfsgegevens
   const stap3 = ui.alert(
-    '📝 Stap 2: Uw bedrijfsgegevens',
-    'Om facturen te maken heeft het programma uw bedrijfsgegevens nodig.\n\n' +
-    'In het tabblad "Instellingen" kunt u invullen:\n' +
+    '📝 Stap 2: Je bedrijfsgegevens',
+    'Om facturen te maken heeft Boekhoudbaar je bedrijfsgegevens nodig.\n\n' +
+    'In het tabblad "Instellingen" vul je in:\n' +
     '  • Bedrijfsnaam\n' +
     '  • Adres\n' +
     '  • KvK-nummer\n' +
@@ -105,12 +105,12 @@ function toonWelkomstWizard() {
   // Stap 4: Klaar
   const stap4 = ui.alert(
     '🚀 Klaar voor gebruik!',
-    'Uw boekhouding is ingesteld.\n\n' +
-    'Wat kunt u nu doen?\n\n' +
-    '  📋 Factuur maken → Boekhouding → Nieuw invoeren\n' +
-    '  📸 Bon uploaden → Boekhouding → Bon of factuur uploaden\n' +
-    '  💬 Hulp nodig? → Boekhouding → Hulp & Assistent\n\n' +
-    'Succes met uw boekhouding!',
+    'Je boekhouding is ingesteld.\n\n' +
+    'Wat kun je nu doen?\n\n' +
+    '  📋 Factuur maken → Boekhoudbaar → Nieuwe boeking\n' +
+    '  📸 Bon uploaden → Boekhoudbaar → Bon of factuur uploaden\n' +
+    '  💬 Hulp nodig? → Boekhoudbaar → Hulp & uitleg\n\n' +
+    'Succes met je boekhouding!',
     ui.ButtonSet.OK
   );
 
@@ -186,7 +186,7 @@ input:focus,select:focus{outline:none;border-color:#2EC4B6}
 </div>
 
 <div class="veld">
-  <label>2. Startjaar van uw onderneming</label>
+  <label>2. Startjaar van je onderneming</label>
   <input id="startjaar" type="number" min="1990" max="${huidigJaar}" placeholder="${huidigJaar}" value="${huidig.startjaar || ''}">
   <div class="help">Voor startersaftrek (€2.123 in eerste 3 jaar) en starterbonus WBSO (€7.996 eerste 5 jaar).</div>
 </div>
@@ -220,7 +220,7 @@ input:focus,select:focus{outline:none;border-color:#2EC4B6}
 </div>
 
 <div class="veld">
-  <label>6. Stopt u dit jaar met uw onderneming? (optioneel)</label>
+  <label>6. Stop je dit jaar met je onderneming? (optioneel)</label>
   <input id="stakingsdatum" type="date" value="${huidig.stakingsdatum || ''}">
   <div class="help">Bij staking dit jaar: stakingsaftrek €3.630 (eenmalig per leven) + stakingslijfrente.</div>
 </div>
@@ -253,7 +253,7 @@ function opslaan() {
   google.script.run
     .withSuccessHandler(function(){
       s.className = 'status success';
-      s.textContent = '✓ Profiel opgeslagen — open Boekhouding → Belastingtips voor uw advies.';
+      s.textContent = '✓ Profiel opgeslagen — open Boekhoudbaar → Belastingtips voor je advies.';
       setTimeout(function(){ google.script.host.close(); }, 1800);
     })
     .withFailureHandler(function(e){

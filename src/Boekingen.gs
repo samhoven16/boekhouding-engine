@@ -33,6 +33,23 @@ function maakJournaalpost_(ss, opt) {
     }
   }
 
+  // ── Jaar-afsluiting check (P0-1 uit criticus-rapport + E2 uit stresstest) ─
+  // Voorkomt: klant boekt in 2026 een factuur met datum 15-11-2025 nadat JA-2025
+  // is gedaan → balans-archief raakt uit sync met actieve saldi → RJ-160 schending,
+  // Belastingdienst-audit-risico. Accountant + DR/SRE bevestigden dit als P0.
+  if (typeof jaarAlAfgesloten_ === 'function') {
+    const boekJaar = boekDatum.getFullYear();
+    if (jaarAlAfgesloten_(ss, boekJaar)) {
+      throw new Error(
+        `Jaar ${boekJaar} is afgesloten via Resultaatverwerking. ` +
+        `Een boeking met datum in een afgesloten jaar zou de gearchiveerde ` +
+        `balans uit sync brengen met de actieve grootboek-saldi. ` +
+        `Boek de correctie in het huidige jaar, of ontsluit ${boekJaar} eerst ` +
+        `via Boekhoudbaar → Geavanceerd → Jaarafsluiting ongedaan maken.`
+      );
+    }
+  }
+
   // ── Strict input-validation (zero-failure) via Invariants-module ──────
   // Vervangt inline checks (debet/credit/bedrag-validatie) door centrale
   // valideerInvariantsVoorJournaalpost_ uit Invariants.gs. Voordelen:
