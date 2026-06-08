@@ -187,7 +187,7 @@ function verwerkMollieWebhook_(payload) {
   } catch (_) {}
   if (!apiKey) return { succes: false, fout: 'Mollie API-key niet geconfigureerd' };
 
-  let status, factuurnummer;
+  let status, factuurnummer, paymentBedrag, paymentBron;
   try {
     const resp = veiligFetch_(MOLLIE_API_BASE + '/payments/' + paymentId, {
       method: 'get',
@@ -200,6 +200,8 @@ function verwerkMollieWebhook_(payload) {
     const json = JSON.parse(resp.getContentText());
     status = json.status;
     factuurnummer = (json.metadata && json.metadata.factuurnummer) || '';
+    paymentBedrag = json.amount ? parseFloat(json.amount.value) : NaN;
+    paymentBron = (json.metadata && json.metadata.bron) || '';
   } catch (e) {
     return { succes: false, fout: e.message };
   }
@@ -209,6 +211,53 @@ function verwerkMollieWebhook_(payload) {
     // idempotency-marker — Mollie kan later wél met 'paid' terugkomen.
     safeAuditLog_('Mollie webhook (geen actie)', paymentId.slice(0, 12) + ' status=' + status);
     return { succes: true, status: status };
+  }
+
+  // P0-2 (criticus-rapport Security): verifieer dat de payment-metadata
+  // overeenkomt met DEZE administratie. Voorheen werd factuurnummer uit
+  // metadata blind aan markeerVerkoopfactuurBetaald gegeven; als een
+  // payment uit een ander Boekhoudbaar-account ooit per ongeluk dezelfde
+  // factuurnummer in metadata had, kon dat een vreemde betaling laten
+  // landen. Nu drie harde checks:
+  //   1. Metadata.bron === 'boekhoudbaar' (wij hebben hem aangemaakt)
+  //   2. Factuurnummer bestaat in VERKOOPFACTUREN
+  //   3. Payment-bedrag === open factuurbedrag (tot €0,02 afronding)
+  if (paymentBron && paymentBron !== 'boekhoudbaar') {
+    safeAuditLog_('Mollie webhook geweigerd (bron mismatch)',
+      paymentId.slice(0, 12) + ' bron=' + paymentBron + ' factuur=' + factuurnummer);
+    return { succes: false, fout: 'Payment-bron is niet boekhoudbaar' };
+  }
+  try {
+    if (typeof getSpreadsheet_ === 'function') {
+      const _ss = getSpreadsheet_();
+      const _vf = _ss && _ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+      if (_vf) {
+        const _data = _vf.getDataRange().getValues();
+        let _factBedrag = null;
+        for (let i = 1; i < _data.length; i++) {
+          if (String(_data[i][0]) === String(factuurnummer)) {
+            _factBedrag = parseFloat(_data[i][6]) || parseFloat(_data[i][5]) || null;
+            break;
+          }
+        }
+        if (_factBedrag === null) {
+          safeAuditLog_('Mollie webhook geweigerd (factuur onbekend)',
+            paymentId.slice(0, 12) + ' factuur=' + factuurnummer);
+          return { succes: false, fout: 'Factuurnummer niet gevonden in administratie' };
+        }
+        if (isFinite(paymentBedrag) && Math.abs(paymentBedrag - _factBedrag) > 0.02) {
+          safeAuditLog_('Mollie webhook geweigerd (bedrag mismatch)',
+            paymentId.slice(0, 12) + ' factuur=' + factuurnummer +
+            ' verwacht=' + _factBedrag + ' ontvangen=' + paymentBedrag);
+          return { succes: false, fout: 'Bedrag mismatch (verwacht €' + _factBedrag + ', ontvangen €' + paymentBedrag + ')' };
+        }
+      }
+    }
+  } catch (_verifyErr) {
+    // Verificatie best-effort: bij interne fout (sheet niet leesbaar) loggen
+    // we maar laten we doorgaan zodat een crash niet alle betalingen
+    // blokkeert. De bedrag-check is de échte gate.
+    Logger.log('Mollie webhook metadata-verify fout: ' + _verifyErr.message);
   }
 
   // Markeer factuur betaald via bestaande functie (idempotent + LockService +
