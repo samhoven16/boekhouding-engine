@@ -2,8 +2,10 @@
 # (CF Pages _redirects ondersteunt alleen relatieve paden als bron)
 # Regel: boekhoudbaar.nl/* → https://www.boekhoudbaar.nl/$1  (301)
 
-# Checkout — doorsturen naar licentieserver
-/kopen https://script.google.com/macros/s/AKfycbyq5Xrvh4bFXkcjpjsdaPS-UJm3b7h-X7kGyfdTnDNcNS2brUX0q86pRU7Q2nSMCOWsMg/exec 302
+# Checkout — Cloudflare Pages blokt cross-origin redirects ('host_not_allowed').
+# Daarom serveren we /kopen/ als interstitial-pagina (website/kopen/index.html)
+# die client-side doorlinkt naar de Apps Script betaalpagina + query-params
+# (affiliate-codes etc.) doorgeeft.
 
 # Security.txt — RFC 9116 noemt /.well-known/security.txt als canonical,
 # maar veel scanners checken óók /security.txt — redirect voor compat.
