@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Bereken hoeveel je verliest aan je boekhoudsoftware — gratis tool</title>
+<meta name="description" content="Stop met €30/mnd betalen voor boekhouding die je niet bezit. Gratis calculator: zie hoeveel je in 5 jaar bespaart door over te stappen op Boekhoudbaar (eenmalig €49).">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/tools/besparing/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Hoeveel verlies je aan boekhoudsoftware? Reken het uit.">
+<meta property="og:description" content="Voor ZZP'ers. Gratis calculator. Zie in 5 sec hoeveel €30/mnd je over de jaren kost — en hoeveel je houdt met eenmalig €49.">
+<meta property="og:url" content="https://www.boekhoudbaar.nl/tools/besparing/">
+<meta property="og:image" content="https://www.boekhoudbaar.nl/og-image.svg">
+<meta property="og:locale" content="nl_NL">
+
+<!-- WebApplication schema voor Rich Snippets -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+  {"@type":"BreadcrumbList","itemListElement":[
+    {"@type":"ListItem","position":1,"name":"Boekhoudbaar","item":"https://www.boekhoudbaar.nl/"},
+    {"@type":"ListItem","position":2,"name":"Tools","item":"https://www.boekhoudbaar.nl/tools/"},
+    {"@type":"ListItem","position":3,"name":"Besparings-calculator","item":"https://www.boekhoudbaar.nl/tools/besparing/"}
+  ]},
+  {"@type":"WebApplication","name":"Besparings-calculator boekhoudsoftware","url":"https://www.boekhoudbaar.nl/tools/besparing/","description":"Gratis interactieve calculator die berekent hoeveel je verliest aan je huidige boekhoudsoftware-abonnement over 1, 3, 5 en 10 jaar.","applicationCategory":"FinanceApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"creator":{"@type":"Organization","name":"Boekhoudbaar","url":"https://www.boekhoudbaar.nl/"}}
+]}
+</script>
+
+<style>
+:root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--accent-bg:rgba(46,196,182,.10);--rood:#DC2626;--rood-bg:#FEF2F2;--groen:#15803D;--groen-bg:#F0FDF4;--tekst:#1A1A1A;--grijs:#5F6B7A;--bg:#F7F9FC;--wit:#fff;--rand:#E5EAF2;
+  /* Spring-physics easing curves — voelen tactiel, niet robotisch */
+  --spring:cubic-bezier(.34,1.56,.64,1);
+  --spring-zacht:cubic-bezier(.25,.46,.45,.94);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:linear-gradient(180deg,#fff 0%,var(--bg) 60%,#fff 100%);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;min-height:100vh;}
+
+/* Biophilic: organische blob die langzaam ademt — pure CSS, GPU-accel */
+.bg-blob{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(46,196,182,.12) 0%,transparent 70%);filter:blur(60px);pointer-events:none;z-index:0;animation:blob-adem 16s var(--spring-zacht) infinite;will-change:transform;}
+.bg-blob-1{top:-200px;right:-100px;}
+.bg-blob-2{bottom:-200px;left:-100px;animation-delay:-8s;background:radial-gradient(circle,rgba(13,27,78,.10) 0%,transparent 70%);}
+@keyframes blob-adem{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-30px) scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.bg-blob{animation:none}}
+
+main{max-width:880px;margin:0 auto;padding:60px 24px;position:relative;z-index:1;}
+
+.hero{text-align:center;margin-bottom:48px;}
+.eyebrow{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--accent);background:var(--accent-bg);padding:6px 14px;border-radius:20px;margin-bottom:18px;}
+h1{font-size:clamp(30px,5vw,46px);font-weight:800;color:var(--blauw);letter-spacing:-0.02em;line-height:1.1;margin-bottom:16px;}
+h1 .accent{background:linear-gradient(110deg,var(--rood) 0%,var(--blauw) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.lede{font-size:17px;color:var(--grijs);max-width:560px;margin:0 auto;line-height:1.6;}
+
+.calc{background:#fff;border:1px solid var(--rand);border-radius:20px;padding:36px 36px 32px;box-shadow:0 20px 60px rgba(13,27,78,.08),0 2px 8px rgba(13,27,78,.04);margin-bottom:32px;}
+@media (max-width:600px){.calc{padding:24px 22px;}}
+
+.input-rij{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:28px;}
+@media (max-width:600px){.input-rij{grid-template-columns:1fr;gap:16px;}}
+.input-blok label{display:block;font-size:12.5px;font-weight:700;color:var(--blauw);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;}
+.input-blok input{width:100%;font-size:32px;font-weight:800;color:var(--blauw);background:var(--bg);border:1.5px solid var(--rand);border-radius:12px;padding:18px 18px;font-family:inherit;letter-spacing:-0.02em;transition:border-color .25s var(--spring-zacht),box-shadow .25s var(--spring-zacht),transform .15s var(--spring);}
+.input-blok input:hover{border-color:rgba(46,196,182,.4);}
+.input-blok input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(46,196,182,.15);transform:translateY(-1px);}
+.input-blok .input-hint{font-size:11.5px;color:var(--grijs);margin-top:6px;font-style:italic;}
+
+/* Resultaat — dansende getallen, animeren bij elke input-wijziging */
+.resultaat{background:linear-gradient(135deg,var(--rood) 0%,#7F1D1D 100%);color:#fff;border-radius:14px;padding:26px 28px;margin-bottom:14px;position:relative;overflow:hidden;animation:res-binnen .5s var(--spring) both;}
+.resultaat-lbl{font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.7);margin-bottom:8px;}
+.resultaat-getal{font-size:clamp(38px,7vw,56px);font-weight:800;letter-spacing:-0.02em;line-height:1;color:#fff;transition:transform .35s var(--spring);will-change:transform;}
+.resultaat-sub{font-size:13.5px;color:rgba(255,255,255,.85);margin-top:6px;}
+@keyframes res-binnen{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+
+/* Periode-tabs */
+.periodes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+@media (max-width:560px){.periodes{grid-template-columns:repeat(2,1fr);}}
+.periode-btn{background:var(--bg);border:1.5px solid var(--rand);border-radius:10px;padding:10px 0;font-size:13.5px;font-weight:700;color:var(--blauw);cursor:pointer;font-family:inherit;transition:all .2s var(--spring);will-change:transform;}
+.periode-btn:hover{transform:translateY(-2px);border-color:rgba(46,196,182,.4);}
+.periode-btn.actief{background:var(--blauw);color:#fff;border-color:var(--blauw);transform:translateY(-1px);box-shadow:0 6px 18px rgba(13,27,78,.18);}
+
+/* Vergelijkings-tabel onder de calc */
+.versus{background:#fff;border:1px solid var(--rand);border-radius:16px;padding:28px 28px;margin-bottom:32px;}
+@media (max-width:600px){.versus{padding:22px 20px;}}
+.versus h2{font-size:20px;color:var(--blauw);margin-bottom:14px;letter-spacing:-0.01em;}
+.versus-rij{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;padding:14px 0;border-bottom:1px solid var(--rand);font-size:14px;align-items:center;}
+.versus-rij:last-child{border-bottom:none;}
+.versus-rij.head{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--grijs);font-weight:700;padding-bottom:10px;border-bottom:2px solid var(--rand);}
+.versus-col-lbl{color:var(--grijs);font-weight:500;}
+.versus-col-mb{color:var(--rood);font-weight:700;}
+.versus-col-bhb{color:var(--groen);font-weight:700;}
+@media (max-width:520px){.versus-rij{grid-template-columns:1.2fr 1fr 1fr;gap:8px;font-size:13px;}.versus-col-lbl{font-size:12.5px;}}
+
+/* CTA met magnetisch-achtige hover via spring-curve */
+.cta-blok{background:linear-gradient(135deg,var(--blauw) 0%,var(--blauw-licht) 100%);color:#fff;border-radius:18px;padding:36px;text-align:center;margin-bottom:32px;position:relative;overflow:hidden;}
+.cta-blok::before{content:"";position:absolute;top:-100px;right:-100px;width:240px;height:240px;background:radial-gradient(circle,rgba(46,196,182,.4) 0%,transparent 60%);border-radius:50%;filter:blur(40px);}
+.cta-blok h2{color:#fff;font-size:22px;margin-bottom:10px;letter-spacing:-0.01em;position:relative;}
+.cta-blok p{color:rgba(255,255,255,.85);font-size:15px;margin-bottom:22px;max-width:480px;margin-left:auto;margin-right:auto;position:relative;}
+.cta-btn{display:inline-block;background:var(--accent);color:var(--blauw);font-weight:800;font-size:15px;padding:16px 36px;border-radius:12px;text-decoration:none;letter-spacing:-0.01em;transition:transform .25s var(--spring),box-shadow .25s var(--spring-zacht);will-change:transform;position:relative;}
+.cta-btn:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 16px 40px rgba(46,196,182,.45);}
+.cta-btn:active{transform:translateY(-1px) scale(.98);transition:transform .08s var(--spring-zacht);}
+
+.share{text-align:center;padding:18px;background:var(--accent-bg);border:1px dashed var(--accent);border-radius:12px;margin-bottom:24px;}
+.share p{margin:0;font-size:14px;color:var(--blauw);font-weight:600;}
+.share button{margin-top:10px;background:#fff;color:var(--blauw);border:1.5px solid var(--accent);font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700;transition:all .2s var(--spring);}
+.share button:hover{background:var(--accent);color:#fff;transform:translateY(-1px);}
+.share .kopieer-melding{display:none;color:var(--groen);font-size:13px;margin-top:8px;font-weight:600;}
+.share .kopieer-melding.zichtbaar{display:block;animation:res-binnen .35s var(--spring);}
+
+.disclaimer{font-size:12.5px;color:var(--grijs);text-align:center;font-style:italic;margin-top:18px;line-height:1.6;}
+
+.nav-top{padding:24px;text-align:center;border-bottom:1px solid var(--rand);background:#fff;position:relative;z-index:2;}
+.nav-top a{color:var(--blauw);text-decoration:none;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px;transition:transform .2s var(--spring);}
+.nav-top a:hover{transform:translateX(-3px);}
+
+footer{background:var(--blauw);color:#fff;padding:32px 24px;text-align:center;font-size:13px;position:relative;z-index:1;}
+footer a{color:rgba(255,255,255,.7);}
+</style>
+<link rel="stylesheet" href="/animations.css">
+</head>
+<body>
+
+<div class="bg-blob bg-blob-1" aria-hidden="true"></div>
+<div class="bg-blob bg-blob-2" aria-hidden="true"></div>
+
+<div class="nav-top">
+  <a href="/">← Boekhoudbaar</a>
+</div>
+
+<main>
+
+  <div class="hero">
+    <span class="eyebrow">Gratis calculator · 5 seconden</span>
+    <h1>Hoeveel <span class="accent">verlies</span> je per jaar aan je boekhoudsoftware?</h1>
+    <p class="lede">Voor ZZP'ers met een SaaS-abonnement zoals Moneybird, Exact Online of e-Boekhouden. Reken zelf uit en zie wat overstappen je oplevert.</p>
+  </div>
+
+  <div class="calc">
+    <div class="input-rij">
+      <div class="input-blok">
+        <label for="prijs">Maandbedrag huidige boekhouding</label>
+        <input type="text" id="prijs" inputmode="decimal" value="30" autocomplete="off">
+        <div class="input-hint">Moneybird Starter €15, Premium €33. Exact Online v.a. €27. e-Boekhouden €18.</div>
+      </div>
+      <div class="input-blok">
+        <label for="jaren">Periode (jaren)</label>
+        <input type="text" id="jaren" inputmode="numeric" value="5" autocomplete="off">
+        <div class="input-hint">Standaard 5 jaar — hoe langer je ondernemer blijft, hoe groter het verschil.</div>
+      </div>
+    </div>
+
+    <div class="periodes" role="tablist" aria-label="Snel-selectie periode">
+      <button class="periode-btn" data-jaren="1" type="button">1 jaar</button>
+      <button class="periode-btn" data-jaren="3" type="button">3 jaar</button>
+      <button class="periode-btn actief" data-jaren="5" type="button">5 jaar</button>
+      <button class="periode-btn" data-jaren="10" type="button">10 jaar</button>
+    </div>
+
+    <div class="resultaat" id="resultaat-blok">
+      <div class="resultaat-lbl">Jij betaalt over deze periode</div>
+      <div class="resultaat-getal" id="resultaat">€ 1.800</div>
+      <div class="resultaat-sub" id="resultaat-sub">…aan een tool die je niet bezit en die elke maand opnieuw betaald moet worden.</div>
+    </div>
+
+    <div class="share">
+      <p>📤 Deel deze berekening met je accountant of mede-ondernemer:</p>
+      <button id="kopieer-btn" type="button">Link kopiëren</button>
+      <div class="kopieer-melding" id="kopieer-melding">✓ Gekopieerd</div>
+    </div>
+  </div>
+
+  <div class="versus">
+    <h2>Hetzelfde bedrag, maar dan bij Boekhoudbaar</h2>
+    <div class="versus-rij head">
+      <div>Periode</div>
+      <div>Moneybird / Exact</div>
+      <div>Boekhoudbaar</div>
+    </div>
+    <div class="versus-rij">
+      <div class="versus-col-lbl">1 jaar</div>
+      <div class="versus-col-mb" data-uit="mb-1">€ 360</div>
+      <div class="versus-col-bhb">€ 49</div>
+    </div>
+    <div class="versus-rij">
+      <div class="versus-col-lbl">3 jaar</div>
+      <div class="versus-col-mb" data-uit="mb-3">€ 1.080</div>
+      <div class="versus-col-bhb">€ 49</div>
+    </div>
+    <div class="versus-rij">
+      <div class="versus-col-lbl">5 jaar</div>
+      <div class="versus-col-mb" data-uit="mb-5">€ 1.800</div>
+      <div class="versus-col-bhb">€ 49</div>
+    </div>
+    <div class="versus-rij">
+      <div class="versus-col-lbl">10 jaar</div>
+      <div class="versus-col-mb" data-uit="mb-10">€ 3.600</div>
+      <div class="versus-col-bhb">€ 49</div>
+    </div>
+  </div>
+
+  <div class="cta-blok">
+    <h2>Bespaar <span id="cta-bedrag">€ 1.751</span> over <span id="cta-jaren">5 jaar</span></h2>
+    <p>Boekhoudbaar is een Google Sheet in jouw Drive die facturen verstuurt, BTW berekent en je dashboard up-to-date houdt. Eenmalig €49, voor altijd van jou.</p>
+    <a href="/kopen" class="cta-btn">Boekhoudbaar voor €49 →</a>
+  </div>
+
+  <p class="disclaimer">
+    Berekening is indicatief. Prijzen van concurrenten zijn instap-tarieven (excl. add-ons, integraties, BTW). Check zelf de actuele tarieven op hun website. Boekhoudbaar is een eenmalige aankoop zonder abonnement of automatische verlenging.
+  </p>
+
+</main>
+
+<footer>
+  <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
+  <p style="margin-top:10px">
+    <a href="/">Home</a> · <a href="/demo/">Demo</a> · <a href="/vergelijking/">Vergelijking</a> · <a href="/over/">Over</a>
+  </p>
+</footer>
+
+<script>
+(function() {
+  const prijsEl = document.getElementById('prijs');
+  const jarenEl = document.getElementById('jaren');
+  const resultaatEl = document.getElementById('resultaat');
+  const resultaatSubEl = document.getElementById('resultaat-sub');
+  const resultaatBlokEl = document.getElementById('resultaat-blok');
+  const ctaBedragEl = document.getElementById('cta-bedrag');
+  const ctaJarenEl = document.getElementById('cta-jaren');
+  const periodeBtns = document.querySelectorAll('.periode-btn');
+  const kopieerBtn = document.getElementById('kopieer-btn');
+  const kopieerMelding = document.getElementById('kopieer-melding');
+
+  // EUR formatter — Nederlandse notatie (€ 1.234)
+  const fmt = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  function parseNum(s) {
+    if (!s) return 0;
+    return parseFloat(String(s).replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+  }
+
+  function bereken() {
+    const prijs = parseNum(prijsEl.value);
+    const jaren = parseNum(jarenEl.value);
+    const totaal = prijs * 12 * jaren;
+    const besparing = Math.max(0, totaal - 49);
+
+    // Animeer met spring-effect bij elke wijziging
+    resultaatEl.style.transform = 'scale(.96)';
+    setTimeout(() => { resultaatEl.style.transform = 'scale(1)'; }, 100);
+
+    resultaatEl.textContent = fmt.format(totaal);
+    const j = Math.round(jaren) || 1;
+    resultaatSubEl.textContent = `Over ${j} ${j === 1 ? 'jaar' : 'jaar'} betaal je dit aan een tool die je niet bezit. Bij Boekhoudbaar: eenmalig € 49 en je houdt ${fmt.format(besparing)} over.`;
+    ctaBedragEl.textContent = fmt.format(besparing);
+    ctaJarenEl.textContent = `${j} ${j === 1 ? 'jaar' : 'jaar'}`;
+
+    // Update versus-tabel met huidige prijs
+    [1, 3, 5, 10].forEach(p => {
+      const el = document.querySelector(`[data-uit="mb-${p}"]`);
+      if (el) el.textContent = fmt.format(prijs * 12 * p);
+    });
+
+    // Update URL voor share (history.replaceState — geen nieuwe page-visit)
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('p', prijs);
+      url.searchParams.set('j', jaren);
+      window.history.replaceState({}, '', url);
+    } catch (_) {}
+  }
+
+  // Periode-tabs → update jaren-input + bereken opnieuw
+  periodeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      periodeBtns.forEach(b => b.classList.remove('actief'));
+      btn.classList.add('actief');
+      jarenEl.value = btn.dataset.jaren;
+      bereken();
+    });
+  });
+
+  // Live update bij elke toetsaanslag
+  prijsEl.addEventListener('input', bereken);
+  jarenEl.addEventListener('input', () => {
+    periodeBtns.forEach(b => b.classList.remove('actief'));
+    const match = Array.from(periodeBtns).find(b => b.dataset.jaren === jarenEl.value.trim());
+    if (match) match.classList.add('actief');
+    bereken();
+  });
+
+  // Pre-fill vanuit URL params (gedeelde link werkt direct)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('p')) prijsEl.value = params.get('p');
+    if (params.has('j')) {
+      jarenEl.value = params.get('j');
+      periodeBtns.forEach(b => b.classList.remove('actief'));
+      const match = Array.from(periodeBtns).find(b => b.dataset.jaren === params.get('j'));
+      if (match) match.classList.add('actief');
+    }
+  } catch (_) {}
+
+  // Kopieer-knop voor share
+  kopieerBtn.addEventListener('click', async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      kopieerMelding.classList.add('zichtbaar');
+      setTimeout(() => kopieerMelding.classList.remove('zichtbaar'), 2400);
+    } catch (_) {
+      // Fallback voor oudere browsers
+      const t = document.createElement('textarea');
+      t.value = url;
+      document.body.appendChild(t);
+      t.select();
+      try { document.execCommand('copy'); kopieerMelding.classList.add('zichtbaar'); setTimeout(() => kopieerMelding.classList.remove('zichtbaar'), 2400); } catch (_) {}
+      document.body.removeChild(t);
+    }
+  });
+
+  bereken();
+})();
+</script>
+
+</body></html>
