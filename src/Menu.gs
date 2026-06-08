@@ -189,25 +189,36 @@ function onOpen() {
       .addItem('Gesloten periodes beheren', 'beheerGeslotenPeriodes')
     )
 
-    // ── Hulp & advies ─────────────────────────
+    // ── Hulp & advies (dagelijks gebruik op top-level) ─────────
     .addItem('🔔 Wat moet ik nu doen? (notificaties)', 'toonNotificaties')
     .addItem('Hulp & uitleg', 'openAssistent')
-    .addItem('🎁 Verwijs een vriend — jullie krijgen beide €5', 'toonReferralDialog')
     .addItem('📰 Wat is er nieuw? (changelog)', 'toonChangelogVolledig')
-    .addItem('Fiscaal overzicht & besparingstips', 'genereerBelastingadvies')
-    .addItem('💡 Wat-als-rekenmachine (extra omzet of investering)', 'toonWatAlsSimulator')
-    .addItem('📋 Vul je profiel in voor persoonlijke berekening', 'toonFiscaalProfielWizard')
-    .addItem('🚗 Zakelijke kilometers registreren', 'toonReiskostenTracker')
-    .addItem('🚗 Hele week kilometers tegelijk', 'toonReiskostenWeek')
-    .addItem('🏦 Lijfrente: hoeveel mag ik storten?', 'toonLijfrenteJaarruimte')
-    .addItem('💰 BTW-spaarpot: heb ik genoeg apart staan?', 'toonBtwSpaarpot')
-    .addItem('💼 Voorlopige belasting: hoeveel reserveren per maand?', 'toonVoorlopigeAanslagTip')
-    .addItem('💎 KIA + MIA + EIA stapeling berekenen', 'toonInvesteringsAftrekStapeling')
-    .addItem('🏁 Bedrijf staken: stakingsaftrek + FOR + lijfrente', 'toonStakingsWizard')
-    .addItem('🔄 Suppletie-aangifte controle', 'genereerSuppletieRapport')
-    .addItem('🏆 Achievements bekijken', 'toonAchievementsOverzicht')
-    .addItem('📊 Geef feedback (NPS-survey)', 'toonNpsSurvey')
-    .addItem('🎬 Jaaroverzicht (vorig jaar in cijfers)', 'toonJaaroverzicht')
+    .addItem('🎁 Verwijs een vriend — jullie krijgen beide €5', 'toonReferralDialog')
+
+    // ── Fiscaal & besparingstips (CYCLE-94 / criticus P1-3): 13 items
+    //    waren een platte lijst op top-level → "menu leest als een GAS-
+    //    engineering changelog" (UX + Disgruntled bevestigden). Nu één
+    //    submenu zodat top-level ademt en je 1× per maand inklikt.
+    .addSubMenu(ui.createMenu('💡 Fiscaal & besparingstips')
+      .addItem('Fiscaal overzicht & besparingstips', 'genereerBelastingadvies')
+      .addItem('💡 Wat-als-rekenmachine (extra omzet of investering)', 'toonWatAlsSimulator')
+      .addItem('📋 Vul je profiel in voor persoonlijke berekening', 'toonFiscaalProfielWizard')
+      .addSeparator()
+      .addItem('🚗 Zakelijke kilometers registreren', 'toonReiskostenTracker')
+      .addItem('🚗 Hele week kilometers tegelijk', 'toonReiskostenWeek')
+      .addSeparator()
+      .addItem('🏦 Lijfrente: hoeveel mag ik storten?', 'toonLijfrenteJaarruimte')
+      .addItem('💰 BTW-spaarpot: heb ik genoeg apart staan?', 'toonBtwSpaarpot')
+      .addItem('💼 Voorlopige belasting: hoeveel reserveren per maand?', 'toonVoorlopigeAanslagTip')
+      .addSeparator()
+      .addItem('💎 KIA + MIA + EIA stapeling berekenen', 'toonInvesteringsAftrekStapeling')
+      .addItem('🏁 Bedrijf staken: stakingsaftrek + FOR + lijfrente', 'toonStakingsWizard')
+      .addItem('🔄 Suppletie-aangifte controle', 'genereerSuppletieRapport')
+      .addSeparator()
+      .addItem('🎬 Jaaroverzicht (vorig jaar in cijfers)', 'toonJaaroverzicht')
+      .addItem('🏆 Achievements bekijken', 'toonAchievementsOverzicht')
+      .addItem('📊 Geef feedback (NPS-survey)', 'toonNpsSurvey')
+    )
     .addSeparator()
 
     // ── Rapporten ─────────────────────────────
