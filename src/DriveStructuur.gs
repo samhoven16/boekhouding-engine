@@ -342,6 +342,26 @@ function sluitJaarAf() {
     return;
   }
 
+  // Pre-flight: strikte balans-check vóór jaarafsluiting. Drempel €0,005
+  // (1 cent afronding × halve eenheid). Als balans niet sluit op deze
+  // strikte drempel staat ergens een journaalpost scheef en gaat een
+  // jaarafsluiting de drift permanent in archief vastleggen.
+  if (typeof controleerBalansStrikt_ === 'function') {
+    const balansCheck = controleerBalansStrikt_();
+    if (balansCheck.status === 'KRITIEK') {
+      const doorgaan = ui.alert(
+        'Balans sluit niet strikt — jaarrekening-risico',
+        balansCheck.bericht + '\n\n' +
+        'Voor een formele jaarrekening MOET activa = passiva tot op €0,005 nauwkeurig. ' +
+        'Doorgaan zou de afwijking permanent in het archief vastleggen.\n\n' +
+        'Druk NEE om eerst saldi te herberekenen, JA om toch door te gaan ' +
+        '(alleen als je weet wat je doet).',
+        ui.ButtonSet.YES_NO
+      );
+      if (doorgaan !== ui.Button.YES) return;
+    }
+  }
+
   // 1. Archiveer huidige spreadsheet — KRITISCH: zonder backup geen reset
   let archiefUrl = '';
   try {

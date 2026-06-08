@@ -2646,6 +2646,31 @@ function verzamelStatusmailStats_() {
     }
   }
 
+  // P1-4-DR/SRE (criticus-rapport): identificeer klanten die actief zijn
+  // maar >48u geen validatie hebben gestuurd → potentieel down/OAuth-revoke/
+  // license-server-issue. Owner krijgt zo signaal vóór support-tickets.
+  // Filter: actief + onboarded >7 dagen (geen nieuwe klanten die nog niet
+  // gestart zijn) + laatsteVal < grens48u OR ontbreekt.
+  const nuMs     = Date.now();
+  const grens48u = nuMs - 48 * 60 * 60 * 1000;
+  const grens7d  = nuMs - 7  * 24 * 60 * 60 * 1000;
+  let stilleKlanten48u = 0;
+  const stilleNamen = [];
+  for (let i = 1; i < data.length; i++) {
+    const status = String(data[i][I_STATUS] || '').toLowerCase();
+    const aktief = (status.indexOf('actief') === 0 || status === '' || status === 'gemaakt');
+    if (!aktief) continue;
+    const aangemaakt = data[i][I_AANGEMAAKT];
+    if (!(aangemaakt instanceof Date) || aangemaakt.getTime() > grens7d) continue;
+    const lv = data[i][I_LAATSTE_VAL];
+    const stil = !(lv instanceof Date) || lv.getTime() < grens48u;
+    if (stil) {
+      stilleKlanten48u++;
+      const naam = String(data[i][I_NAAM] || '').trim();
+      if (naam && stilleNamen.length < 10) stilleNamen.push(naam);
+    }
+  }
+
   return {
     nieuw24u: nieuw24u,
     totaalActief: totaalActief,
@@ -2653,6 +2678,8 @@ function verzamelStatusmailStats_() {
     bounces: bounces,
     recenteValidaties: recenteValidaties,
     recenteNamen: recenteNamen,
+    stilleKlanten48u: stilleKlanten48u,
+    stilleNamen: stilleNamen,
   };
 }
 
@@ -2688,6 +2715,17 @@ function bouwStatusmailHtml_(stats) {
     ? rij('E-mail bounces', stats.bounces, 'CRM checken — bouncestatus-kolom')
     : rij('E-mail bounces', 0, 'geen');
 
+  // P1-4-DR/SRE: stille klanten (>48u geen validatie, ingeschreven >7d)
+  const stilleRij = stats.stilleKlanten48u > 0
+    ? rij('🔇 Stille klanten (>48u)', stats.stilleKlanten48u, 'check: OAuth-revoke / sheet-corruptie / vakantie')
+    : rij('🔇 Stille klanten (>48u)', 0, 'iedereen pingt');
+  const stilleLijst = (stats.stilleNamen && stats.stilleNamen.length)
+    ? '<div style="margin-top:12px;font-size:13px;color:#5F6B7A"><strong>Stille klanten (top 10):</strong>' +
+      '<ul style="margin:6px 0 0;padding-left:20px;font-size:12.5px">' +
+      stats.stilleNamen.map(function(n) { return '<li>' + escHtml_(n) + '</li>'; }).join('') +
+      '</ul></div>'
+    : '';
+
   return '<!DOCTYPE html><html lang="nl"><body style="font-family:-apple-system,Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#f8fafc;color:#1A1A1A">' +
     '<div style="background:#0D1B4E;padding:20px 24px;border-radius:10px 10px 0 0">' +
       '<h2 style="color:#fff;margin:0;font-size:17px;font-weight:700">Boekhoudbaar — dagelijkse status</h2>' +
@@ -2700,11 +2738,13 @@ function bouwStatusmailHtml_(stats) {
         rij('Totaal actieve licenties', stats.totaalActief, '') +
         rij('Ingetrokken / refund', stats.totaalIngetrokken, 'cumulatief') +
         rij('Actieve validaties (24u)', stats.recenteValidaties, 'klant-spreadsheets die contact maakten') +
+        stilleRij +
         bouncesRij +
       '</table>' +
       (namenLijst
         ? '<div style="margin-top:18px;font-size:13px;color:#0D1B4E"><strong>Nieuwe klanten:</strong>' + namenLijst + '</div>'
         : '') +
+      stilleLijst +
       '<div style="margin-top:24px;font-size:12px;color:#9ca3af;border-top:1px solid #eee;padding-top:12px">' +
         'Automatische dagelijkse status. Trigger uitschakelen via Apps Script editor (verstuurDagelijkseStatusmail_).' +
       '</div>' +
