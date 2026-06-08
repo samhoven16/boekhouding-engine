@@ -219,14 +219,27 @@
     <tbody>
       <tr><td style="padding:10px;border:1px solid #E5EAF2">Licentiesleutel + email klant</td><td style="padding:10px;border:1px solid #E5EAF2">7 jaar na aankoop</td><td style="padding:10px;border:1px solid #E5EAF2">Bewaarplicht art. 52 AWR (jij voor je administratie, wij als verkoper)</td></tr>
       <tr><td style="padding:10px;border:1px solid #E5EAF2">Factuur van aankoop (van Boekhoudbaar aan klant)</td><td style="padding:10px;border:1px solid #E5EAF2">7 jaar</td><td style="padding:10px;border:1px solid #E5EAF2">Wettelijke bewaarplicht</td></tr>
-      <tr><td style="padding:10px;border:1px solid #E5EAF2">Audit-log (server-zijde)</td><td style="padding:10px;border:1px solid #E5EAF2">90 dagen</td><td style="padding:10px;border:1px solid #E5EAF2">Operationele monitoring + security</td></tr>
+      <tr><td style="padding:10px;border:1px solid #E5EAF2">Audit-log in jouw Boekhoudbaar-sheet (financiële events: factuur aangemaakt, betaling ontvangen, BTW-aangifte gegenereerd, journaalposten)</td><td style="padding:10px;border:1px solid #E5EAF2">7 jaar</td><td style="padding:10px;border:1px solid #E5EAF2">Wettelijke fiscale bewaarplicht (art. 52 AWR) — je accountant en de Belastingdienst hebben dit nodig bij controle. Staat in jouw Drive, wij hebben geen kopie.</td></tr>
+      <tr><td style="padding:10px;border:1px solid #E5EAF2">Operationele server-logs (licentie-validaties, OTP-emails, IP-adres-hashes voor rate-limiting)</td><td style="padding:10px;border:1px solid #E5EAF2">90 dagen</td><td style="padding:10px;border:1px solid #E5EAF2">Operationele monitoring + security. Bevat géén financiële data en géén ruwe PII (alleen hashes).</td></tr>
       <tr><td style="padding:10px;border:1px solid #E5EAF2">Email-correspondentie (support)</td><td style="padding:10px;border:1px solid #E5EAF2">2 jaar</td><td style="padding:10px;border:1px solid #E5EAF2">Garantie-claims + product-improvement</td></tr>
       <tr><td style="padding:10px;border:1px solid #E5EAF2">Website-analytics (Cloudflare Insights)</td><td style="padding:10px;border:1px solid #E5EAF2">30 dagen, geanonimiseerd</td><td style="padding:10px;border:1px solid #E5EAF2">Geen cookies, alleen geaggregeerd</td></tr>
       <tr><td style="padding:10px;border:1px solid #E5EAF2">Boekhouding-data (sheet in jouw Drive)</td><td style="padding:10px;border:1px solid #E5EAF2">Door jou bepaald</td><td style="padding:10px;border:1px solid #E5EAF2">Wij hebben geen toegang — Google Drive permissions</td></tr>
       <tr><td style="padding:10px;border:1px solid #E5EAF2">Affiliate-code (cookie + opslag bij aankoop)</td><td style="padding:10px;border:1px solid #E5EAF2">90 dagen (cookie), 7 jaar (aankoop-record)</td><td style="padding:10px;border:1px solid #E5EAF2">Alleen na consent — gerechtvaardigd belang partner-uitbetaling</td></tr>
       <tr><td style="padding:10px;border:1px solid #E5EAF2">E-mail bounce-events (Brevo webhook)</td><td style="padding:10px;border:1px solid #E5EAF2">Tot heractivatie van adres</td><td style="padding:10px;border:1px solid #E5EAF2">Gerechtvaardigd belang — voorkomen herhaaldelijke onbestelbare mails</td></tr>
+      <tr><td style="padding:10px;border:1px solid #E5EAF2">Telemetry van crashes en foutmeldingen (gepseudonimiseerd: SHA-256-hash van licentiesleutel + foutbericht + versienr — géén klant-data, géén sheet-inhoud)</td><td style="padding:10px;border:1px solid #E5EAF2">12 maanden</td><td style="padding:10px;border:1px solid #E5EAF2">Gerechtvaardigd belang — opsporen + fixen van bugs. Geen ruwe PII, geen sheet-data. Opt-out: mail naar info@boekhoudbaar.nl met je sleutel-hash voor verwijdering.</td></tr>
+      <tr><td style="padding:10px;border:1px solid #E5EAF2">Installatie-bindings (per klant: welke Sheet-IDs ooit gekoppeld zijn aan deze licentie, om delen-misbruik te detecteren)</td><td style="padding:10px;border:1px solid #E5EAF2">Levensduur licentie + 7 jaar</td><td style="padding:10px;border:1px solid #E5EAF2">Anti-fraud + fiscale bewaarplicht (verkooprecord). Bevat: SHA-256 Sheet-ID, timestamp eerste activatie. Geen sheet-inhoud, geen Drive-toegang.</td></tr>
     </tbody>
   </table>
+
+  <h2>7a. Datalek-procedure (AVG art. 33/34)</h2>
+  <p>Bij een vermoed datalek:</p>
+  <ol style="margin:8px 0 14px 22px;line-height:1.7">
+    <li><strong>Direct na detectie:</strong> incident-log starten (welke data, hoeveel betrokkenen, oorzaak).</li>
+    <li><strong>Binnen 72 uur na detectie:</strong> melding bij Autoriteit Persoonsgegevens via meldloket.autoriteitpersoonsgegevens.nl, tenzij waarschijnlijk geen risico voor betrokkenen.</li>
+    <li><strong>Bij hoog risico voor betrokkenen:</strong> directe informatie aan getroffen klanten via e-mail met: wat lekte, wanneer, welke maatregelen, contactpunt voor vragen.</li>
+    <li><strong>Documentatie:</strong> elk incident wordt bijgehouden in een intern incident-register (bewaartermijn 5 jaar).</li>
+  </ol>
+  <p style="font-size:14px;color:#5F6B7A">Vermoed je een lek? Mail direct naar <a href="mailto:info@boekhoudbaar.nl?subject=DATALEK-VERMOED">info@boekhoudbaar.nl</a> met onderwerp "DATALEK-VERMOED" — dit zorgt voor prioriteit-routing.</p>
 
   <h2>7b. Functionaris Gegevensbescherming (FG)</h2>
   <p>Voor een eenmanszaak van deze omvang is een formele FG niet wettelijk verplicht (AVG art. 37). Sam Hoven (eigenaar) is in de praktijk aanspreekpunt voor alle privacy-vragen via <a href="mailto:info@boekhoudbaar.nl?subject=Privacy-vraag">info@boekhoudbaar.nl</a>.</p>

@@ -56,6 +56,14 @@ function saniteer_(waarde) {
   if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   // Verwijder nul-bytes en control characters
   s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // eslint-disable-line no-control-regex
+  // Stresstest A2: verwijder zero-width spaces + onzichtbare unicode.
+  // Klant kopieert 'Lisa[ZWSP]van Dijk' uit Excel/Word -> KvK-API match
+  // faalt op string-mismatch, debiteur-koppeling breekt onzichtbaar.
+  // U+200B/200C/200D = zero-width space/non-joiner/joiner
+  // U+FEFF       = BOM (byte-order mark)
+  // U+00A0       = non-breaking space -> normaliseer naar gewone spatie
+  // eslint-disable-next-line no-misleading-character-class
+  s = s.replace(new RegExp('[\u200B\u200C\u200D\uFEFF]', 'g'), '').replace(/\u00A0/g, ' ');
   return s;
 }
 

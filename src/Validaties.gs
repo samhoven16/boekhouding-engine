@@ -31,11 +31,24 @@ function valideerBtwNummer_(btwNr) {
       fout: `BTW-nummer "${btwNr}" heeft het verkeerde formaat.\n` +
             `Juist formaat: NL + 9 cijfers + B + 2 cijfers\n` +
             `Voorbeeld: NL123456789B01\n\n` +
-            `Uw BTW-nummer staat op de correspondentie van de Belastingdienst.`,
+            `Je BTW-nummer staat op de correspondentie van de Belastingdienst.`,
     };
   }
 
-  return { geldig: true };
+  // Stresstest A7: geef de genormaliseerde versie terug zodat callers
+  // "nl 123 456 789 b01" niet als-is opslaan op de factuur-PDF.
+  return { geldig: true, genormaliseerd: schoon };
+}
+
+/**
+ * Helper: normaliseert een BTW-nummer naar canonieke vorm zonder validatie.
+ * Gebruik vóór opslaan in sheet/PDF zodat 'nl 123 456 789 b01' wordt
+ * opgeslagen als 'NL123456789B01'. Returns originele input als input geen
+ * geldig BTW-format heeft (caller is verantwoordelijk voor valideer-call).
+ */
+function normaliseerBtwNummer_(btwNr) {
+  const r = valideerBtwNummer_(btwNr);
+  return r.geldig ? r.genormaliseerd : String(btwNr || '').trim();
 }
 
 // ─────────────────────────────────────────────
