@@ -92,10 +92,10 @@ function genereerNotificaties_() {
   } else if (kpi.omzet > 20000 && kpi.omzet < 22000) {
     lijst.push({
       prioriteit: 90,
-      titel: '🚨 KOR-grens overschreden',
-      tekst: 'Je omzet (' + formatBedrag_(kpi.omzet) + ') is over de €20.000 KOR-grens. ' +
-             'Meld je af voor de KOR via de Belastingdienst en factureer voortaan met BTW.',
-      actie: 'Boekhouding → BTW → KOR-check voor exacte stappen',
+      titel: '⚠️ KOR-grens bereikt',
+      tekst: 'Je omzet (' + formatBedrag_(kpi.omzet) + ') komt over de €20.000 KOR-grens. ' +
+             'Tijd om af te melden voor de KOR en voortaan met BTW te factureren — niets dramatisch, wel iets om deze maand te regelen.',
+      actie: 'Boekhoudbaar → BTW → KOR-check voor de stappen',
       euros: null,
       urgent: true,
       bron: 'kor-overschreden',
@@ -189,10 +189,10 @@ function genereerNotificaties_() {
   if (kpi.aantalVervallenFacturen > 0) {
     lijst.push({
       prioriteit: 65,
-      titel: '🚨 ' + kpi.aantalVervallenFacturen +
+      titel: '⏰ ' + kpi.aantalVervallenFacturen +
              ' vervallen factu' + (kpi.aantalVervallenFacturen === 1 ? 'ur' : 'ren'),
-      tekst: 'Klanten zijn te laat met betalen. Stuur een herinnering om je cashflow op peil te houden.',
-      actie: 'Boekhouding → Facturen → Betalingsherinneringen versturen',
+      tekst: 'Klanten zijn te laat met betalen — automatische herinneringen draaien al, maar je kunt nu zelf een nudge sturen voor de echt-vervallenen.',
+      actie: 'Boekhoudbaar → Facturen → Betalingsherinneringen',
       euros: null,
       urgent: kpi.aantalVervallenFacturen >= 3,
       bron: 'vervallen-facturen',
