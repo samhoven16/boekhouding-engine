@@ -191,6 +191,10 @@ function betaalPagina_(e) {
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0D1B4E">
+<!-- target="_top" zorgt dat een form-submit of link uit het Apps Script
+     iframe doorbreekt naar het top-window. Cruciaal voor Mollie-redirect
+     (Mollie heeft X-Frame-Options: DENY → laadt niet in iframe). -->
+<base target="_top">
 <title>${naam} — Aankoop</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -316,7 +320,23 @@ function betaal() {
   document.getElementById('fout').style.display = 'none';
   google.script.run
     .withSuccessHandler(function(res) {
-      if (res.checkoutUrl) { window.location.href = res.checkoutUrl; }
+      if (res.checkoutUrl) {
+        // Cruciaal: Apps Script web-apps draaien in een nested iframe
+        // (script.googleusercontent.com binnen script.google.com). Mollie
+        // checkout heeft X-Frame-Options: DENY — een gewone
+        // window.location.href = checkoutUrl breekt NIET uit het iframe,
+        // dus de klant ziet 'www.mollie.com weigerde de verbinding'.
+        // window.top.location.href forceert de redirect op het top-window
+        // (de echte browser-tab), zodat Mollie correct laadt.
+        try {
+          window.top.location.href = res.checkoutUrl;
+        } catch (e) {
+          // Same-origin policy block? Fallback: open in dezelfde tab op
+          // het wrap-iframe niveau. Werkt op de Apps Script-deployment
+          // omdat die zelf niet meer in een ander iframe gewrap't is.
+          window.location.href = res.checkoutUrl;
+        }
+      }
       else { toonFout(res.fout || 'Betaling aanmaken mislukt.'); btn.disabled=false; btn.textContent=oriBtnTxt; }
     })
     .withFailureHandler(function(e) { toonFout('Fout: '+e.message); btn.disabled=false; btn.textContent=oriBtnTxt; })
@@ -1070,6 +1090,10 @@ function ensureOnboardedKolom_(sheet) {
 function bedanktPagina_(e) {
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- target=_top: zelfde reden als in betaalPagina_ — Apps Script-deployments
+     draaien in een nested iframe; eventuele klikbare links moeten naar
+     het top-window, niet in het iframe. -->
+<base target="_top">
 <!-- CYCLE-49: transactionele post-purchase pagina — niet indexeren,
      anders kunnen reviews/screenshots in zoekresultaten verschijnen. -->
 <meta name="robots" content="noindex,nofollow">
