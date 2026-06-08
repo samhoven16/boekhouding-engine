@@ -1,0 +1,37 @@
+# Merge-strategie per file
+# =========================
+#
+# website/version.json wordt door de post-commit hook bij ELKE commit
+# overschreven met de laatste commit-hash. Dat veroorzaakt merge-conflicten
+# op elke PR-merge waar main en branch beide commits hebben gehad.
+#
+# Driver "ours" lost dit op: bij merge wint altijd onze (=de mergende)
+# kant. Geen waardevol verlies — de hash wordt toch opnieuw geschreven
+# door de post-commit hook bij de volgende commit.
+#
+# VEREIST: developers moeten EEN keer lokaal draaien:
+#   npm install         (triggert prepare-script in package.json)
+# Of expliciet:
+#   git config merge.ours.driver true
+#
+# GitHub-side merges (PR's mergen via UI) profiteren NIET van deze regel
+# — daarvoor moet de PR-maker de conflict zelf oplossen. Voor branches
+# die alleen lokaal mergen werkt dit transparant.
+website/version.json merge=ours
+
+# Algemene line-ending normalisatie — voorkom CRLF/LF-drift bij
+# bijdragers op Windows. Eerlijke fix: laat git intern altijd LF gebruiken,
+# en Windows-checkout krijgt CRLF (autocrlf=input gedrag, maar in repo gepind).
+* text=auto eol=lf
+
+# Binary files: nooit normaliseren
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.svg text
+*.pdf binary
+*.woff binary
+*.woff2 binary
