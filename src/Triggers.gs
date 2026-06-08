@@ -1692,6 +1692,33 @@ function dagelijkseTaken() {
     if (typeof ruimMollieIdempotencyOp_ === 'function') ruimMollieIdempotencyOp_();
   });
 
+  // DR/SRE (criticus-rapport): emailVerzonden_F* idempotency-keys
+  // accumuleren zonder cleanup → quotum-cliff bij 10.000 facturen
+  // (ScriptProperties 500KB total / 9KB per key). Property bevat alleen
+  // ISO-timestamp string van emailverzending. Cleanup-window 180 dagen:
+  // ruim genoeg voor "ik heb een factuur dubbel verstuurd"-detectie,
+  // maar verwijdert de oudste 90% van de keys voor grote klanten.
+  _runTaak_('cleanupEmailIdem', function() {
+    const props = PropertiesService.getScriptProperties();
+    const alle = props.getProperties();
+    const cutoffMs = Date.now() - 180 * 24 * 60 * 60 * 1000;
+    let verwijderd = 0;
+    Object.keys(alle).forEach(function(k) {
+      if (k.indexOf('emailVerzonden_') !== 0) return;
+      try {
+        const ts = new Date(alle[k]).getTime();
+        if (isFinite(ts) && ts < cutoffMs) {
+          props.deleteProperty(k);
+          verwijderd++;
+        }
+      } catch (_) { /* corrupt timestamp → laat staan, niet riskant */ }
+    });
+    if (verwijderd > 0) {
+      try { schrijfAuditLog_('cleanupEmailIdem',
+        'Verwijderd ' + verwijderd + ' emailVerzonden_-keys ouder dan 180d'); } catch (_) {}
+    }
+  });
+
   // Aggregaat: totale duur dagelijkseTaken
   const totaleDuur = Date.now() - dagelijksTotaal0;
   try { metricsLog_('dagelijkseTaken.totaal', totaleDuur, true); } catch (_) {}

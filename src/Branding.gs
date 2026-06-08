@@ -69,6 +69,31 @@ function slaLogoOp(base64Data, mimeType) {
     throw new Error('Bestandstype niet ondersteund. Gebruik PNG, JPG, GIF of WebP (geen SVG vanwege beveiliging).');
   }
 
+  // Security (criticus-rapport): magic-byte-verificatie. Voorheen werd
+  // MIME-string vertrouwd op wat client stuurde. Een attacker (of klant
+  // met malafide intentie) kon HTML/JS-payload uploaden met mimeType=PNG.
+  // Die data-URL werd vervolgens in PDF-templates en email-bodies
+  // geïnjecteerd. Nu: decode eerste 12 bytes en match tegen magic-bytes.
+  try {
+    const hoofd = Utilities.base64Decode(base64Data.slice(0, 24));
+    const magicCheck = {
+      'image/png':  (hoofd.length >= 8 && hoofd[0] === 0x89 && hoofd[1] === 0x50 && hoofd[2] === 0x4E && hoofd[3] === 0x47),  // ‰PNG
+      'image/jpeg': (hoofd.length >= 3 && hoofd[0] === 0xFF && hoofd[1] === 0xD8 && hoofd[2] === 0xFF),                       // FFD8FF
+      'image/jpg':  (hoofd.length >= 3 && hoofd[0] === 0xFF && hoofd[1] === 0xD8 && hoofd[2] === 0xFF),
+      'image/gif':  (hoofd.length >= 6 && hoofd[0] === 0x47 && hoofd[1] === 0x49 && hoofd[2] === 0x46 && hoofd[3] === 0x38),  // GIF8
+      'image/webp': (hoofd.length >= 12 && hoofd[0] === 0x52 && hoofd[1] === 0x49 && hoofd[2] === 0x46 && hoofd[3] === 0x46
+                     && hoofd[8] === 0x57 && hoofd[9] === 0x45 && hoofd[10] === 0x42 && hoofd[11] === 0x50),                   // RIFF...WEBP
+    };
+    if (!magicCheck[mt]) {
+      auditLog_('Logo upload geweigerd (magic-byte mismatch)', 'mt=' + mt);
+      throw new Error('Bestandsinhoud komt niet overeen met opgegeven type. Upload een echt PNG/JPG/GIF/WebP bestand.');
+    }
+  } catch (decodeErr) {
+    // Als decode zelf faalt = corrupte base64 → niet doorlaten
+    if (decodeErr.message && decodeErr.message.indexOf('komt niet overeen') !== -1) throw decodeErr;
+    throw new Error('Afbeelding kon niet gelezen worden. Bestand mogelijk corrupt.');
+  }
+
   // Grootte check: base64 is ~33% groter dan binaire data
   const byteSchatting = base64Data.length * 0.75;
   if (byteSchatting > 200 * 1024) {

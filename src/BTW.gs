@@ -155,6 +155,12 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     const datum = parseDatum_(vfData[i][2]);
     if (!datum || isNaN(datum.getTime()) || datum < vanDatum || datum > totDatum) continue;
 
+    // Skip GESTORNEERD facturen (criticus-rapport Accountant): bij storno
+    // wordt status [14] = 'Gestorneerd' en BTW [11] = 0 gezet door
+    // _markeerFactuurGestorneerd_. Skip hier expliciet zodat ook bij
+    // legacy-rijen zonder bedragsupdate geen dubbeltelling optreedt.
+    if (String(vfData[i][14] || '').toLowerCase() === 'gestorneerd') continue;
+
     // Skip GECREDITEERD facturen — de creditnota-rij (negatieve grondslag)
     // levert al de tegenboeking. Dubbele aftrek voorkomen bij periode-overschrijding.
     const status = String(vfData[i][14] || '');
@@ -202,6 +208,11 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     if (!ifData[i][3]) continue;
     const datum = parseDatum_(ifData[i][3]);
     if (!datum || isNaN(datum.getTime()) || datum < vanDatum || datum > totDatum) continue;
+
+    // Skip GESTORNEERD inkoopfacturen (criticus-rapport Accountant): bij
+    // storno via maakStornoJournaalpost_ wordt status [12] = 'Gestorneerd'
+    // en BTW [10] = 0. Tweede gate hier voor legacy-rijen.
+    if (String(ifData[i][12] || '').toLowerCase() === 'gestorneerd') continue;
 
     const btwBedrag = parseFloat(ifData[i][10]) || 0;
     const btwLabel  = String(ifData[i][9] || '');

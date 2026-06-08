@@ -245,7 +245,76 @@ function maakStornoJournaalpost_(ss, origineelBoekingId, reden) {
     schrijfAuditLog_('STORNO geboekt',
       stornoId + ' storneert ' + origineelBoekingId + ' (' + reden + ')');
   } catch (_) {}
+
+  // P0-Accountant (criticus-rapport): bij storno op een inkoop- of verkoop-
+  // factuur-journaalpost is alleen de JOURNAALPOST-tegenboeking niet
+  // genoeg. berekenBtwAangifte_ leest BTW vanuit VERKOOPFACTUREN /
+  // INKOOPFACTUREN-rijen, niet uit journaalposten. Zonder factuur-update
+  // zou de voorbelasting OF de verschuldigde BTW dubbel meetellen → te
+  // veel teruggevraagd of te weinig afgedragen → naheffing + 30% boete.
+  // Daarom: markeer matched factuur als 'Gestorneerd' + nul BTW-bedrag.
+  try {
+    const origRef = String(origineel[11] || '').trim();
+    if (origRef) {
+      _markeerFactuurGestorneerd_(ss, origRef, stornoId);
+    }
+  } catch (markErr) {
+    Logger.log('Storno: factuur-markering faalde voor ref=' +
+      (origineel[11] || '?') + ': ' + markErr.message);
+    safeAuditLog_('STORNO factuur-mark MISLUKT',
+      origineelBoekingId + ' ref=' + (origineel[11] || '?') + ': ' + markErr.message);
+  }
+
   return stornoId;
+}
+
+/**
+ * Markeer een verkoop- of inkoopfactuur als 'Gestorneerd' op basis van
+ * referentie. Zet ook BTW-bedrag op 0 zodat berekenBtwAangifte_ deze rij
+ * niet meer meetelt. Idempotent: dubbele aanroep doet niets.
+ *
+ * Matched op:
+ *   VERKOOPFACTUREN [1] Factuurnummer → ref begint met F-prefix
+ *   INKOOPFACTUREN  [1] Intern nummer → ref begint met IK-prefix
+ *
+ * @private
+ */
+function _markeerFactuurGestorneerd_(ss, ref, stornoId) {
+  if (!ref) return;
+  // Verkoop-pad
+  const vfSheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (vfSheet) {
+    const vfData = vfSheet.getDataRange().getValues();
+    // ref kan factuurnummer-met-prefix bevatten ('F000001') of met "(storno)"
+    // suffix uit eerdere flow. Strip dat eerst.
+    const schoonRef = ref.replace(/\s*\(storno\)\s*$/i, '').trim();
+    for (let i = 1; i < vfData.length; i++) {
+      if (String(vfData[i][1] || '').trim() === schoonRef) {
+        if (String(vfData[i][14] || '').toLowerCase() === 'gestorneerd') return;
+        vfSheet.getRange(i + 1, 15).setValue('Gestorneerd');   // kolom 15 = [14] Status
+        vfSheet.getRange(i + 1, 12).setValue(0);               // kolom 12 = [11] BTW bedrag
+        try { schrijfAuditLog_('VERKOOPFACTUUR gestorneerd',
+          'Factuur ' + schoonRef + ' door storno ' + stornoId); } catch (_) {}
+        return;
+      }
+    }
+  }
+  // Inkoop-pad
+  const ifSheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
+  if (ifSheet) {
+    const ifData = ifSheet.getDataRange().getValues();
+    const schoonRef = ref.replace(/\s*\(storno\)\s*$/i, '').trim();
+    for (let i = 1; i < ifData.length; i++) {
+      if (String(ifData[i][1] || '').trim() === schoonRef) {
+        if (String(ifData[i][12] || '').toLowerCase() === 'gestorneerd') return;
+        ifSheet.getRange(i + 1, 13).setValue('Gestorneerd');   // kolom 13 = [12] Status
+        ifSheet.getRange(i + 1, 11).setValue(0);               // kolom 11 = [10] BTW bedrag
+        try { schrijfAuditLog_('INKOOPFACTUUR gestorneerd',
+          'Inkoop ' + schoonRef + ' door storno ' + stornoId); } catch (_) {}
+        return;
+      }
+    }
+  }
 }
 
 // ─────────────────────────────────────────────
