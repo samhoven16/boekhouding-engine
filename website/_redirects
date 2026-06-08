@@ -2,20 +2,22 @@
 # (CF Pages _redirects ondersteunt alleen relatieve paden als bron)
 # Regel: boekhoudbaar.nl/* → https://www.boekhoudbaar.nl/$1  (301)
 
-# Checkout — doorsturen naar licentieserver
-/kopen https://script.google.com/macros/s/AKfycbyq5Xrvh4bFXkcjpjsdaPS-UJm3b7h-X7kGyfdTnDNcNS2brUX0q86pRU7Q2nSMCOWsMg/exec 302
+# Checkout — Cloudflare Pages blokt cross-origin redirects ('host_not_allowed').
+# Daarom serveren we /kopen/ als interstitial-pagina (website/kopen/index.html)
+# die client-side doorlinkt naar de Apps Script betaalpagina + query-params
+# (affiliate-codes etc.) doorgeeft.
 
 # Security.txt — RFC 9116 noemt /.well-known/security.txt als canonical,
 # maar veel scanners checken óók /security.txt — redirect voor compat.
 /security.txt /.well-known/security.txt 301
 
-# Trailing-slash canonicalisering: de .html-bestanden serveren op /voorwaarden
-# zonder slash; mét slash gaf 404. Veel pagina's linkten naar de slash-vorm.
-# 301 zodat oude links + getypte URL's alsnog landen, en SEO-canoniek wordt
-# één URL per pagina.
-/voorwaarden/ /voorwaarden 301
-/privacy/ /privacy 301
-/transparantie/ /transparantie 301
+# Trailing-slash canonicalisering. De pagina's zijn nu folders met
+# index.html (voorheen losse .html-bestanden die Cloudflare Pages
+# 403'de met 'host_not_allowed' — bug bewezen via curl op productie).
+# Zonder slash → met slash zodat de oude URLs blijven werken zonder breaking.
+/voorwaarden /voorwaarden/ 301
+/privacy /privacy/ 301
+/transparantie /transparantie/ 301
 
 # ── Affiliate tracking (/go/ routes) ──────────────────────────
 # 302 = tijdelijk, zodat target-URL bijgewerkt kan worden zonder SEO-impact.
