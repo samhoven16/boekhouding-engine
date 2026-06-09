@@ -1657,6 +1657,27 @@ function dagelijkseTaken() {
   _runTaak_('auditKeten', function() {
     if (typeof controleerAuditKetenProactief_ === 'function') controleerAuditKetenProactief_();
   });
+  // Wiskundig bewijs: verifieer alle 10 invarianten (I₁–I₁₀) tegen de live
+  // administratie. Vindt silent-drift die in de UI niet zichtbaar is:
+  // balans-paradoxen, factuurnummer-duplicaten, BTW-anomalies, periode-leaks.
+  // Schrijft per run één samenvatting naar _SYSTEM_LOG; bij schending komt
+  // er een WARN-entry per axioma met tegenvoorbeeld. Faalt nooit hard — het
+  // bewijs is observatie, niet enforcement.
+  _runTaak_('formeelBewijs', function() {
+    if (typeof bewijsAlleInvarianten_ !== 'function') return;
+    const rapport = bewijsAlleInvarianten_(ss);
+    if (!rapport) return;
+    if (typeof structuredLog_ === 'function') {
+      if (rapport.alleGoed) {
+        structuredLog_('INFO', 'dagelijkseTaken.formeelBewijs',
+          'Alle ' + rapport.gecheckt + ' axioma\'s OK', { gecheckt: rapport.gecheckt });
+      } else {
+        structuredLog_('WARN', 'dagelijkseTaken.formeelBewijs',
+          rapport.schendingen.length + '/' + rapport.gecheckt + ' invarianten geschonden',
+          { schendingen: rapport.schendingen });
+      }
+    }
+  });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   // Cycle 68: Belastingadvies-tab is een statische rendering van
   // aftrekposten + spoed-deadlines. Voorheen werd hij alleen vernieuwd
