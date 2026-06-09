@@ -31,7 +31,28 @@ const LICENTIE_CACHE_UREN = 24;
 // tijdslimiet — bij permanente server-outage werd elke licentie eindeloos
 // "geldig" verklaard, óók ingetrokken/refund-bestaande sleutels.
 const LICENTIE_LAATST_GELUKT_KEY = 'licentieLaatstGelukt';
-const LICENTIE_OFFLINE_GRACE_DAGEN = 7;
+
+// Audit-vondst ronde 2 (langlopend-onderhoud): default 7 dagen was te
+// kort. Bij Sam-onbeschikbaarheid (vakantie / account lock / bus-factor)
+// werd klant in de 8e dag uitgesloten — kon zelfs niet meer factureren
+// bij BTW-deadline. Sam's USP "Wat als Boekhoudbaar morgen stopt" eist
+// een GROTER venster.
+//
+// Nieuwe default = 90 dagen. Klant kan via ScriptProperty
+// 'LICENTIE_GRACE_DAGEN' override doen (bv. 365 voor jaar-onafhankelijk).
+// Sam kan via template-update default verlagen als hij dat ooit wil.
+const LICENTIE_OFFLINE_GRACE_DAGEN_DEFAULT = 90;
+function _licentieGraceDagen_() {
+  try {
+    const v = parseInt(PropertiesService.getScriptProperties()
+      .getProperty('LICENTIE_GRACE_DAGEN') || '', 10);
+    if (isFinite(v) && v >= 1 && v <= 3650) return v;  // 1d-10y
+  } catch (_) {}
+  return LICENTIE_OFFLINE_GRACE_DAGEN_DEFAULT;
+}
+// Backward-compat: constant blijft bestaan voor oude callers/tests.
+// eslint-disable-next-line no-unused-vars
+const LICENTIE_OFFLINE_GRACE_DAGEN = LICENTIE_OFFLINE_GRACE_DAGEN_DEFAULT;
 const LICENTIE_OFFLINE_BANNER_KEY = 'licentieOfflineBannerLaatst'; // UserProp
 
 function getLicentieServerUrl_() {
@@ -855,14 +876,14 @@ function _offlineFallback_(sleutel, reden) {
   }
   const msPerDag = 86400000;
   const dagenSinds = Math.floor((Date.now() - laatstGelukt) / msPerDag);
-  if (dagenSinds >= LICENTIE_OFFLINE_GRACE_DAGEN) {
+  if (dagenSinds >= _licentieGraceDagen_()) {
     return {
       geldig: false,
       fout: 'Licentie kan al ' + dagenSinds + ' dagen niet geverifieerd worden. ' +
         'Controleer je internetverbinding of neem contact op met support@boekhoudbaar.nl.',
     };
   }
-  const dagenResterend = LICENTIE_OFFLINE_GRACE_DAGEN - dagenSinds;
+  const dagenResterend = _licentieGraceDagen_() - dagenSinds;
   return {
     geldig: true,
     naam: props.getProperty(LICENTIE_KLANT_KEY) || '',

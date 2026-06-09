@@ -7,9 +7,10 @@
  * op LICENTIE_PROP_KEY-matching → permanent-down server = permanente "geldig"-
  * verklaring, óók voor ingetrokken sleutels.
  *
- * NU: 7 dagen offline-grace gemeten vanaf de laatste SUCCESVOLLE server-call
- * (geldig=true). Daarna ongeldig met heldere foutmelding. Banner waarschuwt
- * de klant dagelijks vanaf moment dat we offline gaan.
+ * NU (audit ronde 2, juni 2026): 90 dagen offline-grace gemeten vanaf de
+ * laatste SUCCESVOLLE server-call. Was 7 dagen — te kort bij Sam-uitval.
+ * Daarna ongeldig met heldere foutmelding. Banner waarschuwt de klant
+ * dagelijks vanaf moment dat we offline gaan.
  */
 'use strict';
 
@@ -93,7 +94,7 @@ describe('CYCLE 82: bounded stale-while-revalidate', () => {
     expect(propStore.licentieLaatstGelukt).toBe(tsVoor);
   });
 
-  test('server onbereikbaar + 3 dagen sinds laatste OK: offline-geldig met dagenResterend=4', () => {
+  test('server onbereikbaar + 3 dagen sinds laatste OK: offline-geldig met dagenResterend=87 (default 90 dagen)', () => {
     const { ctx } = maakCtx({
       props: { licentieLaatstGelukt: String(Date.now() - 3 * MS_PER_DAG) },
     });
@@ -101,16 +102,16 @@ describe('CYCLE 82: bounded stale-while-revalidate', () => {
     expect(r.geldig).toBe(true);
     expect(r.offline).toBe(true);
     expect(r.dagenSinds).toBe(3);
-    expect(r.dagenResterend).toBe(4);
+    expect(r.dagenResterend).toBe(87);
   });
 
-  test('server onbereikbaar + 7 dagen sinds laatste OK: ongeldig (grace verlopen)', () => {
+  test('server onbereikbaar + 90 dagen sinds laatste OK: ongeldig (grace verlopen)', () => {
     const { ctx } = maakCtx({
-      props: { licentieLaatstGelukt: String(Date.now() - 7 * MS_PER_DAG) },
+      props: { licentieLaatstGelukt: String(Date.now() - 90 * MS_PER_DAG) },
     });
     const r = ctx.valideerLicentieOpServer_(SLEUTEL);
     expect(r.geldig).toBe(false);
-    expect(r.fout).toMatch(/7 dagen/);
+    expect(r.fout).toMatch(/90 dagen/);
   });
 
   test('server onbereikbaar + nooit een succesvolle validatie: ongeldig', () => {
@@ -140,7 +141,30 @@ describe('CYCLE 82: bounded stale-while-revalidate', () => {
     const r = ctx.valideerLicentieOpServer_(SLEUTEL);
     expect(r.geldig).toBe(true);
     expect(r.offline).toBe(true);
-    expect(r.dagenResterend).toBe(5);
+    expect(r.dagenResterend).toBe(88);  // 90 - 2 dagen sinds
+  });
+
+  test('audit-2: ScriptProperty LICENTIE_GRACE_DAGEN override werkt', () => {
+    const { ctx } = maakCtx({
+      props: {
+        licentieLaatstGelukt: String(Date.now() - 5 * MS_PER_DAG),
+        'LICENTIE_GRACE_DAGEN': '14',  // klant-override naar 14 dagen
+      },
+    });
+    const r = ctx.valideerLicentieOpServer_(SLEUTEL);
+    expect(r.geldig).toBe(true);
+    expect(r.dagenResterend).toBe(9);  // 14 - 5
+  });
+
+  test('audit-2: override-validatie blokkeert onzin (0 of >3650) → fallback 90', () => {
+    const { ctx } = maakCtx({
+      props: {
+        licentieLaatstGelukt: String(Date.now() - 3 * MS_PER_DAG),
+        'LICENTIE_GRACE_DAGEN': '0',
+      },
+    });
+    const r = ctx.valideerLicentieOpServer_(SLEUTEL);
+    expect(r.dagenResterend).toBe(87);  // default 90 gebruikt
   });
 });
 
@@ -173,12 +197,12 @@ describe('CYCLE 82: isLicentieGeldig_ cache-TTL + banner', () => {
     });
     ctx.isLicentieGeldig_();
     expect(toastCalls.length).toBe(1);
-    expect(toastCalls[0].msg).toMatch(/5 dagen offline-toegang/);
+    expect(toastCalls[0].msg).toMatch(/88 dagen offline-toegang/);  // 90 - 2
   });
 
   test('offline-geldig met 1 dag resterend: enkelvoud "1 dag"', () => {
     const { ctx, toastCalls } = maakCtx({
-      props: { licentieLaatstGelukt: String(Date.now() - 6 * MS_PER_DAG) },
+      props: { licentieLaatstGelukt: String(Date.now() - 89 * MS_PER_DAG) },  // 90 - 89 = 1
     });
     ctx.isLicentieGeldig_();
     expect(toastCalls[0].msg).toMatch(/Nog 1 dag offline-toegang/);
@@ -189,7 +213,7 @@ describe('CYCLE 82: isLicentieGeldig_ cache-TTL + banner', () => {
     const vandaag = new Date().toISOString().slice(0, 10);
     const { ctx, toastCalls } = maakCtx({
       props: { licentieLaatstGelukt: String(Date.now() - 2 * MS_PER_DAG) },
-      userProps: { licentieOfflineBannerLaatst: vandaag + '|5' },
+      userProps: { licentieOfflineBannerLaatst: vandaag + '|88' },  // 90 - 2
     });
     ctx.isLicentieGeldig_();
     expect(toastCalls.length).toBe(0);

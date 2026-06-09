@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Wat als Boekhoudbaar morgen stopt? — Boekhoudbaar</title>
+<meta name="description" content="Boekhoudbaar is gemaakt om jouw boekhouding te overleven, ook als wij er ooit niet meer zijn. Concrete continuïteits-beloftes — geen marketing-praat.">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/continuiteit/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/animations.css">
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
+<style>
+:root{--blauw:#0D1B4E;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--bg:#F7F9FC;--rand:#E5EAF2;--rood:#DC2626;--groen:#059669;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--tekst);background:#fff;line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;}
+main{max-width:760px;margin:0 auto;padding:48px 24px 96px;}
+h1{font-size:34px;font-weight:800;color:var(--blauw);letter-spacing:-0.02em;margin-bottom:16px;line-height:1.2;}
+h2{font-size:22px;font-weight:700;color:var(--blauw);margin:40px 0 12px;}
+h3{font-size:16px;font-weight:700;color:var(--blauw);margin:24px 0 8px;}
+p{margin-bottom:14px;color:#333;}
+a{color:var(--blauw);}
+.intro{font-size:18px;color:var(--grijs);margin-bottom:32px;border-left:3px solid var(--accent);padding-left:16px;line-height:1.55;}
+.belofte{background:var(--bg);border:1px solid var(--rand);border-radius:10px;padding:20px 24px;margin:18px 0;}
+.belofte h3{margin-top:0;display:flex;align-items:center;gap:8px;}
+.belofte ul{margin:8px 0 0 22px;}
+.belofte li{margin-bottom:6px;}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;}
+th,td{padding:10px 14px;border-bottom:1px solid var(--rand);text-align:left;vertical-align:top;}
+th{background:var(--bg);font-weight:600;color:var(--blauw);}
+.kleur-rood{color:var(--rood);font-weight:600;}
+.kleur-groen{color:var(--groen);font-weight:600;}
+.footer-link{margin-top:48px;padding-top:24px;border-top:1px solid var(--rand);color:var(--grijs);font-size:14px;}
+</style>
+</head>
+<body>
+<nav-bar></nav-bar>
+<main>
+  <h1>Wat als Boekhoudbaar morgen stopt?</h1>
+  <p class="intro">Een eerlijk antwoord. Niet "wij blijven voor altijd". Wel: wat blijft werken, hoe lang, en wat je zelf kunt doen om voorbereid te zijn.</p>
+
+  <h2>Korte versie</h2>
+  <p>Boekhoudbaar is een Google Sheet in <strong>jouw</strong> Drive. Sam (de maker) is solo. Voor het geval Sam ooit onbeschikbaar wordt — vakantie, ziekte, of definitief — is het systeem zo ontworpen dat jouw boekhouding gewoon blijft werken.</p>
+
+  <h2>De drie continuïteits-beloftes</h2>
+
+  <div class="belofte">
+    <h3>🟢 Belofte 1: Je sheet blijft jouw eigendom, voor altijd</h3>
+    <p>Je hele administratie staat in jouw Google Drive. Boekhoudbaar heeft geen kopie en geen toegang. Als wij stoppen — om welke reden ook — blijft je sheet werken: facturen versturen, BTW berekenen, balans tonen, XAF exporteren voor je accountant.</p>
+    <p><strong>Wat je niet hoeft:</strong> migreren, exporteren, of een nieuwe tool kopen. Het blijft gewoon werken in Google Sheets.</p>
+  </div>
+
+  <div class="belofte">
+    <h3>🟢 Belofte 2: 90 dagen offline-buffer</h3>
+    <p>Als onze licentie-server tijdelijk niet bereikbaar is — Google-storing, Sam op vakantie, of erger — werkt je sheet gewoon door. We hebben een buffer van <strong>90 dagen</strong> ingebouwd. Dat is ruim genoeg om:</p>
+    <ul>
+      <li>Een BTW-deadline te halen (kwartaal-aangifte = max 14 dagen)</li>
+      <li>Een jaarafsluiting af te ronden</li>
+      <li>Tijd te geven voor een opvolger om de boel over te nemen</li>
+    </ul>
+    <p>Bij Sam-uitval boven 90 dagen kan een opvolger (familie, collega, koper) de buffer verder verlengen via één configuratie-wijziging op de license-server. Zie ook ons <a href="https://github.com/samhoven16/boekhouding-engine/blob/main/RUNBOOK.md" rel="noopener">RUNBOOK</a>.</p>
+  </div>
+
+  <div class="belofte">
+    <h3>🟢 Belofte 3: Vrij om weg te gaan, altijd</h3>
+    <p>Boekhoudbaar is geen lock-in. We geven je actief de gereedschappen om weg te gaan:</p>
+    <ul>
+      <li><strong>CSV-export</strong> van elke sheet (Google Sheets native)</li>
+      <li><strong>XAF-export</strong> voor je accountant (RGS 3.5 — werkt met Moneybird, Exact, e-Boekhouden)</li>
+      <li><strong>JSONL-snapshot</strong> ("Noah's Ark") in je backup-folder — leesbaar door elke tool over 20 jaar</li>
+      <li><strong>35 migratie-gidsen</strong> op <a href="/gids/">/gids/</a> — Moneybird, e-Boekhouden, Exact, etc.</li>
+    </ul>
+  </div>
+
+  <h2>Wat je ziet als Sam onbeschikbaar wordt</h2>
+
+  <table>
+    <thead>
+      <tr><th>Wanneer</th><th>Wat jij ervaart</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Eerste 90 dagen</strong></td>
+        <td><span class="kleur-groen">Niets bijzonders.</span> Alles werkt zoals altijd.</td>
+      </tr>
+      <tr>
+        <td><strong>Dag 91+</strong></td>
+        <td>Banner: "licentie kon niet geverifieerd worden". Boekingen + factureren werken nog. Sommige menu-items wachten op contact met support.</td>
+      </tr>
+      <tr>
+        <td><strong>Bij definitieve uitval</strong></td>
+        <td>Aankondiging via je laatst-bekende e-mail + de website. Migratie-instructies. Je houdt je sheet — voor altijd.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Wat als je nu al iets wilt doen</h2>
+  <p>Drie acties die je nu kunt nemen om hoe-dan-ook voorbereid te zijn:</p>
+  <ol style="margin-left:22px;">
+    <li><strong>Maak een lokale backup</strong> — Bestand → Downloaden → Excel (.xlsx). 1× per maand. Bewaar offline.</li>
+    <li><strong>Volg je accountant-export</strong> — Boekhouding → Geavanceerd → Exporteer pakket voor accountant. Stuur jaarlijks naar je accountant zodat hij een fallback heeft.</li>
+    <li><strong>Lees het RUNBOOK</strong> — wij publiceren onze eigen "wat-als-Sam-niet-meer-werkt"-procedure publiek op <a href="https://github.com/samhoven16/boekhouding-engine/blob/main/RUNBOOK.md" rel="noopener">GitHub</a>. Lees 'm één keer door zodat je weet wat er gebeurt.</li>
+  </ol>
+
+  <h2>Waarom geen "open-source-belofte"?</h2>
+  <p>Een aantal klanten vraagt of de broncode open-source wordt als Sam stopt. Ons antwoord: dat kunnen we niet beloven (zou klanten data-toegang aan derden geven via inversie-engineering). Maar:</p>
+  <ul style="margin-left:22px;">
+    <li>De broncode is voor Sam zelf transparant — alles staat in jouw Apps Script editor</li>
+    <li>Een opvolger of koper kan de code doorzetten (zie <a href="/voorwaarden/#art7">voorwaarden art. 7</a>)</li>
+    <li>Je sheet blijft werken zonder server, dus open-source is feitelijk niet nodig voor continuïteit</li>
+  </ul>
+
+  <p class="footer-link">Vragen? Mail <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a> — of lees het <a href="https://github.com/samhoven16/boekhouding-engine/blob/main/RUNBOOK.md" rel="noopener">publieke RUNBOOK</a>.</p>
+</main>
+</body>
+</html>
