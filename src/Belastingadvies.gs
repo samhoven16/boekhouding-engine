@@ -247,13 +247,31 @@ function getBelasting_() {
     }
   } catch (_) { /* fail-open naar lokale tarieven */ }
 
-  const tarieven = serverTarieven || BELASTING_PER_JAAR[jaar] || BELASTING_PER_JAAR[2026];
+  // Audit-vondst ronde 2 (langlopend-onderhoud): fallback naar
+  // BELASTING_PER_JAAR[2026] gaf vanaf 2027 stille verkeerde tarieven als
+  // Sam stopt met onderhouden. Nu: pak laatst-bekende jaar als hoogste
+  // beschikbare key, niet hardcoded 2026. Daarnaast: returneer expliciet
+  // metadata.tariefVerouderd zodat callers kunnen waarschuwen.
+  const beschikbareJaren = Object.keys(BELASTING_PER_JAAR)
+    .map(function(j) { return parseInt(j, 10); })
+    .filter(function(j) { return isFinite(j); })
+    .sort(function(a, b) { return b - a; });  // descending
+  const laatstBekendJaar = beschikbareJaren[0] || 2026;
+  const tarieven = serverTarieven
+    || BELASTING_PER_JAAR[jaar]
+    || BELASTING_PER_JAAR[laatstBekendJaar];
   // Hebben we échte tarieven voor het lopende jaar (server-override of lokale
-  // tabel)? Zo niet, dan vielen we terug op de 2026-snapshot. Belangrijk:
-  // serverTarieven is een ANDER object dan BELASTING_PER_JAAR[jaar], dus we
-  // mogen TARIEFSJAAR niet via object-identiteit bepalen — anders rapporteert
-  // de (aanbevolen) server-update-route ten onrechte 2026 i.p.v. het echte jaar.
+  // tabel)? Zo niet, dan vielen we terug op de laatst-bekende-jaar-snapshot.
+  // Belangrijk: serverTarieven is een ANDER object dan BELASTING_PER_JAAR[jaar],
+  // dus we mogen TARIEFSJAAR niet via object-identiteit bepalen — anders
+  // rapporteert de (aanbevolen) server-update-route ten onrechte verouderd-flag.
   const heeftJaarTarieven = !!(serverTarieven || BELASTING_PER_JAAR[jaar]);
+  // Markeer dat klant een fallback ziet — UI moet expliciet waarschuwen.
+  if (!heeftJaarTarieven && tarieven && typeof tarieven === 'object') {
+    tarieven.TARIEF_VEROUDERD = true;
+    tarieven.TARIEF_FALLBACK_JAAR = laatstBekendJaar;
+    tarieven.TARIEF_BRON = 'fallback (' + laatstBekendJaar + ')';
+  }
 
   // KLANT-OVERRIDES uit Instellingen-tab. Drie-laags-merge:
   //   1. Hardcoded defaults (KOR_GRENS, KIA_MIN, etc.)
