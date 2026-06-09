@@ -281,6 +281,7 @@ function onOpen() {
       .addItem('Licentie-informatie', 'toonLicentieInfo')
       .addSeparator()
       .addItem('Werkruimte opschonen (tabbladen)', 'herorganiseerWerkruimte')
+      .addItem('🧹 Triggers schoonmaken (zombie-triggers verwijderen)', 'sanitizeTriggers')
       .addSeparator()
       .addItem('🔒 Fortress Mode AAN (klant-proof maken)', 'fortressModeAan')
       .addItem('🔓 Fortress Mode UIT (handmatig editen weer toestaan)', 'fortressModeUit')
