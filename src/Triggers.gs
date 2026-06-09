@@ -1687,6 +1687,14 @@ function dagelijkseTaken() {
       controleerEmailQuotaProactief_();
     }
   });
+  // SelfHeal trigger-check: nachtelijk de canonical trigger-set verifiëren
+  // en bij gaps repareren. Throttle 24u — voorkomt heal-stormen als sanitize
+  // zelf op een ScriptApp-quota landt.
+  _runTaak_('triggerSelfHeal', function() {
+    if (typeof controleerVolledigeTriggerInstallatie_ === 'function') {
+      controleerVolledigeTriggerInstallatie_();
+    }
+  });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   // Cycle 68: Belastingadvies-tab is een statische rendering van
   // aftrekposten + spoed-deadlines. Voorheen werd hij alleen vernieuwd
