@@ -1605,22 +1605,88 @@ function verwerkJournaalpostFormulier(e) {
 // ─────────────────────────────────────────────
 
 // Healthchecks.io heartbeat — bewijs dat dagelijkse trigger gedraaid heeft.
-// Gemiste heartbeat na 1u grace = email-alert. Gratis tier (samhoven16@gmail.com).
-const HEALTHCHECK_DAGELIJKSE_TAKEN = 'https://hc-ping.com/d1a1c491-59b6-4380-a4b1-357649f749b3';
+// Gemiste heartbeat na 1u grace = email-alert.
+//
+// SINGLE-MONITOR-RISK MITIGATION (go-live audit 2026-06-09):
+//   • URL was hardcoded in source → in publieke repo = derden kunnen
+//     valse-groene pings sturen + Sam's account-uitval = blind voor alle
+//     klanten 7+ dagen.
+//   • Nu: URL leest uit ScriptProperty per klant ('HEALTHCHECK_URL'),
+//     met fallback naar gedeelde URL voor backward compat. Extra
+//     ScriptProperty 'HEALTHCHECK_URL_BACKUP' voor 2e onafhankelijke
+//     monitor (bv. UptimeRobot + Healthchecks.io tegelijk). Bij beide
+//     leeg: silent skip.
+//
+const _HEALTHCHECK_FALLBACK_URL = 'https://hc-ping.com/d1a1c491-59b6-4380-a4b1-357649f749b3';
+
+/**
+ * Lees de geconfigureerde healthcheck-URLs uit ScriptProperties.
+ * Returnt array van geldige URLs (kan leeg zijn).
+ *
+ * Volgorde:
+ *   1. HEALTHCHECK_URL          (primaire monitor, klant-eigen)
+ *   2. HEALTHCHECK_URL_BACKUP   (2e monitor, optioneel)
+ *   3. Fallback hardcoded URL   (alleen bij migratie van bestaande klanten;
+ *                                klant kan setProperty('HEALTHCHECK_URL', '')
+ *                                om migratie te bevestigen)
+ *
+ * @returns {Array<string>}
+ * @private
+ */
+function _getHealthcheckUrls_() {
+  const urls = [];
+  let props;
+  try { props = PropertiesService.getScriptProperties(); } catch (_) {}
+  if (props) {
+    const primair = String(props.getProperty('HEALTHCHECK_URL') || '').trim();
+    const backup  = String(props.getProperty('HEALTHCHECK_URL_BACKUP') || '').trim();
+    if (/^https?:\/\//.test(primair)) urls.push(primair);
+    if (/^https?:\/\//.test(backup))  urls.push(backup);
+    // Migratie-flag: lege string in HEALTHCHECK_URL = klant heeft bewust
+    // opt-out gekozen → geen fallback. Null = nog niet ingesteld → fallback.
+    if (props.getProperty('HEALTHCHECK_URL') === null && urls.length === 0) {
+      urls.push(_HEALTHCHECK_FALLBACK_URL);
+    }
+  } else if (urls.length === 0) {
+    urls.push(_HEALTHCHECK_FALLBACK_URL);
+  }
+  return urls;
+}
+
+/**
+ * Ping alle geconfigureerde healthcheck-URLs. Fail-open: een falende ping
+ * mag dagelijkseTaken niet blokkeren.
+ *
+ * KNOWN LIMITATION: UrlFetchApp.fetch heeft een hard 60s timeout per call.
+ * Bij twee onbereikbare URLs verbrandt de start-ping tot 120s van het
+ * 6-min GAS-execution-budget vóór enige _runTaak_ draait. Acceptabel
+ * binnen budget, maar reden om HEALTHCHECK_URL niet naar een onbekende
+ * service te wijzen.
+ *
+ * @param {string} suffix — '/start' bij begin, '' bij success
+ * @param {string} payload
+ * @private
+ */
+function _pingAlleHealthchecks_(suffix, payload) {
+  const urls = _getHealthcheckUrls_();
+  urls.forEach(function(url) {
+    try {
+      UrlFetchApp.fetch(url + (suffix || ''), {
+        muteHttpExceptions: true,
+        method: 'post',
+        payload: payload,
+      });
+    } catch (_) { /* fail-open per URL */ }
+  });
+}
 
 function dagelijkseTaken() {
   const ss = getSpreadsheet_();
   const dagelijksTotaal0 = Date.now();
 
-  // START-ping: laat healthchecks.io weten dat we begonnen zijn. Bij crash
-  // halverwege missen we de SUCCESS-ping en krijgt owner alert.
-  try {
-    UrlFetchApp.fetch(HEALTHCHECK_DAGELIJKSE_TAKEN + '/start', {
-      muteHttpExceptions: true,
-      method: 'post',
-      payload: 'host=' + ss.getName(),
-    });
-  } catch (_) { /* fail-open: healthcheck mag taken niet blokkeren */ }
+  // START-ping: laat alle geconfigureerde monitors weten dat we begonnen zijn.
+  // Bij crash halverwege missen ze de SUCCESS-ping en krijgt owner alert.
+  _pingAlleHealthchecks_('/start', 'host=' + ss.getName());
 
   // Elke taak in eigen try-catch: één falende taak stopt de rest niet.
   // Wrap in _runTaak_ voor automatische metrics + status-logging.
@@ -1762,15 +1828,10 @@ function dagelijkseTaken() {
   try { metricsLog_('dagelijkseTaken.totaal', totaleDuur, true); } catch (_) {}
   Logger.log('Dagelijkse taken uitgevoerd: ' + new Date());
 
-  // SUCCESS-ping: alles afgerond zonder uncaught exception. Healthchecks.io
-  // markeert deze run als groen. Duur (ms) in body voor monitoring-trends.
-  try {
-    UrlFetchApp.fetch(HEALTHCHECK_DAGELIJKSE_TAKEN, {
-      muteHttpExceptions: true,
-      method: 'post',
-      payload: 'duur_ms=' + totaleDuur,
-    });
-  } catch (_) {}
+  // SUCCESS-ping: alles afgerond zonder uncaught exception. Alle
+  // geconfigureerde monitors markeren deze run als groen. Duur (ms) in
+  // body voor monitoring-trends.
+  _pingAlleHealthchecks_('', 'duur_ms=' + totaleDuur);
 }
 
 /**
