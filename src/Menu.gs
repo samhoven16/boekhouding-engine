@@ -281,6 +281,7 @@ function onOpen() {
       .addItem('Licentie-informatie', 'toonLicentieInfo')
       .addSeparator()
       .addItem('Werkruimte opschonen (tabbladen)', 'herorganiseerWerkruimte')
+      .addItem('🧹 Triggers schoonmaken (zombie-triggers verwijderen)', 'sanitizeTriggers')
       .addSeparator()
       .addItem('Setup opnieuw uitvoeren (reset)', 'resetSetup')
     )
