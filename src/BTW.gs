@@ -107,6 +107,13 @@ function sheetData_(ss, naam) {
   return s ? s.getDataRange().getValues() : [[]];
 }
 
+// TODO audit-ronde 2 (accountant + Belastingdienst): voor elk inkoopfactuur-
+// rij dat r2/r5b voorbelasting bijdraagt, hoort een Drive-bijlage-link
+// in dezelfde rij (kolom 'Bijlage' of 'PDF'). Bij steekproef-controle
+// art. 15 Wet OB eist onderliggende bewijsstuk; rijen zonder bijlage
+// kunnen voorbelasting verliezen. Vervolg-PR: berekenBtwAangifte_ moet
+// rijen met lege bijlage-kolom in r2/r5b OF flaggen in audit-log OF
+// uitsluiten van voorbelasting-totaal.
 function berekenBtwAangifte_(ss, vanDatum, totDatum) {
   // Null-guard: sheet kan ontbreken bij gedeeltelijke setup of verwijderde tab.
   const vfData = sheetData_(ss, SHEETS.VERKOOPFACTUREN);

@@ -378,6 +378,13 @@ function _bewijs_I7_factuurnummerMonotoon_(ss) {
       }
     }
   });
+  // TODO audit-ronde 2 (accountant + Belastingdienst): I₇ blokkeert nu
+  // niet in de factuur-creatie-flow — alleen post-hoc detectie. Bij
+  // controleur-vraag "waarom factuur 045 vóór 044 in tijd?" leunt
+  // verdediging op de klant's begrip van het axioma. Overweeg in
+  // vervolg-PR een pre-write check in Verkoopfacturen.gs die backdated
+  // factuur-rijen weigert (of expliciet motiveren vereist, zoals
+  // beheerGeslotenPeriodes nu doet).
   if (breuk.length > 0) {
     return Object.assign(meta, {
       geldig: false,

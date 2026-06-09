@@ -1123,7 +1123,7 @@ function beheerGeslotenPeriodes() {
   const resp = ui.prompt(
     '🔒 Gesloten periodes',
     `De volgende periodes zijn vergrendeld:\n\n${lijstTekst}\n\n` +
-    `Voer het nummer in van de periode die u wilt ontgrendelen, of druk op Annuleren:`,
+    `Voer het nummer in van de periode die je wilt ontgrendelen, of druk op Annuleren:`,
     ui.ButtonSet.OK_CANCEL
   );
 
@@ -1131,20 +1131,87 @@ function beheerGeslotenPeriodes() {
 
   const nr = parseInt(resp.getResponseText().trim()) - 1;
   if (isNaN(nr) || nr < 0 || nr >= periodes.length) {
-    ui.alert('Ongeldig nummer.'); return;
+    ui.alert('Ongeldig nummer — kies 1 t/m ' + periodes.length + ' uit de lijst.');
+    return;
+  }
+
+  // Audit-vondst ronde 2 (accountant + Belastingdienst):
+  // Bij art. 52 AWR-controle moet retroactieve wijziging van afgesloten
+  // periode "gemotiveerd én onmiskenbaar in audit-trail" worden vastgelegd.
+  // Single-YES-click was te laag → "kennelijke onjuistheid"-vermoeden.
+  //
+  // Nu: 3 gates achter elkaar:
+  //   1. Klant typt EXACT de periode-label (typo-resistant intent)
+  //   2. Klant typt motivatie (min 20 chars vrije tekst)
+  //   3. Bevestigings-dialog toont samenvatting + waarschuwing
+  // Pas dan: ontgrendeling + audit-log met motivatie.
+  const periode = periodes[nr];
+
+  const bevestigTekst = ui.prompt(
+    '⚠️ Periode ontgrendelen — stap 1 van 3',
+    `Type EXACT de periode-naam om je intentie te bevestigen.\n\n` +
+    `Verwacht: ${periode.label}\n\n` +
+    `(Hoofdletters/spaties moeten overeenkomen)`,
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (bevestigTekst.getSelectedButton() !== ui.Button.OK) return;
+  if (String(bevestigTekst.getResponseText() || '').trim() !== periode.label) {
+    ui.alert(
+      'Geannuleerd',
+      'De periode-naam kwam niet exact overeen — uit veiligheid is de actie afgebroken. ' +
+      'Probeer opnieuw via Boekhouding → Boekjaar → Gesloten periodes.',
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+  const motivatieDialog = ui.prompt(
+    '⚠️ Periode ontgrendelen — stap 2 van 3',
+    `Geef een MOTIVATIE voor het ontgrendelen (min 20 tekens).\n\n` +
+    `Deze tekst wordt vastgelegd in het AuditLog ter verdediging bij een ` +
+    `controle door Belastingdienst (art. 52 AWR — administratie-betrouwbaarheid).\n\n` +
+    `Voorbeelden:\n` +
+    `  • "Correctie inkoopfactuur leverancier X, datum 12-02 — bewijsstuk later ontvangen"\n` +
+    `  • "Boekjaar 2025 herstellen na ontdekking foutboeking €450 advieskosten"`,
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (motivatieDialog.getSelectedButton() !== ui.Button.OK) return;
+  const motivatie = String(motivatieDialog.getResponseText() || '').trim();
+  if (motivatie.length < 20) {
+    ui.alert(
+      'Motivatie te kort',
+      'Geef minstens 20 tekens motivatie. Deze tekst wordt vastgelegd in het AuditLog ' +
+      'en kan worden overlegd bij een controle door Belastingdienst.',
+      ui.ButtonSet.OK
+    );
+    return;
   }
 
   const bevestiging = ui.alert(
-    '⚠️ Periode ontgrendelen',
-    `Weet u zeker dat u "${periodes[nr].label}" wilt ontgrendelen?\n\n` +
-    `U kunt dan weer boekingen maken in deze periode. Dit kan gevolgen hebben voor ingediende BTW-aangiften.`,
+    '⚠️ Periode ontgrendelen — stap 3 van 3',
+    `Periode:    ${periode.label}\n` +
+    `Motivatie:  ${motivatie.slice(0, 200)}\n\n` +
+    `BELANGRIJK: deze ontgrendeling wordt vastgelegd in het AuditLog ` +
+    `inclusief je naam, tijdstip en bovenstaande motivatie. Bij latere ` +
+    `Belastingdienst-controle kan deze regel als bewijs van een ` +
+    `weloverwogen wijziging worden overlegd.\n\n` +
+    `Doorgaan?`,
     ui.ButtonSet.YES_NO
   );
 
   if (bevestiging === ui.Button.YES) {
     periodes.splice(nr, 1);
     props.setProperty('GESLOTEN_PERIODES', JSON.stringify(periodes));
-    ui.alert('Periode ontgrendeld.', 'U kunt weer boekingen maken in deze periode.', ui.ButtonSet.OK);
+    try {
+      schrijfAuditLog_('PERIODE_ONTGRENDELD',
+        'periode=' + periode.label + ' | motivatie=' + motivatie.slice(0, 400));
+    } catch (_) {}
+    ui.alert(
+      'Periode ontgrendeld + gelogd',
+      'De periode is ontgrendeld. De motivatie staat in AuditLog (verborgen tabblad). ' +
+      'Maak nu de noodzakelijke correctie(s) en sluit de periode daarna opnieuw af.',
+      ui.ButtonSet.OK
+    );
   }
 }
 
