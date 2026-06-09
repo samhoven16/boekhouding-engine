@@ -50,7 +50,9 @@ function augmentUtilities(ctx) {
 describe('CYCLE 65: AI bon-scan is bereikbaar (geen valse belofte)', () => {
   test('menu wiret zetGeminiApiKey', () => {
     expect(menuBron).toContain("'zetGeminiApiKey'");
-    expect(menuBron).toMatch(/Gemini API-key voor bon-scan[\s\S]{0,40}'zetGeminiApiKey'/);
+    // Label-tekst is in PR #248 herformuleerd naar BYOK-framing ("Eigen", "gratis",
+    // "optioneel"). De essentie blijft: er staat een Gemini-label bij de handler.
+    expect(menuBron).toMatch(/Gemini[\s\S]{0,80}'zetGeminiApiKey'/);
   });
 
   test('zetGeminiApiKey bestaat en slaat versleuteld op in ScriptProperties', () => {

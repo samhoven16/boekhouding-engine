@@ -18,6 +18,38 @@ function openNieuweBoeking() {
   const catOpties = (ctx.categorieen || [])
     .map(function(c){ return '<option>' + _esc(c) + '</option>'; }).join('');
 
+  // BYOK-gating: AI bon-scan vereist klant's eigen Gemini API-key (gratis op
+  // aistudio.google.com). Zonder key tonen we GEEN dropzone — dat zou de klant
+  // verleiden tot uploaden waarna hij een foutmelding krijgt. In plaats daarvan:
+  // een eerlijke uitleg + één klik om de key in te stellen.
+  const aiActief = (typeof aiBeschikbaar_ === 'function') ? aiBeschikbaar_() : false;
+  const uploadPanelInhoud = aiActief ? `
+    <div class="sectie">Stap 1 — Upload uw bon of factuur</div>
+    <div class="dropzone" id="dropzone" onclick="document.getElementById('bon-file').click()">
+      <span class="icoon">📷</span>
+      <strong id="dz-titel">Klik hier of sleep een bestand</strong>
+      <p>JPG, PNG, PDF — max 10 MB</p>
+    </div>
+    <input type="file" id="bon-file" accept="image/*,.pdf" style="display:none" onchange="bonGekozen(this)">
+    <div class="ai-balk" id="ai-balk">
+      <div class="spinner" id="ai-spinner"></div>
+      <span id="ai-tekst">AI scant uw document...</span>
+    </div>
+  ` : `
+    <div class="byok-uit" style="background:#FFF8E1;border:1px solid #FFECB3;border-radius:10px;padding:20px;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:600;color:#5A3F00;margin-bottom:6px">🤖 AI bon-scan staat uit</div>
+      <div style="font-size:13px;color:#5A3F00;line-height:1.55;margin-bottom:12px">
+        Deze feature gebruikt Google Gemini om leverancier, datum en bedrag automatisch van je bon te lezen.
+        Je gebruikt je <b>eigen</b> Google AI-key (gratis aan te maken, geen creditcard nodig).<br>
+        Boekhoudbaar betaalt nooit voor jouw scans — jij ziet je eigen verbruik op je eigen Google-account.
+      </div>
+      <button class="btn" onclick="zetAiKeyIn()" style="background:#0D1B4E;color:#fff;border:none;padding:9px 18px;border-radius:6px;font-weight:600;cursor:pointer">Stel je gratis Gemini-key in</button>
+      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="margin-left:12px;color:#0D1B4E;font-size:13px">Open aistudio.google.com</a>
+    </div>
+    <div class="sectie">Of vul handmatig in</div>
+    <div style="font-size:12px;color:#666;margin-bottom:8px">Boek je kosten via tab <b>💸 Kosten</b> als je geen AI gebruikt.</div>
+  `;
+
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
 :root{--pk:${kleur};--pk-licht:${kleurLicht};--pk-mid:${kleurMidden}}
@@ -389,18 +421,7 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 
 <!-- ════ UPLOAD + AI ════ -->
 <div class="panel" id="panel-upload">
-  <div class="sectie">Stap 1 — Upload uw bon of factuur</div>
-  <div class="dropzone" id="dropzone" onclick="document.getElementById('bon-file').click()">
-    <span class="icoon">📷</span>
-    <strong id="dz-titel">Klik hier of sleep een bestand</strong>
-    <p>JPG, PNG, PDF — max 10 MB</p>
-  </div>
-  <input type="file" id="bon-file" accept="image/*,.pdf" style="display:none" onchange="bonGekozen(this)">
-
-  <div class="ai-balk" id="ai-balk">
-    <div class="spinner" id="ai-spinner"></div>
-    <span id="ai-tekst">AI scant uw document...</span>
-  </div>
+  ${uploadPanelInhoud}
 
   <div id="upload-velden" style="display:none">
     <div class="sectie">Stap 2 — Controleer &amp; corrigeer</div>
@@ -1096,6 +1117,20 @@ function vulSpraakVelden(type, v) {
 }
 
 /* ── UPLOAD + AI ── */
+function zetAiKeyIn() {
+  // Klant klikt op "Stel je gratis Gemini-key in" in het BYOK-CTA-paneel.
+  // We sluiten de huidige dialog NIET; in plaats daarvan tonen we de
+  // GAS-prompt en herrenderen de UI op basis van de nieuwe status.
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (r && r.actief) {
+        alert('AI bon-scan is nu actief. Sluit dit venster en open Nieuwe boeking opnieuw — de Upload+AI tab werkt nu.');
+      }
+    })
+    .withFailureHandler(function(e) { alert('Lukt niet: ' + (e.message || e)); })
+    .aiSetupViaDialog();
+}
+
 function bonGekozen(input) {
   var file = input.files[0];
   if (!file) return;
