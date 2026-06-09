@@ -126,11 +126,13 @@ describe('Fix #5 — Periode-ontgrendel-historie behouden', () => {
     expect(blok).toMatch(/hist\.push\(/);
   });
 
-  test('Historie cap op 100 entries (9KB-prop-limit safety)', () => {
+  test('Historie cap op 15 entries (R3 — 100 overschreed 9KB-prop-limit)', () => {
+    // Cap was 100 in R2-batch1 maar 100 × ~450B ≈ 45KB > 9KB-per-property.
+    // R3 audit (audit2-r3-fixes.test.js) bracht cap terug naar 15.
     const start = boek.indexOf('GESLOTEN_PERIODES_HISTORIE');
     const blok = boek.slice(start, start + 1500);
-    expect(blok).toMatch(/hist\.length > 100/);
-    expect(blok).toMatch(/hist\.slice\(hist\.length - 100\)/);
+    expect(blok).toMatch(/hist\.length > 15/);
+    expect(blok).toMatch(/hist\.slice\(hist\.length - 15\)/);
   });
 
   test('Fail-safe: historie-write mag splice niet blokkeren', () => {

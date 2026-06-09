@@ -830,20 +830,34 @@ function schrijfAuditLog_(actie, details) {
     // race-condition risico tussen dagelijkseTaken (auditKeten + formeel-
     // Bewijs schrijven parallel) en user-actie (PERIODE_ONTGRENDELD).
     // Nu: LockService.getScriptLock met 2s tryLock → atomair read+write.
+    //
+    // Audit ronde 3 (gas-runtime): tryLock kan stil falen (returnt false).
+    // Voorheen ging de write tóch door → race bleef open. Nu: bij lock-
+    // miss schrijven we de hash NIET — entry-buffer wordt nog wel bewaard
+    // (zonder hash-suffix) zodat de audit-log niet stilvalt, maar de chain
+    // wordt overgeslagen tot volgende write die wel de lock krijgt.
     let lock = null;
-    try { lock = LockService.getScriptLock(); lock.tryLock(2000); } catch (_) {}
-    let prevHash = '';
-    try { prevHash = String(props.getProperty('AUDIT_KETEN_HASH') || ''); } catch (_) {}
-    let entryHash = '';
+    let lockHeld = false;
     try {
-      const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, prevHash + '|' + entryBase);
-      entryHash = raw.map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); }).join('');
+      lock = LockService.getScriptLock();
+      lockHeld = lock.tryLock(2000);
     } catch (_) {}
-    const entry = entryBase + ' | ' + entryHash.slice(0, 16);
-    if (entryHash) {
-      try { props.setProperty('AUDIT_KETEN_HASH', entryHash); } catch (_) {}
+    let prevHash = '';
+    let entryHash = '';
+    if (lockHeld) {
+      try { prevHash = String(props.getProperty('AUDIT_KETEN_HASH') || ''); } catch (_) {}
+      try {
+        const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, prevHash + '|' + entryBase);
+        entryHash = raw.map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); }).join('');
+      } catch (_) {}
+      if (entryHash) {
+        try { props.setProperty('AUDIT_KETEN_HASH', entryHash); } catch (_) {}
+      }
+      try { lock.releaseLock(); } catch (_) {}
     }
-    if (lock) { try { lock.releaseLock(); } catch (_) {} }
+    const entry = lockHeld
+      ? entryBase + ' | ' + entryHash.slice(0, 16)
+      : entryBase + ' | NOLOCK';
     // KNOWN LIMITATION: klant heeft Editor-rechten op ScriptProperties dus
     // kan AUDIT_KETEN_HASH resetten. Mitigatie: dagelijkseTaken stuurt
     // huidige hash naar Sam-only inbox (mailDagelijksAuditAnchor_) zodat
@@ -936,14 +950,32 @@ function verifieerAuditChain_() {
   }
 }
 
+// Audit-vondst ronde 3 (red-team): de "externe" anchor was niet écht
+// extern omdat AUDIT_ANCHOR_EMAIL ScriptProperty klant-schrijfbaar is.
+// Klant kon ontvanger naar eigen adres zetten → Sam ontvangt nooit.
+// Nu: hardcoded Sam-fallback-adres dat ALTIJD een kopie krijgt naast
+// de configureerbare ontvanger. Klant kan dit niet uitzetten zonder
+// de code te wijzigen (en dat gaat klant-instances voorbij).
+//
+// Sam zet dit op zijn eigen e-mail in de template vóór distributie.
+// Klant ziet wel het BCC-veld in z'n eigen Sent — bewust transparant:
+// "audit-anchor wordt gemailed naar Boekhoudbaar voor bewijslast".
+const _AUDIT_ANCHOR_SAM_FALLBACK = 'samhoven16@gmail.com';
+
 /**
  * Audit-vondst ronde 2: externe trust-anchor voor audit-chain.
- * Mailt de huidige AUDIT_KETEN_HASH + entry-count naar Sam-only inbox.
- * Klant kan ScriptProperties resetten, maar de gemailde hash blijft als
- * onafhankelijke referentie. Sam kan vergelijken bij latere verificatie.
+ * Ronde 3 (red-team): dual-channel om klant-omleiding te dichten.
+ *
+ * Mailt huidige AUDIT_KETEN_HASH + entry-count naar:
+ *   1. Klant-configureerbare AUDIT_ANCHOR_EMAIL / OWNER_STATUS_EMAIL
+ *   2. Sam-hardcoded fallback (klant kan NIET wissen zonder code-edit)
+ *
+ * Beide ontvangen ALTIJD een kopie (geen alternatief). Klant ziet het in
+ * z'n Sent-folder — bewust transparant. Bij Belastingdienst-controle kan
+ * Sam de bewaarde mail vergelijken met huidige AUDIT_KETEN_HASH; mismatch
+ * = klant heeft chain gereset.
  *
  * Throttle: 1× per dag (idempotent via datum-prop).
- * Ontvanger: AUDIT_ANCHOR_EMAIL ScriptProperty, fallback OWNER_STATUS_EMAIL.
  */
 // eslint-disable-next-line no-unused-vars
 function mailDagelijksAuditAnchor_() {
@@ -953,9 +985,18 @@ function mailDagelijksAuditAnchor_() {
     const laatste = props.getProperty('AUDIT_ANCHOR_LAATSTE_MAIL') || '';
     if (laatste === vandaag) return;  // throttle 1×/dag
 
-    const ontvanger = props.getProperty('AUDIT_ANCHOR_EMAIL')
-      || props.getProperty('OWNER_STATUS_EMAIL') || '';
-    if (!ontvanger || !/@/.test(ontvanger)) return;
+    const klantOntvanger = String(props.getProperty('AUDIT_ANCHOR_EMAIL')
+      || props.getProperty('OWNER_STATUS_EMAIL') || '').trim();
+    // Sam-fallback krijgt ALTIJD een kopie — klant-schrijfbare prop kan
+    // dit niet onderdrukken (anti-tamper).
+    const ontvangers = [];
+    if (klantOntvanger && /@/.test(klantOntvanger)) ontvangers.push(klantOntvanger);
+    if (_AUDIT_ANCHOR_SAM_FALLBACK
+        && /@/.test(_AUDIT_ANCHOR_SAM_FALLBACK)
+        && ontvangers.indexOf(_AUDIT_ANCHOR_SAM_FALLBACK) === -1) {
+      ontvangers.push(_AUDIT_ANCHOR_SAM_FALLBACK);
+    }
+    if (ontvangers.length === 0) return;
 
     const hash = props.getProperty('AUDIT_KETEN_HASH') || '(leeg)';
     const buffer = props.getProperty('auditLogBuffer') || '';
@@ -977,7 +1018,9 @@ function mailDagelijksAuditAnchor_() {
       'Hash:        ' + hash + '\n\n' +
       'Bij Belastingdienst-controle: vergelijk deze hash met huidige\n' +
       'AUDIT_KETEN_HASH ScriptProperty. Mismatch = klant heeft chain gereset.';
-    try { MailApp.sendEmail(ontvanger, onderwerp, body); } catch (_) {}
+    ontvangers.forEach(function(o) {
+      try { MailApp.sendEmail(o, onderwerp, body); } catch (_) {}
+    });
     props.setProperty('AUDIT_ANCHOR_LAATSTE_MAIL', vandaag);
   } catch (_) { /* anchor mag nooit dagelijkseTaken breken */ }
 }

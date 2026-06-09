@@ -1217,8 +1217,13 @@ function beheerGeslotenPeriodes() {
         ontgrendeldDoor: (function() { try { return Session.getActiveUser().getEmail() || ''; } catch (_) { return ''; } })(),
         motivatie: motivatie.slice(0, 400),
       });
-      // Cap historie op laatste 100 ontgrendelingen om 9KB-prop-limit te respecteren
-      if (hist.length > 100) hist = hist.slice(hist.length - 100);
+      // Cap historie op laatste 15 ontgrendelingen. Audit ronde 3:
+      // 100 × ~450B (motivatie 400 + meta) ≈ 45KB > 9KB-per-property limiet
+      // → setProperty zou throwen → catch swallow → silent data-loss op historie.
+      // 15 entries × ~450B = ~7KB, ruim onder 9KB. Belastingdienst-controle
+      // kijkt vrijwel altijd 1 lopend boekjaar; oudere entries staan in AuditLog
+      // via schrijfAuditLog_ hierna (die hash-chain + 100-rij-buffer heeft).
+      if (hist.length > 15) hist = hist.slice(hist.length - 15);
       props.setProperty('GESLOTEN_PERIODES_HISTORIE', JSON.stringify(hist));
     } catch (_) { /* historie-write mag splice niet blokkeren */ }
 
