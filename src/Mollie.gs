@@ -105,14 +105,26 @@ function genereerMolliePaymentLink_(factuur) {
         ? circuitBreaker_('mollie_api', fetchFn)
         : fetchFn();
     } catch (eCB) {
-      // Circuit-OPEN of veiligFetch-throw: log + degradeer naar geen-link
+      // Circuit-OPEN of veiligFetch-throw: log + degradeer naar geen-link.
+      // Go-live blocker #8: klant moet WETEN dat de factuur zonder iDEAL-
+      // knop uitgaat — anders denkt zij dat alles werkt en klaagt haar
+      // klant pas later "ik zie geen betaal-knop".
       safeAuditLog_('Mollie payment-link MISLUKT (circuit)', factuur.factuurnummer + ' ' + (eCB.message || eCB));
+      _toonMollieFaalToast_(factuur.factuurnummer, 'is tijdelijk niet bereikbaar');
       return null;
     }
     const code = resp.getResponseCode();
     if (code !== 201) {
       Logger.log('Mollie create-payment status ' + code + ': ' + resp.getContentText().slice(0, 300));
       safeAuditLog_('Mollie payment-link MISLUKT', factuur.factuurnummer + ' status=' + code);
+      // Vertaal HTTP-code naar klant-vriendelijke reden (geen jargon "API-fout 4xx").
+      // Reden moet grammaticaal aansluiten op "Mollie {reden}" in de toast.
+      let reden = 'is tijdelijk niet bereikbaar';
+      if (code === 401 || code === 403) reden = 'weigert de API-key — check Instellingen → Mollie API-key';
+      else if (code === 422)            reden = 'heeft de factuurgegevens niet geaccepteerd — check klantnaam en bedrag';
+      else if (code >= 500)             reden = 'is tijdelijk niet bereikbaar';
+      else if (code >= 400)             reden = 'heeft het verzoek geweigerd (code ' + code + ')';
+      _toonMollieFaalToast_(factuur.factuurnummer, reden);
       return null;
     }
     const json = JSON.parse(resp.getContentText());
@@ -122,8 +134,52 @@ function genereerMolliePaymentLink_(factuur) {
     return link;
   } catch (e) {
     Logger.log('genereerMolliePaymentLink_ fout: ' + e.message);
+    _toonMollieFaalToast_(factuur && factuur.factuurnummer, 'is niet bereikbaar door een onbekende fout');
     return null;
   }
+}
+
+/**
+ * Toont een toast aan de klant zodra een Mollie payment-link niet kon
+ * worden gegenereerd. Voorkomt dat klant denkt "factuur is verstuurd met
+ * iDEAL-knop" terwijl die er feitelijk niet op staat.
+ *
+ * Fail-safe: throwt niets — als de spreadsheet-context ontbreekt (webhook
+ * / unit-test) gebeurt er stil niets. Idempotency niet nodig omdat toast
+ * een no-op is in non-UI-contexten.
+ *
+ * Daarnaast: schrijft UserProperty MOLLIE_LAATSTE_FAAL met ISO-timestamp
+ * + factuurnummer + reden, zodat een latere klant-vraag traceerbaar is.
+ *
+ * @param {string} factuurnummer
+ * @param {string} reden — grammaticaal aansluitend op "Mollie {reden}".
+ *                          Voorbeelden: 'is tijdelijk niet bereikbaar',
+ *                          'weigert de API-key — check Instellingen',
+ *                          'heeft de factuurgegevens niet geaccepteerd'.
+ * @private
+ */
+function _toonMollieFaalToast_(factuurnummer, reden) {
+  const nr = String(factuurnummer || '?');
+  const r  = String(reden || 'onbekend');
+  try {
+    PropertiesService.getUserProperties().setProperty(
+      'MOLLIE_LAATSTE_FAAL',
+      JSON.stringify({ ts: new Date().toISOString(), factuur: nr, reden: r })
+    );
+  } catch (_) {}
+  try {
+    const ss = getSpreadsheet_();
+    if (ss && typeof ss.toast === 'function') {
+      ss.toast(
+        'Factuur ' + nr + ' is verstuurd, maar Mollie ' + r +
+          ' — er staat tijdelijk geen iDEAL-knop op deze factuur. ' +
+          'Je klant kan handmatig overmaken via het IBAN op de factuur. ' +
+          'Bij de volgende factuur wordt het opnieuw geprobeerd.',
+        '⚠️ Tijdelijk geen iDEAL-link',
+        12
+      );
+    }
+  } catch (_) {}
 }
 
 /**
