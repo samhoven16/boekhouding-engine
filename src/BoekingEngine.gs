@@ -818,7 +818,31 @@ function schrijfAuditLog_(actie, details) {
     } catch (_) { tenant = 'na'; }
     // Cap details om 9KB ScriptProperties limit te respecteren
     const detailsCapped = String(details || '').slice(0, 500);
-    const entry        = tijdstip + ' | ' + tenant + ' | ' + gebruiker + ' | ' + actie + ' | ' + detailsCapped;
+    const entryBase    = tijdstip + ' | ' + tenant + ' | ' + gebruiker + ' | ' + actie + ' | ' + detailsCapped;
+
+    // Audit-finding ronde 2: hash-chain om tampering te detecteren.
+    // Klant heeft Editor-toegang op ScriptProperties → kan elke regel
+    // hand-editten. Zonder chain is "audit-log was fout"-claim niet weer-
+    // legbaar. Met chain: SHA256(prevHash + entry) → elke wijziging
+    // breekt de chain bij verificatie. Klant kan recente entries niet
+    // ongemerkt veranderen want hij kent de prevHash niet zonder de
+    // exacte tijdstempel + gebruiker + tenant te reproduceren.
+    let prevHash = '';
+    try { prevHash = String(props.getProperty('AUDIT_KETEN_HASH') || ''); } catch (_) {}
+    let entryHash = '';
+    try {
+      const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, prevHash + '|' + entryBase);
+      entryHash = raw.map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); }).join('');
+    } catch (_) {}
+    const entry = entryBase + ' | ' + entryHash.slice(0, 16);
+    if (entryHash) {
+      try { props.setProperty('AUDIT_KETEN_HASH', entryHash); } catch (_) {}
+    }
+    // KNOWN LIMITATION + TODO: klant heeft Editor-rechten op
+    // ScriptProperties dus kan AUDIT_KETEN_HASH resetten. Chain breekt dan
+    // bij volgende verificatie (verifieerAuditChain_ in volgende PR). Voor
+    // externe anchor: dagelijksTaken zou de huidige hash kunnen mailen naar
+    // een Sam-only inbox — write-only trust anchor die klant niet bereikt.
 
     // Houd laatste 100 regels bij in ScriptProperties (max ~8KB om 9KB limit veilig te houden)
     const LOG_KEY = 'auditLogBuffer';

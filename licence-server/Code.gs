@@ -47,7 +47,22 @@ function doGet(e) {
   // (veiligVergelijk_ stopt timing-attack maar niet rate-attack).
   // 20 pogingen/uur globaal — voldoende voor legitieme typo's, voorkomt
   // brute-force scanning.
-  if (actie === 'admin')         return rateLimit_(e, { actie: 'admin-login', globaal: 20, windowMin: 60 }) || adminPaneel_(e);
+  //
+  // Audit-finding #3 ronde 2: globaal counter = self-DoS risico (attacker
+  // kan eigenaar uitsluiten door 20× verkeerd te raden). Twee mitigaties:
+  //   1. Bij overschrijding mailt server Sam ÉÉN keer per uur (alert)
+  //   2. ScriptProperty 'ADMIN_NOODSLEUTEL' (Sam-only) bypasst rate-limit
+  //      mits query-param ?noodsleutel=<waarde> matched. Sam weet, attacker
+  //      niet. Tijdelijk gebruiken bij lockout incident.
+  if (actie === 'admin') {
+    if (_adminNoodsleutelOk_(e)) return adminPaneel_(e);
+    const blocked = rateLimit_(e, { actie: 'admin-login', globaal: 20, windowMin: 60 });
+    if (blocked) {
+      try { _meldAdminLockoutAanOwner_(); } catch (_) {}
+      return blocked;
+    }
+    return adminPaneel_(e);
+  }
   if (actie === 'roteer')        return rateLimit_(e, { actie: 'roteer', perEmail: 3, globaal: 100, windowMin: 60 }) || roteerEndpoint_(e);
   if (actie === 'revoke')        return revokeEndpoint_(e);
   // Cycle 80: GDPR Art. 17 — recht op vergetelheid. OTP-gated zodat alleen
@@ -1150,6 +1165,94 @@ function bedanktPagina_(e) {
 // ─────────────────────────────────────────────
 //  ADMIN PANEEL
 // ─────────────────────────────────────────────
+/**
+ * Audit-finding ronde 2: noodsleutel-bypass voor admin-rate-limit lockout.
+ * Sam zet ScriptProperty 'ADMIN_NOODSLEUTEL' op een sterke random waarde
+ * (>= 24 chars). Bij admin-lockout door brute-force-aanval kan hij
+ * inloggen via ?actie=admin&noodsleutel=<waarde>. Attacker kent waarde
+ * niet → bypass faalt → rate-limit blijft van kracht.
+ *
+ * Verifieert constant-time. Bewust GEEN audit-log van de waarde zelf,
+ * alleen "bypass gebruikt" met IP-info-snippet als beschikbaar.
+ *
+ * @param {Object} e — Apps Script doGet event
+ * @returns {boolean} true = bypass toegestaan
+ * @private
+ */
+function _adminNoodsleutelOk_(e) {
+  try {
+    const ingegeven = String((e && e.parameter && e.parameter.noodsleutel) || '');
+    if (!ingegeven || ingegeven.length < 24) return false;
+    const verwacht = String(PropertiesService.getScriptProperties()
+      .getProperty('ADMIN_NOODSLEUTEL') || '');
+    if (!verwacht || verwacht.length < 24) return false;  // niet geconfigureerd
+    const ok = (typeof veiligVergelijk_ === 'function')
+      ? veiligVergelijk_(ingegeven, verwacht)
+      : ingegeven === verwacht;
+    if (ok) {
+      try {
+        SpreadsheetApp.openById(PropertiesService.getScriptProperties()
+          .getProperty('LICENTIE_SHEET_ID') || '').getSheetByName('Audit Log')
+          .appendRow([new Date(), 'ADMIN_NOODSLEUTEL_GEBRUIKT', '(geslaagd)']);
+      } catch (_) {}
+    }
+    return ok;
+  } catch (_) { return false; }
+}
+
+/**
+ * Audit-finding ronde 2: bij admin-rate-limit hit ontvangt Sam ÉÉN mail
+ * per uur (throttled via ScriptProperty). Voorkomt dat hij niet doorheeft
+ * dat hij is uitgesloten door een aanval.
+ *
+ * Inhoud: melding van blokkade + uitleg over noodsleutel-bypass.
+ *
+ * @private
+ */
+function _meldAdminLockoutAanOwner_() {
+  const NU = Date.now();
+  const props = PropertiesService.getScriptProperties();
+  const laatste = parseInt(props.getProperty('ADMIN_LOCKOUT_LAATSTE_ALERT_TS') || '0', 10);
+  if (NU - laatste < 60 * 60 * 1000) return;  // throttle: 1×/uur
+  props.setProperty('ADMIN_LOCKOUT_LAATSTE_ALERT_TS', String(NU));
+
+  const ontvanger = props.getProperty('OWNER_STATUS_EMAIL') ||
+    (function() {
+      try { return Session.getEffectiveUser().getEmail() || ''; }
+      catch (_) { return ''; }
+    })();
+  if (!ontvanger) return;
+
+  const noodsleutelGezet = !!props.getProperty('ADMIN_NOODSLEUTEL');
+
+  const html =
+    '<div style="font-family:-apple-system,Arial,sans-serif;max-width:560px">' +
+    '<div style="background:#FEE2E2;border:2px solid #DC2626;border-radius:8px;padding:16px 20px;margin-bottom:18px">' +
+    '<div style="font-size:18px;font-weight:700;color:#991B1B">🚨 Admin-paneel geblokkeerd</div>' +
+    '<div style="font-size:14px;color:#7F1D1D;margin-top:8px;line-height:1.5">' +
+    'De licence-server heeft 20 mislukte admin-login-pogingen geregistreerd in het afgelopen uur. ' +
+    'De normale admin-login is voor 60 minuten geblokkeerd — dit kan een brute-force-aanval zijn ' +
+    'of jezelf bij herhaalde typo.</div></div>' +
+    (noodsleutelGezet
+      ? '<p style="font-size:14px">Inloggen kan tijdens lockout via:<br>' +
+        '<code style="background:#F7F9FC;padding:4px 8px;border-radius:4px;font-size:12px">' +
+        '?actie=admin&amp;noodsleutel=&lt;ADMIN_NOODSLEUTEL waarde&gt;</code></p>' +
+        '<p style="font-size:12px;color:#6B7280">⚠️ Noodsleutel komt in browser history en server-logs. ' +
+        'Rotate de waarde na gebruik via ScriptProperty wijziging.</p>'
+      : '<p style="font-size:14px;color:#D97706">⚠️ Geen <code>ADMIN_NOODSLEUTEL</code> ScriptProperty gezet. ' +
+        'Stel hem in (minimaal 24 random chars) zodat je bij toekomstige lockouts toegang houdt.</p>') +
+    '</div>';
+
+  try {
+    MailApp.sendEmail({
+      to: ontvanger,
+      subject: '🚨 Boekhoudbaar admin-paneel geblokkeerd (20 pogingen/uur)',
+      htmlBody: html,
+      name: 'Boekhoudbaar Security',
+    });
+  } catch (_) {}
+}
+
 function adminPaneel_(e) {
   const ww    = PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '';
   const input = String((e.parameter.ww || '')).trim();

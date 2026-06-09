@@ -235,7 +235,14 @@ function verwerkMollieWebhook_(payload) {
       const raw = Utilities.computeHmacSha256Signature(paymentId, secret);
       return raw.map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); }).join('');
     })();
-    if (!sig || sig !== verwacht) {
+    // Audit-finding #2 ronde 2: gebruik constant-time vergelijking i.p.v. !==
+    // om timing-attack op HMAC signature te voorkomen. veiligVergelijkApi_ zit
+    // in API.gs en geeft 0-time-leak per byte; "!==" returnt vroeg op eerste
+    // verschil → attacker kan byte-voor-byte signature reconstructeren.
+    const sigOk = (typeof veiligVergelijkApi_ === 'function')
+      ? veiligVergelijkApi_(sig, verwacht)
+      : sig === verwacht;  // fallback bij oude installs zonder helper
+    if (!sig || !sigOk) {
       safeAuditLog_('Mollie webhook sig mismatch', paymentId.slice(0, 12) + '…');
       return { succes: false, fout: 'Ongeldige signature' };
     }
