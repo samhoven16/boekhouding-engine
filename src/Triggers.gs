@@ -1678,6 +1678,15 @@ function dagelijkseTaken() {
       }
     }
   });
+  // Pro-actieve quota-waarschuwing: als de klant >80% van zijn Gmail-dagcap
+  // heeft gebruikt, krijgt hij ÉÉN mail met uitleg + actie-opties. Voorkomt
+  // dat facturen later op de dag stilletjes in de DLQ landen omdat quota op
+  // is. Idempotent per dag per niveau-escalatie.
+  _runTaak_('emailQuotaWaarschuwing', function() {
+    if (typeof controleerEmailQuotaProactief_ === 'function') {
+      controleerEmailQuotaProactief_();
+    }
+  });
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   // Cycle 68: Belastingadvies-tab is een statische rendering van
   // aftrekposten + spoed-deadlines. Voorheen werd hij alleen vernieuwd
