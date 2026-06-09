@@ -1199,6 +1199,7 @@
   }
   details:first-of-type { border-top: 1px solid var(--rand); }
   details[open] { background: linear-gradient(180deg, rgba(247,249,252,.6) 0%, transparent 100%); }
+  details .faq-list { margin-left: 18px; }
   summary {
     padding: 20px 4px; font-size: 16.5px; font-weight: 600;
     cursor: pointer; list-style: none;
@@ -1748,6 +1749,41 @@
         <summary>Kan ik vanuit Moneybird / Exact / e-Boekhouden overstappen?</summary>
         <p>Ja, via CSV-import. De meeste tools laten je facturen en bankafschriften als CSV exporteren — die sleep je in Boekhoudbaar en de boekingen worden automatisch gemaakt. Voor specifieke stappen per concurrent: <a href="/gids/moneybird-alternatief-2026.html">Moneybird</a>, <a href="/gids/e-boekhouden-alternatief.html">e-Boekhouden</a>, <a href="/gids/exact-online-alternatief.html">Exact Online</a>.</p>
         <p>Boekhoudbaar exporteert óók weg: <strong>CSV</strong> per sheet, <strong>XAF</strong> voor je accountant (RGS 3.5), <strong>JSONL</strong>-snapshot voor lange-termijn-archief. Geen vendor lock-in. Zie ook onze <a href="/continuiteit/">continuïteits-belofte</a>.</p>
+      </details>
+
+      <details id="balans-klopt-niet">
+        <summary>Mijn balans klopt niet — wat nu?</summary>
+        <p>Top-5 oorzaken in volgorde van frequentie:</p>
+        <ol class="faq-list">
+          <li><strong>Niet alle bankboekingen geboekt</strong>. Check Bankafschriften-tab → openstaande regels.</li>
+          <li><strong>BTW-spaarpot niet apart gehouden</strong>. Rekening 1205 hoort jouw te-betalen BTW te tonen, niet 0.</li>
+          <li><strong>Beginbalans van vorig jaar ontbreekt</strong>. Bij overstap halverwege het jaar moet je openingsbalans handmatig invoeren.</li>
+          <li><strong>Crediteuren/debiteuren niet bijgewerkt</strong>. Open facturen die toch zijn betaald maar nog op "Verzonden" staan.</li>
+          <li><strong>Handmatige cel-overschrijving</strong>. Boekhoudbaar's invariant-check (10 axioma's) detecteert dit en mailt je.</li>
+        </ol>
+        <p>Doe een diagnose via menu <strong>Boekhouding → Geavanceerd → 🔍 Gezondheidscheck administratie</strong>. Bij twijfel: stuur de output naar <a href="mailto:support@boekhoudbaar.nl">support</a>.</p>
+      </details>
+
+      <details id="boeking-corrigeren">
+        <summary>Ik heb iets fout geboekt — hoe corrigeer ik?</summary>
+        <p>Het hangt af van de status:</p>
+        <ul class="faq-list">
+          <li><strong>Verkoopfactuur al verstuurd</strong>: maak een credit-nota via <em>Boekhouding → Nieuwe boeking → Factuur</em> met negatief bedrag. De oude factuur blijft staan (art. 35a Wet OB — niet wissen).</li>
+          <li><strong>Inkoopboeking foutief</strong>: open <em>Inkoopfacturen</em>-tab, rechtsklik rij → "Storneren". Genereert automatisch een tegenboeking.</li>
+          <li><strong>Journaalpost handmatig</strong>: alleen in lopende periode (afgesloten periodes vereisen <em>Periode ontgrendelen</em> met motivatie — gelogd voor Belastingdienst).</li>
+        </ul>
+        <p>Volledige werkflow + screenshots: <a href="/gids/boeking-corrigeren.html">/gids/boeking-corrigeren</a>.</p>
+      </details>
+
+      <details id="extra-kosten">
+        <summary>Komen er nog kosten naast die €49?</summary>
+        <p>Nee. €49 = eenmalig + geen abonnement + gratis updates voor altijd. Wel optioneel als jij dat wilt:</p>
+        <ul class="faq-list">
+          <li><strong>Mollie</strong> (iDEAL-betaal-link op factuur): ~€0,29 per geslaagde betaling. Niet verplicht — je kan handmatige IBAN gebruiken.</li>
+          <li><strong>Gemini AI</strong> (bonscan): je eigen Google AI-key, ~€0,001 per scan. Eerste 1500/dag gratis op Google's free-tier. Niet verplicht — handmatig invoeren werkt prima.</li>
+          <li><strong>Google Workspace</strong> (voor 1500 mails/dag i.p.v. 100): €6/maand bij Google. Voor de meeste ZZP'ers niet nodig.</li>
+        </ul>
+        <p>Boekhoudbaar betaalt NOOIT voor jouw API-calls — je ziet alles op je eigen Google-rekening. Zie <a href="/transparantie/">transparantie-pagina</a> voor alle externe diensten.</p>
       </details>
 
       <details id="google-warning">

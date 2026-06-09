@@ -1147,6 +1147,20 @@ function beheerGeslotenPeriodes() {
   // Pas dan: ontgrendeling + audit-log met motivatie.
   const periode = periodes[nr];
 
+  // Audit ronde 2 (customer-voice): vooraankondiging zodat klant niet
+  // verrast wordt door "stap 1 van 3" zonder context.
+  const introOk = ui.alert(
+    '⚠️ Periode ontgrendelen — uitleg',
+    `Je gaat ${periode.label} ontgrendelen. Dit kost 3 bevestigingen:\n\n` +
+    `  1. Type de periode-naam exact (intent-check)\n` +
+    `  2. Geef een motivatie (min 20 tekens — voor audit-trail)\n` +
+    `  3. Eindbevestiging met samenvatting\n\n` +
+    `De ontgrendeling wordt vastgelegd in het AuditLog voor controle door\n` +
+    `Belastingdienst (art. 52 AWR). Doorgaan?`,
+    ui.ButtonSet.YES_NO
+  );
+  if (introOk !== ui.Button.YES) return;
+
   const bevestigTekst = ui.prompt(
     '⚠️ Periode ontgrendelen — stap 1 van 3',
     `Type EXACT de periode-naam om je intentie te bevestigen.\n\n` +

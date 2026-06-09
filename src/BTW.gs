@@ -107,6 +107,29 @@ function sheetData_(ss, naam) {
   return s ? s.getDataRange().getValues() : [[]];
 }
 
+// Audit ronde 2 (tax-compliance): EU BTW-nummer prefix-lijst voor
+// ICP-aangifte (art. 37a Wet OB) — intracommunautaire leveringen aan
+// EU-B2B-klanten met geldig BTW-nr. NL wordt geëxcludeerd (binnenlands).
+// Bron: https://ec.europa.eu/taxation_customs/vies/
+const _EU_LANDEN_BTW_PREFIX = [
+  'AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'EL',
+  'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'PL', 'PT', 'RO', 'SE',
+  'SI', 'SK',
+];
+
+/**
+ * Detecteert of een BTW-nummer EU-buiten-NL is (= ICP-relevant).
+ * @param {string} btwNr — bijv. "DE123456789" of "FR12345678901"
+ * @returns {boolean}
+ */
+function _isEuBuitenNlBtwNr_(btwNr) {
+  const s = String(btwNr || '').replace(/\s/g, '').toUpperCase();
+  if (s.length < 4) return false;
+  const prefix = s.slice(0, 2);
+  if (prefix === 'NL') return false;
+  return _EU_LANDEN_BTW_PREFIX.indexOf(prefix) !== -1;
+}
+
 // TODO audit-ronde 2 (accountant + Belastingdienst): voor elk inkoopfactuur-
 // rij dat r2/r5b voorbelasting bijdraagt, hoort een Drive-bijlage-link
 // in dezelfde rij (kolom 'Bijlage' of 'PDF'). Bij steekproef-controle
@@ -189,6 +212,21 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
       aangifte.r1d += grondslag;
     } else if (btwLabel.includes('0%') || /nultarief/i.test(btwLabel)) {
       aangifte.r1d += grondslag;
+      // Audit ronde 2 (tax-compliance): ICP-detect bij EU B2B-klanten.
+      // Niet-NL EU BTW-nummer + nultarief = intracommunautaire levering
+      // → r3a-rubriek + ICP-aangifte verplicht (art. 37a Wet OB).
+      // Voorheen vergat klant ICP-aangifte = naheffing + boete.
+      const btwNrKlant = String(vfData[i][7] || '');
+      if (_isEuBuitenNlBtwNr_(btwNrKlant)) {
+        aangifte.r3a_grondslag += grondslag;
+        aangifte._icpVereist = aangifte._icpVereist || [];
+        aangifte._icpVereist.push({
+          factuurnummer: String(vfData[i][1] || ''),
+          klantnaam: String(vfData[i][5] || ''),
+          btwNr: btwNrKlant,
+          grondslag: grondslag,
+        });
+      }
     } else if (/verlegd/i.test(btwLabel)) {
       aangifte.r1e_grondslag += grondslag;
       aangifte.r1e_btw += btwBedrag;
