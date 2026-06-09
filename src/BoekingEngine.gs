@@ -518,7 +518,29 @@ function logAiAanroep_(soort, inputHash, output, status, metadata) {
  * Resultaat wordt gelogd in AuditLog onder "AI-aanroep bon-scan". Klant
  * MOET het resultaat handmatig bevestigen voor opslag — geen automatische
  * journaalpost zonder klant-actie.
+ *
+ * MODEL-FALLBACK (toegevoegd na audit 2026-06-09): gemini-2.0-flash is
+ * door Google EOL gemaakt op 1 juni 2026. Default nu gemini-2.5-flash
+ * (stabiel + free-tier). Klant kan via ScriptProperty 'GEMINI_MODEL'
+ * een ander model kiezen zonder code-update — toekomstige EOL's
+ * vereisen alleen een property-wijziging.
  */
+const _GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash';
+
+/**
+ * Welk Gemini-model gebruikt deze klant? Default = '_GEMINI_MODEL_DEFAULT'
+ * (zie boven). Override via ScriptProperty 'GEMINI_MODEL'.
+ *
+ * @returns {string} model-naam voor in de URL
+ * @private
+ */
+function _geminiModel_() {
+  try {
+    const v = PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL');
+    if (v && v.trim()) return v.trim();
+  } catch (_) {}
+  return _GEMINI_MODEL_DEFAULT;
+}
 /**
  * Stelt de Gemini API-sleutel in voor de "Upload + AI" bon-scan.
  * Opgeslagen in ScriptProperties (owner-niveau — de owner betaalt de
@@ -604,7 +626,7 @@ function scanDocumentMetAI(base64Data, mimeType) {
 
   try {
     const resp = UrlFetchApp.fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey,
+      'https://generativelanguage.googleapis.com/v1beta/models/' + _geminiModel_() + ':generateContent?key=' + apiKey,
       {
         method: 'post',
         contentType: 'application/json',
@@ -757,7 +779,7 @@ function parseSpraakinvoer(type, tekst) {
 
   try {
     const resp = UrlFetchApp.fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey,
+      'https://generativelanguage.googleapis.com/v1beta/models/' + _geminiModel_() + ':generateContent?key=' + apiKey,
       {
         method: 'post',
         contentType: 'application/json',
