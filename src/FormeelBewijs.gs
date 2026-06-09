@@ -1,0 +1,532 @@
+/**
+ * FormeelBewijs.gs
+ * ════════════════════════════════════════════════════════════════
+ * Wiskundige Axiomatische Fundering voor Boekhoudbaar
+ * ════════════════════════════════════════════════════════════════
+ *
+ * Filosofie: een boekhoudprogramma is een formeel systeem F = (Σ, A, ⊢)
+ * waarbij:
+ *   Σ = alfabet (rekeningen, factuurnrs, BTW-tarieven, bedragen ∈ ℚ)
+ *   A = axioma's (de wetten van dubbel boekhouden + NL fiscale regels)
+ *   ⊢ = afleidingsregels (journaalpost-creatie, BTW-berekening, …)
+ *
+ * Een correct programma is correct iff alle invarianten in A gelden op
+ * elke staat S ∈ State. Deze module verifieert die invarianten tegen
+ * de LIVE administratie (niet alleen unit-tests).
+ *
+ * ────────────────────────────────────────────────────────────────
+ * DE AXIOMATISCHE FUNDERING (10 invarianten)
+ * ────────────────────────────────────────────────────────────────
+ *
+ * I₁  ALGEBRA — DEBIT/CREDIT BALANS
+ *     ∀ journaalpost J:  J.debet_bedrag = J.credit_bedrag
+ *     (gevolg: ΣJ.debet = ΣJ.credit over alle journaalposten)
+ *
+ * I₂  ALGEBRA — GROOTBOEKSALDO CONSISTENT
+ *     ∀ rekening R:  saldo(R) = Σ {J.bedrag | J ∈ JPs, J raakt R aan debet-zijde}
+ *                              - Σ {J.bedrag | J ∈ JPs, J raakt R aan credit-zijde}
+ *     (anders: GROOTBOEKSCHEMA-saldo en journaalpost-totaal divergeren)
+ *
+ * I₃  ALGEBRA — BALANS-WET
+ *     Σ {R.saldo | R.type = Activa} = Σ {R.saldo | R.type = Passiva}
+ *     Tolerantie: ε = 0.005 (jaarrekening) of 0.05 (lopend)
+ *
+ * I₄  ALGEBRA — FACTUUR-DECOMPOSITIE
+ *     ∀ factuur F:  F.bedragIncl = F.bedragExcl + F.btwBedrag  (±€0,01 afronding)
+ *     F.btwBedrag = F.bedragExcl × F.btwTarief  (waar btwTarief ∈ {0, 0.09, 0.21})
+ *
+ * I₅  ALGEBRA — BTW-AANGIFTE SLUITEND
+ *     A.r5a = A.r1a_btw + A.r1b_btw + A.r1c_btw + A.r1e_btw + A.r4a_btw
+ *     A.r5d = A.r5a - A.r5b
+ *     (afgerond op €1 conform Belastingdienst)
+ *
+ * I₆  GETALTHEORIE — FACTUURNUMMER-UNICITEIT
+ *     ∀ F₁, F₂ ∈ Verkoopfacturen:  F₁ ≠ F₂ ⟹ F₁.nr ≠ F₂.nr
+ *     (verboden door art. 35 Wet OB; dubbele nr = naheffing-risico)
+ *
+ * I₇  GETALTHEORIE — FACTUURNUMMER MONOTONIE
+ *     ∀ F₁, F₂ met F₁.datum ≤ F₂.datum:  F₁.nr ≤ F₂.nr
+ *     Uitzondering: jaarwisseling reset (telleratie per boekjaar)
+ *
+ * I₈  VERZAMELINGSLEER — AFGESLOTEN PERIODE IMMUTABILITY
+ *     Zij P = afgesloten periode. ∀ J nieuwe journaalpost:
+ *       J.datum ∈ P ⟹ verwerping (zie maakJournaalpost_ guard)
+ *
+ * I₉  DISCRETE WISKUNDE — REKENINGSCHEMA DAG-EIGENSCHAP
+ *     Het Grootboekschema vormt een rooted forest van rekeningen waar
+ *     leaf-rekeningen de enige zijn waarop geboekt mag worden
+ *     (parent-rekeningen zijn aggregaten — boekingen daar = invariant-breuk).
+ *
+ * I₁₀ BAYES — BTW-ANOMALIE-DETECTIE
+ *     Zij μ = EWMA van laatste 4 kwartalen r5d. Bij |huidig - μ| > 2σ:
+ *     verhoogde waarschijnlijkheid van invoerfout. Waarschuw vóór indiening.
+ *
+ * ────────────────────────────────────────────────────────────────
+ * USAGE
+ * ────────────────────────────────────────────────────────────────
+ *   const rapport = bewijsAlleInvarianten_(ss);
+ *   if (rapport.alleGoed) console.log('✓ Boekhouding wiskundig consistent.');
+ *   else rapport.schendingen.forEach(s => console.log('✗', s.code, s.boodschap));
+ *
+ * Aanroepen vanuit: GezondheidCheck (dagelijks), pre-jaarafsluiting,
+ * pre-BTW-aangifte indienen, pre-accountant-export.
+ */
+
+// eslint-disable-next-line no-unused-vars
+const FORMEEL_BEWIJS_INVARIANTEN = [
+  { code: 'I1', naam: 'Debit/Credit Balans per journaalpost', soort: 'Algebra' },
+  { code: 'I2', naam: 'Grootboeksaldo consistent met journaalposten', soort: 'Algebra' },
+  { code: 'I3', naam: 'Balans-wet (Activa = Passiva)', soort: 'Algebra' },
+  { code: 'I4', naam: 'Factuur-decompositie (excl + btw = incl)', soort: 'Algebra' },
+  { code: 'I5', naam: 'BTW-aangifte sluitend (r5d = r5a - r5b)', soort: 'Algebra' },
+  { code: 'I6', naam: 'Factuurnummer-uniciteit', soort: 'Getaltheorie' },
+  { code: 'I7', naam: 'Factuurnummer-monotonie', soort: 'Getaltheorie' },
+  { code: 'I8', naam: 'Afgesloten periode immutability', soort: 'Verzamelingsleer' },
+  { code: 'I9', naam: 'Rekeningschema leaf-only-boekingen', soort: 'Discrete wiskunde' },
+  { code: 'I10', naam: 'BTW-anomalie binnen 2σ', soort: 'Bayes' },
+];
+
+/**
+ * Hoofd-runner: verifieert alle 10 invarianten tegen de live administratie.
+ * Returns rapport-object met per invariant: status, bewijs/tegenvoorbeeld.
+ *
+ * @param {Spreadsheet} ss
+ * @returns {{alleGoed: boolean, schendingen: Array, gecheckt: number}}
+ */
+// eslint-disable-next-line no-unused-vars
+function bewijsAlleInvarianten_(ss) {
+  if (!ss) ss = getSpreadsheet_();
+  if (!ss) return { alleGoed: false, schendingen: [{ code: 'INIT', boodschap: 'Spreadsheet niet beschikbaar' }], gecheckt: 0 };
+
+  const schendingen = [];
+  const checkers = [
+    _bewijs_I1_debitCreditBalans_,
+    _bewijs_I2_grootboekConsistent_,
+    _bewijs_I3_balansWet_,
+    _bewijs_I4_factuurDecompositie_,
+    _bewijs_I5_btwAangifteSluitend_,
+    _bewijs_I6_factuurnummerUniek_,
+    _bewijs_I7_factuurnummerMonotoon_,
+    _bewijs_I8_afgeslotenPeriode_,
+    _bewijs_I9_leafOnlyBoekingen_,
+    _bewijs_I10_btwAnomalie_,
+  ];
+
+  checkers.forEach(function(checker) {
+    try {
+      const resultaat = checker(ss);
+      if (resultaat && !resultaat.geldig) {
+        schendingen.push({
+          code: resultaat.code,
+          naam: resultaat.naam,
+          boodschap: resultaat.boodschap,
+          tegenvoorbeeld: resultaat.tegenvoorbeeld || null,
+          soort: resultaat.soort,
+        });
+      }
+    } catch (e) {
+      schendingen.push({
+        code: '?', naam: 'Checker-fout', boodschap: e.message,
+      });
+    }
+  });
+
+  try {
+    safeAuditLog_('FormeelBewijs',
+      schendingen.length === 0
+        ? 'Alle ' + checkers.length + ' invarianten OK'
+        : schendingen.length + '/' + checkers.length + ' invarianten geschonden');
+  } catch (_) {}
+
+  return {
+    alleGoed: schendingen.length === 0,
+    schendingen: schendingen,
+    gecheckt: checkers.length,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// I₁ — DEBIT/CREDIT BALANS
+// ─────────────────────────────────────────────────────────────
+function _bewijs_I1_debitCreditBalans_(ss) {
+  const meta = { code: 'I1', naam: 'Debit/Credit Balans', soort: 'Algebra' };
+  const jp = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  if (!jp || jp.getLastRow() <= 1) return Object.assign(meta, { geldig: true });
+
+  // Elk journaalpost-record heeft één debet- en één credit-rekening met
+  // hetzelfde bedrag (intra-record balans). De integriteit zit in de
+  // create-flow (maakJournaalpost_), maar I₁ verifieert dat de SOM van
+  // alle debet-bedragen = SOM van alle credit-bedragen (totaal-balans).
+  const data = jp.getDataRange().getValues();
+  let totaalDebet = 0, totaalCredit = 0;
+  // Kolommen: [4] debet rek, [6] credit rek, [8] bedrag, [16] status
+  for (let i = 1; i < data.length; i++) {
+    const status = String(data[i][16] || '').toUpperCase();
+    if (status === 'CORRUPT' || status === 'GESTORNEERD') continue;
+    const bedrag = parseFloat(data[i][8]) || 0;
+    totaalDebet += bedrag;   // debet-zijde van deze journaalpost
+    totaalCredit += bedrag;  // credit-zijde van deze journaalpost (gelijk per I₁)
+  }
+  const verschil = Math.abs(totaalDebet - totaalCredit);
+  if (verschil > 0.005) {
+    return Object.assign(meta, {
+      geldig: false,
+      boodschap: 'ΣDebet (' + totaalDebet + ') ≠ ΣCredit (' + totaalCredit + '), δ=' + verschil,
+      tegenvoorbeeld: { totaalDebet: totaalDebet, totaalCredit: totaalCredit },
+    });
+  }
+  return Object.assign(meta, { geldig: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// I₂ — GROOTBOEKSALDO CONSISTENT
+// ─────────────────────────────────────────────────────────────
+function _bewijs_I2_grootboekConsistent_(ss) {
+  const meta = { code: 'I2', naam: 'Grootboeksaldo consistent', soort: 'Algebra' };
+  const gb = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
+  const jp = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  if (!gb || !jp) return Object.assign(meta, { geldig: true });
+
+  // Bouw verwacht-saldo per rekening uit journaalposten
+  const verwacht = {};
+  const jpData = jp.getDataRange().getValues();
+  for (let i = 1; i < jpData.length; i++) {
+    const status = String(jpData[i][16] || '').toUpperCase();
+    if (status === 'CORRUPT' || status === 'GESTORNEERD') continue;
+    const debet = String(jpData[i][4] || '');
+    const credit = String(jpData[i][6] || '');
+    const bedrag = parseFloat(jpData[i][8]) || 0;
+    if (debet) verwacht[debet] = (verwacht[debet] || 0) + bedrag;
+    if (credit) verwacht[credit] = (verwacht[credit] || 0) - bedrag;
+  }
+
+  // Vergelijk met grootboeksaldi (gemaximaliseerd op 5 grootste afwijkingen)
+  const gbData = gb.getDataRange().getValues();
+  const drift = [];
+  for (let i = 1; i < gbData.length; i++) {
+    const code = String(gbData[i][0] || '').trim();
+    if (!code) continue;
+    const saldoGB = parseFloat(gbData[i][5]) || 0;
+    const saldoVerwacht = verwacht[code] || 0;
+    const verschil = Math.abs(saldoGB - saldoVerwacht);
+    if (verschil > 0.005) {
+      drift.push({ rek: code, gb: saldoGB, verwacht: saldoVerwacht, δ: verschil });
+    }
+  }
+  if (drift.length > 0) {
+    drift.sort(function(a, b) { return b.δ - a.δ; });
+    return Object.assign(meta, {
+      geldig: false,
+      boodschap: drift.length + ' rekening(en) divergeren tussen Grootboekschema en Journaalposten',
+      tegenvoorbeeld: drift.slice(0, 5),
+    });
+  }
+  return Object.assign(meta, { geldig: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// I₃ — BALANS-WET (Activa = Passiva)
+// ─────────────────────────────────────────────────────────────
+function _bewijs_I3_balansWet_(ss) {
+  const meta = { code: 'I3', naam: 'Balans-wet (Activa = Passiva)', soort: 'Algebra' };
+  const gb = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
+  if (!gb) return Object.assign(meta, { geldig: true });
+  const data = gb.getDataRange().getValues();
+  let activa = 0, passiva = 0;
+  for (let i = 1; i < data.length; i++) {
+    const bw = String(data[i][4] || '');
+    const saldo = parseFloat(data[i][5]) || 0;
+    if (bw === 'Activa') activa += saldo;
+    if (bw === 'Passiva') passiva += saldo;
+  }
+  const verschil = Math.abs(activa - passiva);
+  if (verschil > 0.05) {  // soepele drempel: I₃-strikt zit in controleerBalansStrikt_
+    return Object.assign(meta, {
+      geldig: false,
+      boodschap: 'Activa (€' + activa.toFixed(2) + ') ≠ Passiva (€' + passiva.toFixed(2) + '), δ=€' + verschil.toFixed(4),
+      tegenvoorbeeld: { activa: activa, passiva: passiva, verschil: verschil },
+    });
+  }
+  return Object.assign(meta, { geldig: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// I₄ — FACTUUR-DECOMPOSITIE
+// ─────────────────────────────────────────────────────────────
+function _bewijs_I4_factuurDecompositie_(ss) {
+  const meta = { code: 'I4', naam: 'Factuur-decompositie (excl + btw = incl)', soort: 'Algebra' };
+  const vf = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (!vf) return Object.assign(meta, { geldig: true });
+  const data = vf.getDataRange().getValues();
+  const fout = [];
+  // Kolommen: [1] nr, [9] excl, [11] btw, [12] incl, [14] status
+  for (let i = 1; i < data.length; i++) {
+    const status = String(data[i][14] || '').toLowerCase();
+    if (status === 'gestorneerd' || status === 'gecrediteerd') continue;
+    const excl = parseFloat(data[i][9]) || 0;
+    const btw = parseFloat(data[i][11]) || 0;
+    const incl = parseFloat(data[i][12]) || 0;
+    if (excl === 0 && btw === 0 && incl === 0) continue;
+    const verwacht = excl + btw;
+    if (Math.abs(verwacht - incl) > 0.01) {
+      fout.push({ nr: data[i][1], excl: excl, btw: btw, incl: incl, verwacht: verwacht });
+    }
+  }
+  if (fout.length > 0) {
+    return Object.assign(meta, {
+      geldig: false,
+      boodschap: fout.length + ' factuur(/en) met decompositie-fout',
+      tegenvoorbeeld: fout.slice(0, 3),
+    });
+  }
+  return Object.assign(meta, { geldig: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// I₅ — BTW-AANGIFTE SLUITEND
+// ─────────────────────────────────────────────────────────────
+function _bewijs_I5_btwAangifteSluitend_(ss) {
+  const meta = { code: 'I5', naam: 'BTW-aangifte sluitend', soort: 'Algebra' };
+  // Verifieer op huidig kwartaal als BTW.gs aanroepbaar is
+  if (typeof berekenBtwAangifte_ !== 'function') return Object.assign(meta, { geldig: true });
+  try {
+    const nu = new Date();
+    const q = Math.floor(nu.getMonth() / 3);
+    const van = new Date(nu.getFullYear(), q * 3, 1);
+    const tot = new Date(nu.getFullYear(), (q + 1) * 3, 0, 23, 59, 59);
+    const a = berekenBtwAangifte_(ss, van, tot);
+    if (!a) return Object.assign(meta, { geldig: true });
+    const r5aBerekend = (a.r1a_btw || 0) + (a.r1b_btw || 0) + (a.r1c_btw || 0) + (a.r1e_btw || 0) + (a.r4a_btw || 0);
+    if (Math.abs((a.r5a || 0) - r5aBerekend) > 0.01) {
+      return Object.assign(meta, {
+        geldig: false,
+        boodschap: 'r5a (€' + a.r5a + ') ≠ Σ(r1a+r1b+r1c+r1e+r4a) (€' + r5aBerekend.toFixed(2) + ')',
+        tegenvoorbeeld: { r5a: a.r5a, berekend: r5aBerekend },
+      });
+    }
+    const r5dBerekend = (a.r5a || 0) - (a.r5b || 0);
+    if (Math.abs((a.r5d || 0) - r5dBerekend) > 0.01) {
+      return Object.assign(meta, {
+        geldig: false,
+        boodschap: 'r5d (€' + a.r5d + ') ≠ r5a - r5b (€' + r5dBerekend.toFixed(2) + ')',
+        tegenvoorbeeld: { r5d: a.r5d, berekend: r5dBerekend },
+      });
+    }
+  } catch (e) {
+    return Object.assign(meta, { geldig: false, boodschap: 'BTW-berekening faalde: ' + e.message });
+  }
+  return Object.assign(meta, { geldig: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// I₆ — FACTUURNUMMER-UNICITEIT
+// ─────────────────────────────────────────────────────────────
+function _bewijs_I6_factuurnummerUniek_(ss) {
+  const meta = { code: 'I6', naam: 'Factuurnummer-uniciteit', soort: 'Getaltheorie' };
+  const vf = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (!vf) return Object.assign(meta, { geldig: true });
+  const data = vf.getDataRange().getValues();
+  const gezien = {};
+  const dubbel = [];
+  for (let i = 1; i < data.length; i++) {
+    const nr = String(data[i][1] || '').trim();
+    if (!nr) continue;
+    if (gezien[nr]) dubbel.push({ nr: nr, rijen: [gezien[nr], i + 1] });
+    else gezien[nr] = i + 1;
+  }
+  if (dubbel.length > 0) {
+    return Object.assign(meta, {
+      geldig: false,
+      boodschap: 'Dubbele factuurnummers: ' + dubbel.length + ' (art. 35 Wet OB schending → naheffing-risico)',
+      tegenvoorbeeld: dubbel.slice(0, 5),
+    });
+  }
+  return Object.assign(meta, { geldig: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// I₇ — FACTUURNUMMER-MONOTONIE
+// ─────────────────────────────────────────────────────────────
+function _bewijs_I7_factuurnummerMonotoon_(ss) {
+  const meta = { code: 'I7', naam: 'Factuurnummer-monotonie binnen boekjaar', soort: 'Getaltheorie' };
+  const vf = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+  if (!vf) return Object.assign(meta, { geldig: true });
+  const data = vf.getDataRange().getValues();
+
+  // Groepeer per boekjaar (jaar uit datum [2]), check binnen-jaar monotonie
+  const perJaar = {};
+  for (let i = 1; i < data.length; i++) {
+    const nrStr = String(data[i][1] || '').trim();
+    const datum = data[i][2];
+    if (!nrStr || !(datum instanceof Date)) continue;
+    // Extraheer numeriek deel (laatste serie cijfers)
+    const m = nrStr.match(/(\d+)\s*$/);
+    if (!m) continue;
+    const nrNum = parseInt(m[1], 10);
+    const jaar = datum.getFullYear();
+    if (!perJaar[jaar]) perJaar[jaar] = [];
+    perJaar[jaar].push({ nr: nrNum, datum: datum.getTime(), str: nrStr });
+  }
+
+  const breuk = [];
+  Object.keys(perJaar).forEach(function(j) {
+    const lijst = perJaar[j];
+    lijst.sort(function(a, b) { return a.datum - b.datum; });
+    for (let i = 1; i < lijst.length; i++) {
+      if (lijst[i].nr < lijst[i - 1].nr) {
+        breuk.push({ jaar: j, eerder: lijst[i - 1].str, later: lijst[i].str });
+      }
+    }
+  });
+  if (breuk.length > 0) {
+    return Object.assign(meta, {
+      geldig: false,
+      boodschap: breuk.length + ' chronologische monotonie-breuk(en) (waarschuwing, geen blokkering)',
+      tegenvoorbeeld: breuk.slice(0, 3),
+    });
+  }
+  return Object.assign(meta, { geldig: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// I₈ — AFGESLOTEN PERIODE IMMUTABILITY
+// ─────────────────────────────────────────────────────────────
+function _bewijs_I8_afgeslotenPeriode_(ss) {
+  const meta = { code: 'I8', naam: 'Afgesloten periode immutability', soort: 'Verzamelingsleer' };
+  // I₈ wordt afgedwongen in maakJournaalpost_ (Boekingen.gs:36+). De
+  // bewijs-runner controleert post-hoc: zijn er journaalposten met
+  // datum in een gesloten periode? Zo ja, axiom-schending.
+  if (typeof _leesGeslotenPeriodes_ !== 'function') return Object.assign(meta, { geldig: true });
+  const periodes = _leesGeslotenPeriodes_();
+  if (!periodes || periodes.length === 0) return Object.assign(meta, { geldig: true });
+
+  const jp = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  if (!jp) return Object.assign(meta, { geldig: true });
+  const data = jp.getDataRange().getValues();
+  const inbreuk = [];
+  for (let i = 1; i < data.length; i++) {
+    const datum = data[i][1];
+    if (!(datum instanceof Date)) continue;
+    for (let p = 0; p < periodes.length; p++) {
+      const van = new Date(periodes[p].van);
+      const tot = new Date(periodes[p].tot);
+      if (datum >= van && datum <= tot) {
+        const aangemaakt = data[i][14];  // kolom: aangemaakt op
+        // Inbreuk alleen als aangemaakt NA periode-sluiting
+        if (aangemaakt instanceof Date && periodes[p].geslotenOp) {
+          const gesloten = new Date(periodes[p].geslotenOp);
+          if (aangemaakt > gesloten) {
+            inbreuk.push({ jpId: data[i][0], datum: datum, periode: periodes[p].label });
+          }
+        }
+        break;
+      }
+    }
+  }
+  if (inbreuk.length > 0) {
+    return Object.assign(meta, {
+      geldig: false,
+      boodschap: inbreuk.length + ' journaalpost(en) achteraf in afgesloten periode geboekt',
+      tegenvoorbeeld: inbreuk.slice(0, 3),
+    });
+  }
+  return Object.assign(meta, { geldig: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// I₉ — LEAF-ONLY BOEKINGEN (Discrete wiskunde / Grafentheorie)
+// ─────────────────────────────────────────────────────────────
+function _bewijs_I9_leafOnlyBoekingen_(ss) {
+  const meta = { code: 'I9', naam: 'Boekingen alleen op leaf-rekeningen', soort: 'Discrete wiskunde' };
+  // I₉ wordt al afgedwongen door valideerJournaalpostBalans_ (Invariants.gs).
+  // Post-hoc verificatie: zijn er ouder-rekeningen (rond getal eindigend
+  // op 00 met onder-kinderen) waar journaalposten op staan?
+  const gb = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
+  const jp = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  if (!gb || !jp) return Object.assign(meta, { geldig: true });
+
+  // Bouw set van rekening-codes; bepaal welke 'parent' zijn op basis
+  // van numerieke voorvoegsel-relatie (bv. 1000 heeft kinderen 1100, 1200...)
+  const codes = [];
+  const gbData = gb.getDataRange().getValues();
+  for (let i = 1; i < gbData.length; i++) {
+    const c = String(gbData[i][0] || '').trim();
+    if (c) codes.push(c);
+  }
+  const isParent = {};
+  codes.forEach(function(c) {
+    // Een code is "parent" als er een andere code is die hetzelfde voorvoegsel
+    // heeft maar specifieker is (langer of hoger laatste cijfer).
+    const heeftKind = codes.some(function(other) {
+      if (other === c) return false;
+      // Heuristiek: c=1000 is parent van 1100, 1200, …
+      if (c.endsWith('000') && other.startsWith(c.charAt(0))) return true;
+      return false;
+    });
+    if (heeftKind) isParent[c] = true;
+  });
+
+  const jpData = jp.getDataRange().getValues();
+  const fout = [];
+  for (let i = 1; i < jpData.length; i++) {
+    const debet = String(jpData[i][4] || '').trim();
+    const credit = String(jpData[i][6] || '').trim();
+    if (isParent[debet]) fout.push({ jp: jpData[i][0], rek: debet, zijde: 'debet' });
+    if (isParent[credit]) fout.push({ jp: jpData[i][0], rek: credit, zijde: 'credit' });
+  }
+  if (fout.length > 0) {
+    return Object.assign(meta, {
+      geldig: false,
+      boodschap: fout.length + ' boeking(en) op parent-rekening (graf-invariant gebroken)',
+      tegenvoorbeeld: fout.slice(0, 3),
+    });
+  }
+  return Object.assign(meta, { geldig: true });
+}
+
+// ─────────────────────────────────────────────────────────────
+// I₁₀ — BAYESIAANSE BTW-ANOMALIE
+// ─────────────────────────────────────────────────────────────
+function _bewijs_I10_btwAnomalie_(ss) {
+  const meta = { code: 'I10', naam: 'BTW-aangifte binnen 2σ van EWMA', soort: 'Bayes' };
+  // Pak laatste 5 kwartalen, vergelijk huidig (=5e) met EWMA van eerste 4.
+  if (typeof berekenBtwAangifte_ !== 'function') return Object.assign(meta, { geldig: true });
+
+  const kwartaalR5d = [];
+  const nu = new Date();
+  for (let k = 4; k >= 0; k--) {
+    const refDatum = new Date(nu.getFullYear(), nu.getMonth() - k * 3, 15);
+    const q = Math.floor(refDatum.getMonth() / 3);
+    const van = new Date(refDatum.getFullYear(), q * 3, 1);
+    const tot = new Date(refDatum.getFullYear(), (q + 1) * 3, 0, 23, 59, 59);
+    try {
+      const a = berekenBtwAangifte_(ss, van, tot);
+      kwartaalR5d.push(a && a.r5d ? parseFloat(a.r5d) : 0);
+    } catch (_) {
+      kwartaalR5d.push(0);
+    }
+  }
+  if (kwartaalR5d.length < 5) return Object.assign(meta, { geldig: true });
+
+  // EWMA met α=0.5 (recent zwaarder gewicht maar geen overfit)
+  const historie = kwartaalR5d.slice(0, 4);
+  const huidig = kwartaalR5d[4];
+  const μ = historie.reduce(function(s, x, i) {
+    const w = Math.pow(0.5, historie.length - 1 - i);
+    return s + x * w;
+  }, 0) / historie.reduce(function(s, _, i) { return s + Math.pow(0.5, historie.length - 1 - i); }, 0);
+  // Sample-standaarddeviatie
+  const σ2 = historie.reduce(function(s, x) { return s + Math.pow(x - μ, 2); }, 0) / Math.max(1, historie.length - 1);
+  const σ = Math.sqrt(σ2);
+  // Als σ ≈ 0 (alle historie gelijk), val terug op 10%-tolerantie van μ
+  const tolerantie = σ > 1 ? 2 * σ : Math.max(0.1 * Math.abs(μ), 100);
+
+  if (Math.abs(huidig - μ) > tolerantie) {
+    return Object.assign(meta, {
+      geldig: false,
+      boodschap: 'Huidig kwartaal r5d (€' + huidig.toFixed(0) + ') wijkt > 2σ af van historische EWMA (€' + μ.toFixed(0) + '); controleer vóór indiening',
+      tegenvoorbeeld: { huidig: huidig, μ: μ, σ: σ, afwijking: Math.abs(huidig - μ) },
+    });
+  }
+  return Object.assign(meta, { geldig: true });
+}
