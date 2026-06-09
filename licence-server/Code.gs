@@ -95,14 +95,24 @@ function healthEndpoint_() {
       licenseCount = sheet ? Math.max(0, sheet.getLastRow() - 1) : 0;
     }
   } catch (_) {}
+  // Granulair status-niveau zodat externe monitor (UptimeRobot, Cloudflare
+  // Worker, Healthchecks.io) op JSON-velden kan alerten i.p.v. HTTP 200/500.
+  // - 'crit' = missende kritieke config → product is feitelijk down voor
+  //            nieuwe klanten ondanks dat de webapp HTTP 200 geeft.
+  const config = (typeof controleerKritiekeConfig_ === 'function')
+    ? controleerKritiekeConfig_()
+    : { ok: true, crit: [], warn: [] };
+  const status = config.ok ? 'ok' : 'crit';
+
   return ContentService.createTextOutput(JSON.stringify({
-    status: 'ok',
+    status: status,
     ts: new Date().toISOString(),
     version: '1.0.3',
     licenses: licenseCount,
     mollie: !!props.getProperty('MOLLIE_API_KEY'),
     templateReady: !!props.getProperty('TEMPLATE_SS_ID'),
     brevo: !!props.getProperty('BREVO_API_KEY'),
+    config: { ok: config.ok, missend: config.crit, waarschuwingen: config.warn },
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -2553,6 +2563,39 @@ function setupBrevoWebhookToken() {
  *
  * @returns {Object} { verstuurd, ontvanger, nieuw24u, totaal, bounces, recenteValidaties }
  */
+/**
+ * Controleert of kritieke Script Properties op de license-server gezet zijn.
+ * Pure read; gebruikt door dagelijkse statusmail (voor CRIT-banner) én door
+ * /exec?actie=status (voor extern monitor).
+ *
+ * Drempels:
+ *   CRIT — zonder deze stopt provisioning of de aankoop-flow volledig
+ *   WARN — zonder deze valt een non-critical-pad terug op een fallback
+ *
+ * Go-live blocker #7: als TEMPLATE_SS_ID per ongeluk wist tussen
+ * deploys, throwt elke Mollie-webhook 500 en klant betaalt zonder mail
+ * tot Sam het ziet. Nu: 1 dagelijkse mail-bovenaan + observable endpoint.
+ *
+ * @returns {{ok: boolean, crit: Array<string>, warn: Array<string>}}
+ */
+function controleerKritiekeConfig_() {
+  const props = PropertiesService.getScriptProperties();
+  const crit = [];
+  const warn = [];
+
+  // CRIT-niveau: zonder dit stopt de business
+  if (!props.getProperty('TEMPLATE_SS_ID'))     crit.push('TEMPLATE_SS_ID');
+  if (!props.getProperty('MOLLIE_API_KEY'))     crit.push('MOLLIE_API_KEY');
+  if (!props.getProperty('ADMIN_WACHTWOORD'))   crit.push('ADMIN_WACHTWOORD');
+
+  // WARN-niveau: fallback bestaat, maar beperkt
+  if (!props.getProperty('BREVO_API_KEY'))      warn.push('BREVO_API_KEY (Brevo email → MailApp fallback)');
+  if (!props.getProperty('OWNER_STATUS_EMAIL')) warn.push('OWNER_STATUS_EMAIL (gebruikt effective user)');
+  if (!props.getProperty('VAN_EMAIL'))          warn.push('VAN_EMAIL (gebruikt default info@boekhoudbaar.nl)');
+
+  return { ok: crit.length === 0, crit: crit, warn: warn };
+}
+
 function verstuurDagelijkseStatusmail_() {
   const props = PropertiesService.getScriptProperties();
   const ontvanger = props.getProperty('OWNER_STATUS_EMAIL') ||
@@ -2566,9 +2609,37 @@ function verstuurDagelijkseStatusmail_() {
     return { verstuurd: false, reden: 'geen-ontvanger' };
   }
 
+  const config = controleerKritiekeConfig_();
   const stats = verzamelStatusmailStats_();
-  const html  = bouwStatusmailHtml_(stats);
-  const onderwerp = '📊 Boekhoudbaar status — ' +
+  let html  = bouwStatusmailHtml_(stats);
+
+  // CRIT-banner bovenaan mail: missende kritieke configuratie maakt
+  // het hele product onbeschikbaar. Sam moet dit direct zien — niet
+  // verstopt onderaan in een log.
+  if (!config.ok) {
+    const banner =
+      '<div style="background:#FEE2E2;border:2px solid #DC2626;border-radius:8px;padding:16px 20px;margin-bottom:20px">' +
+      '<div style="font-size:18px;font-weight:700;color:#991B1B;margin-bottom:8px">' +
+      '🚨 KRITIEKE CONFIG ONTBREEKT — actie vereist</div>' +
+      '<div style="font-size:14px;color:#7F1D1D;line-height:1.55">' +
+      'De volgende Script Properties zijn niet gezet op de license-server. ' +
+      'Zonder deze stopt provisioning of de aankoop-flow:</div>' +
+      '<ul style="margin:10px 0 4px 22px;font-size:14px;color:#7F1D1D">' +
+      config.crit.map(function(k) { return '<li><code>' + k + '</code></li>'; }).join('') +
+      '</ul></div>';
+    html = banner + html;
+  }
+  if (config.warn.length > 0) {
+    const wb =
+      '<div style="background:#FFF8E1;border:1px solid #FFECB3;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#5A3F00">' +
+      '<strong>ℹ️ Niet-kritieke config-warnings:</strong><ul style="margin:6px 0 0 22px">' +
+      config.warn.map(function(k) { return '<li>' + k + '</li>'; }).join('') +
+      '</ul></div>';
+    html = wb + html;
+  }
+
+  const prefix = !config.ok ? '[CRIT] ' : '';
+  const onderwerp = prefix + '📊 Boekhoudbaar status — ' +
     Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'd MMM') +
     ' · ' + stats.nieuw24u + ' nieuw, ' + stats.totaalActief + ' actief';
 
@@ -2579,10 +2650,10 @@ function verstuurDagelijkseStatusmail_() {
       htmlBody: html,
       name: 'Boekhoudbaar Status',
     });
-    return Object.assign({ verstuurd: true, ontvanger: ontvanger }, stats);
+    return Object.assign({ verstuurd: true, ontvanger: ontvanger, config: config }, stats);
   } catch (e) {
     Logger.log('verstuurDagelijkseStatusmail_ MailApp fout: ' + e.message);
-    return Object.assign({ verstuurd: false, reden: e.message }, stats);
+    return Object.assign({ verstuurd: false, reden: e.message, config: config }, stats);
   }
 }
 
