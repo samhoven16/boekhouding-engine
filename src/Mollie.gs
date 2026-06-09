@@ -86,13 +86,29 @@ function genereerMolliePaymentLink_(factuur) {
         bron: 'boekhoudbaar',
       },
     };
-    const resp = veiligFetch_(MOLLIE_API_BASE + '/payments', {
-      method: 'post',
-      contentType: 'application/json',
-      headers: { 'Authorization': 'Bearer ' + apiKey },
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true,
-    });
+    // Zelfde circuit breaker als de webhook-handler — bij gedegradeerde Mollie
+    // API stoppen we automatisch met retries om hun edge niet te bombarderen.
+    // Bij open circuit retourneren we netjes null: de factuur wordt verstuurd
+    // zonder payment-link, klant kan handmatig betalen (graceful degradation).
+    const fetchFn = function() {
+      return veiligFetch_(MOLLIE_API_BASE + '/payments', {
+        method: 'post',
+        contentType: 'application/json',
+        headers: { 'Authorization': 'Bearer ' + apiKey },
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true,
+      });
+    };
+    let resp;
+    try {
+      resp = (typeof circuitBreaker_ === 'function')
+        ? circuitBreaker_('mollie_api', fetchFn)
+        : fetchFn();
+    } catch (eCB) {
+      // Circuit-OPEN of veiligFetch-throw: log + degradeer naar geen-link
+      safeAuditLog_('Mollie payment-link MISLUKT (circuit)', factuur.factuurnummer + ' ' + (eCB.message || eCB));
+      return null;
+    }
     const code = resp.getResponseCode();
     if (code !== 201) {
       Logger.log('Mollie create-payment status ' + code + ': ' + resp.getContentText().slice(0, 300));
@@ -189,11 +205,24 @@ function verwerkMollieWebhook_(payload) {
 
   let status, factuurnummer, paymentBedrag, paymentBron;
   try {
-    const resp = veiligFetch_(MOLLIE_API_BASE + '/payments/' + paymentId, {
-      method: 'get',
-      headers: { 'Authorization': 'Bearer ' + apiKey },
-      muteHttpExceptions: true,
-    });
+    // Wrap de outbound Mollie-call in een circuit breaker. Bij 3 fouten binnen
+    // 5 min gaat het circuit 15 min open → we bombarderen een degraderende
+    // Mollie-edge niet en gooien geen rate-limit-walls op. Mollie retried de
+    // webhook automatisch, dus een open circuit = uitgestelde verwerking, geen
+    // verloren betaling.
+    const resp = (typeof circuitBreaker_ === 'function')
+      ? circuitBreaker_('mollie_api', function() {
+          return veiligFetch_(MOLLIE_API_BASE + '/payments/' + paymentId, {
+            method: 'get',
+            headers: { 'Authorization': 'Bearer ' + apiKey },
+            muteHttpExceptions: true,
+          });
+        })
+      : veiligFetch_(MOLLIE_API_BASE + '/payments/' + paymentId, {
+          method: 'get',
+          headers: { 'Authorization': 'Bearer ' + apiKey },
+          muteHttpExceptions: true,
+        });
     if (resp.getResponseCode() !== 200) {
       return { succes: false, fout: 'Mollie API status ' + resp.getResponseCode() };
     }
@@ -203,6 +232,9 @@ function verwerkMollieWebhook_(payload) {
     paymentBedrag = json.amount ? parseFloat(json.amount.value) : NaN;
     paymentBron = (json.metadata && json.metadata.bron) || '';
   } catch (e) {
+    // Circuit-OPEN error landt hier net als een gewone fout. Caller (webhook
+    // handler) retourneert dan een 5xx-achtige body waarna Mollie binnen
+    // ~15 min retried — exact wat we willen.
     return { succes: false, fout: e.message };
   }
 
