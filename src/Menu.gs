@@ -282,6 +282,9 @@ function onOpen() {
       .addSeparator()
       .addItem('Werkruimte opschonen (tabbladen)', 'herorganiseerWerkruimte')
       .addSeparator()
+      .addItem('🔒 Fortress Mode AAN (klant-proof maken)', 'fortressModeAan')
+      .addItem('🔓 Fortress Mode UIT (handmatig editen weer toestaan)', 'fortressModeUit')
+      .addSeparator()
       .addItem('Setup opnieuw uitvoeren (reset)', 'resetSetup')
     )
 
