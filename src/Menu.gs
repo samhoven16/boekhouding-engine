@@ -37,6 +37,12 @@ function onOpen() {
   try { if (typeof herstelKritiekeTriggersIndienNodig_ === 'function') herstelKritiekeTriggersIndienNodig_(); }
   catch (e) { Logger.log('Trigger-zelfherstel overgeslagen: ' + e.message); }
 
+  // SelfHeal: bredere check dan herstelKritiekeTriggers — vergelijkt met
+  // canonical _HYGIENE_VERWACHTE_TRIGGERS. Vangt missende onEdit / onFormSubmit
+  // (audit-log stil + form-invoer niet doorkomend) die de oude check liet zitten.
+  try { if (typeof controleerVolledigeTriggerInstallatie_ === 'function') controleerVolledigeTriggerInstallatie_(); }
+  catch (e) { Logger.log('SelfHeal overgeslagen: ' + e.message); }
+
   // Jaarwisseling-check: in jan-mrt waarschuwen als factuurprefix nog op
   // vorig jaar staat. Aanbieding om jaarafsluiting nu te doen.
   try { if (typeof checkJaarwisselingNodig_ === 'function') checkJaarwisselingNodig_(); }
