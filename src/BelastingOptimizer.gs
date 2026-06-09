@@ -13,8 +13,11 @@
  *
  *   €0–€2.901      : 0%   (drempel — onder dit bedrag geen aftrek)
  *   €2.901–€69.765 : 28%  (volle aftrek)
- *   €69.765–€129.194 : vast bedrag (€19.535)
- *   >€129.194       : afbouwzone (lineair tot 0)
+ *   €69.765–€130.744 : vast bedrag (€19.769) — config-driven, zie
+ *                     Belastingadvies.gs KIA_VAST_BEDRAG. Werd voorheen
+ *                     €19.535 / €129.194 — ronde 2 audit-fix synchronisatie
+ *                     met config-defaults na Prinsjesdag-update.
+ *   >€130.744       : afbouwzone (lineair tot 0)
  *
  * Slimme timing = elk jaar in de optimale zone landen.
  *

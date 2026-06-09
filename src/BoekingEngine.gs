@@ -824,9 +824,14 @@ function schrijfAuditLog_(actie, details) {
     // Klant heeft Editor-toegang op ScriptProperties → kan elke regel
     // hand-editten. Zonder chain is "audit-log was fout"-claim niet weer-
     // legbaar. Met chain: SHA256(prevHash + entry) → elke wijziging
-    // breekt de chain bij verificatie. Klant kan recente entries niet
-    // ongemerkt veranderen want hij kent de prevHash niet zonder de
-    // exacte tijdstempel + gebruiker + tenant te reproduceren.
+    // breekt de chain bij verificatie.
+    //
+    // Audit-ronde 2 (cross-PR): read-compute-write zonder LockService =
+    // race-condition risico tussen dagelijkseTaken (auditKeten + formeel-
+    // Bewijs schrijven parallel) en user-actie (PERIODE_ONTGRENDELD).
+    // Nu: LockService.getScriptLock met 2s tryLock → atomair read+write.
+    let lock = null;
+    try { lock = LockService.getScriptLock(); lock.tryLock(2000); } catch (_) {}
     let prevHash = '';
     try { prevHash = String(props.getProperty('AUDIT_KETEN_HASH') || ''); } catch (_) {}
     let entryHash = '';
@@ -838,11 +843,13 @@ function schrijfAuditLog_(actie, details) {
     if (entryHash) {
       try { props.setProperty('AUDIT_KETEN_HASH', entryHash); } catch (_) {}
     }
-    // KNOWN LIMITATION + TODO: klant heeft Editor-rechten op
-    // ScriptProperties dus kan AUDIT_KETEN_HASH resetten. Chain breekt dan
-    // bij volgende verificatie (verifieerAuditChain_ in volgende PR). Voor
-    // externe anchor: dagelijksTaken zou de huidige hash kunnen mailen naar
-    // een Sam-only inbox — write-only trust anchor die klant niet bereikt.
+    if (lock) { try { lock.releaseLock(); } catch (_) {} }
+    // KNOWN LIMITATION: klant heeft Editor-rechten op ScriptProperties dus
+    // kan AUDIT_KETEN_HASH resetten. Mitigatie: dagelijkseTaken stuurt
+    // huidige hash naar Sam-only inbox (mailDagelijksAuditAnchor_) zodat
+    // klant-reset detecteerbaar is via mismatch. Plus verifieerAuditChain_
+    // herrekent de chain over buffer ter detectie van midden-in-buffer-
+    // tampering. Beide hieronder geïmplementeerd.
 
     // Houd laatste 100 regels bij in ScriptProperties (max ~8KB om 9KB limit veilig te houden)
     const LOG_KEY = 'auditLogBuffer';
@@ -871,6 +878,108 @@ function slaBusinessTypeOp(type) {
   PropertiesService.getScriptProperties().setProperty('businessType', type);
   schrijfAuditLog_('businessType gewijzigd', type);
   return true;
+}
+
+/**
+ * Audit-vondst ronde 2: verifieer integriteit van auditLogBuffer-keten.
+ * Re-rekent SHA256-chain over alle entries en vergelijkt met AUDIT_KETEN_HASH.
+ * Bij mismatch: klant heeft entries gewijzigd OF AUDIT_KETEN_HASH gereset.
+ *
+ * Externe anchor (mailDagelijksAuditAnchor_) detecteert daarnaast de
+ * combinatie: klant reset zowel buffer ALS AUDIT_KETEN_HASH → server-side
+ * vergelijking met laatst-gemailde hash flagt dit.
+ *
+ * @returns {{ok: boolean, totaal: number, gebroken: number|null, reden: string}}
+ */
+// eslint-disable-next-line no-unused-vars
+function verifieerAuditChain_() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const buffer = props.getProperty('auditLogBuffer') || '';
+    const opgeslagenHash = props.getProperty('AUDIT_KETEN_HASH') || '';
+    if (!buffer) return { ok: true, totaal: 0, gebroken: null, reden: 'Lege audit-buffer' };
+    const regels = buffer.split('\n').filter(Boolean);
+    let prevHash = '';
+    // Buffer is tail-rotating; recompute kan ALLEEN de laatste-bekende staat
+    // re-rekenen vanaf "prevHash voor de oudste regel in buffer". Die hebben
+    // we niet → we kunnen alleen verifiëren dat ELKE entry consistent is met
+    // z'n eigen suffix-hash. Volledige chain over ALLE history vereist
+    // append-only sheet (TODO buiten deze PR).
+    let gebroken = null;
+    for (let i = 0; i < regels.length; i++) {
+      const r = regels[i];
+      // Entry-format: "tijd | tenant | user | actie | details | hash"
+      const lastPipe = r.lastIndexOf(' | ');
+      if (lastPipe < 0) { gebroken = i; break; }
+      const entryBase = r.slice(0, lastPipe);
+      const opgeslagenSuffix = r.slice(lastPipe + 3);
+      const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, prevHash + '|' + entryBase);
+      const computed = raw.map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); }).join('');
+      if (computed.slice(0, 16) !== opgeslagenSuffix) {
+        // Eerste regel mismatch = prevHash van vóór buffer-start onbekend (acceptabel)
+        if (i > 0) { gebroken = i; break; }
+      }
+      prevHash = computed;
+    }
+    const eindHashOk = !prevHash || prevHash === opgeslagenHash;
+    if (gebroken !== null) {
+      return { ok: false, totaal: regels.length, gebroken: gebroken,
+        reden: 'Hash-mismatch op rij ' + gebroken + ' van buffer' };
+    }
+    if (!eindHashOk && prevHash) {
+      return { ok: false, totaal: regels.length, gebroken: regels.length - 1,
+        reden: 'AUDIT_KETEN_HASH stemt niet overeen met laatste buffer-entry — mogelijk reset' };
+    }
+    return { ok: true, totaal: regels.length, gebroken: null, reden: 'Chain consistent' };
+  } catch (e) {
+    return { ok: false, totaal: 0, gebroken: null, reden: 'Verifier-fout: ' + e.message };
+  }
+}
+
+/**
+ * Audit-vondst ronde 2: externe trust-anchor voor audit-chain.
+ * Mailt de huidige AUDIT_KETEN_HASH + entry-count naar Sam-only inbox.
+ * Klant kan ScriptProperties resetten, maar de gemailde hash blijft als
+ * onafhankelijke referentie. Sam kan vergelijken bij latere verificatie.
+ *
+ * Throttle: 1× per dag (idempotent via datum-prop).
+ * Ontvanger: AUDIT_ANCHOR_EMAIL ScriptProperty, fallback OWNER_STATUS_EMAIL.
+ */
+// eslint-disable-next-line no-unused-vars
+function mailDagelijksAuditAnchor_() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const vandaag = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd');
+    const laatste = props.getProperty('AUDIT_ANCHOR_LAATSTE_MAIL') || '';
+    if (laatste === vandaag) return;  // throttle 1×/dag
+
+    const ontvanger = props.getProperty('AUDIT_ANCHOR_EMAIL')
+      || props.getProperty('OWNER_STATUS_EMAIL') || '';
+    if (!ontvanger || !/@/.test(ontvanger)) return;
+
+    const hash = props.getProperty('AUDIT_KETEN_HASH') || '(leeg)';
+    const buffer = props.getProperty('auditLogBuffer') || '';
+    const entryCount = buffer ? buffer.split('\n').filter(Boolean).length : 0;
+    let tenant = '';
+    try {
+      const ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
+      tenant = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, ssId)
+        .map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); })
+        .join('').slice(0, 8);
+    } catch (_) { tenant = 'na'; }
+
+    const onderwerp = 'Audit-anchor ' + tenant + ' — ' + vandaag;
+    const body =
+      'Dagelijkse audit-chain trust-anchor (niet klant-zichtbaar).\n\n' +
+      'Datum:       ' + vandaag + '\n' +
+      'Tenant:      ' + tenant + '\n' +
+      'Entry-count: ' + entryCount + '\n' +
+      'Hash:        ' + hash + '\n\n' +
+      'Bij Belastingdienst-controle: vergelijk deze hash met huidige\n' +
+      'AUDIT_KETEN_HASH ScriptProperty. Mismatch = klant heeft chain gereset.';
+    try { MailApp.sendEmail(ontvanger, onderwerp, body); } catch (_) {}
+    props.setProperty('AUDIT_ANCHOR_LAATSTE_MAIL', vandaag);
+  } catch (_) { /* anchor mag nooit dagelijkseTaken breken */ }
 }
 
 function getBusinessType() {

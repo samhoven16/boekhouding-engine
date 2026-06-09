@@ -1729,6 +1729,12 @@ function dagelijkseTaken() {
   // Schrijft per run één samenvatting naar _SYSTEM_LOG; bij schending komt
   // er een WARN-entry per axioma met tegenvoorbeeld. Faalt nooit hard — het
   // bewijs is observatie, niet enforcement.
+  // Audit-vondst ronde 2: dagelijkse trust-anchor voor audit-chain.
+  // Mailt huidige AUDIT_KETEN_HASH naar Sam-only inbox als externe
+  // referentie tegen klant-side reset. 1× per dag throttled.
+  _runTaak_('auditAnchor', function() {
+    if (typeof mailDagelijksAuditAnchor_ === 'function') mailDagelijksAuditAnchor_();
+  });
   _runTaak_('formeelBewijs', function() {
     if (typeof bewijsAlleInvarianten_ !== 'function') return;
     const rapport = bewijsAlleInvarianten_(ss);
