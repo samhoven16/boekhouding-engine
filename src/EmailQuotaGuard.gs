@@ -136,16 +136,16 @@ function controleerEmailQuotaProactief_() {
   const body =
     'Hallo,\n\n' +
     'Boekhoudbaar verstuurt facturen en herinneringen via je eigen Gmail.\n' +
-    'Google staat per dag een vast aantal mails toe — als die op is, kunnen\n' +
-    'we de rest van de dag geen e-mails meer versturen.\n\n' +
+    'Google staat per dag een vast aantal mails toe — als die op is, kan\n' +
+    'Boekhoudbaar de rest van de dag geen e-mails meer versturen.\n\n' +
     'Huidige status:\n' +
     '  • Verstuurd vandaag:  ' + (status.totaal - status.resterend) + ' van ' + status.totaal + '\n' +
     '  • Nog te versturen:    ' + status.resterend + '\n' +
     '  • Niveau:              ' + status.niveau + '\n\n' +
     'Wat kun je doen?\n' +
     '  1. Wacht tot morgenochtend — de quota reset om 00:00 PT (~09:00 NL).\n' +
-    '  2. Heb je een Google Workspace-account? Dan is je dagcap 1500 i.p.v. 100.\n' +
-    '     Boekhoudbaar werkt 100% hetzelfde, alleen ruimer.\n' +
+    '  2. Heb je een Google Workspace-account? Dan is je dagcap 1500 i.p.v. 100\n' +
+    '     mails — 15× zoveel ruimte. Boekhoudbaar werkt 100% hetzelfde.\n' +
     '  3. Bij urgente facturen: verstuur ze tijdelijk handmatig (kopieer de\n' +
     '     PDF uit Drive).\n\n' +
     'Mails die nu niet kunnen worden verstuurd worden automatisch opnieuw\n' +

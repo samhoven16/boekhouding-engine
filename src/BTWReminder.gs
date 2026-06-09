@@ -101,14 +101,14 @@ Uw BTW aangifte voor ${kw.naam} moet uiterlijk ${kw.deadline.toLocaleDateString(
 
 U heeft nog ${dagentot} dag${dagentot === 1 ? '' : 'en'} de tijd.${saldoTekst}
 
-Open uw boekhoudprogramma en kies:
+Open Boekhoudbaar en kies:
 Boekhouding → BTW → 🧾 BTW aangifte assistent
 
 Voor de daadwerkelijke aangifte gaat u naar:
 https://mijn.belastingdienst.nl
 
 Met vriendelijke groet,
-Uw boekhoudprogramma`;
+— Boekhoudbaar`;
 
   // Try/catch zodat een GmailApp-quota-fout de trigger-keten niet stopt;
   // props alleen bijwerken bij geslaagde verzending (anders wordt morgen
