@@ -1669,15 +1669,35 @@ function _getHealthcheckUrls_() {
  */
 function _pingAlleHealthchecks_(suffix, payload) {
   const urls = _getHealthcheckUrls_();
-  urls.forEach(function(url) {
-    try {
-      UrlFetchApp.fetch(url + (suffix || ''), {
-        muteHttpExceptions: true,
-        method: 'post',
-        payload: payload,
-      });
-    } catch (_) { /* fail-open per URL */ }
+  if (urls.length === 0) return;
+  // Audit-vondst ronde 2 (cross-PR): bij 2 dode URLs kan sequentieel forEach
+  // tot 120s budget verbranden vóór dagelijkseTaken überhaupt begint.
+  // UrlFetchApp.fetchAll() doet alle requests CONCURRENT → max-latency =
+  // 60s (single-timeout) i.p.v. n*60s. Fail-open: één requesten throw
+  // mag niet de andere blokkeren.
+  const requests = urls.map(function(url) {
+    return {
+      url: url + (suffix || ''),
+      muteHttpExceptions: true,
+      method: 'post',
+      payload: payload,
+    };
   });
+  try {
+    UrlFetchApp.fetchAll(requests);
+  } catch (_) {
+    // fetchAll throw'd op één van de requests — fallback naar sequentieel
+    // zodat at-least een ping doorkomt. Per-URL fail-open behouden.
+    urls.forEach(function(url) {
+      try {
+        UrlFetchApp.fetch(url + (suffix || ''), {
+          muteHttpExceptions: true,
+          method: 'post',
+          payload: payload,
+        });
+      } catch (_) {}
+    });
+  }
 }
 
 function dagelijkseTaken() {
@@ -1753,14 +1773,12 @@ function dagelijkseTaken() {
       controleerEmailQuotaProactief_();
     }
   });
-  // SelfHeal trigger-check: nachtelijk de canonical trigger-set verifiëren
-  // en bij gaps repareren. Throttle 24u — voorkomt heal-stormen als sanitize
-  // zelf op een ScriptApp-quota landt.
-  _runTaak_('triggerSelfHeal', function() {
-    if (typeof controleerVolledigeTriggerInstallatie_ === 'function') {
-      controleerVolledigeTriggerInstallatie_();
-    }
-  });
+  // Audit-vondst ronde 2 (cross-PR): triggerSelfHeal verplaatst naar LAATSTE
+  // positie in dagelijkseTaken-keten. Was midden in de keten, maar
+  // sanitizeTriggers_ doet delete+recreate van alle triggers — als de
+  // recreate-stap faalt op ScriptApp-quota MIDDEN in de keten, blijft het
+  // systeem zonder triggers tot volgende onOpen. Aan einde plaatsen
+  // beperkt blast-radius: alle nuttige work is dan al gedaan.
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   // Cycle 68: Belastingadvies-tab is een statische rendering van
   // aftrekposten + spoed-deadlines. Voorheen werd hij alleen vernieuwd
@@ -1796,6 +1814,47 @@ function dagelijkseTaken() {
     if (typeof ruimMollieIdempotencyOp_ === 'function') ruimMollieIdempotencyOp_();
   });
 
+  // Audit-vondst ronde 2 (GAS-runtime): herinneringsStap_<factuurnr> keys
+  // worden gewist bij BETAALD/GECREDITEERD, maar facturen die nooit betaald
+  // worden (failliete klant, langdurig oninbaar) behouden de key voor altijd.
+  // Bij 10k onbetaalde facturen over jaren = ~150KB van de 500KB-budget.
+  // Cleanup-strategie: verwijder herinneringsStap-keys voor facturen die
+  // 2 jaar GEEN status-update meer hebben gehad (Verkoopfacturen kolom 'Laatst
+  // bijgewerkt' kolom 15). Tot 2 jaar = nog actief in debiteuren-overleg.
+  _runTaak_('cleanupHerinneringsStap', function() {
+    try {
+      const ss = getSpreadsheet_();
+      const vf = ss && ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
+      if (!vf) return;
+      const data = vf.getDataRange().getValues();
+      // Bouw set van factuurnummers die nog "actief" zijn (jonger dan 2 jaar)
+      const tweeJaarMs = 2 * 365 * 24 * 60 * 60 * 1000;
+      const cutoff = Date.now() - tweeJaarMs;
+      const actieveFacturen = {};
+      for (let i = 1; i < data.length; i++) {
+        const fnr = String(data[i][0] || '');
+        const datum = data[i][2];
+        if (!fnr) continue;
+        const ts = (datum instanceof Date) ? datum.getTime() : 0;
+        if (ts >= cutoff) actieveFacturen[fnr] = true;
+      }
+      const props = PropertiesService.getScriptProperties();
+      const alle = props.getProperties();
+      let verwijderd = 0;
+      Object.keys(alle).forEach(function(k) {
+        if (k.indexOf('herinneringsStap_') !== 0) return;
+        const fnr = k.slice('herinneringsStap_'.length);
+        if (!actieveFacturen[fnr]) {
+          try { props.deleteProperty(k); verwijderd++; } catch (_) {}
+        }
+      });
+      if (verwijderd > 0) {
+        try { schrijfAuditLog_('cleanupHerinneringsStap',
+          'Verwijderd ' + verwijderd + ' herinneringsStap-keys voor facturen > 2 jaar oud'); } catch (_) {}
+      }
+    } catch (_) { /* fail-safe — cleanup mag dagelijkseTaken nooit breken */ }
+  });
+
   // DR/SRE (criticus-rapport): emailVerzonden_F* idempotency-keys
   // accumuleren zonder cleanup → quotum-cliff bij 10.000 facturen
   // (ScriptProperties 500KB total / 9KB per key). Property bevat alleen
@@ -1820,6 +1879,15 @@ function dagelijkseTaken() {
     if (verwijderd > 0) {
       try { schrijfAuditLog_('cleanupEmailIdem',
         'Verwijderd ' + verwijderd + ' emailVerzonden_-keys ouder dan 180d'); } catch (_) {}
+    }
+  });
+
+  // SelfHeal trigger-check: ALLERLAATSTE step in dagelijkseTaken — beperkt
+  // blast-radius als sanitize-recreate halverwege faalt op ScriptApp-quota.
+  // Alle nuttige work is dan al gedaan. Throttle 24u via SelfHeal.gs.
+  _runTaak_('triggerSelfHeal', function() {
+    if (typeof controleerVolledigeTriggerInstallatie_ === 'function') {
+      controleerVolledigeTriggerInstallatie_();
     }
   });
 
@@ -2304,6 +2372,12 @@ function markeerVervallenFacturen_(ss) {
   // Markeer als VERVALLEN: status is VERZONDEN of DEELS_BETAALD én vervaldatum is voorbij.
   // Concepts skippen we (nog niet officieel verstuurd), BETAALD/GECREDITEERD is final.
   const teMarkeren = [FACTUUR_STATUS.VERZONDEN, FACTUUR_STATUS.DEELS_BETAALD];
+
+  // Audit-vondst ronde 2 (GAS-runtime): was per-rij setValue + setBackground in
+  // for-loop = 2 sheet-writes per match × ~10ms. Bij 5k facturen waarvan 200
+  // vervallen = 4s overhead in dagelijkseTaken. Nu: collect ranges + batch
+  // via getRangeList (één sheet-roundtrip). Bij 0 hits = 0 writes.
+  const teVervallenRijen = [];
   for (let i = 1; i < data.length; i++) {
     const status = data[i][14];
     if (teMarkeren.indexOf(status) === -1) continue;
@@ -2314,9 +2388,25 @@ function markeerVervallenFacturen_(ss) {
     const verval = (ruwVerval instanceof Date) ? ruwVerval : parseDatum_(ruwVerval);
     if (!verval || isNaN(verval.getTime())) continue;
     if (verval < vandaag) {
-      sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.VERVALLEN);
-      sheet.getRange(i + 1, 15).setBackground('#FFCDD2');
+      teVervallenRijen.push(i + 1);  // 1-based rij-nr voor Sheet API
     }
+  }
+  if (teVervallenRijen.length === 0) return;
+  // Batch: zelfde kolom 15 (status). getRangeList accepteert A1-notation.
+  const a1List = teVervallenRijen.map(function(rij) { return 'O' + rij; });  // O = kolom 15
+  try {
+    const rangeList = sheet.getRangeList(a1List);
+    rangeList.setValue(FACTUUR_STATUS.VERVALLEN);
+    rangeList.setBackground('#FFCDD2');
+  } catch (e) {
+    // Fallback: oude per-rij loop indien getRangeList niet beschikbaar
+    Logger.log('markeerVervallenFacturen_ batch faalde, fallback per-rij: ' + e.message);
+    teVervallenRijen.forEach(function(rij) {
+      try {
+        sheet.getRange(rij, 15).setValue(FACTUUR_STATUS.VERVALLEN);
+        sheet.getRange(rij, 15).setBackground('#FFCDD2');
+      } catch (_) {}
+    });
   }
 }
 

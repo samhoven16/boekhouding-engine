@@ -107,10 +107,26 @@ function controleerEmailQuotaProactief_() {
     return;  // OK / LET_OP — geen actie
   }
 
-  // Idempotency: max 1 waarschuwing per dag per niveau-escalatie
+  // Audit-vondst ronde 2 (cross-PR regressie): bij niveau OP of < 5 resterend
+  // mag deze waarschuwingsmail de allerlaatste quota-slot NIET opmaken.
+  // dagelijkseTaken roept hierna nog `herinneringen` (dunning, 100 facturen)
+  // en `btwDeadline` (mail per kwartaal-bijna-deadline) — die hebben de
+  // resterende slots nodig. Bij niveau OP/<5: skip mail, maar zet wel
+  // idempotency-flag zodat we morgen niet alsnog dubbel-mailen.
   const props = PropertiesService.getScriptProperties();
   const vandaag = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd');
   const sleutel = vandaag + ':' + status.niveau;
+  if (status.niveau === 'OP' || status.resterend <= 2) {
+    props.setProperty(_EMAIL_QUOTA_WAARSCHUWING_PROP, sleutel + ':SKIP_QUOTA');
+    try {
+      safeAuditLog_('EmailQuota mail-SKIP',
+        'niveau=' + status.niveau + ' resterend=' + status.resterend +
+        ' — laatste slots gereserveerd voor factuur/herinnering');
+    } catch (_) {}
+    return;
+  }
+
+  // Idempotency: max 1 waarschuwing per dag per niveau-escalatie
   const laatste = props.getProperty(_EMAIL_QUOTA_WAARSCHUWING_PROP);
   if (laatste === sleutel) return;
 
