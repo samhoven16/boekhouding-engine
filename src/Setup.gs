@@ -96,6 +96,14 @@ function setup() {
       ['Technische tabs verbergen', function() { verbergTechnischeTabbladen_(ss); }],
       ['Grootboekschema laden',     function() { vulGrootboekschema_(ss); }],
       ['Instellingen initialiseren', function() { zetInstellingen_(ss); }],
+      ['Slimme defaults invullen',  function() {
+        // Vult Email + Webhook-secret automatisch op basis van wat we al
+        // weten (Session-user, random secret). Idempotent — overschrijft
+        // nooit klant-input.
+        if (typeof vulSlimmeDefaultsIn_ === 'function') {
+          vulSlimmeDefaultsIn_();
+        }
+      }],
       ['Belasting-overrides toevoegen', function() {
         if (typeof voegBelastingOverridesToeAanInstellingen_ === 'function') {
           voegBelastingOverridesToeAanInstellingen_();
