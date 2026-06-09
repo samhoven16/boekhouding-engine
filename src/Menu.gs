@@ -266,6 +266,7 @@ function onOpen() {
       .addItem('Google Drive mappen', 'toonDriveStructuur')
       .addItem('Website / webshop koppelen (API)', 'toonZapierInstructies')
       .addItem('KvK API-key (voor auto-fill bedrijfsgegevens)', 'zetKvkApiKey')
+      .addItem('🔄 Ververs bedrijfsgegevens uit KvK (1× per klant)', 'ververseKvKBedrijfsgegevens')
       .addItem('Mollie API-key (voor iDEAL-betaal-link op factuur)', 'zetMollieApiKey')
       .addItem('🤖 Eigen Gemini API-key (gratis, optioneel — AI bon-scan)', 'zetGeminiApiKey')
       .addSeparator()
