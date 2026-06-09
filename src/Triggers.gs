@@ -1749,6 +1749,12 @@ function dagelijkseTaken() {
   // Schrijft per run één samenvatting naar _SYSTEM_LOG; bij schending komt
   // er een WARN-entry per axioma met tegenvoorbeeld. Faalt nooit hard — het
   // bewijs is observatie, niet enforcement.
+  // Audit-vondst ronde 2: dagelijkse trust-anchor voor audit-chain.
+  // Mailt huidige AUDIT_KETEN_HASH naar Sam-only inbox als externe
+  // referentie tegen klant-side reset. 1× per dag throttled.
+  _runTaak_('auditAnchor', function() {
+    if (typeof mailDagelijksAuditAnchor_ === 'function') mailDagelijksAuditAnchor_();
+  });
   _runTaak_('formeelBewijs', function() {
     if (typeof bewijsAlleInvarianten_ !== 'function') return;
     const rapport = bewijsAlleInvarianten_(ss);
@@ -2444,7 +2450,7 @@ function controleerBtwDeadlines_() {
           `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
           `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
           `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
-          `Met vriendelijke groet,\nUw boekhoudprogramma`
+          `Met vriendelijke groet,\n— Boekhoudbaar`
         );
       } catch (err) {
         Logger.log('BTW deadline reminder mislukt: ' + err.message);

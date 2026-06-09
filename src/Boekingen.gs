@@ -1214,6 +1214,28 @@ function beheerGeslotenPeriodes() {
   );
 
   if (bevestiging === ui.Button.YES) {
+    // Audit ronde 2 (accountant): bewaar ontgrendelingshistorie i.p.v.
+    // splice (vorige gesloten-staat verloor). Append naar
+    // GESLOTEN_PERIODES_HISTORIE-ScriptProperty zodat meervoudige open/
+    // sluit-cycli terugleesbaar zijn voor Belastingdienst-controleur.
+    try {
+      const histRuw = props.getProperty('GESLOTEN_PERIODES_HISTORIE') || '[]';
+      let hist = [];
+      try { hist = JSON.parse(histRuw); if (!Array.isArray(hist)) hist = []; } catch (_) {}
+      hist.push({
+        label: periode.label,
+        van: periode.van || null,
+        tot: periode.tot || null,
+        geslotenOp: periode.geslotenOp || null,
+        ontgrendeldOp: new Date().toISOString(),
+        ontgrendeldDoor: (function() { try { return Session.getActiveUser().getEmail() || ''; } catch (_) { return ''; } })(),
+        motivatie: motivatie.slice(0, 400),
+      });
+      // Cap historie op laatste 100 ontgrendelingen om 9KB-prop-limit te respecteren
+      if (hist.length > 100) hist = hist.slice(hist.length - 100);
+      props.setProperty('GESLOTEN_PERIODES_HISTORIE', JSON.stringify(hist));
+    } catch (_) { /* historie-write mag splice niet blokkeren */ }
+
     periodes.splice(nr, 1);
     props.setProperty('GESLOTEN_PERIODES', JSON.stringify(periodes));
     try {

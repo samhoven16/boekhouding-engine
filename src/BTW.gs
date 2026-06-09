@@ -209,9 +209,18 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
       aangifte.r1b_grondslag += grondslag;
       aangifte.r1b_btw += btwBedrag;
     } else if (/vrijgesteld/i.test(btwLabel)) {
+      // Audit-vondst ronde 2 (tax-compliance): r1d combineert formeel beide
+      // (Belastingdienst-rubriek 1d label "0% of vrijgesteld") MAAR voor de
+      // pro-rata BTW-aftrek (art. 11 lid 2 Wet OB) telt alleen ECHT-VRIJGESTELD
+      // als beperkende noemer. Nultarief-omzet is BELASTE omzet (recht op
+      // aftrek). Voorheen: ZZP'er met €30k EU-export + €20k NL 21% kreeg
+      // pro-rata 40% i.p.v. 100% → naheffing. Nu intern gesplitst, output
+      // naar Belastingdienst-formulier blijft samengevoegd.
       aangifte.r1d += grondslag;
+      aangifte.r1d_vrijgesteld = (aangifte.r1d_vrijgesteld || 0) + grondslag;
     } else if (btwLabel.includes('0%') || /nultarief/i.test(btwLabel)) {
       aangifte.r1d += grondslag;
+      aangifte.r1d_nul = (aangifte.r1d_nul || 0) + grondslag;
       // Audit ronde 2 (tax-compliance): ICP-detect bij EU B2B-klanten.
       // Niet-NL EU BTW-nummer + nultarief = intracommunautaire levering
       // → r3a-rubriek + ICP-aangifte verplicht (art. 37a Wet OB).
@@ -291,11 +300,18 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
   // Verlegd (r1e) telt als BELAST (alleen heffing verschoven naar afnemer).
   // Export (2a) en EU 0% (1c als 0%) tellen ook als belast.
   const r5bOrigineel = rondBedrag_(aangifte.r5b);
+  // Audit-vondst ronde 2: nultarief (export buiten EU) is BELASTE omzet
+  // met recht op aftrek. Was ten onrechte als "vrijgesteld" in noemer.
+  // Plus: r2a (export buiten EU) en r3a (IC-levering) zijn ook belast.
   const belasteOmzet = (aangifte.r1a_grondslag || 0)
     + (aangifte.r1b_grondslag || 0)
     + (aangifte.r1c_grondslag || 0)
-    + (aangifte.r1e_grondslag || 0);
-  const vrijgesteldeOmzet = aangifte.r1d || 0;
+    + (aangifte.r1e_grondslag || 0)
+    + (aangifte.r1d_nul || 0)
+    + (aangifte.r2a || 0)
+    + (aangifte.r3a_grondslag || 0);
+  // Alleen écht vrijgesteld (NIET nultarief) telt in noemer als beperkend.
+  const vrijgesteldeOmzet = aangifte.r1d_vrijgesteld || 0;
   const totaalOmzet = belasteOmzet + vrijgesteldeOmzet;
 
   if (vrijgesteldeOmzet > 0 && belasteOmzet > 0 && totaalOmzet > 0) {

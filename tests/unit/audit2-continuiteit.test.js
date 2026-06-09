@@ -57,8 +57,10 @@ describe('Fix #2 — Belastingadvies fallback geeft expliciete waarschuwing', ()
 
   test('Bij fallback wordt TARIEF_VEROUDERD-flag op tarieven gezet', () => {
     expect(belasting).toMatch(/TARIEF_VEROUDERD = true/);
-    expect(belasting).toMatch(/TARIEF_FALLBACK_JAAR = laatstBekendJaar/);
-    expect(belasting).toMatch(/TARIEF_BRON = ['"]fallback/);
+    // Audit ronde 2 batch-1: ook bij placeholder-jaar (BELASTING_PER_JAAR[2027].placeholder=true)
+    // wordt vlag gezet. Expressie nu ternary: isPlaceholderJaar ? jaar : laatstBekendJaar.
+    expect(belasting).toMatch(/TARIEF_FALLBACK_JAAR = (isPlaceholderJaar \? jaar : )?laatstBekendJaar/);
+    expect(belasting).toMatch(/['"]fallback \(/);  // batch-1: ternary maakt het beide takken
   });
 
   test('Anti-regressie: heeftJaarTarieven-check intact', () => {

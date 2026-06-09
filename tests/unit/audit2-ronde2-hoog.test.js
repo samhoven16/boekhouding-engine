@@ -1,0 +1,202 @@
+/**
+ * tests/unit/audit2-ronde2-hoog.test.js
+ *
+ * Ronde 2 verificatie-audit vond 4 echte HIGH-issues bovenop wat al in
+ * PR #258-#263 lag. Deze PR fixt alle vier:
+ *
+ *   1. BTW r1d split — nultarief telde ten onrechte als vrijgesteld in
+ *      pro-rata noemer. Concreet: ZZP'er met EU-export + NL 21% kreeg
+ *      40% i.p.v. 100% voorbelasting-aftrek → naheffing-risico.
+ *   2. AUDIT_KETEN_HASH zonder LockService → race-condition tussen
+ *      dagelijkseTaken en user-actie (PERIODE_ONTGRENDELD).
+ *   3. verifieerAuditChain_ ontbrak → hash-chain was symbool-politiek.
+ *   4. Externe trust-anchor (mailDagelijksAuditAnchor_) ontbrak → klant
+ *      kon zowel buffer als hash resetten zonder spoor.
+ *
+ * Plus 2 LOW:
+ *   5. BelastingOptimizer.gs:14-17 stale doc-comment €19.535/€129.194
+ *      → bijgewerkt naar €19.769/€130.744 (aligned met Belastingadvies).
+ *   6. /continuiteit/ niet in homepage nav → discoverability win.
+ */
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.resolve(__dirname, '../..');
+const btw = fs.readFileSync(path.join(ROOT, 'src/BTW.gs'), 'utf8');
+const eng = fs.readFileSync(path.join(ROOT, 'src/BoekingEngine.gs'), 'utf8');
+const trig = fs.readFileSync(path.join(ROOT, 'src/Triggers.gs'), 'utf8');
+const opt = fs.readFileSync(path.join(ROOT, 'src/BelastingOptimizer.gs'), 'utf8');
+const home = fs.readFileSync(path.join(ROOT, 'website/index.html'), 'utf8');
+
+describe('Fix #1 — BTW r1d split (pro-rata naheffing-risico)', () => {
+  test('r1d_vrijgesteld en r1d_nul worden apart bijgehouden', () => {
+    expect(btw).toMatch(/aangifte\.r1d_vrijgesteld = \(aangifte\.r1d_vrijgesteld \|\| 0\) \+ grondslag/);
+    expect(btw).toMatch(/aangifte\.r1d_nul = \(aangifte\.r1d_nul \|\| 0\) \+ grondslag/);
+  });
+
+  test('r1d totaal blijft samengevoegd voor Belastingdienst-rubriek', () => {
+    // Aangifte-formulier label is "0% of vrijgesteld" — output gelijk
+    expect(btw).toMatch(/vrijgesteld[\s\S]*?aangifte\.r1d \+= grondslag/);
+    expect(btw).toMatch(/nultarief[\s\S]*?aangifte\.r1d \+= grondslag/);
+  });
+
+  test('Pro-rata noemer gebruikt ALLEEN r1d_vrijgesteld (niet r1d-totaal)', () => {
+    expect(btw).toMatch(/const vrijgesteldeOmzet = aangifte\.r1d_vrijgesteld \|\| 0/);
+  });
+
+  test('belasteOmzet bevat nu ook r1d_nul + r2a + r3a_grondslag', () => {
+    expect(btw).toMatch(/\(aangifte\.r1d_nul \|\| 0\)/);
+    expect(btw).toMatch(/\(aangifte\.r2a \|\| 0\)/);
+    expect(btw).toMatch(/\(aangifte\.r3a_grondslag \|\| 0\)/);
+  });
+
+  test('Commentaar verklaart Wet OB art. 11 + naheffing-risico', () => {
+    expect(btw).toMatch(/art\. 11 lid 2 Wet OB|art\. 11 Uitv\.besch/);
+    expect(btw).toMatch(/naheffing/i);
+  });
+});
+
+describe('Fix #2 — AUDIT_KETEN_HASH LockService rond read+write', () => {
+  test('LockService.getScriptLock voor read+write atomair', () => {
+    const start = eng.indexOf('function schrijfAuditLog_');
+    const eind = eng.indexOf('\nfunction ', start + 1);
+    const blok = eng.slice(start, eind);
+    expect(blok).toMatch(/LockService\.getScriptLock\(\)/);
+    expect(blok).toMatch(/tryLock\(2000\)/);
+    expect(blok).toMatch(/lock\.releaseLock\(\)/);
+  });
+
+  test('Lock omsluit prevHash-read EN entryHash-write (atomair)', () => {
+    const start = eng.indexOf('function schrijfAuditLog_');
+    const eind = eng.indexOf('\nfunction ', start + 1);
+    const blok = eng.slice(start, eind);
+    const idxLock = blok.indexOf('tryLock');
+    const idxRead = blok.indexOf("getProperty('AUDIT_KETEN_HASH')");
+    const idxWrite = blok.indexOf("setProperty('AUDIT_KETEN_HASH'");
+    const idxRelease = blok.indexOf('releaseLock');
+    expect(idxLock).toBeLessThan(idxRead);
+    expect(idxWrite).toBeLessThan(idxRelease);
+  });
+});
+
+describe('Fix #3 — verifieerAuditChain_ functie', () => {
+  test('Functie bestaat', () => {
+    expect(eng).toMatch(/function verifieerAuditChain_\s*\(\s*\)/);
+  });
+
+  test('Returnt { ok, totaal, gebroken, reden }', () => {
+    const start = eng.indexOf('function verifieerAuditChain_');
+    const eind = eng.indexOf('\nfunction ', start + 1);
+    const blok = eng.slice(start, eind);
+    expect(blok).toMatch(/return \{ ok: true/);
+    expect(blok).toMatch(/return \{ ok: false/);
+    expect(blok).toMatch(/totaal:/);
+    expect(blok).toMatch(/gebroken:/);
+    expect(blok).toMatch(/reden:/);
+  });
+
+  test('Recompute SHA-256 per entry tegen opgeslagen suffix', () => {
+    const start = eng.indexOf('function verifieerAuditChain_');
+    const eind = eng.indexOf('\nfunction ', start + 1);
+    const blok = eng.slice(start, eind);
+    expect(blok).toMatch(/DigestAlgorithm\.SHA_256, prevHash \+ ['"]\|['"] \+ entryBase/);
+    expect(blok).toMatch(/computed\.slice\(0, 16\) !== opgeslagenSuffix/);
+  });
+
+  test('Detecteert AUDIT_KETEN_HASH mismatch met laatste entry-hash', () => {
+    const start = eng.indexOf('function verifieerAuditChain_');
+    const eind = eng.indexOf('\nfunction ', start + 1);
+    const blok = eng.slice(start, eind);
+    expect(blok).toMatch(/mogelijk reset/);
+  });
+
+  test('Fail-safe: verifier-fout returnt structureel resultaat (geen throw)', () => {
+    const start = eng.indexOf('function verifieerAuditChain_');
+    const eind = eng.indexOf('\nfunction ', start + 1);
+    const blok = eng.slice(start, eind);
+    expect(blok).toMatch(/Verifier-fout: ['"] \+ e\.message/);
+  });
+});
+
+describe('Fix #4 — mailDagelijksAuditAnchor_ externe trust-anchor', () => {
+  test('Functie bestaat', () => {
+    expect(eng).toMatch(/function mailDagelijksAuditAnchor_/);
+  });
+
+  test('Throttle: max 1× per dag (AUDIT_ANCHOR_LAATSTE_MAIL property)', () => {
+    expect(eng).toMatch(/AUDIT_ANCHOR_LAATSTE_MAIL/);
+    expect(eng).toMatch(/if \(laatste === vandaag\) return/);
+  });
+
+  test('Ontvanger: AUDIT_ANCHOR_EMAIL met fallback OWNER_STATUS_EMAIL', () => {
+    expect(eng).toMatch(/AUDIT_ANCHOR_EMAIL[\s\S]*?OWNER_STATUS_EMAIL/);
+  });
+
+  test('Mail-body bevat hash + entry-count + tenant + datum', () => {
+    const start = eng.indexOf('function mailDagelijksAuditAnchor_');
+    const eind = eng.indexOf('\nfunction ', start + 1);
+    const blok = eng.slice(start, eind);
+    expect(blok).toMatch(/Entry-count:/);
+    expect(blok).toMatch(/Hash:/);
+    expect(blok).toMatch(/Tenant:/);
+    expect(blok).toMatch(/Datum:/);
+  });
+
+  test('Body legt verificatie-procedure uit voor Belastingdienst-controle', () => {
+    expect(eng).toMatch(/Belastingdienst-controle/);
+    expect(eng).toMatch(/Mismatch = klant heeft chain gereset/);
+  });
+
+  test('Fail-safe: throwt nooit (anchor mag dagelijkseTaken niet breken)', () => {
+    const start = eng.indexOf('function mailDagelijksAuditAnchor_');
+    const eind = eng.indexOf('\nfunction ', start + 1);
+    const blok = eng.slice(start, eind);
+    expect(blok).toMatch(/} catch \(_\) \{ \/\* anchor mag nooit/);
+  });
+
+  test('Wiring: _runTaak_("auditAnchor", ...) in dagelijkseTaken', () => {
+    expect(trig).toMatch(/_runTaak_\(['"]auditAnchor['"]/);
+    expect(trig).toMatch(/mailDagelijksAuditAnchor_/);
+  });
+
+  test('auditAnchor staat vóór formeelBewijs (anchor eerst, dan verificatie)', () => {
+    const idxAnchor = trig.indexOf("_runTaak_('auditAnchor'");
+    const idxBewijs = trig.indexOf("_runTaak_('formeelBewijs'");
+    expect(idxAnchor).toBeLessThan(idxBewijs);
+  });
+});
+
+describe('Fix #5 — BelastingOptimizer.gs doc-comment bijgewerkt', () => {
+  test('Doc-comment toont nu €19.769 + €130.744 (config-aligned)', () => {
+    expect(opt).toMatch(/€19\.769/);
+    expect(opt).toMatch(/€130\.744/);
+  });
+
+  test('Oude waarden €19.535 + €129.194 zijn weg uit code, behalve in audit-context', () => {
+    // Allowed: één referentie in commentaar over de fix zelf
+    const refsOud = (opt.match(/€19\.535/g) || []).length;
+    expect(refsOud).toBeLessThanOrEqual(1);
+  });
+
+  test('Verwijst expliciet naar Belastingadvies.gs als source-of-truth', () => {
+    expect(opt).toMatch(/Belastingadvies\.gs KIA_VAST_BEDRAG/);
+  });
+});
+
+describe('Fix #6 — /continuiteit/ in homepage nav (discoverability)', () => {
+  test('nav-menu bevat /continuiteit/ link', () => {
+    const start = home.indexOf('id="nav-menu"');
+    const eind = home.indexOf('</ul>', start);
+    const blok = home.slice(start, eind);
+    expect(blok).toMatch(/href="\/continuiteit\/"/);
+  });
+
+  test('Link-tekst is "Continuïteit" (met juiste umlaut)', () => {
+    const start = home.indexOf('id="nav-menu"');
+    const eind = home.indexOf('</ul>', start);
+    const blok = home.slice(start, eind);
+    expect(blok).toMatch(/>Continuïteit</);
+  });
+});

@@ -59,6 +59,7 @@ const BELASTING_META = {
   2027: {
     versie: '2027.0-prelim',
     bevestigd: null,  // nog niet bevestigd; placeholder waarden
+    placeholder: true,  // audit ronde 2 (langlopend): triggert TARIEF_VEROUDERD
     bron: 'https://www.belastingdienst.nl/',
     bron_omschrijving: 'Voorlopige inschatting — wacht op Belastingplan 2027 (september 2026)',
   },
@@ -266,11 +267,18 @@ function getBelasting_() {
   // dus we mogen TARIEFSJAAR niet via object-identiteit bepalen — anders
   // rapporteert de (aanbevolen) server-update-route ten onrechte verouderd-flag.
   const heeftJaarTarieven = !!(serverTarieven || BELASTING_PER_JAAR[jaar]);
-  // Markeer dat klant een fallback ziet — UI moet expliciet waarschuwen.
-  if (!heeftJaarTarieven && tarieven && typeof tarieven === 'object') {
+  // Audit ronde 2 (langlopend): placeholder-jaartabellen (bv. 2027 vóór
+  // Belastingplan 2027 op Prinsjesdag) hebben placeholder:true gemarkeerd
+  // en horen óók TARIEF_VEROUDERD-flag te triggeren. Was: alleen bij
+  // ontbrekend jaar → stil-verkeerd risico voor heel 2027 als Sam stopt.
+  const isPlaceholderJaar = !!(BELASTING_PER_JAAR[jaar] && BELASTING_PER_JAAR[jaar].placeholder);
+  // Markeer dat klant een fallback OF placeholder ziet — UI moet expliciet waarschuwen.
+  if ((!heeftJaarTarieven || isPlaceholderJaar) && tarieven && typeof tarieven === 'object') {
     tarieven.TARIEF_VEROUDERD = true;
-    tarieven.TARIEF_FALLBACK_JAAR = laatstBekendJaar;
-    tarieven.TARIEF_BRON = 'fallback (' + laatstBekendJaar + ')';
+    tarieven.TARIEF_FALLBACK_JAAR = isPlaceholderJaar ? jaar : laatstBekendJaar;
+    tarieven.TARIEF_BRON = isPlaceholderJaar
+      ? 'placeholder (' + jaar + ' — wacht op Belastingplan)'
+      : 'fallback (' + laatstBekendJaar + ')';
   }
 
   // KLANT-OVERRIDES uit Instellingen-tab. Drie-laags-merge:

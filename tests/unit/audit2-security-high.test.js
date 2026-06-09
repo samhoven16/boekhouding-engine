@@ -52,11 +52,11 @@ describe('Fix #2 — Admin brute-force lockout: noodsleutel + alert', () => {
     expect(codeBron).toMatch(/function _adminNoodsleutelOk_/);
   });
 
-  test('Min lengte noodsleutel = 24 chars (anti-trivial-guess)', () => {
+  test('Min lengte noodsleutel ≥ 32 chars (anti-trivial-guess, audit-2 verhoogd van 24)', () => {
     const start = codeBron.indexOf('function _adminNoodsleutelOk_');
     const eind = codeBron.indexOf('\nfunction ', start + 1);
     const blok = codeBron.slice(start, eind);
-    const minChecks = (blok.match(/length < 24/g) || []).length;
+    const minChecks = (blok.match(/length < 32/g) || []).length;
     expect(minChecks).toBeGreaterThanOrEqual(2);  // ingegeven én verwacht
   });
 
