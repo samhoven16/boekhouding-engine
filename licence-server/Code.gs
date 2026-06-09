@@ -1142,8 +1142,8 @@ function bedanktPagina_(e) {
 <div class="card">
   <div style="font-size:44px;text-align:center">🎉</div>
   <h1>Bedankt voor je aankoop!</h1>
-  <p class="sub">Je betaling is ontvangen. Binnen enkele minuten staat er een e-mail in je inbox met je licentiesleutel en activatielink.</p>
-  <div class="info"><strong>Nog niets binnen na 5 minuten?</strong> Check je spam-map en zoek op <em>"Boekhoudbaar"</em>.</div>
+  <p class="sub">Je betaling is ontvangen. Binnen 5 minuten staat er een e-mail in je inbox met je licentiesleutel en activatielink.</p>
+  <div class="info"><strong>Niets binnen na 5 minuten?</strong> Check je spam-map en zoek op <em>"Boekhoudbaar"</em>.</div>
 
   <div class="heads-up">
     <strong>Wat gebeurt er zo:</strong>
@@ -1462,6 +1462,10 @@ function stuurLicentiemail_(naam, email, sleutel) {
     </div>
 
     <div style="text-align:center;margin:24px 0">
+      <p style="font-size:14px;color:#5F6B7A;margin-bottom:12px;line-height:1.55">
+        Na de klik kom je in <strong>2 Google-schermen</strong>. In het tweede staat<br>
+        "<strong>Geavanceerd → Doorgaan</strong>" — dat is de juiste knop.
+      </p>
       <a href="${kopieerLink}" style="background:#0D1B4E;color:#fff;padding:16px 32px;
          border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;letter-spacing:.1px">
         Open mijn boekhouding →
