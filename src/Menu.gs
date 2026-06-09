@@ -212,6 +212,7 @@ function onOpen() {
       .addItem('💼 Voorlopige belasting: hoeveel reserveren per maand?', 'toonVoorlopigeAanslagTip')
       .addSeparator()
       .addItem('💎 KIA + MIA + EIA stapeling berekenen', 'toonInvesteringsAftrekStapeling')
+      .addItem('💎 Investeringen optimaal timen (KIA-maximalisatie)', 'toonInvesteringsOptimizer')
       .addItem('🏁 Bedrijf staken: stakingsaftrek + FOR + lijfrente', 'toonStakingsWizard')
       .addItem('🔄 Suppletie-aangifte controle', 'genereerSuppletieRapport')
       .addSeparator()

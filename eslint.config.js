@@ -37,6 +37,7 @@ const GAS_GLOBALS = {
   Logger:            'readonly',
   Browser:           'readonly',
   LockService:       'readonly',
+  LinearOptimizationService: 'readonly',
   FormApp:           'readonly',
   DocumentApp:       'readonly',
   CalendarApp:       'readonly',
