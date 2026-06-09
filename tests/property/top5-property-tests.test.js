@@ -47,9 +47,14 @@ describe('PROP: rondBedrag_ — 1000 random inputs', () => {
         catch (e) { throw new Error('UNEXPECTED THROW on ' + JSON.stringify(input) + ': ' + e.message); }
         if (typeof out !== 'number') throw new Error('output is not number: ' + typeof out + ' for ' + input);
         if (isFinite(out)) {
-          // ≤2 decimalen: out * 100 moet integer zijn (ronding-tolerantie 1e-9)
+          // ≤2 decimalen: out * 100 moet integer zijn.
+          // Tolerantie schalend met magnitude (float64 mantissa = 52 bits,
+          // dus ~1e-15 relatieve precisie). Bij €300M+ kan float-artefact
+          // tot ~4e-6 absoluut zijn ondanks correct gerond op cent —
+          // ronde 2 audit-flake op seed 1001792640 (300251909.835).
           const cents = Math.round(out * 100);
-          if (Math.abs(out * 100 - cents) > 1e-6) throw new Error('>2 decimalen: ' + out + ' for ' + input);
+          const absTol = Math.max(1e-6, Math.abs(out) * 1e-12);
+          if (Math.abs(out * 100 - cents) > absTol) throw new Error('>2 decimalen: ' + out + ' for ' + input);
         }
       }
     ), { numRuns: RUNS, verbose: 0 });

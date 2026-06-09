@@ -55,7 +55,15 @@ function doGet(e) {
   //      mits query-param ?noodsleutel=<waarde> matched. Sam weet, attacker
   //      niet. Tijdelijk gebruiken bij lockout incident.
   if (actie === 'admin') {
-    if (_adminNoodsleutelOk_(e)) return adminPaneel_(e);
+    // Audit ronde 2 (red-team): bypass-pad krijgt soepelere rate-limit
+    // i.p.v. unlimited. Bij gelekte noodsleutel + zwak ADMIN_WACHTWOORD
+    // anders unbounded brute-force. 200/uur = ruim voor Sam's gebruik,
+    // maar belet >3 raden/sec sustained.
+    if (_adminNoodsleutelOk_(e)) {
+      const bypassBlocked = rateLimit_(e, { actie: 'admin-met-noodsleutel', globaal: 200, windowMin: 60 });
+      if (bypassBlocked) return bypassBlocked;
+      return adminPaneel_(e);
+    }
     const blocked = rateLimit_(e, { actie: 'admin-login', globaal: 20, windowMin: 60 });
     if (blocked) {
       try { _meldAdminLockoutAanOwner_(); } catch (_) {}
@@ -1182,10 +1190,14 @@ function bedanktPagina_(e) {
 function _adminNoodsleutelOk_(e) {
   try {
     const ingegeven = String((e && e.parameter && e.parameter.noodsleutel) || '');
-    if (!ingegeven || ingegeven.length < 24) return false;
+    // Audit ronde 2 (red-team): min lengte verhoogd 24→32 chars.
+    // 24 chars ≈ 140 bits entropie bij random; bij menselijke keuze
+    // (woordenlijst, zwak patroon) feitelijk veel lager. 32 chars =
+    // ~192 bits entropie zelfs bij gemiddelde keuze.
+    if (!ingegeven || ingegeven.length < 32) return false;
     const verwacht = String(PropertiesService.getScriptProperties()
       .getProperty('ADMIN_NOODSLEUTEL') || '');
-    if (!verwacht || verwacht.length < 24) return false;  // niet geconfigureerd
+    if (!verwacht || verwacht.length < 32) return false;  // niet geconfigureerd
     const ok = (typeof veiligVergelijk_ === 'function')
       ? veiligVergelijk_(ingegeven, verwacht)
       : ingegeven === verwacht;

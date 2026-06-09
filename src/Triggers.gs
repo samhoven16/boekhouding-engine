@@ -2444,7 +2444,7 @@ function controleerBtwDeadlines_() {
           `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
           `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
           `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
-          `Met vriendelijke groet,\nUw boekhoudprogramma`
+          `Met vriendelijke groet,\n— Boekhoudbaar`
         );
       } catch (err) {
         Logger.log('BTW deadline reminder mislukt: ' + err.message);
