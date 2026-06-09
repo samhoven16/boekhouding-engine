@@ -103,7 +103,8 @@ describe('Klantreis #5 — Migratie-FAQ op homepage voor persona-3', () => {
   test('Antwoord linkt naar bestaande migratie-gidsen', () => {
     const start = home.indexOf('id="migratie"');
     const blok = home.slice(start, start + 2000);
-    expect(blok).toMatch(/href="\/gids\/moneybird-alternatief-2026\.html"/);
+    // SEO-fix batch 1: .html → trailing-slash conventie (canonical)
+    expect(blok).toMatch(/href="\/gids\/moneybird-alternatief-2026\//);
   });
 
   test('Antwoord noemt 3 export-formaten weg uit Boekhoudbaar', () => {
