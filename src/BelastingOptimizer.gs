@@ -12,12 +12,11 @@
  * verschillende aftrek-percentages per zone:
  *
  *   €0–€2.901      : 0%   (drempel — onder dit bedrag geen aftrek)
- *   €2.901–€69.765 : 28%  (volle aftrek)
- *   €69.765–€130.744 : vast bedrag (€19.769) — config-driven, zie
- *                     Belastingadvies.gs KIA_VAST_BEDRAG. Werd voorheen
- *                     €19.535 / €129.194 — ronde 2 audit-fix synchronisatie
- *                     met config-defaults na Prinsjesdag-update.
- *   >€130.744       : afbouwzone (lineair tot 0)
+ *   €2.901–€71.683 : 28%  (volle aftrek)
+ *   €71.684–€132.746 : vast bedrag (€20.072) — config-driven, zie
+ *                     Belastingadvies.gs KIA_VAST_BEDRAG. Definitieve
+ *                     2026-staffel, geverifieerd op belastingdienst.nl.
+ *   >€132.747       : afbouwzone (lineair tot 0 bij €398.236)
  *
  * Slimme timing = elk jaar in de optimale zone landen.
  *

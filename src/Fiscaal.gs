@@ -37,10 +37,10 @@ function berekenInvesteringsAftrek_(inv) {
 
   // KIA — gebruik centrale helper uit Belastingadvies.gs zodat KIA-bedragen
   // hier identiek zijn aan wat genereerBelastingadvies en het Dashboard
-  // tonen. Voorheen waren hier hardcoded €19.535 / €129.194 die afweken
-  // van de canonical config (€19.769 / €130.744) → twee verschillende
-  // KIA-uitkomsten voor dezelfde investering, afhankelijk van waar de
-  // klant het bekijkt. Bij Prinsjesdag-update is nu één plek (BELASTING_PER_JAAR).
+  // tonen. Voorheen stonden hier eigen hardcoded staffelwaarden die afweken
+  // van de canonical config → twee verschillende KIA-uitkomsten voor
+  // dezelfde investering, afhankelijk van waar de klant het bekijkt.
+  // Bij Prinsjesdag-update is nu één plek (BELASTING_PER_JAAR).
   const totaalJaar = parseFloat(inv.totaalKiaJaar) || bedrag;
   const kia = (typeof berekenKiaAftrek_ === 'function') ? berekenKiaAftrek_(totaalJaar, B) : 0;
   const mia = _mia_(inv, B);

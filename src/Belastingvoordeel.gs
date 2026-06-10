@@ -209,7 +209,7 @@ function getSeizoensTip_() {
       titel: `🎄 December: Nog ${dagenTotEinde} dagen voor fiscale acties`,
       tekst:
         `LAATSTE KANS dit jaar voor:\n` +
-        `• KIA: investeringen tussen €2.901 en €130.744 → 28% extra aftrek\n` +
+        `• KIA: investeringen tussen €2.901 en €71.683 → 28% extra aftrek\n` +
         `• MIA/VAMIL: milieu-investeringen op RVO Milieulijst → 27-45% aftrek\n` +
         `• EIA: energie-investeringen op RVO Energielijst → 40% aftrek\n` +
         `• Lijfrente-storting: tot jaarruimte (30% premiegrondslag, Wet toekomst pensioenen)\n` +
@@ -380,8 +380,8 @@ input[type=number]:focus{outline:none;border-color:#2EC4B6}
 </div>
 
 <div class="tip">
-  <strong>💡 Tip:</strong> Investeringen tussen €2.901 en €69.765 geven 28% KIA-aftrek
-  (max €19.769). Lijfrente-storting voor jaareinde benut jaarruimte (vervalt 7 jaar later).
+  <strong>💡 Tip:</strong> Investeringen tussen €2.901 en €71.683 geven 28% KIA-aftrek
+  (max €20.072). Lijfrente-storting voor jaareinde benut jaarruimte (vervalt 7 jaar later).
 </div>
 
 <script>

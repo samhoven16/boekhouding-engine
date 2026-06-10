@@ -1,5 +1,5 @@
 {
-  "runAt": "2026-06-10T12:03:25.907Z",
+  "runAt": "2026-06-10T12:20:32.178Z",
   "totalFindings": 24,
   "bySeverity": {
     "🟢 ROBUST": 12,
@@ -13,168 +13,168 @@
       "severity": "🟢 ROBUST",
       "title": "Unicode/emoji wordt onveranderd doorgevoerd",
       "details": "Input \"🚀 Marketing-advies « café » → klant 😀 中文 العربية\" wordt niet ge-saniteerd. Acceptabel als geen XSS-risico (sheet-only). Wordt het in HtmlService gebruikt? escHtml_ retourneert: \"🚀 Marketing-advies « café » → klant 😀 中文 العربية\"",
-      "ts": 1781092998703
+      "ts": 1781094024503
     },
     {
       "category": "A",
       "severity": "🟢 ROBUST",
       "title": "Zero-width spaces worden verwijderd",
       "details": "",
-      "ts": 1781092998704
+      "ts": 1781094024505
     },
     {
       "category": "A",
       "severity": "🟡 DRIFT",
       "title": "Geen lengte-limiet op vrije tekst-velden",
       "details": "50k-char input wordt geaccepteerd. Risico: Google Sheets cel-limit (50k chars hard), GAS heap, factuur-PDF break.",
-      "ts": 1781092998705
+      "ts": 1781094024506
     },
     {
       "category": "A",
       "severity": "🔴 BROKEN",
       "title": "parseDatumStrict_ accepteert 29-02-2027 maar rolt naar 10/6",
       "details": "BTW-aangifte-datum kan stilletjes verschuiven van Q1 naar Q2 zonder waarschuwing aan klant.",
-      "ts": 1781092998705
+      "ts": 1781094024508
     },
     {
       "category": "A",
       "severity": "🟢 ROBUST",
       "title": "Cell-formula injection wordt geneutraliseerd",
       "details": "Output: '=IMPORTRANGE(\"https://docs.google.com/spreadsheets/d/EVIL/edit\",\"A1:Z9999\")",
-      "ts": 1781092998706
+      "ts": 1781094024508
     },
     {
       "category": "A",
       "severity": "🟡 DRIFT",
       "title": "isGeldigBTWNummer_(\"nl123456789b01\") = true, verwacht false",
       "details": "lowercase — moet uppercase forceren of weigeren",
-      "ts": 1781092998707
+      "ts": 1781094024509
     },
     {
       "category": "A",
       "severity": "🟡 DRIFT",
       "title": "isGeldigBTWNummer_(\"NL 123456789 B01\") = true, verwacht false",
       "details": "Spaces in nummer",
-      "ts": 1781092998707
+      "ts": 1781094024509
     },
     {
       "category": "B",
       "severity": "🔴 BROKEN",
       "title": "volgendBoekingId_ produceert dubbele IDs onder rapid-fire",
       "details": "Unique IDs: 1 van 100 calls.",
-      "ts": 1781092998711
+      "ts": 1781094024514
     },
     {
       "category": "B",
       "severity": "🟡 DRIFT",
       "title": "Factuurnummer-check en append-row zijn NIET in één LockService-blok",
       "details": "Inspectie: Triggers.gs:verwerkInkomstenUitHoofdformulier_ doet valideerFactuurnummerUniek_ en daarna appendRow. Twee form-submits in dezelfde tick (mogelijk bij Brevo-webhook + Google Form gelijktijdig) kunnen beide door de check komen. Bekende invariant: volgendFactuurnummer_ heeft wel een eigen lock, dus collision is voor sequentiële nummers onmogelijk — maar HANDMATIG opgegeven factuurnummers kunnen wel collisioneren. Aanbeveling: lock ook hier of doc ed risico expliciet.",
-      "ts": 1781092998712
+      "ts": 1781094024515
     },
     {
       "category": "B",
       "severity": "💡 KANS",
       "title": "Geen duplicate-detection op (ref, debet, credit, bedrag)-tuple",
       "details": "Twee identieke journaalposten met zelfde ref = TEST-DBL worden beide geschreven. Mollie webhook met retry-storm zou dit triggeren. Mitigatie: idempotency-key check op ref-niveau.",
-      "ts": 1781092998713
+      "ts": 1781094024517
     },
     {
       "category": "B",
       "severity": "🟡 DRIFT",
       "title": "verwerkHerhalendeKosten_ heeft GEEN LockService",
       "details": "Bevestigd in invariants.md:99. Twee dashboard-refreshes in dezelfde minuut kunnen dezelfde herhalende kostenpost dubbel boeken. Mitigatie: date-advance is immediate. Aanbeveling: voeg LockService toe — implementatie is ~5 regels.",
-      "ts": 1781092998713
+      "ts": 1781094024517
     },
     {
       "category": "B",
       "severity": "💡 KANS",
       "title": "Mollie webhook idempotency niet bereikbaar in unit-runtime",
       "details": "Test in stress-runbook (manual): verstuur via Mollie test-dashboard 3× zelfde payment.id binnen 10s. Verwacht: 1 betaling-boeking + 2 IDEMPOTENT-audit-log entries. Code-pad: Triggers.gs ~doVerwerkMolliePayment_.",
-      "ts": 1781092998713
+      "ts": 1781094024517
     },
     {
       "category": "C",
       "severity": "🟢 ROBUST",
       "title": "berekenBtw: excl + btw == incl bij fractionele input",
       "details": "",
-      "ts": 1781092998717
+      "ts": 1781094024521
     },
     {
       "category": "C",
       "severity": "🟢 ROBUST",
       "title": "Cumulatieve BTW-afronding stabiel bij 10k regels",
       "details": "Drift binnen 1 cent.",
-      "ts": 1781092998725
+      "ts": 1781094024530
     },
     {
       "category": "C",
       "severity": "🟢 ROBUST",
       "title": "BTW null vs 0 invariant correct voor alle 5 tarieven",
       "details": "Per .claude/invariants.md: null=vrijgesteld/verlegd (geen BTW), 0=nultarief (recoverable). Hard onderscheid behouden.",
-      "ts": 1781092998725
+      "ts": 1781094024531
     },
     {
       "category": "C",
       "severity": "🟢 ROBUST",
       "title": "50× boek+corrigeer behoudt saldi op exact 0",
       "details": "",
-      "ts": 1781092998733
+      "ts": 1781094024537
     },
     {
       "category": "C",
       "severity": "🟢 ROBUST",
       "title": "Self-posting wordt geweigerd",
       "details": "Journaalpost kan niet worden geboekt: debet- en credit-rekening zijn identiek (1200). Dit zou betekenen dat de boeking geen effect heeft op de balans.",
-      "ts": 1781092998736
+      "ts": 1781094024540
     },
     {
       "category": "D",
       "severity": "🟢 ROBUST",
-      "title": "10k boekingen in 7145ms (in-memory mock)",
+      "title": "10k boekingen in 7613ms (in-memory mock)",
       "details": "In productie ondervinden klanten quotum-pijn rond 5k boekingen via GAS Sheets-quota. Aanbeveling: documenteer in admin-UI welk percentage van de 10k bewaarplicht-jaarcap bereikt is.",
-      "ts": 1781093005887
+      "ts": 1781094032158
     },
     {
       "category": "D",
       "severity": "💡 KANS",
       "title": "ScriptProperties cleanup nog niet automatisch",
       "details": "Audit-rapport 4 juni: aanbeveling om dagelijks Properties > 90d te purgen. Bij 100+ klanten verzamelt herinneringsStap_*-keys zich; bij 500KB grens crashed PropertiesService. Implementatie: 1 functie + 1 trigger; voorgesteld in audit-rapport sectie 2.4.",
-      "ts": 1781093005887
+      "ts": 1781094032158
     },
     {
       "category": "D",
       "severity": "🟢 ROBUST",
-      "title": "1000-regel factuur validatie: 1ms",
+      "title": "1000-regel factuur validatie: 0ms",
       "details": "Aanbeveling: hard cap op factuur-regels (UI feedback + PDF-quotum).",
-      "ts": 1781093005888
+      "ts": 1781094032159
     },
     {
       "category": "E",
       "severity": "🟡 DRIFT",
       "title": "Journaalpost wordt geschreven ook al ontbreekt Grootboekschema",
       "details": "updateGrootboekSaldo_ retourneert silent + audit-log, maar de journaal-rij staat al in JOURNAAL. Balans-rapport gebruikt GROOTBOEK[saldo], niet de journaal-aggregatie → onzichtbare drift. Mitigatie: voor sheet-write check op Grootboekschema-existence; of run herberekeningGrootboekSaldi automatisch.",
-      "ts": 1781093005892
+      "ts": 1781094032163
     },
     {
       "category": "E",
       "severity": "🟢 ROBUST",
       "title": "Boeking in afgesloten jaar geweigerd",
       "details": "Jaar 2025 is afgesloten via Resultaatverwerking. Een boeking met datum in een afgesloten jaar zou de gearchiveerde balans uit sync brengen met de actieve grootboek-saldi. Boek de correctie in het huidige jaar, of ontsluit 2025 eerst via Boekhoudbaar → Geavanceerd → Jaarafsluiting ongedaan maken.",
-      "ts": 1781093005892
+      "ts": 1781094032164
     },
     {
       "category": "E",
       "severity": "🟢 ROBUST",
       "title": "controleerBalans_ detecteert saldo-tampering",
       "details": "Verschil van € 100,00 tussen activa (€ 100,00) en passiva (€ 0,00). Controleer openingssaldi of ontbrekende boekingen. Dit kan normaal zijn tijdens het lopende boekjaar; bij afsluiting moet het naar €0,00.",
-      "ts": 1781093005906
+      "ts": 1781094032177
     },
     {
       "category": "E",
       "severity": "💡 KANS",
       "title": "Negatief banksaldo wordt zonder waarschuwing geboekt",
       "details": "Saldo 1200: €-20000. Voor ZZP betekent dit roodstand of admin-fout. Aanbeveling: dashboard-widget \"ALERT: bank in rood vanaf datum X\" — bestaande GezondheidCheck heeft hiervoor logica? Verifieer.",
-      "ts": 1781093005907
+      "ts": 1781094032178
     }
   ]
 }

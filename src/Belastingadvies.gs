@@ -296,13 +296,16 @@ function getBelasting_() {
 
   return Object.assign({
     KOR_GRENS:              20000,
-    // KIA — investerings-aftrek-tabel. Bron: belastingdienst.nl/.../kia
+    // KIA — investerings-aftrek-tabel 2026. Definitieve staffel,
+    // geverifieerd op belastingdienst.nl (2026-06-10):
+    //   t/m €2.900: 0% · €2.901–€71.683: 28% · €71.684–€132.746: vast €20.072
+    //   €132.747–€398.236: €20.072 − 7,56% × deel boven €132.747 · >€398.236: 0%
     KIA_MIN:                2901,
-    KIA_MAX:                392230,
+    KIA_MAX:                398236,
     KIA_PCT:                0.28,
-    KIA_VAST_VAN:           69765,
-    KIA_VAST_BEDRAG:        19769,
-    KIA_AFBOUW_START:       130744,
+    KIA_VAST_VAN:           71683,
+    KIA_VAST_BEDRAG:        20072,
+    KIA_AFBOUW_START:       132747,
     KIA_AFBOUW_PCT:         0.0756,
     FOR_PCT:                0.0944,
     MIA_PCT:                0.455,
@@ -895,10 +898,10 @@ function _berekenBelastingadviesRaw_(ss) {
 
   // KIA-tabel kent 4 zones (zie BELASTING constants):
   //  - <€2.901:                        geen KIA
-  //  - €2.901  – €69.765:              28% van investering
-  //  - €69.765 – €130.744:             vast €19.769
-  //  - €130.744 – €392.230:            afbouw: €19.769 − 7,56% × (inv − €130.744)
-  //  - >€392.230:                      geen KIA (max bereikt)
+  //  - €2.901  – €71.683:              28% van investering
+  //  - €71.684 – €132.746:             vast €20.072
+  //  - €132.747 – €398.236:            afbouw: €20.072 − 7,56% × (inv − €132.747)
+  //  - >€398.236:                      geen KIA (max bereikt)
   const kiaAftrek = berekenKiaAftrek_(investeringen, BELASTING);
   if (kiaAftrek > 0) {
     let kiaToelichting;
@@ -1701,7 +1704,7 @@ function signaleerAfschrijvingskandidaat_(ss, bedrag, leverancier, omschr) {
 //  signaleerAfschrijvingskandidaat_ schrijft alleen audit-log dat de klant
 //  zelden ziet. Deze functie aggregeert ALLE potentieel-gemiste investeringen
 //  van het lopende jaar en mailt de klant met een geschatte gemiste KIA.
-//  Klant mist anders €420-€19.769 KIA-aftrek (28%-zone) afhankelijk van
+//  Klant mist anders €420-€20.072 KIA-aftrek (28%-zone) afhankelijk van
 //  omvang investeringen. Dagelijks aangeroepen via dagelijkseTaken.
 // ─────────────────────────────────────────────
 function controleerKiaMisserProactief_() {
