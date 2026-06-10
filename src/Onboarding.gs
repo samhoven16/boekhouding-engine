@@ -346,26 +346,181 @@ function controleerOpUpdate_() {
   }
 
   // Hybride pad: server kan vertellen dat een NIEUWERE versie beschikbaar is
-  // dan wat de klant draait. Toon dan toast met instructie.
+  // dan wat de klant draait. Twee niveaus:
+  //   - 'normaal' → toast 1×/7 dagen, niet-blokkerend
+  //   - 'kritiek' (BTW-fix, fiscale correctheid, security) → modal 1×/dag,
+  //     audit-gelogd. Klant kan toelichting + instructies-link zien. Audit-log
+  //     is Sam's bewijslast: "klant is op datum X gewaarschuwd voor versie Y".
   try {
     if (typeof haalConfigOp_ !== 'function') return;
     const cfg = haalConfigOp_();
     if (!cfg || !cfg.versie) return;
-    if (_versieIsNieuwer_(cfg.versie, HUIDIGE_VERSIE)) {
-      // Throttle: max 1× per 7 dagen — niet zeuren
-      const userProps = PropertiesService.getUserProperties();
-      const last = parseInt(userProps.getProperty('serverVersieToastTs') || '0');
-      if (Date.now() - last < 7 * 24 * 3600 * 1000) return;
-      userProps.setProperty('serverVersieToastTs', String(Date.now()));
-      try {
-        SpreadsheetApp.getActiveSpreadsheet().toast(
-          'Versie ' + cfg.versie + ' is beschikbaar (jij draait ' + HUIDIGE_VERSIE + '). ' +
-          'Menu: Boekhoudbaar → Licentie & Updates → Wat is er nieuw?',
-          '↑ Update beschikbaar', 10
-        );
-      } catch (_) {}
+    if (!_versieIsNieuwer_(cfg.versie, HUIDIGE_VERSIE)) return;
+
+    const isKritiek = (cfg.versieErnst === 'kritiek') &&
+      _isVersieKritiek_(HUIDIGE_VERSIE, cfg.versieKritiekVoor);
+
+    if (isKritiek) {
+      _toonKritiekeUpdateModal_(HUIDIGE_VERSIE, cfg.versie,
+        cfg.versieToelichting || '', cfg.versieInstructiesUrl || 'https://boekhoudbaar.nl/update/');
+    } else {
+      _toonNormaleUpdateToast_(HUIDIGE_VERSIE, cfg.versie);
     }
   } catch (_) {}
+}
+
+/**
+ * Klant draait een versie die op de kritieke-lijst staat (server bepaalt
+ * welke). Toont modal die klant moet bevestigen. Throttle 1×/dag — klant
+ * kan in een dag meerdere keren openen, niet steeds nag.
+ *
+ * Audit-log: bewijst dat klant is gewaarschuwd voor deze upgrade. Bij
+ * latere geschil ("ik wist het niet") is dit Sam's bewijslast.
+ */
+function _toonKritiekeUpdateModal_(huidigeVersie, nieuweVersie, toelichting, instructiesUrl) {
+  const userProps = PropertiesService.getUserProperties();
+  const lastKey = 'kritiekeUpdateModalTs_' + nieuweVersie;
+  const last = parseInt(userProps.getProperty(lastKey) || '0');
+  if (Date.now() - last < 24 * 3600 * 1000) return;
+  userProps.setProperty(lastKey, String(Date.now()));
+
+  try { safeAuditLog_('Kritieke update aangekondigd',
+    'huidige=' + huidigeVersie + ' nieuw=' + nieuweVersie); } catch (_) {}
+
+  // Escape: server-input komt nu uit ScriptProperties (Sam-controlled), maar
+  // bij toekomstig admin-dashboard kan iemand anders die zetten. Geen XSS-risico.
+  const esc = function(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  };
+  huidigeVersie = esc(huidigeVersie);
+  nieuweVersie  = esc(nieuweVersie);
+  toelichting   = esc(toelichting);
+  // URL: alleen http(s) toestaan om javascript: te blokkeren
+  if (!/^https?:\/\//i.test(String(instructiesUrl || ''))) instructiesUrl = 'https://boekhoudbaar.nl/update/';
+
+  try {
+    const html = HtmlService.createHtmlOutput(`
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+             padding:24px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+        .label{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#B91C1C;margin-bottom:6px}
+        h3{color:#0D1B4E;margin-bottom:8px;font-size:20px;font-weight:800;letter-spacing:-0.01em}
+        p{color:#5A6478;line-height:1.55;margin:0 0 10px}
+        .versie{background:#fff;border:1px solid #E5EAF2;padding:10px 14px;border-radius:8px;margin:12px 0;font-size:13px}
+        .versie b{color:#0D1B4E}
+        .warn{background:#FDECEC;border-left:3px solid #B91C1C;color:#5A1010;padding:12px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:12px;line-height:1.55}
+        .btn{background:#0D1B4E;color:white;border:none;padding:11px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;text-decoration:none;display:inline-block}
+        .btn:hover{background:#1A2A6B}
+        .btn-sec{background:#F7F9FC;color:#0D1B4E;border:1px solid #E5EAF2;padding:10px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;margin-left:6px}
+        .btn-sec:hover{background:#EEF2F8}
+      </style>
+      <div class="label">Kritieke update</div>
+      <h3>Update naar versie ${nieuweVersie} aanbevolen</h3>
+      <div class="versie">
+        Je versie: <b>${huidigeVersie}</b> &nbsp;→&nbsp; Beschikbaar: <b>${nieuweVersie}</b>
+      </div>
+      <p>${toelichting || 'Deze versie bevat een correctie die invloed kan hebben op je fiscale aangifte of administratie.'}</p>
+      <div class="warn">
+        <b>Waarom dit serieus is:</b> kritieke updates lossen fouten op in BTW-berekening, jaarafsluiting of compliance. Tot je geüpdatet bent, kunnen jouw berekeningen afwijken van de actuele wetgeving.
+      </div>
+      <p>De update-instructies (≈ 5 minuten werk) vind je op:</p>
+      <p><a class="btn" href="${instructiesUrl}" target="_blank">Open update-instructies</a>
+         <button class="btn-sec" onclick="google.script.host.close()">Later — herinner me morgen</button></p>
+    `).setWidth(560).setHeight(420).setSandboxMode(HtmlService.SandboxMode.IFRAME);
+    SpreadsheetApp.getUi().showModalDialog(html, '⚠ Kritieke update beschikbaar');
+  } catch (_) {
+    // Geen UI (trigger-context) — toast als fallback
+    try {
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        'KRITIEKE update naar ' + nieuweVersie + ' beschikbaar. Zie ' + instructiesUrl,
+        '⚠ Update vereist', 15
+      );
+    } catch (__) {}
+  }
+}
+
+/**
+ * Niet-kritieke update: zachte toast 1×/7 dagen. Klant kan negeren.
+ */
+function _toonNormaleUpdateToast_(huidigeVersie, nieuweVersie) {
+  const userProps = PropertiesService.getUserProperties();
+  const last = parseInt(userProps.getProperty('serverVersieToastTs') || '0');
+  if (Date.now() - last < 7 * 24 * 3600 * 1000) return;
+  userProps.setProperty('serverVersieToastTs', String(Date.now()));
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Versie ' + nieuweVersie + ' is beschikbaar (jij draait ' + huidigeVersie + '). ' +
+      'Menu: Boekhoudbaar → Licentie & Updates → Hoe update ik?',
+      '↑ Update beschikbaar', 10
+    );
+  } catch (_) {}
+}
+
+/**
+ * Returnt true als huidigeVersie in de kritieke-lijst staat (string-match).
+ * Lege lijst = nooit kritiek (server heeft (nog) niets geclassificeerd).
+ */
+function _isVersieKritiek_(huidigeVersie, kritiekVoor) {
+  if (!Array.isArray(kritiekVoor) || kritiekVoor.length === 0) return false;
+  return kritiekVoor.indexOf(String(huidigeVersie)) >= 0;
+}
+
+/**
+ * Menu-actie: klant kan altijd handmatig naar de update-pagina.
+ * Forceert versie-check (bypass cache) zodat klant meteen de meest recente
+ * info ziet — geen 24u-staleness.
+ */
+function toonHoeUpdateIk() {
+  let cfg = null;
+  try {
+    // Cache invalideren zodat klant altijd verse info ziet
+    PropertiesService.getUserProperties().deleteProperty('licentieConfigTs');
+    cfg = haalConfigOp_();
+  } catch (_) {}
+
+  const esc = function(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  };
+  const nieuw = esc((cfg && cfg.versie) || 'onbekend');
+  let url = (cfg && cfg.versieInstructiesUrl) || 'https://boekhoudbaar.nl/update/';
+  if (!/^https?:\/\//i.test(String(url))) url = 'https://boekhoudbaar.nl/update/';
+  const isNieuwer = cfg && cfg.versie && _versieIsNieuwer_(cfg.versie, HUIDIGE_VERSIE);
+  const isKritiek = isNieuwer && cfg.versieErnst === 'kritiek' &&
+    _isVersieKritiek_(HUIDIGE_VERSIE, cfg.versieKritiekVoor);
+
+  const statusBlok = isNieuwer
+    ? (isKritiek
+        ? '<div style="background:#FDECEC;border-left:3px solid #B91C1C;color:#5A1010;padding:10px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12px"><b>Kritieke update beschikbaar</b><br>' + esc(cfg.versieToelichting || 'BTW/compliance-correctie.') + '</div>'
+        : '<div style="background:#FFF8E1;border-left:3px solid #FFC107;color:#5A3F00;padding:10px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12px"><b>Nieuwe versie beschikbaar</b><br>Niet-urgent — update wanneer je tijd hebt.</div>')
+    : '<div style="background:#E6F7F4;border-left:3px solid #2EC4B6;color:#0D1B4E;padding:10px 12px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12px"><b>Je bent up-to-date</b></div>';
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;
+           padding:22px;font-size:13px;color:#1A1A1A;background:#F7F9FC;-webkit-font-smoothing:antialiased}
+      .label{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#2EC4B6;margin-bottom:4px}
+      h3{color:#0D1B4E;margin-bottom:8px;font-size:18px;font-weight:800;letter-spacing:-0.01em}
+      p{color:#5A6478;line-height:1.55;margin:0 0 10px}
+      .versie{background:#fff;border:1px solid #E5EAF2;padding:10px 14px;border-radius:8px;margin:10px 0;font-size:13px}
+      .versie b{color:#0D1B4E}
+      .btn{background:#0D1B4E;color:white;border:none;padding:10px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;text-decoration:none;display:inline-block;font-family:inherit}
+      .btn:hover{background:#1A2A6B}
+      .btn-sec{background:#F7F9FC;color:#0D1B4E;border:1px solid #E5EAF2;padding:9px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;margin-left:6px}
+    </style>
+    <div class="label">Updates</div>
+    <h3>Hoe update ik?</h3>
+    <div class="versie">Je versie: <b>${HUIDIGE_VERSIE}</b> &nbsp;&nbsp; Beschikbaar: <b>${nieuw}</b></div>
+    ${statusBlok}
+    <p>Updates voor Boekhoudbaar werken via een korte handmatige stap. Bekijk de instructies:</p>
+    <p><a class="btn" href="${url}" target="_blank">Open update-instructies</a>
+       <button class="btn-sec" onclick="google.script.host.close()">Sluiten</button></p>
+  `).setWidth(540).setHeight(380).setSandboxMode(HtmlService.SandboxMode.IFRAME);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Updates');
 }
 
 /** Vergelijkt 'a.b.c' versie-strings. Returns true als a > b. */

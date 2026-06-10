@@ -326,6 +326,7 @@ function onOpen() {
       .addItem('Licentie-informatie bekijken', 'toonLicentieInfo')
       .addSeparator()
       .addItem('Wat is er nieuw?', 'toonWatIsErNieuw')
+      .addItem('↑ Hoe update ik?', 'toonHoeUpdateIk')
       .addSeparator()
       .addItem('🗑 Mijn account verwijderen (AVG art. 17)', 'toonAccountVerwijderenDialog')
     )

@@ -991,16 +991,25 @@ function configEndpoint_(e) {
   let flags = {};
   let belastingTarieven = null;
   let featureMeldingen = {};
+  let versieKritiekVoor = [];
   try { flags = JSON.parse(props.getProperty('FEATURE_FLAGS') || '{}'); } catch (_) {}
   try { belastingTarieven = JSON.parse(props.getProperty('BELASTING_TARIEVEN') || 'null'); } catch (_) {}
   try { featureMeldingen = JSON.parse(props.getProperty('FEATURE_MELDINGEN') || '{}'); } catch (_) {}
+  // Lijst van versie-strings waarvoor een kritieke upgrade nodig is (bijv. BTW-fix
+  // in 2.8.0 → ['2.7.0', '2.6.0', ...] zodat alleen die klanten de modal zien).
+  // Lege lijst = geen kritieke updates op dit moment.
+  try { versieKritiekVoor = JSON.parse(props.getProperty('VERSIE_KRITIEK_VOOR') || '[]'); } catch (_) {}
   return jsonResp_({
-    versie:           props.getProperty('PRODUCT_VERSIE') || '2.1.0',
-    bericht:          props.getProperty('GLOBAL_BERICHT') || '',
-    flags:            flags,
-    features:         flags,           // alias voor isFeatureIngeschakeld_
-    featureMeldingen: featureMeldingen,
-    belastingTarieven: belastingTarieven,  // null = client gebruikt lokale fallback
+    versie:               props.getProperty('PRODUCT_VERSIE') || '2.1.0',
+    versieErnst:          props.getProperty('VERSIE_ERNST') || 'normaal',  // 'normaal' | 'kritiek'
+    versieToelichting:    props.getProperty('VERSIE_TOELICHTING') || '',
+    versieInstructiesUrl: props.getProperty('VERSIE_INSTRUCTIES_URL') || 'https://boekhoudbaar.nl/update/',
+    versieKritiekVoor:    versieKritiekVoor,
+    bericht:              props.getProperty('GLOBAL_BERICHT') || '',
+    flags:                flags,
+    features:             flags,           // alias voor isFeatureIngeschakeld_
+    featureMeldingen:     featureMeldingen,
+    belastingTarieven:    belastingTarieven,  // null = client gebruikt lokale fallback
   });
 }
 
