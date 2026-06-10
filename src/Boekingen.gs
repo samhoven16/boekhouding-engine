@@ -423,24 +423,84 @@ function herberekeningGrootboekSaldi() {
   const gbSheet = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
   const jpSheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
 
-  // Reset alle saldi naar 0
-  const gbData = gbSheet.getDataRange().getValues();
-  for (let i = 1; i < gbData.length; i++) {
-    gbSheet.getRange(i + 1, 6).setValue(0);
+  // Eén lees + één in-memory aggregatie + één batch-write. De oude versie
+  // riep updateGrootboekSaldo_ aan per debet- en credit-zijde van élke
+  // journaalpost. Dat is per call: getDataRange().getValues() op
+  // GROOTBOEKSCHEMA + LockService.waitLock + setValue per match.
+  // Bij 50k journaalposten × 2 × ~200 GB-rijen = ~20M cell-reads,
+  // ~100k setValues, plus de lock seqentialiseert alles → timeout halverwege
+  // met een half-geschreven balans (juist het tegenovergestelde van wat dit
+  // menu-item moet doen, en het wordt aanbevolen door controleerBalansStrikt_).
+  const lock = LockService.getScriptLock();
+  let lockHeld = false;
+  try { lock.waitLock(30000); lockHeld = true; }
+  catch (_e) {
+    SpreadsheetApp.getUi().alert(
+      'Kon de herberekening niet starten — een andere boeking is nog bezig. ' +
+      'Probeer het zo opnieuw.');
+    return;
   }
 
-  // Herbereken op basis van alle journaalposten
-  const jpData = jpSheet.getDataRange().getValues();
-  for (let i = 1; i < jpData.length; i++) {
-    const debet = String(jpData[i][4]);
-    const credit = String(jpData[i][6]);
-    const bedrag = parseFloat(jpData[i][8]) || 0;
+  try {
+    const gbData = gbSheet.getDataRange().getValues();
+    const jpData = jpSheet.getDataRange().getValues();
 
-    updateGrootboekSaldo_(ss, debet, bedrag, 'debet');
-    updateGrootboekSaldo_(ss, credit, bedrag, 'credit');
+    // Bouw lookup van rekeningcode → { idx, type } op basis van het schema.
+    const idxPerCode = new Map();
+    for (let i = 1; i < gbData.length; i++) {
+      const code = String(gbData[i][0]);
+      if (code) idxPerCode.set(code, { rij: i, type: gbData[i][2] });
+    }
+
+    // Reset alle saldi in geheugen.
+    const nieuweSaldi = new Map();
+    idxPerCode.forEach(function(_, code) { nieuweSaldi.set(code, 0); });
+
+    // Aggregeer over alle journaalposten.
+    const onbekendeRekeningen = new Set();
+    for (let i = 1; i < jpData.length; i++) {
+      const debet = String(jpData[i][4] || '');
+      const credit = String(jpData[i][6] || '');
+      const bedrag = parseFloat(jpData[i][8]) || 0;
+      if (bedrag === 0) continue;
+
+      for (const z of [{ code: debet, kant: 'debet' }, { code: credit, kant: 'credit' }]) {
+        if (!z.code) continue;
+        const meta = idxPerCode.get(z.code);
+        if (!meta) { onbekendeRekeningen.add(z.code); continue; }
+        const teken = (meta.type === 'Actief' || meta.type === 'Kosten')
+          ? (z.kant === 'debet' ? 1 : -1)
+          : (z.kant === 'debet' ? -1 : 1);
+        nieuweSaldi.set(z.code, nieuweSaldi.get(z.code) + teken * bedrag);
+      }
+    }
+
+    // Eén batch-write: kolom 6 (saldo) over de hele GB-tab.
+    const saldoKolom = [];
+    for (let i = 1; i < gbData.length; i++) {
+      const code = String(gbData[i][0] || '');
+      saldoKolom.push([code ? rondBedrag_(nieuweSaldi.get(code) || 0) : gbData[i][5]]);
+    }
+    if (saldoKolom.length > 0) {
+      gbSheet.getRange(2, 6, saldoKolom.length, 1).setValues(saldoKolom);
+    }
+
+    try {
+      schrijfAuditLog_('Saldi herberekend',
+        jpData.length - 1 + ' journaalposten verwerkt' +
+        (onbekendeRekeningen.size ? ' · ' + onbekendeRekeningen.size + ' onbekende rekening(en): ' +
+          [...onbekendeRekeningen].slice(0, 5).join(', ') : ''));
+    } catch (_) {}
+
+    const waarschuwing = onbekendeRekeningen.size
+      ? '\n\nLet op: ' + onbekendeRekeningen.size + ' rekening(en) uit boekingen staan niet in het schema — '
+        + 'die zijn overgeslagen. Check de audit-log voor de codes.'
+      : '';
+    SpreadsheetApp.getUi().alert(
+      'Saldi opnieuw berekend op basis van ' + (jpData.length - 1) + ' boeking(en).' + waarschuwing);
+  } finally {
+    if (lockHeld) { try { lock.releaseLock(); } catch (_) {} }
   }
-
-  SpreadsheetApp.getUi().alert('Saldi opnieuw berekend op basis van alle boekingen.');
 }
 
 // ─────────────────────────────────────────────

@@ -2359,6 +2359,24 @@ function verstuurDripsDagelijks_() {
       });
     }
     if (verstuurd > 0) Logger.log('Drip-batch: ' + verstuurd + ' mails verstuurd.');
+
+    // Cleanup van drip_*-keys voor klanten die de hele schedule voorbij zijn.
+    // Zonder dit groeit ScriptProperties bij ~5.000 cumulatieve klanten over
+    // het 500KB-quotum (4 keys × ~75 bytes per klant) — daarna kan de server
+    // geen nieuwe activaties meer wegschrijven. Drempel = laatste drip + 14d.
+    const laatsteDripDag = DRIP_SCHEDULE.reduce(function(m, d) { return Math.max(m, d.dag); }, 0);
+    const cleanupOuderDanDagen = laatsteDripDag + 14;
+    let opgeruimd = 0;
+    for (let i = 1; i < data.length; i++) {
+      const aanmaakDatum = data[i][7];
+      if (!(aanmaakDatum instanceof Date)) continue;
+      const dagenSinds = Math.floor((nu - aanmaakDatum.getTime()) / 86400000);
+      if (dagenSinds <= cleanupOuderDanDagen) continue;
+      const sleutel = String(data[i][0] || '').trim();
+      if (!sleutel) continue;
+      opgeruimd += _verwijderDripKeys_(sleutel);
+    }
+    if (opgeruimd > 0) Logger.log('Drip-cleanup: ' + opgeruimd + ' verlopen keys verwijderd.');
   } catch (e) {
     Logger.log('::error:: verstuurDripsDagelijks_ fout: ' + e.message);
   }

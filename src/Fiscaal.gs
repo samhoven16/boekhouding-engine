@@ -212,18 +212,28 @@ function berekenStakingsfiscaliteit_(input) {
  */
 function toonStakingsWizard() {
   const ui = SpreadsheetApp.getUi();
+  const B = (typeof getBelasting_ === 'function') ? getBelasting_() : {};
+  const stakingsaftrek = B.STAKINGSAFTREK ? formatBedrag_(B.STAKINGSAFTREK) : '€3.630';
   ui.alert(
-    '🏁 Bedrijf staken — fiscale wizard',
-    'Bij bedrijfsbeëindiging spelen stakingsaftrek (€3.630), FOR-vrijval, ' +
-    'en stakingslijfrente. Deze wizard berekent het netto-effect.\n\n' +
-    'Voor jouw specifieke situatie: raadpleeg een fiscalist VOOR je staakt — ' +
-    'de keuzes zijn onomkeerbaar zodra de jaaraangifte is ingediend.\n\n' +
-    'Open Boekhouding → Belastingvoordeel → "Wat-als-rekenmachine" en kies ' +
-    '"Bedrijf staken" als simulatie-modus.',
+    'Bedrijf staken — checklist',
+    'Bij bedrijfsbeëindiging spelen vier dingen waar Boekhoudbaar je niet ' +
+    'automatisch doorheen kan loodsen — dit is een wettelijke route, geen wizard.\n\n' +
+    'Checklist (in volgorde):\n\n' +
+    '1. Stakingsbalans opmaken op de stakingsdatum. Open de Balans-tab, ' +
+    'export 1× PDF en bewaar als peilmoment.\n\n' +
+    '2. Stakingsaftrek claimen in de IB-aangifte van het stakingsjaar ' +
+    '(maximaal ' + stakingsaftrek + ', eenmalig per leven). Vereiste: ' +
+    'voldoen aan urencriterium in 3 van de 5 voorgaande jaren.\n\n' +
+    '3. FOR (oudedagsreserve) vrijval — bij beëindiging valt het volledige ' +
+    'saldo vrij in Box 1. Overweeg omzetting naar lijfrente binnen 6 maanden ' +
+    'na staking om belasting uit te smeren.\n\n' +
+    '4. Laatste BTW-aangifte en finale suppletie. KOR-deelnemers: meld ' +
+    'beëindiging KOR bij Belastingdienst.nl.\n\n' +
+    'Voor de fiscale puzzel zelf: één gesprek met een fiscalist verdient zich ' +
+    'normaal terug — de keuzes zijn onomkeerbaar zodra de aangifte is ingediend.',
     ui.ButtonSet.OK
   );
-  // Werkelijke wizard: extend simuleerWatAls_ in Belastingvoordeel.gs
-  // met scenario 'staking'. Voor nu: documenteer via alert.
+  try { safeAuditLog_('Stakings-checklist getoond', String(new Date().getFullYear())); } catch (_) {}
 }
 
 // ─────────────────────────────────────────────
