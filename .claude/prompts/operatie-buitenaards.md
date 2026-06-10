@@ -25,6 +25,23 @@ Bewijs is precies één van deze drie dingen:
 een aparte lijst onderaan het rapport en tellen niet mee in de eindscore.
 
 ═══════════════════════════════════════════════════════════════
+PRE-FLIGHT (10 min, harder cap, breekt = stop)
+═══════════════════════════════════════════════════════════════
+
+Voor je IETS anders doet: bewijs dat je harnas werkt. Een sessie die om uur 3
+ontdekt dat de testrunner stuk is, is verspild.
+
+1. `git rev-parse HEAD` — noteer.
+2. `npm test 2>&1 | tail -5` — moet "Tests: N passed" tonen met N≥2191.
+3. `node scripts/truth-check.js; echo "exit=$?"` — exit moet 0 zijn.
+4. `node scripts/impact.js getSpreadsheet_ | head -5` — moet callers tonen.
+5. Schrijf een dummy falende test in tests/unit/_preflight.test.js
+   (`expect(1).toBe(2)`), draai `npm test`, zie 'm falen, verwijder 'm.
+   Bewijs dat jouw test-write-cycle echt werkt.
+
+Faalt iets? Stop. Repareer ALLEEN dat. Geen audit zonder werkend harnas.
+
+═══════════════════════════════════════════════════════════════
 VERPLICHTE VOORBEREIDING (niet overslaan)
 ═══════════════════════════════════════════════════════════════
 
@@ -38,6 +55,26 @@ VERPLICHTE VOORBEREIDING (niet overslaan)
    EEN DUPLICAAT VAN EEN EERDERE VONDST TELT NIET. Nul. Je wordt afgerekend
    op wat nog NIEMAND heeft gezien.
 3. Maak branch: git checkout -b audit/buitenaards-$(date +%Y%m%d)
+
+═══════════════════════════════════════════════════════════════
+ZES CONCRETE VERDACHTEN (waarschijnlijkste vindplaatsen)
+═══════════════════════════════════════════════════════════════
+
+Niet shoppen in heel src/. Begin hier — recent + dicht bij geld + complex:
+
+V1. `schrijfAuditLog_` hash-keten: race tussen NOLOCK-pad en lock-pad. Twee
+    parallelle aanroepen waarvan één NOLOCK krijgt — wat gebeurt met
+    AUDIT_KETEN_HASH? Klopt verifieerAuditChain_ daarna nog?
+V2. `dagelijkseTaken()` met 5 jaar klant-data: FormeelBewijs + Jaarafsluiting
+    + Hygiene + SelfHeal toegevoegd. Som van P95-runtimes — onder 6 min cap?
+V3. Mollie circuit-breaker recovery-pad: open-state → eerste poging na
+    cooldown faalt → wordt de breaker correct gereset of stapelt teller?
+V4. `volgendFactuurnummer_` + LockService onder echte concurrency: twee
+    submits in <50ms. Krijgen ze hetzelfde nummer? Hoe weet je dat zeker?
+V5. Licence-server 200-versies budget: bij 199 versies → wat gebeurt er?
+    Faalt deploy:licence:release netjes of corrupt het de live deployment?
+V6. Per-klant code-update gap: bekende olifant. Maak hem aantoonbaar — een
+    test die uitwijst hoeveel klantkopieën achterlopen op HUIDIGE_VERSIE.
 
 ═══════════════════════════════════════════════════════════════
 FASE 0 — NULMETING (±30 min, alles hierna meet je hiertegen)
@@ -151,6 +188,22 @@ mechanisme (≤ ~200 regels + tests), bijvoorbeeld:
 Simplicity ceiling uit CLAUDE.md geldt: liever 30 werkende regels dan 300 mooie.
 
 ═══════════════════════════════════════════════════════════════
+PROTOCOL PER VONDST (verplicht, in deze volgorde)
+═══════════════════════════════════════════════════════════════
+
+1. ROOD eerst: schrijf de falende test. Commit met "test:" prefix.
+2. ZELF-FALSIFICATIE (5 min, harde cap): probeer je eigen vondst kapot
+   te maken. Stel deze vragen en beantwoord ze schriftelijk:
+     - Is dit gedrag misschien expres zo? (zoek in git log + comments)
+     - Werkt mijn reproductie ook zonder mijn vondst-aanname?
+     - Triggert dit ooit in productie, of alleen in mijn test-scenario?
+   Als één antwoord twijfel oproept: GEEN fix, verplaats naar Vermoedens.
+3. GROEN: schrijf de fix. Diff-budget: ≤ 50 regels netto. P0 mag groter
+   mits expliciet als P0 gemarkeerd in commit-message.
+4. `npm run test:flow <flow>` + `npm run lint:changed` — beide groen.
+5. Commit met "fix:" prefix, één vondst = één fix-commit.
+
+═══════════════════════════════════════════════════════════════
 SPELREGELS
 ═══════════════════════════════════════════════════════════════
 
@@ -162,7 +215,31 @@ SPELREGELS
 - Geen nieuwe npm-dependencies. Geen nieuwe GAS-globals zonder
   eslint.config.js-update. Geen refactors buiten de vondst.
 - Sheet-kolommen ALLEEN aanraken na check tegen .claude/sheet-schemas.md.
-- Elke 90 min zonder nieuwe vondst in een fase → volgende fase.
+- HARD TIME-BOX per fase: fase 1+2 elk max 90 min. Fase 3 max 60 min
+  (agents draaien parallel). Fase 4 max 120 min. Fase 5 max 120 min.
+  Klok over? Schrijf op wat onaf is, ga door. Geen exception.
+- ANTI-LLM-FAILMODES (overtreding = revert je eigen commit):
+    - Geen nieuwe .md-bestanden behalve STATUS_BUITENAARDS.md.
+    - Geen "while I'm here"-refactors. Bug-scope blijft bug-scope.
+    - Geen narrative comments ("// We do X because Y because Z"); alleen
+      één regel als WAAROM niet-evident is.
+    - Geen try-catch die error swallowed om een test groen te krijgen.
+    - Geen mock aanpassen om productiecode te dekken; pas productiecode.
+
+═══════════════════════════════════════════════════════════════
+KILL-SWITCH (zelfcorrectie, niet optioneel)
+═══════════════════════════════════════════════════════════════
+
+Houd een teller bij: false_positives_in_a_row.
+- Vondst die bij zelf-falsificatie alsnog sneuvelt: +1.
+- Geverifieerde vondst die fix overleeft: reset naar 0.
+
+Bij 3 op rij: STOP de huidige fase. Schrijf in STATUS_BUITENAARDS.md
+één paragraaf "waarom mijn signaal-detector dreef" en ga naar de
+volgende fase. Liever vroeg eerlijk dan laat doorploeteren.
+
+P0-CLAUSULE: vind je data-corruptie / geld-verlies / Belastingdienst-
+risico, STOP alles, fix P0 eerst, push solo PR. Andere vondsten wachten.
 
 ═══════════════════════════════════════════════════════════════
 EXIT-CRITERIA (stop zodra één waar is)
