@@ -87,10 +87,14 @@ describe('Starters-pagina — Persona Linde positionering', () => {
   });
 
   test('Prijs-framing voor starter: "veiligheid" niet "besparing" (Linde kent geen €30/mnd pijn)', () => {
-    // Kaart 3 framet €49 als eenmalige veiligheid, niet als besparing-vs-abonnement
-    expect(starters).toMatch(/€60.{0,3}€150/);
+    // Kaart 3 framet €49 als zekerheid ("weet dat het klopt") + activatie-garantie.
+    // De boekhouder-vergelijking (€60–€150) is bewust verwijderd: die activeert
+    // bij een starter juist het "moet ik niet gewoon een boekhouder?"-frame.
+    expect(starters).not.toMatch(/€60.{0,3}€150/);
+    expect(starters).not.toMatch(/boekhouder \(€/);
     expect(starters).toMatch(/eenmalig €49/i);
-    expect(starters).toMatch(/Goed beginnen kost je eenmalig €49/);
+    expect(starters).toMatch(/weet dat het klopt/i);
+    expect(starters).toMatch(/[Ll]ukt activeren niet binnen 7 dagen\? Geld terug/);
   });
 });
 
