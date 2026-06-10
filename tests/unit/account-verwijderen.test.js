@@ -106,6 +106,32 @@ describe('AccountVerwijderen — aanvraagVerwijderOtp', () => {
   });
 });
 
+describe('Regression-guard: google.script.run-aanroepbare functies hebben geen trailing underscore', () => {
+  // Apps Script: trailing _ = "private", niet bereikbaar via google.script.run
+  // vanuit HtmlService-dialogen. Tests passeren wel zonder onderscheid (ze
+  // roepen ctx.fn direct aan). Deze guard voorkomt regressie naar private-
+  // naam (heeft in PR #280 commit eeeaa91 tot near-miss geleid).
+  const fs = require('fs');
+  const src = fs.readFileSync(
+    path.resolve(__dirname, '../../src/AccountVerwijderen.gs'), 'utf8');
+
+  test('aanvraagVerwijderOtp gedefinieerd ZONDER trailing underscore', () => {
+    expect(src).toMatch(/function aanvraagVerwijderOtp\(/);
+    expect(src).not.toMatch(/function aanvraagVerwijderOtp_\(/);
+  });
+  test('voerAccountVerwijdering gedefinieerd ZONDER trailing underscore', () => {
+    expect(src).toMatch(/function voerAccountVerwijdering\(/);
+    expect(src).not.toMatch(/function voerAccountVerwijdering_\(/);
+  });
+  test('HTML google.script.run aanroep matched function-definitie', () => {
+    // De `.aanvraagVerwijderOtp(email)` / `.voerAccountVerwijdering(email, otp)`
+    // moeten exact matchen met de gedefinieerde functienamen — anders krijgt
+    // klant withFailureHandler in plaats van resultaat.
+    expect(src).toMatch(/\.aanvraagVerwijderOtp\(email\)/);
+    expect(src).toMatch(/\.voerAccountVerwijdering\(email, otp\)/);
+  });
+});
+
 describe('AccountVerwijderen — voerAccountVerwijdering', () => {
   test('lege otp: weiger zonder server-call', () => {
     const { ctx, fetchMock } = maakCtx();
