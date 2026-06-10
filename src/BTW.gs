@@ -308,8 +308,10 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     + (aangifte.r1c_grondslag || 0)
     + (aangifte.r1e_grondslag || 0)
     + (aangifte.r1d_nul || 0)
-    + (aangifte.r2a || 0)
-    + (aangifte.r3a_grondslag || 0);
+    + (aangifte.r2a || 0);
+  // NB: r3a_grondslag (IC-leveringen) NIET optellen — die euro's zitten al
+  // in r1d_nul (zelfde factuur, zie 0%-tak hierboven); meetellen = dubbele
+  // telling in de pro-rata-breuk → te hoge voorbelasting-aftrek.
   // Alleen écht vrijgesteld (NIET nultarief) telt in noemer als beperkend.
   const vrijgesteldeOmzet = aangifte.r1d_vrijgesteld || 0;
   const totaalOmzet = belasteOmzet + vrijgesteldeOmzet;
@@ -335,6 +337,10 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
 
   aangifte.r5c = rondBedrag_(Math.max(0, aangifte.r5b - aangifte.r5a));
   aangifte.saldo = rondBedrag_(aangifte.r5a - aangifte.r5b);
+  // Rubriek 5d = 5a − 5b (zelfde waarde als saldo). De I₅-verifier
+  // (FormeelBewijs.gs) en de EWMA-anomaliedetectie lezen r5d; zonder dit
+  // veld rapporteren zij bij elk saldo ≠ 0 een valse invariant-schending.
+  aangifte.r5d = aangifte.saldo;
 
   // Afronden alle bedragen — skip metadata-keys (beginnen met _)
   // anders wordt _onbekendeLabels-object met rondBedrag_ tot 0 vermalen.
@@ -388,9 +394,11 @@ function valideerBtwInvariants_(a) {
   }
 
   // 3. r5a (totaal verschuldigd) = som van rubrieken
+  // (r3a is een 0%-grondslag-rubriek zonder verschuldigde BTW en hoort
+  // niet in deze som — conform axioma I₅ en berekenBtwAangifte_.)
   const verschuldigdSom = rondBedrag_(
     (a.r1a_btw || 0) + (a.r1b_btw || 0) + (a.r1c_btw || 0) +
-    (a.r1e_btw || 0) + (a.r3a_btw || 0) + (a.r4a_btw || 0)
+    (a.r1e_btw || 0) + (a.r4a_btw || 0)
   );
   if (!near(a.r5a, verschuldigdSom)) {
     issues.push({ code: 'BTW-R5A-SOM', tekst: 'Totaal verschuldigd (r5a=' + a.r5a + ') wijkt af van som rubrieken (' + verschuldigdSom + ')' });

@@ -50,10 +50,13 @@ describe('XAF Auditfile 3.2 — compliance verificatie', () => {
       ['JP001', new Date(2026, 0, 15), 'Verkoop fact 001', 'Verkoop', '1300', 'Debiteuren', '4100', 'Omzet 21%', 121.00, '21%', 21.00],
       ['JP002', new Date(2026, 2, 20), 'Inkoop materiaal', 'Inkoop', '7000', 'Inkoopwaarde', '1500', 'Kredieten', 50.00, '21%', 8.68],
     ];
+    // Kolomlayout conform .claude/sheet-schemas.md RELATIES:
+    // [0]=Relatie ID, [1]=Type, [2]=Naam, [3]=Contactpersoon, [4]=Adres,
+    // [5]=Postcode, [6]=Plaats, [7]=Land, [8]=KvK, [9]=BTW, [10]=Email
     const relaties = [
-      ['Naam', 'Email', 'Adres', 'KvK', 'BTW', 'Type'],
-      ['Klant A', 'a@klant.nl', 'Straat 1', '87654321', 'NL123456789B01', 'klant'],
-      ['Lev B', 'b@lev.nl', 'Weg 2', '11223344', 'NL987654321B02', 'leverancier'],
+      ['Relatie ID', 'Type', 'Naam', 'Contactpersoon', 'Adres', 'Postcode', 'Plaats', 'Land', 'KvK', 'BTW', 'Email'],
+      ['REL0001', 'Klant', 'Klant A', '', 'Straat 1', '1234 AB', 'Adam', 'NL', '87654321', 'NL123456789B01', 'a@klant.nl'],
+      ['REL0002', 'Leverancier', 'Lev B', '', 'Weg 2', '5678 CD', 'Rdam', 'NL', '11223344', 'NL987654321B02', 'b@lev.nl'],
     ];
 
     const mockSheets = {

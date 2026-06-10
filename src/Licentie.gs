@@ -844,6 +844,13 @@ function valideerLicentieOpServer_(sleutel) {
       if (json && json.geldig) {
         try { PropertiesService.getScriptProperties().setProperty(
           LICENTIE_LAATST_GELUKT_KEY, String(Date.now())); } catch (_) {}
+      } else if (json && json.geldig === false) {
+        // Expliciete server-revoke (chargeback/refund/ingetrokken): wis de
+        // offline-grace-basis. Anders kan een klant ná een ontvangen revoke
+        // de server blokkeren en via _offlineFallback_ alsnog de volledige
+        // grace-periode op een ingetrokken licentie doorwerken.
+        try { PropertiesService.getScriptProperties().deleteProperty(
+          LICENTIE_LAATST_GELUKT_KEY); } catch (_) {}
       }
       return json;
     }

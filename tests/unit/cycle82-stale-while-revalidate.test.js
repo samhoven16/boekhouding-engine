@@ -83,15 +83,18 @@ describe('CYCLE 82: bounded stale-while-revalidate', () => {
     expect(parseInt(propStore.licentieLaatstGelukt)).toBeGreaterThan(Date.now() - 5000);
   });
 
-  test('server-200 met geldig=false: timestamp NIET bijgewerkt (revoke heeft effect)', () => {
+  test('server-200 met geldig=false: grace-basis wordt GEWIST (revoke blijvend)', () => {
+    // Go-live audit (red-team): een ontvangen revoke moet de offline-grace-
+    // basis wissen, anders kan de klant daarna de server blokkeren en via
+    // _offlineFallback_ alsnog de hele grace-periode doorwerken op een
+    // ingetrokken licentie (chargeback-fraude).
     const { ctx, propStore } = maakCtx({
       props: { licentieLaatstGelukt: String(Date.now() - 3 * MS_PER_DAG) },
       fetchImpl: () => okResp({ geldig: false, fout: 'Ingetrokken' }),
     });
-    const tsVoor = propStore.licentieLaatstGelukt;
     const r = ctx.valideerLicentieOpServer_(SLEUTEL);
     expect(r.geldig).toBe(false);
-    expect(propStore.licentieLaatstGelukt).toBe(tsVoor);
+    expect(propStore.licentieLaatstGelukt).toBeUndefined();
   });
 
   test('server onbereikbaar + 3 dagen sinds laatste OK: offline-geldig met dagenResterend=87 (default 90 dagen)', () => {

@@ -15,10 +15,20 @@ function onOpen() {
   try { licentieOk = controleerLicentieEnKopie_(); } catch (e) { Logger.log('Licentie check fout: ' + e.message); }
 
   if (!licentieOk) {
+    // Data-export blijft ALTIJD bereikbaar, ook zonder geldige licentie.
+    // De kern van de anti-lock-in-belofte ("je data is van jou, ook als
+    // Boekhoudbaar stopt") mag nooit achter de licentie-gate zitten —
+    // anders kan een klant na de offline-grace zijn eigen administratie
+    // niet meer uit het systeem halen.
     ui.createMenu('Boekhoudbaar')
       .addItem('Licentie activeren', 'toonLicentieDialoog')
       .addSeparator()
       .addItem('Licentie-informatie', 'toonLicentieInfo')
+      .addSeparator()
+      .addSubMenu(ui.createMenu('Mijn data exporteren (altijd beschikbaar)')
+        .addItem('Exporteer als XAF (auditfile)', 'exporteerXaf')
+        .addItem('Volledige data-export', 'exporteerAlleData')
+        .addItem('Backup maken', 'maakBackup'))
       .addToUi();
     return;
   }

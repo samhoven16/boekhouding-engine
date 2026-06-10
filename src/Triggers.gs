@@ -1297,7 +1297,9 @@ function verwerkVerkoopfactuurFormulier(e) {
     // Hoofdregel in Verkoopfacturen tabblad
     const factuurData = [
       factuurNr,                              // Factuur ID
-      getInstelling_('Factuurprefix') + factuurNr, // Factuurnummer
+      // Zelfde formaat als hoofdpad (F000001) — twee formaten naast elkaar
+      // ondermijnt aantoonbaar-sequentiële nummering (art. 35a Wet OB).
+      formatFactuurnummer_(factuurNr, getInstelling_('Factuurprefix'), 6), // Factuurnummer
       datum,                                  // Datum
       vervaldatum,                            // Vervaldatum
       klantId,                                // Klant ID
@@ -1372,7 +1374,7 @@ function verwerkVerkoopfactuurFormulier(e) {
           break;
         }
       }
-      schrijfAuditLog_('Factuur aangemaakt (legacy)', getInstelling_('Factuurprefix') + factuurNr + ' | klant: ' + klantnaam);
+      schrijfAuditLog_('Factuur aangemaakt (legacy)', formatFactuurnummer_(factuurNr, getInstelling_('Factuurprefix'), 6) + ' | klant: ' + klantnaam);
     } else {
       schrijfAuditLog_('PDF MISLUKT (legacy)', 'factuur ' + factuurNr + ' – PDF niet gegenereerd');
     }
@@ -1877,7 +1879,10 @@ function dagelijkseTaken() {
       const cutoff = Date.now() - tweeJaarMs;
       const actieveFacturen = {};
       for (let i = 1; i < data.length; i++) {
-        const fnr = String(data[i][0] || '');
+        // [1] = Factuurnummer ("F000001") — de dunning-keys gebruiken dit
+        // formaat. Kolom [0] is het numerieke Factuur ID; dat matcht nooit
+        // met een key en zou élke dag alle dunning-state wissen.
+        const fnr = String(data[i][1] || '');
         const datum = data[i][2];
         if (!fnr) continue;
         const ts = (datum instanceof Date) ? datum.getTime() : 0;
@@ -2268,7 +2273,12 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
     // Skip als al volledig betaald (negatief = overbetaling, status nog niet bijgewerkt)
     if (bedragOpen <= 0) continue;
 
-    const onderwerp = `Betalingsherinnering ${volgendeStap}/3 – Factuur ${factuurnummer}`;
+    // Geen stap-teller ("1/3") in het onderwerp: dat lekt de interne
+    // escalatie-administratie naar de debiteur van de klant. Escalatie
+    // zit in de toon van de tekst; de stap staat in het audit-log.
+    const onderwerp = volgendeStap >= 3
+      ? `Laatste betalingsherinnering – Factuur ${factuurnummer}`
+      : `Betalingsherinnering – Factuur ${factuurnummer}`;
     const tekst =
       `Beste ${klantnaam},\n\n` +
       (volgendeStap === 1

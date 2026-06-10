@@ -322,10 +322,16 @@ function verwerkBankImport_(ss, transacties) {
   const vfUpdates = [];          // {rij, nieuwBetaald, status} voor batch-write
   const ifUpdates = [];          // {rij, status, betaaldatum}
 
-  transacties.forEach(function(t, idx) {
+  // for-loop met break (géén forEach): bij de tijdslimiet moet de hele loop
+  // stoppen — een forEach-return slaat alleen de huidige rij over, waardoor
+  // élke resterende rij opnieuw de guillotine raakte.
+  for (let idx = 0; idx < transacties.length; idx++) {
+    const t = transacties[idx];
     if (guillotineCheck_(startTs, 'verwerkBankImport_', { idx: idx, totaal: transacties.length }, 270000)) {
       Logger.log('BankImport guillotine bij idx ' + idx + '/' + transacties.length);
-      return;
+      resultaat.fouten.push('Import gestopt op tijdslimiet bij transactie ' + (idx + 1) + ' van ' +
+        transacties.length + '. Importeer hetzelfde bestand nogmaals — al verwerkte rijen worden automatisch overgeslagen.');
+      break;
     }
     try {
       // Idempotency: skip als reeds geïmporteerd (dedup-set)
@@ -335,7 +341,7 @@ function verwerkBankImport_(ss, transacties) {
       const dedupKey = tDatum + '|' + (parseFloat(t.bedrag) || 0).toFixed(2) + '|' + String(t.omschr || '').slice(0, 30);
       if (bestaandeKeys.has(dedupKey)) {
         resultaat.overgeslagen++;
-        return;
+        continue;
       }
       bestaandeKeys.add(dedupKey);
 
@@ -387,7 +393,7 @@ function verwerkBankImport_(ss, transacties) {
     } catch (e) {
       resultaat.fouten.push('Rij overgeslagen: ' + e.message);
     }
-  });
+  }
 
   // BATCH WRITE: één setValues-call ipv N appendRow-calls
   if (teSchrijvenRijen.length > 0) {

@@ -976,23 +976,19 @@ function guillotineCheck_(startTs, taakNaam, hervatData, drempelMs) {
   const verstreken = Date.now() - (parseInt(startTs) || Date.now());
   if (verstreken < grens) return false;
 
-  // Sla cursor op + schedule self-trigger
+  // Sla cursor op. GEEN self-trigger meer: de doelfuncties hebben parameters
+  // (ss, transacties, …) en een time-trigger roept ze aan met een event-object
+  // → crash bij hervatten. Bovendien werden de one-shot-triggers nooit
+  // opgeruimd (cap = 20 triggers/script → daarna faalt álle trigger-creatie).
+  // Hervatten gebeurt via het eigen cursor-mechanisme van de aanroeper
+  // (dunningCursor bij de volgende dagelijkse run; dedup-set bij her-import).
   try {
     PropertiesService.getScriptProperties()
       .setProperty('guillotine_' + taakNaam, JSON.stringify(hervatData || {}));
   } catch (e) { Logger.log('guillotine cursor-save fout: ' + e.message); }
 
-  try {
-    // Time-based trigger over 1 minuut die functie opnieuw aanroept
-    ScriptApp.newTrigger(taakNaam)
-      .timeBased()
-      .after(60 * 1000)
-      .create();
-    Logger.log('Guillotine: ' + taakNaam + ' gepauzeerd na ' + Math.round(verstreken/1000) + 's, hervat over 1 min');
-    safeAuditLog_('Guillotine pauze', taakNaam + ' na ' + Math.round(verstreken/1000) + 's');
-  } catch (e) {
-    Logger.log('guillotine trigger-create fout: ' + e.message);
-  }
+  Logger.log('Guillotine: ' + taakNaam + ' gepauzeerd na ' + Math.round(verstreken/1000) + 's; hervat bij volgende run');
+  safeAuditLog_('Guillotine pauze', taakNaam + ' na ' + Math.round(verstreken/1000) + 's');
   return true;
 }
 
@@ -1015,19 +1011,19 @@ function guillotineKlaar_(taakNaam) {
   try {
     PropertiesService.getScriptProperties().deleteProperty('guillotine_' + taakNaam);
   } catch (_) {}
-  // Verwijder ook eventuele self-trigger
+  // Ruim door oudere versies gelekte one-shot self-triggers op. Veilig:
+  // guillotine-taaknamen (sub-taken zoals stuurAutomatischeBetalingsherinneringen_
+  // of verwerkBankImport_) zijn nooit canonical geplande handlers — de dagelijkse
+  // trigger draait op dagelijkseTaken. Extra guard voor het geval dat ooit wijzigt.
   try {
+    const canonical = (typeof _HYGIENE_VERWACHTE_TRIGGERS !== 'undefined')
+      ? _HYGIENE_VERWACHTE_TRIGGERS.map(function(t) { return t.handler || t; })
+      : [];
+    if (canonical.indexOf(taakNaam) !== -1) return;
     ScriptApp.getProjectTriggers().forEach(function(t) {
       if (t.getHandlerFunction() === taakNaam &&
           t.getEventType && t.getEventType() === ScriptApp.EventType.CLOCK) {
-        // Alleen self-rescheduled triggers verwijderen, niet de standaard daily-trigger
-        // (die heeft andere timing). We checken op 'after'-style triggers via tijdstip.
-        try {
-          // Als trigger NIET de hoofd-daily-trigger is (die heeft fixed schedule),
-          // verwijder het. Heuristiek: getEventType is CLOCK voor beide; we kunnen
-          // niet onderscheiden — dus we accepteren dat we de daily-trigger soms
-          // ook verwijderen. setupTriggers herstelt 'm wel.
-        } catch (_) {}
+        try { ScriptApp.deleteTrigger(t); } catch (_) {}
       }
     });
   } catch (_) {}
