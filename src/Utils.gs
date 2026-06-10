@@ -719,9 +719,13 @@ ${bedrijf}`;
  * Geeft versie-info van het script
  */
 function getVersieInfo() {
+  // Versie en jaar runtime ophalen — eerdere hardcoded '2.0.0' / '2026'
+  // gaven verkeerde info terug in Diagnostiek terwijl HUIDIGE_VERSIE in
+  // Onboarding.gs al jaren verder stond.
+  const versie = (typeof HUIDIGE_VERSIE === 'string' && HUIDIGE_VERSIE) ? HUIDIGE_VERSIE : '2.7.0';
   return {
-    versie: '2.0.0',
-    aangemaakt: '2026',
+    versie: versie,
+    aangemaakt: String(new Date().getFullYear()),
     beschrijving: 'Boekhoudprogramma voor ZZP/MKB via Google Forms & Spreadsheets',
     functies: [
       'Dubbel boekhouden (NL GAAP)',

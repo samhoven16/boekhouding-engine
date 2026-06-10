@@ -262,7 +262,10 @@ function toonJaaroverzicht() {
   const ss = getSpreadsheet_();
   if (!ss) return;
   const vorigJaar = new Date().getFullYear() - 1;
-  const huidigJaar = new Date().getFullYear();
+  // "Door naar X" verwijst naar het jaar ná het terugkijk-jaar. Bij openen
+  // in late december was new Date().getFullYear() gelijk aan vorigJaar →
+  // de knop zei dan "Door naar 2026" terwijl het overzicht over 2025 ging.
+  const huidigJaar = vorigJaar + 1;
 
   // Bereken cijfers
   const stats = _berekenJaarStats_(ss, vorigJaar);
