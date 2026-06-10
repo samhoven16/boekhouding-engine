@@ -158,7 +158,7 @@ function toonAccountVerwijderenDialog() {
             document.getElementById('btnOtp').textContent = 'Verstuur bevestigingscode';
             toon('status1', 'red', (err && err.message) || 'Netwerkfout.');
           })
-          .aanvraagVerwijderOtp_(email);
+          .aanvraagVerwijderOtp(email);
       }
       function bevestigVerwijdering() {
         var email = document.getElementById('email').value.trim().toLowerCase();
@@ -186,7 +186,7 @@ function toonAccountVerwijderenDialog() {
             document.getElementById('btnDelete').textContent = 'Definitief verwijderen';
             toon('status2', 'red', (err && err.message) || 'Netwerkfout.');
           })
-          .voerAccountVerwijdering_(email, otp);
+          .voerAccountVerwijdering(email, otp);
       }
     </script>
   `).setWidth(540).setHeight(620).setSandboxMode(HtmlService.SandboxMode.IFRAME);
@@ -201,7 +201,7 @@ function toonAccountVerwijderenDialog() {
  * @param {string} email
  * @return {{ok: boolean, fout?: string}}
  */
-function aanvraagVerwijderOtp_(email) {
+function aanvraagVerwijderOtp(email) {
   email = String(email || '').trim().toLowerCase();
   if (!email || email.indexOf('@') < 0) {
     return { ok: false, fout: 'Ongeldig e-mailadres.' };
@@ -230,7 +230,7 @@ function aanvraagVerwijderOtp_(email) {
  * @param {string} otp
  * @return {{ok: boolean, bericht?: string, fout?: string}}
  */
-function voerAccountVerwijdering_(email, otp) {
+function voerAccountVerwijdering(email, otp) {
   email = String(email || '').trim().toLowerCase();
   otp = String(otp || '').trim();
   if (!email || !otp) return { ok: false, fout: 'E-mail en code zijn verplicht.' };

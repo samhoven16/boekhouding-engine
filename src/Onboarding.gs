@@ -427,7 +427,7 @@ function _toonKritiekeUpdateModal_(huidigeVersie, nieuweVersie, toelichting, ins
         <b>Waarom dit serieus is:</b> kritieke updates lossen fouten op in BTW-berekening, jaarafsluiting of compliance. We streven ernaar deze binnen redelijke termijn beschikbaar te stellen. Verantwoordelijkheid voor de juistheid van je aangifte blijft bij jou als ondernemer (AWR art. 8); update tijdig om afwijkingen te voorkomen.
       </div>
       <p>De update-instructies (≈ 5 minuten werk) vind je op:</p>
-      <p><a class="btn" href="${instructiesUrl}" target="_blank">Open update-instructies</a>
+      <p><a class="btn" href="${instructiesUrl}" target="_blank" rel="noopener noreferrer">Open update-instructies</a>
          <button class="btn-sec" onclick="google.script.host.close()">Later — herinner me morgen</button></p>
     `).setWidth(560).setHeight(420).setSandboxMode(HtmlService.SandboxMode.IFRAME);
     SpreadsheetApp.getUi().showModalDialog(html, '⚠ Kritieke update beschikbaar');
@@ -541,7 +541,7 @@ function toonHoeUpdateIk() {
     <div class="versie">Je versie: <b>${HUIDIGE_VERSIE}</b> &nbsp;&nbsp; Beschikbaar: <b>${nieuw}</b></div>
     ${statusBlok}
     <p>Updates voor Boekhoudbaar werken via een korte handmatige stap. Bekijk de instructies:</p>
-    <p><a class="btn" href="${url}" target="_blank">Open update-instructies</a>
+    <p><a class="btn" href="${url}" target="_blank" rel="noopener noreferrer">Open update-instructies</a>
        <button class="btn-sec" onclick="google.script.host.close()">Sluiten</button></p>
   `).setWidth(540).setHeight(380).setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showModalDialog(html, 'Updates');

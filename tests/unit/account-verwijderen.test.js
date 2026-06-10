@@ -2,8 +2,8 @@
  * tests/unit/account-verwijderen.test.js
  *
  * Klant-zijde AVG Art. 17 zelfservice (AccountVerwijderen.gs). Bevat:
- *   - aanvraagVerwijderOtp_   (delegeert naar licence-server 'aanvraag-otp')
- *   - voerAccountVerwijdering_ (delegeert naar licence-server 'verwijder' +
+ *   - aanvraagVerwijderOtp   (delegeert naar licence-server 'aanvraag-otp')
+ *   - voerAccountVerwijdering (delegeert naar licence-server 'verwijder' +
  *      wist lokale licentie-cache bij succes)
  *
  * Server-zijde (verwijderEndpoint_) heeft eigen tests in
@@ -49,10 +49,10 @@ function maakCtx(opts) {
   return { ctx, propStore, fetchMock };
 }
 
-describe('AccountVerwijderen — aanvraagVerwijderOtp_', () => {
+describe('AccountVerwijderen — aanvraagVerwijderOtp', () => {
   test('lege email: weiger zonder server-call', () => {
     const { ctx, fetchMock } = maakCtx();
-    const r = ctx.aanvraagVerwijderOtp_('');
+    const r = ctx.aanvraagVerwijderOtp('');
     expect(r.ok).toBe(false);
     expect(r.fout).toMatch(/ongeldig/i);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -60,14 +60,14 @@ describe('AccountVerwijderen — aanvraagVerwijderOtp_', () => {
 
   test('email zonder @: weiger', () => {
     const { ctx, fetchMock } = maakCtx();
-    const r = ctx.aanvraagVerwijderOtp_('geenAtSign');
+    const r = ctx.aanvraagVerwijderOtp('geenAtSign');
     expect(r.ok).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   test('geen LICENTIE_SERVER_URL geconfigureerd: graceful melding', () => {
     const { ctx, fetchMock } = maakCtx({ props: { LICENTIE_SERVER_URL: '' } });
-    const r = ctx.aanvraagVerwijderOtp_('klant@example.nl');
+    const r = ctx.aanvraagVerwijderOtp('klant@example.nl');
     expect(r.ok).toBe(false);
     expect(r.fout).toMatch(/server.*niet geconfigureerd|support/i);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe('AccountVerwijderen — aanvraagVerwijderOtp_', () => {
 
   test('happy-path: roept aanvraag-otp aan met url-encoded email', () => {
     const { ctx, fetchMock } = maakCtx();
-    const r = ctx.aanvraagVerwijderOtp_('Klant+tag@example.nl');
+    const r = ctx.aanvraagVerwijderOtp('Klant+tag@example.nl');
     expect(r.ok).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const url = fetchMock.mock.calls[0][0];
@@ -87,7 +87,7 @@ describe('AccountVerwijderen — aanvraagVerwijderOtp_', () => {
     const { ctx } = maakCtx({
       fetchMock: jest.fn(() => { throw new Error('DNS timeout'); }),
     });
-    const r = ctx.aanvraagVerwijderOtp_('klant@example.nl');
+    const r = ctx.aanvraagVerwijderOtp('klant@example.nl');
     expect(r.ok).toBe(false);
     expect(r.fout).toMatch(/netwerk/i);
     expect(r.fout).toMatch(/DNS timeout/);
@@ -100,23 +100,23 @@ describe('AccountVerwijderen — aanvraagVerwijderOtp_', () => {
         getResponseCode: () => 200,
       })),
     });
-    const r = ctx.aanvraagVerwijderOtp_('onbekend@example.nl');
+    const r = ctx.aanvraagVerwijderOtp('onbekend@example.nl');
     expect(r.ok).toBe(false);
     expect(r.fout).toMatch(/niet bekend/);
   });
 });
 
-describe('AccountVerwijderen — voerAccountVerwijdering_', () => {
+describe('AccountVerwijderen — voerAccountVerwijdering', () => {
   test('lege otp: weiger zonder server-call', () => {
     const { ctx, fetchMock } = maakCtx();
-    const r = ctx.voerAccountVerwijdering_('klant@example.nl', '');
+    const r = ctx.voerAccountVerwijdering('klant@example.nl', '');
     expect(r.ok).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   test('otp niet 6 cijfers: weiger', () => {
     const { ctx, fetchMock } = maakCtx();
-    const r = ctx.voerAccountVerwijdering_('klant@example.nl', '12345');
+    const r = ctx.voerAccountVerwijdering('klant@example.nl', '12345');
     expect(r.ok).toBe(false);
     expect(r.fout).toMatch(/6 cijfers/i);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -134,7 +134,7 @@ describe('AccountVerwijderen — voerAccountVerwijdering_', () => {
       })),
     });
     expect(propStore.licentieCacheGeldigTot).toBeDefined();
-    const r = ctx.voerAccountVerwijdering_('klant@example.nl', '123456');
+    const r = ctx.voerAccountVerwijdering('klant@example.nl', '123456');
     expect(r.ok).toBe(true);
     expect(propStore.licentieCacheGeldigTot).toBeUndefined();
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -154,14 +154,14 @@ describe('AccountVerwijderen — voerAccountVerwijdering_', () => {
         getResponseCode: () => 200,
       })),
     });
-    const r = ctx.voerAccountVerwijdering_('klant@example.nl', '999999');
+    const r = ctx.voerAccountVerwijdering('klant@example.nl', '999999');
     expect(r.ok).toBe(false);
     expect(propStore.licentieCacheGeldigTot).toBe('99999');
   });
 
   test('email lowercased + url-encoded', () => {
     const { ctx, fetchMock } = maakCtx();
-    ctx.voerAccountVerwijdering_('Klant@Example.NL', '123456');
+    ctx.voerAccountVerwijdering('Klant@Example.NL', '123456');
     const url = fetchMock.mock.calls[0][0];
     expect(url).toContain('email=' + encodeURIComponent('klant@example.nl'));
   });
