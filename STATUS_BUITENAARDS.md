@@ -10,7 +10,17 @@
 
 ## TL;DR
 
-**Go-live verdict: ja, met twee meegedragen risico's**.
+**Go-live verdict: ja, met twee meegedragen risico's** — na een near-miss-correctie van mijzelf.
+
+> **Near-miss eerlijk vermeld**: de eerste 5 commits van deze sessie bevatten een fout
+> die de AVG-flow in productie kapot zou hebben gemaakt. `aanvraagVerwijderOtp_`
+> en `voerAccountVerwijdering_` hadden trailing underscore — Apps Script convention
+> maakt zulke functies onbereikbaar voor `google.script.run` vanuit HTML. Tests
+> waren groen omdat ze de functies via ctx aanroepen (geen google.script.run-runtime).
+> Pas de klantreis-her-simulator (fase E) detecteerde dit. Gefixt in commit `eeeaa91`
+> vóór deze update. Zonder die fase had ik dit niet gevonden. Sluit aan op V2-prompt:
+> "automated tests verifiëren code, niet feature-correctheid".
+
 
 De twee blockers uit de klantreis-audit van 10 juni (update-pad ontbrekend + AVG-art-17 onvindbaar) zijn nu beide concreet afgedekt — niet perfect, wel **voldoende voor early-stage launch** met de eerste handvol klanten. De audits door 4 specialist-agents (red-team, gas-runtime, tax-compliance, langlopend-onderhoud) hebben 3 vervolg-vondsten opgeleverd die ik diezelfde nacht heb verwerkt; 1 vondst is bewust uitgesteld naar tier 2 en gedocumenteerd.
 
