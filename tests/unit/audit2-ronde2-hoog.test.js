@@ -46,10 +46,15 @@ describe('Fix #1 — BTW r1d split (pro-rata naheffing-risico)', () => {
     expect(btw).toMatch(/const vrijgesteldeOmzet = aangifte\.r1d_vrijgesteld \|\| 0/);
   });
 
-  test('belasteOmzet bevat nu ook r1d_nul + r2a + r3a_grondslag', () => {
+  test('belasteOmzet bevat r1d_nul + r2a, maar NIET r3a_grondslag (dubbeltelling)', () => {
     expect(btw).toMatch(/\(aangifte\.r1d_nul \|\| 0\)/);
     expect(btw).toMatch(/\(aangifte\.r2a \|\| 0\)/);
-    expect(btw).toMatch(/\(aangifte\.r3a_grondslag \|\| 0\)/);
+    // Cross-PR-regressie (go-live audit): een IC-levering telt al mee via
+    // r1d_nul (zelfde factuur); r3a_grondslag óók optellen = dezelfde euro's
+    // dubbel in de pro-rata-breuk → te hoge voorbelasting-aftrek.
+    const belasteOmzetBlok = btw.slice(btw.indexOf('const belasteOmzet'), btw.indexOf('const vrijgesteldeOmzet'));
+    expect(belasteOmzetBlok).not.toMatch(/r3a_grondslag \|\| 0\)\s*[+;]/);
+    expect(belasteOmzetBlok).toMatch(/dubbele\s*[\s\S]*telling|dubbel/i);
   });
 
   test('Commentaar verklaart Wet OB art. 11 + naheffing-risico', () => {

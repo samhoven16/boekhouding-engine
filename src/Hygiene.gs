@@ -81,8 +81,20 @@ const _HYGIENE_VERWACHTE_TRIGGERS = [
   { handler: 'onOpen',              type: 'spreadsheet',    event: 'onOpen' },
   { handler: 'onEdit',              type: 'spreadsheet',    event: 'onEdit' },
   { handler: 'verwerkHoofdformulier', type: 'spreadsheet',  event: 'onFormSubmit' },
-  { handler: 'dagelijkseTaken',     type: 'time',            uur: 0 },  // 00:00
+  // 08:00 conform installeelTriggers_ (Setup.gs) — was 00:00, maar dan
+  // verstuurt dunning betalingsherinneringen om middernacht.
+  { handler: 'dagelijkseTaken',     type: 'time',            uur: 8 },
+  { handler: 'stuurWeeklySamenvatting_', type: 'weekly',     dag: 'MONDAY', uur: 8 },
+  { handler: 'mailMaandrapport',    type: 'monthly',          dagVanMaand: 1, uur: 10 },
 ];
+
+/**
+ * Opt-in triggers die de klant bewust zelf aanzet (en sanitize dus moet
+ * BEHOUDEN, niet hermaken): zonder deze lijst wist delete-all-recreate
+ * de BTW-deadline-reminder permanent.
+ * @private
+ */
+const _HYGIENE_BEHOUD_HANDLERS = ['controleerBtwDeadline_'];
 
 /**
  * Verwijder ALLE bestaande project-triggers en installeer alleen de
@@ -106,6 +118,7 @@ function sanitizeTriggers_() {
     const bestaand = ScriptApp.getProjectTriggers();
     bestaand.forEach(function(t) {
       try {
+        if (_HYGIENE_BEHOUD_HANDLERS.indexOf(t.getHandlerFunction()) !== -1) return;
         ScriptApp.deleteTrigger(t);
         verwijderd++;
       } catch (e) {
@@ -127,6 +140,12 @@ function sanitizeTriggers_() {
     try {
       if (def.type === 'time') {
         ScriptApp.newTrigger(def.handler).timeBased().atHour(def.uur).everyDays(1).create();
+      } else if (def.type === 'weekly') {
+        ScriptApp.newTrigger(def.handler).timeBased()
+          .onWeekDay(ScriptApp.WeekDay[def.dag]).atHour(def.uur).create();
+      } else if (def.type === 'monthly') {
+        ScriptApp.newTrigger(def.handler).timeBased()
+          .onMonthDay(def.dagVanMaand).atHour(def.uur).create();
       } else if (def.type === 'spreadsheet') {
         const b = ScriptApp.newTrigger(def.handler).forSpreadsheet(ss);
         if (def.event === 'onOpen') b.onOpen().create();

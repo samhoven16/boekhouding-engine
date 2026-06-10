@@ -247,16 +247,20 @@ function _bouwRelatiesXml_(ss) {
   let leveranciers = '';
   for (let i = 1; i < data.length; i++) {
     const rij = data[i];
-    const naam = String(rij[0] || '').trim();
+    // Kolomindices conform .claude/sheet-schemas.md RELATIES:
+    // [0]=Relatie ID, [1]=Type, [2]=Naam, [8]=KvK, [9]=BTW, [10]=Email.
+    // Eerdere versie las [0] als naam etc. → Relatie-ID als naam en
+    // ontbrekende KvK/BTW-nummers in het auditfile (faalt VIES/ICP-crosscheck).
+    const relatieId = String(rij[0] || '').trim();
+    const type = String(rij[1] || '').toLowerCase();
+    const naam = String(rij[2] || '').trim();
     if (!naam) continue;
-    const email = String(rij[1] || '').trim();
-    const adres = String(rij[2] || '').trim();
-    const kvk = String(rij[3] || '').trim();
-    const btw = String(rij[4] || '').trim();
-    const type = String(rij[5] || '').toLowerCase();
+    const kvk = String(rij[8] || '').trim();
+    const btw = String(rij[9] || '').trim();
+    const email = String(rij[10] || '').trim();
 
     const entry = '      <customerSupplier>\n' +
-      '        <custSupID>' + _xafEsc_(naam.substring(0, 50)) + '</custSupID>\n' +
+      '        <custSupID>' + _xafEsc_((relatieId || naam).substring(0, 50)) + '</custSupID>\n' +
       '        <custSupName>' + _xafEsc_(naam) + '</custSupName>\n' +
       (kvk ? '        <custSupCompanyIdent>' + _xafEsc_(kvk) + '</custSupCompanyIdent>\n' : '') +
       (btw ? '        <taxRegIdent>' + _xafEsc_(btw) + '</taxRegIdent>\n' : '') +

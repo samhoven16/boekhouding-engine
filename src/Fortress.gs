@@ -123,12 +123,27 @@ function _fortressStatus_() {
  * @returns {number} aantal sheets vergrendeld
  * @private
  */
+
+/**
+ * Sheets die Fortress moet overslaan bij vergrendelen én hashen:
+ * Fortress-eigen tabs plus de append-only audit-tabs. Die laatste krijgen
+ * per definitie dagelijks nieuwe rijen (schrijfDagelijksAuditAnchor_,
+ * logBusinessEventNaarAuditSheet_) — meehashen = elke dag een vals
+ * drift-alarm; vergrendelen = de dagelijkse append faalt stil.
+ * @private
+ */
+function _fortressSkipSheet_(naam) {
+  if (naam.indexOf('_Fortress') === 0) return true;
+  return naam === SHEETS.AUDIT_ANCHOR || naam === SHEETS.AUDIT_LOG;
+}
+
 function _vergrendelAlleSheets_() {
   const ss = getSpreadsheet_();
   if (!ss) return 0;
   const me = Session.getEffectiveUser();
   let aantal = 0;
   ss.getSheets().forEach(function(sheet) {
+    if (_fortressSkipSheet_(sheet.getName())) return;
     try {
       const bestaand = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
       let prot;
@@ -211,7 +226,7 @@ function _fortressShadowSnapshot_() {
     // Sla SHA-256 hash op van elke sheet's data-fingerprint
     const hashes = {};
     ss.getSheets().forEach(function(sheet) {
-      if (sheet.getName().indexOf('_Fortress') === 0) return;
+      if (_fortressSkipSheet_(sheet.getName())) return;
       try {
         const data = sheet.getDataRange().getValues();
         const json = JSON.stringify(data);
@@ -251,6 +266,8 @@ function fortressIntegriteitCheck_() {
     const ss = getSpreadsheet_();
     const drift = [];
     Object.keys(vorig.hashes).forEach(function(naam) {
+      // Skip ook bij oude snapshots die de audit-tabs nog bevatten
+      if (_fortressSkipSheet_(naam)) return;
       const sheet = ss.getSheetByName(naam);
       if (!sheet) return;
       try {

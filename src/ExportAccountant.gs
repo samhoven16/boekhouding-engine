@@ -86,7 +86,20 @@ function exporteerAccountantsPakket() {
     folder.createFile(`6_Grootboeksaldi_${jaar}.csv`, gbCsv, 'text/csv');
     gemaakteFiles.push('📊 Grootboeksaldi');
 
-    // ── 7. Instructiebestand voor accountant ────────────────────────────
+    // ── 7. XAF 3.2 auditfile ─────────────────────────────────────────────
+    // Het importeerbare bestand voor Exact/Twinfield/etc. Zonder dit bevat
+    // het pakket alleen CSV/TXT en moet de accountant zelf de losse
+    // XAF-menu-actie vinden — eerste-blik-test faalt dan.
+    try {
+      const xafXml = _bouwXafXml_(ss);
+      folder.createFile(`7_Auditfile_${bedrijfSafe}_${jaar}.xaf`, xafXml, 'application/xml');
+      gemaakteFiles.push('📑 XAF-auditfile (importeerbaar)');
+    } catch (xafErr) {
+      Logger.log('XAF in accountantspakket faalde: ' + xafErr.message);
+      gemaakteFiles.push('⚠️ XAF-auditfile mislukt — gebruik menu Controle & Export → Exporteer als XAF');
+    }
+
+    // ── 8. Instructiebestand voor accountant ────────────────────────────
     const instructies = maakAccountantInstructies_(bedrijf, jaar, folder.getUrl());
     folder.createFile(`0_LEESMIJ_accountant.txt`, instructies, 'text/plain');
 
@@ -285,14 +298,17 @@ INHOUD:
   4_Inkoopfacturen_${jaar}.csv  — Alle ontvangen facturen/kosten
   5_BTW_aangifte_${jaar}.txt    — BTW overzicht per kwartaal
   6_Grootboeksaldi_${jaar}.csv  — Eindstanden per grootboekrekening
+  7_Auditfile_*_${jaar}.xaf     — XAF 3.2 auditfile (direct importeerbaar)
 
 GEBRUIKTE GROOTBOEKSCHEMA:
   Conform Nederlands RGS (Referentie Grootboekschema).
   Codes zijn compatibel met Exact Online en Twinfield.
 
 IMPORT IN BOEKHOUDPAKKET:
-  De CSV-bestanden kunnen worden geïmporteerd in:
-  Exact Online, Twinfield, AFAS, of handmatig verwerkt worden.
+  Gebruik bij voorkeur het XAF-bestand (7) — dat is het standaard
+  Belastingdienst-auditfileformaat en importeert direct in Exact Online,
+  Twinfield, AFAS e.a. De CSV-bestanden zijn voor naslagwerk of
+  handmatige verwerking.
 
 CONTACT:
   Vragen over de data? Neem contact op met de ondernemer.

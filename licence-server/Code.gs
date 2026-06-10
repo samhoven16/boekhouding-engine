@@ -517,7 +517,10 @@ function maakBetaling(klantnaam, klantEmail, refCode) {
         amount:      { value: eindprijs, currency: 'EUR' },
         description: productnm + ' — ' + klantnaam +
                      (refGeldig ? ' (€' + REF_KORTING + ' referral-korting)' : ''),
-        redirectUrl: webAppUrl + '?actie=bedankt',
+        // Website-bedanktpagina i.p.v. de kale Apps Script-kaart: daar staat
+        // de 5-stappen-walkthrough incl. het "Google heeft deze app niet
+        // geverifieerd"-scherm waar de meeste activaties op stranden.
+        redirectUrl: 'https://www.boekhoudbaar.nl/bedankt/',
         webhookUrl:  webAppUrl,
         metadata:    ref
           ? { naam: klantnaam, email: klantEmail, ref: ref, refKortingToegepast: refGeldig ? REF_KORTING : 0 }
@@ -1962,6 +1965,30 @@ function roteerEndpoint_(e) {
     const emailCol = headers.indexOf('Email');
     const statusCol = headers.indexOf('Status');
     if (sleutelCol < 0 || emailCol < 0 || statusCol < 0) throw new Error('Sheet-format onjuist');
+
+    // Anti-misbruik (red-team audit): onbeperkte rotatie-ketens = één betaalde
+    // licentie die telkens een verse, ongebonden sleutel oplevert (elke kopie
+    // teert daarna op de offline-grace). Persistente grens, sheet-gebaseerd
+    // (de cache-rate-limit van 3/uur reset en stopt ketens dus niet):
+    // max 3 rotaties per e-mail per 30 dagen, daarna via support.
+    const aangemaaktCol = headers.indexOf('Aangemaakt op');
+    const mollieCol = headers.indexOf('Mollie betaling ID');
+    if (aangemaaktCol >= 0 && mollieCol >= 0) {
+      const dertigDagenTerug = Date.now() - 30 * 86400000;
+      let recenteRotaties = 0;
+      for (let r = 1; r < data.length; r++) {
+        if (String(data[r][emailCol]).toLowerCase() !== email) continue;
+        if (String(data[r][mollieCol] || '').indexOf('ROTATIE-VAN-') !== 0) continue;
+        const gemaakt = data[r][aangemaaktCol];
+        if (gemaakt instanceof Date && gemaakt.getTime() >= dertigDagenTerug) recenteRotaties++;
+      }
+      if (recenteRotaties >= 3) {
+        return ContentService.createTextOutput(JSON.stringify({
+          ok: false,
+          fout: 'Maximaal 3 sleutel-rotaties per 30 dagen. Neem contact op met support@boekhoudbaar.nl.',
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
 
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][sleutelCol]).toUpperCase() === oudeSleutel.toUpperCase() &&

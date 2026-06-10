@@ -377,7 +377,8 @@ function _verwerkFactuur_(ss, s) {
   } else if (!heeftPdf) {
     emailInfo = ' Let op: PDF kon niet worden gegenereerd \u2014 geen e-mail verstuurd.';
   } else {
-    emailInfo = ' E-mail versturen mislukt.';
+    emailInfo = ' E-mail versturen mislukt — de factuur is wél aangemaakt. ' +
+      'Opnieuw versturen kan via Boekhouding → Factuurlijst; het systeem probeert het zelf ook nog 3×.';
   }
   // Financial snapshot suffix for the confirmation message
   let snapshotInfo = '';
@@ -1008,12 +1009,13 @@ function toonAuditKetenVerificatie() {
   const allesOk = buffer.ok && anchor.ok;
   ui.alert(
     'Audit-keten verificatie',
-    (allesOk ? '✓ Beide ketens consistent — geen manipulatie gedetecteerd.'
-             : '✗ Mogelijke manipulatie gedetecteerd — zie hieronder.') + '\n\n' +
+    (allesOk ? '✓ Beide ketens consistent.'
+             : '✗ Audit-keten onderbroken — zie hieronder.') + '\n\n' +
     regel('Buffer-keten (recente acties)', buffer) + '\n' +
     regel('Anchor-keten (dagelijkse historie)', anchor) + '\n\n' +
-    (allesOk ? '' : 'Mogelijke oorzaken: herinstallatie, herstel uit back-up, of '
-      + 'handmatige wijziging. Neem bij twijfel contact op met support@boekhoudbaar.nl.'),
+    (allesOk ? '' : 'Een onderbreking gebeurt normaal na een herinstallatie of '
+      + 'herstel uit een back-up — dan is er niets aan de hand. Heb je geen van '
+      + 'beide gedaan, of twijfel je? Mail support@boekhoudbaar.nl.'),
     ui.ButtonSet.OK
   );
 }
