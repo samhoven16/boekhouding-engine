@@ -34,7 +34,7 @@
   {"@type":"FAQPage","mainEntity":[
     {"@type":"Question","name":"Ik ben net begonnen — moet ik nu al een boekhoudprogramma?","acceptedAnswer":{"@type":"Answer","text":"Je hoeft niets duurs. Maar vanaf je eerste factuur moet je je administratie 7 jaar bewaren (wettelijke bewaarplicht) en elk kwartaal BTW-aangifte doen. Beginnen met een net systeem voorkomt dat je later honderden facturen moet terugzoeken. Boekhoudbaar kost eenmalig €49 — geen abonnement."}},
     {"@type":"Question","name":"Wat is een BTW-aangifte en hoe vaak moet ik dat doen?","acceptedAnswer":{"@type":"Answer","text":"Een BTW-aangifte is een overzicht dat je elk kwartaal bij de Belastingdienst indient: hoeveel BTW je klanten betaalden minus hoeveel BTW je zelf betaalde. Het verschil betaal je (of krijg je terug). Boekhoudbaar rekent dit automatisch uit en laat precies zien welke bedragen je waar invult."}},
-    {"@type":"Question","name":"Wat is de KOR en moet ik die aanvinken?","acceptedAnswer":{"@type":"Answer","text":"De Kleine Ondernemersregeling (KOR) is een vrijstelling: blijf je onder €20.000 omzet per jaar, dan hoef je geen BTW te rekenen of aangifte te doen. Voor sommige starters handig, voor anderen juist niet (je kunt dan ook geen BTW terugvragen). Boekhoudbaar helpt je deze keuze maken met een rekenhulp."}}
+    {"@type":"Question","name":"Wat is de KOR en moet ik die aanvinken?","acceptedAnswer":{"@type":"Answer","text":"De Kleine Ondernemersregeling (KOR) is een vrijstelling: blijf je onder €20.000 omzet per jaar, dan hoef je geen BTW te rekenen of aangifte te doen. Voor sommige starters handig, voor anderen juist niet (je kunt dan ook geen BTW terugvragen). Boekhoudbaar legt in gewone taal uit wat de KOR betekent; je zet 'm met één instelling aan of uit."}}
   ]}
 ]}
 </script>
@@ -102,6 +102,10 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:48px 24px;font-siz
 <link rel="stylesheet" href="/animations.css">
 <link rel="stylesheet" href="/nav.css">
 <script defer src="/nav.js"></script>
+<!-- Ronde-3 (klantreis): consent.js persisteert de ?ref= affiliate-cookie en
+     injecteert 'm in /kopen-links. Ontbrak hier → partner-attributie lekte
+     voor wie via een partner-link op /starters/ landde. -->
+<script src="/consent.js" defer></script>
 </head>
 <body>
 
@@ -186,7 +190,7 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:48px 24px;font-siz
       </div>
       <div class="stap">
         <span class="stap-num"></span>
-        <span class="stap-tekst"><strong>Open je eigen kopie in Google Drive</strong><span>Eén klik. Je hebt alleen een gratis Google-account nodig (geen Gmail vereist). Je gegevens blijven privé in jóuw Drive — wij kunnen er niet bij.</span></span>
+        <span class="stap-tekst"><strong>Open je eigen kopie in Google Drive</strong><span>Eén klik. Je hebt alleen een gratis Google-account nodig (geen Gmail vereist). Je gegevens blijven privé in jóuw Drive — Boekhoudbaar kan er niet bij.</span></span>
       </div>
       <div class="stap">
         <span class="stap-num"></span>

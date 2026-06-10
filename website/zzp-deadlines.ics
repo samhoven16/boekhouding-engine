@@ -15,7 +15,7 @@ DTSTAMP:20260507T000000Z
 DTSTART;VALUE=DATE:20260430
 DTEND;VALUE=DATE:20260501
 SUMMARY:📋 BTW-aangifte Q1 2026 deadline
-DESCRIPTION:Aangifte + betaling Q1 2026 (jan-mrt) moet vóór 30 april bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhouding → BTW → BTW-aangifte (kwartaal).
+DESCRIPTION:Aangifte + betaling Q1 2026 (jan-mrt) moet vóór 30 april bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhoudbaar → BTW → BTW-aangifte (kwartaal).
 URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
 CATEGORIES:Belasting,BTW
 BEGIN:VALARM
@@ -36,7 +36,7 @@ DTSTAMP:20260507T000000Z
 DTSTART;VALUE=DATE:20260731
 DTEND;VALUE=DATE:20260801
 SUMMARY:📋 BTW-aangifte Q2 2026 deadline
-DESCRIPTION:Aangifte + betaling Q2 2026 (apr-jun) moet vóór 31 juli bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhouding → BTW → BTW-aangifte (kwartaal).
+DESCRIPTION:Aangifte + betaling Q2 2026 (apr-jun) moet vóór 31 juli bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhoudbaar → BTW → BTW-aangifte (kwartaal).
 URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
 CATEGORIES:Belasting,BTW
 BEGIN:VALARM
@@ -52,7 +52,7 @@ DTSTAMP:20260507T000000Z
 DTSTART;VALUE=DATE:20261031
 DTEND;VALUE=DATE:20261101
 SUMMARY:📋 BTW-aangifte Q3 2026 deadline
-DESCRIPTION:Aangifte + betaling Q3 2026 (jul-sep) moet vóór 31 oktober bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhouding → BTW → BTW-aangifte (kwartaal).
+DESCRIPTION:Aangifte + betaling Q3 2026 (jul-sep) moet vóór 31 oktober bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhoudbaar → BTW → BTW-aangifte (kwartaal).
 URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
 CATEGORIES:Belasting,BTW
 BEGIN:VALARM
@@ -68,7 +68,7 @@ DTSTAMP:20260507T000000Z
 DTSTART;VALUE=DATE:20270131
 DTEND;VALUE=DATE:20270201
 SUMMARY:📋 BTW-aangifte Q4 2026 deadline
-DESCRIPTION:Aangifte + betaling Q4 2026 (okt-dec) moet vóór 31 januari 2027 bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhouding → BTW → BTW-aangifte (kwartaal).
+DESCRIPTION:Aangifte + betaling Q4 2026 (okt-dec) moet vóór 31 januari 2027 bij de Belastingdienst zijn.\n\nIn Boekhoudbaar: Boekhoudbaar → BTW → BTW-aangifte (kwartaal).
 URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
 CATEGORIES:Belasting,BTW
 BEGIN:VALARM
@@ -84,7 +84,7 @@ DTSTAMP:20260507T000000Z
 DTSTART;VALUE=DATE:20260501
 DTEND;VALUE=DATE:20260502
 SUMMARY:📊 IB-aangifte 2025 deadline (zonder uitstel)
-DESCRIPTION:Inkomstenbelasting + ZVW-aangifte 2025 moet vóór 1 mei 2026 bij de Belastingdienst zijn — TENZIJ je vóór 1 mei uitstel hebt aangevraagd (max 1 september).\n\nIn Boekhoudbaar: Boekhouding → Belastingadvies voor schatting van te betalen IB.
+DESCRIPTION:Inkomstenbelasting + ZVW-aangifte 2025 moet vóór 1 mei 2026 bij de Belastingdienst zijn — TENZIJ je vóór 1 mei uitstel hebt aangevraagd (max 1 september).\n\nIn Boekhoudbaar: Boekhoudbaar → Belastingadvies voor schatting van te betalen IB.
 URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
 CATEGORIES:Belasting,IB
 BEGIN:VALARM
@@ -100,7 +100,7 @@ DTSTAMP:20260507T000000Z
 DTSTART;VALUE=DATE:20261231
 DTEND;VALUE=DATE:20270101
 SUMMARY:🎄 Jaarafsluiting 2026 — boekhouding klaarmaken
-DESCRIPTION:Eind boekjaar. Tijd om: 1) laatste facturen ingediend\, 2) bankafschrift ingelezen tot 31 dec\, 3) jaarafsluiting uitvoeren in Boekhoudbaar (Boekhouding → Instellingen → Sluit jaar af). Dit archiveert 2026 + zet factuurnummering klaar voor 2027.
+DESCRIPTION:Eind boekjaar. Tijd om: 1) laatste facturen ingediend\, 2) bankafschrift ingelezen tot 31 dec\, 3) jaarafsluiting uitvoeren in Boekhoudbaar (Boekhoudbaar → Instellingen → Sluit jaar af). Dit archiveert 2026 + zet factuurnummering klaar voor 2027.
 URL:https://www.boekhoudbaar.nl/gids/
 CATEGORIES:Boekhouding
 BEGIN:VALARM
