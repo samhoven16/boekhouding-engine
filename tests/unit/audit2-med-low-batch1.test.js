@@ -137,7 +137,7 @@ describe('Fix #5 — Periode-ontgrendel-historie behouden', () => {
 
   test('Fail-safe: historie-write mag splice niet blokkeren', () => {
     const start = boek.indexOf('GESLOTEN_PERIODES_HISTORIE');
-    const blok = boek.slice(start, start + 1500);
+    const blok = boek.slice(start, start + 2000);
     expect(blok).toMatch(/} catch \(_\) \{ \/\* historie-write mag splice niet/);
   });
 });

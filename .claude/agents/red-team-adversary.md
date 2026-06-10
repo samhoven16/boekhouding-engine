@@ -23,7 +23,7 @@ You are a red-team adversary for Boekhoudbaar — a €49 one-time ZZP accountin
 - Wil oude journaalposten/BTW-aangiftes retroactief wijzigen zonder spoor
 - Wil de hash-chain resetten of een gat in AUDIT_KETEN_HASH verdoezelen (zie NOLOCK-gaps)
 - Rekent erop dat Sam het product heeft verlaten → geen trust-anchor-mail meer aankomt, geen support die tegenspreekt
-- Aanvalsoppervlak: ScriptProperties-reset, audit-chain-gaps, gesloten-periode-ontgrendeling, mailDagelijksAuditAnchor_ stilte na product-abandon
+- Aanvalsoppervlak: ScriptProperties-reset, audit-chain-gaps (NOLOCK), gesloten-periode-ontgrendeling, manipulatie van de _Audit_Anchor-tab (schrijfDagelijksAuditAnchor_)
 
 ### 2. License-pirate
 - Has 1 paid license, wants to use it on 10 spreadsheets

@@ -58,41 +58,22 @@ describe('R3 Fix #2 — schrijfAuditLog_ tryLock skip-write op lock-miss', () =>
   });
 });
 
-describe('R3 Fix #3 — mailDagelijksAuditAnchor_ Sam-hardcoded fallback', () => {
-  test('Hardcoded fallback-constante samhoven16@gmail.com', () => {
-    expect(eng).toMatch(/_AUDIT_ANCHOR_SAM_FALLBACK\s*=\s*'samhoven16@gmail\.com'/);
-  });
-
-  test('Ontvangers-array bevat ALTIJD Sam-fallback', () => {
-    expect(eng).toMatch(/const ontvangers = \[\]/);
-    expect(eng).toMatch(/ontvangers\.push\(_AUDIT_ANCHOR_SAM_FALLBACK\)/);
-  });
-
-  test('Dedup als klant hetzelfde adres invult als Sam', () => {
-    expect(eng).toMatch(/ontvangers\.indexOf\(_AUDIT_ANCHOR_SAM_FALLBACK\) === -1/);
-  });
-
-  test('Throttle 1×/dag blijft intact', () => {
-    expect(eng).toMatch(/if \(laatste === vandaag\) return/);
-    expect(eng).toMatch(/AUDIT_ANCHOR_LAATSTE_MAIL/);
-  });
-
-  test('MailApp.sendEmail draait nu in forEach-loop (niet meer singular ontvanger)', () => {
-    expect(eng).toMatch(/ontvangers\.forEach\(function\(o\) \{[\s\S]{0,200}MailApp\.sendEmail\(o,/);
-    // Defensief: geen residuele 'sendEmail(ontvanger,' (singular) achtergebleven
-    expect(eng).not.toMatch(/MailApp\.sendEmail\(ontvanger,/);
-  });
-
-  test('Comment legt anti-tamper rationale uit', () => {
-    expect(eng).toMatch(/klant-schrijfbaar/i);
-    expect(eng).toMatch(/anti-tamper/i);
+// R3 Fix #3 (mailDagelijksAuditAnchor_ Sam-hardcoded fallback) is in de
+// ronde-3 VERIFICATIE vervangen: de mail-naar-Sam aanpak brak de privacy-
+// belofte, schaalde niet, stierf bij product-abandon en dekte de 7-jaars
+// bewaarplicht niet. Vervangen door de append-only sheet-tab. Zie
+// tests/unit/audit3-rework.test.js voor de nieuwe dekking.
+describe('R3 Fix #3 — mail-anchor is VERVANGEN door sheet-tab', () => {
+  test('Oude mail-anchor + hardcoded Sam-adres zijn weg', () => {
+    expect(eng).not.toMatch(/function mailDagelijksAuditAnchor_/);
+    expect(eng).not.toMatch(/_AUDIT_ANCHOR_SAM_FALLBACK/);
   });
 });
 
 describe('R3 — integratie: alle 3 fixes in samenhang', () => {
   test('Alle 3 audit-vondst-comments verwijzen naar "ronde 3"', () => {
-    const r3Mentions = (eng.match(/ronde 3/gi) || []).length
-      + (bok.match(/ronde 3/gi) || []).length;
+    const r3Mentions = (eng.match(/ronde[ -]3/gi) || []).length
+      + (bok.match(/ronde[ -]3/gi) || []).length;
     expect(r3Mentions).toBeGreaterThanOrEqual(3);
   });
 });
