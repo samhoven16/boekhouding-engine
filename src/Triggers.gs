@@ -1740,9 +1740,32 @@ function _pingAlleHealthchecks_(suffix, payload) {
   }
 }
 
+// 6-min GAS execution cap. Budget = 4 min laat 2 min marge voor afronding
+// + healthcheck-pings. Bij langlopende administraties (>5 jaar data) waar
+// vroege taken meer tijd kosten, voorkomt dit dat triggerSelfHeal/cleanup
+// nooit meer aan bod komen. _runTaak_ slaat tasks over zodra budget op is.
+// Override via ScriptProperty 'DAGELIJKSE_TAKEN_BUDGET_MS' (1000-300000).
+const DAGELIJKSE_TAKEN_BUDGET_MS_DEFAULT = 4 * 60 * 1000;
+function _dagelijksBudget_() {
+  try {
+    const v = parseInt(PropertiesService.getScriptProperties()
+      .getProperty('DAGELIJKSE_TAKEN_BUDGET_MS') || '', 10);
+    if (isFinite(v) && v >= 1000 && v <= 300000) return v;
+  } catch (_) {}
+  return DAGELIJKSE_TAKEN_BUDGET_MS_DEFAULT;
+}
+// Module-niveau: gezet door dagelijkseTaken aan start, gelezen door
+// _runTaak_, geleegd aan einde. Eén trigger-context = geen race.
+// var (niet let) zodat de waarden ook in VM-sandbox properties op globalThis
+// zijn — anders kunnen Jest-tests _huidigDagelijksBudgetStart niet zetten.
+var _huidigDagelijksBudgetStart = 0;
+var _huidigDagelijksBudgetOverschreden = false;
+
 function dagelijkseTaken() {
   const ss = getSpreadsheet_();
   const dagelijksTotaal0 = Date.now();
+  _huidigDagelijksBudgetStart = dagelijksTotaal0;
+  _huidigDagelijksBudgetOverschreden = false;
 
   // START-ping: laat alle geconfigureerde monitors weten dat we begonnen zijn.
   // Bij crash halverwege missen ze de SUCCESS-ping en krijgt owner alert.
@@ -1950,6 +1973,10 @@ function dagelijkseTaken() {
   // geconfigureerde monitors markeren deze run als groen. Duur (ms) in
   // body voor monitoring-trends.
   _pingAlleHealthchecks_('', 'duur_ms=' + totaleDuur);
+
+  // Budget-context vrijgeven — next dagelijkseTaken zet 'm opnieuw.
+  _huidigDagelijksBudgetStart = 0;
+  _huidigDagelijksBudgetOverschreden = false;
 }
 
 /**
@@ -1960,6 +1987,22 @@ function dagelijkseTaken() {
  *  - audit-log bij fout
  */
 function _runTaak_(naam, fn) {
+  // Budget-guard: bij langlopende administraties kan de cumulatieve duur
+  // van vroege taken latere taken (triggerSelfHeal, cleanup-taken) uit de
+  // 6-min GAS-cap drukken. Sla over zodra budget op is — markeert SKIP,
+  // audit-logt één keer per run zodat Sam kan zien welke installaties
+  // budget overschrijden en welke taken erdoor worden geraakt.
+  if (_huidigDagelijksBudgetStart > 0 &&
+      Date.now() - _huidigDagelijksBudgetStart > _dagelijksBudget_()) {
+    if (!_huidigDagelijksBudgetOverschreden) {
+      _huidigDagelijksBudgetOverschreden = true;
+      try { safeAuditLog_('Dagelijkse taken: budget overschreden',
+        'eerste skip: ' + naam + ' na ' + (Date.now() - _huidigDagelijksBudgetStart) + 'ms'); } catch (_) {}
+    }
+    try { _updateTaakStatus_(naam, 'SKIP', 0, 'budget overschreden'); } catch (_) {}
+    return;
+  }
+
   const t0 = Date.now();
   let status = 'OK';
   let foutBericht = '';
