@@ -1231,8 +1231,15 @@ function beheerGeslotenPeriodes() {
         ontgrendeldDoor: (function() { try { return Session.getActiveUser().getEmail() || ''; } catch (_) { return ''; } })(),
         motivatie: motivatie.slice(0, 400),
       });
-      // Cap historie op laatste 100 ontgrendelingen om 9KB-prop-limit te respecteren
-      if (hist.length > 100) hist = hist.slice(hist.length - 100);
+      // Cap historie op laatste 15 ontgrendelingen. Audit ronde 3:
+      // 100 × ~450B (motivatie 400 + meta) ≈ 45KB > 9KB-per-property limiet
+      // → setProperty zou throwen → catch swallow → silent data-loss op historie.
+      // 15 entries × ~450B = ~7KB, ruim onder 9KB. Deze prop is enkel een
+      // snelle leeshulp; de DUURZAME 7-jaars vastlegging (art. 52 AWR) gebeurt
+      // los hieronder via logBusinessEventNaarAuditSheet_ → AUDIT_LOG-sheet
+      // (hash-chain + 7-jaars retentie). Oudere entries dan 15 vallen dus
+      // alleen uit déze leeshulp, niet uit het duurzame bewijs.
+      if (hist.length > 15) hist = hist.slice(hist.length - 15);
       props.setProperty('GESLOTEN_PERIODES_HISTORIE', JSON.stringify(hist));
     } catch (_) { /* historie-write mag splice niet blokkeren */ }
 
@@ -1241,6 +1248,15 @@ function beheerGeslotenPeriodes() {
     try {
       schrijfAuditLog_('PERIODE_ONTGRENDELD',
         'periode=' + periode.label + ' | motivatie=' + motivatie.slice(0, 400));
+    } catch (_) {}
+    // Ronde-3 (accountant): óók duurzaam naar AUDIT_LOG-sheet (7-jaars
+    // bewaarplicht art. 52 AWR) — periode-ontgrendeling is precies wat een
+    // controleur onderzoekt; de ScriptProperties-buffer roteert na 100.
+    try {
+      if (typeof logBusinessEventNaarAuditSheet_ === 'function') {
+        logBusinessEventNaarAuditSheet_('PERIODE_ONTGRENDELD',
+          'periode=' + periode.label + ' | motivatie=' + motivatie.slice(0, 400));
+      }
     } catch (_) {}
     ui.alert(
       'Periode ontgrendeld + gelogd',

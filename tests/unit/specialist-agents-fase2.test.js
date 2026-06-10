@@ -171,11 +171,11 @@ describe('documentatie-volledigheid — typische klantvragen', () => {
   });
 });
 
-describe('Totaal: 9 agents in setup', () => {
-  test('3 fase-1 (tax/gas/voice) + 6 fase-2 = 9 agents in .claude/agents/', () => {
+describe('Totaal: 12 agents in setup (na fase-3 SEO/positionering uitbreiding)', () => {
+  test('3 fase-1 + 6 fase-2 + 3 fase-3 = 12 agents in .claude/agents/', () => {
     const files = fs.readdirSync(AGENTS_DIR).filter(function(f) {
       return f.endsWith('.md');
     });
-    expect(files.length).toBe(9);
+    expect(files.length).toBe(12);
   });
 });

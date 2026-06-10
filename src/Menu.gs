@@ -182,6 +182,7 @@ function onOpen() {
       .addItem('Maandrapport nu versturen', 'mailMaandrapport')
       .addSeparator()
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
+      .addItem('🔐 Audit-keten verifiëren (is er niets gewijzigd?)', 'toonAuditKetenVerificatie')
       .addItem('🔧 Systeemstatus (voor support)', 'toonSysteemStatus')
       .addItem('📁 Audit-log naar JSON exporteren (90 dgn)', 'exporteerAuditLogJson')
       .addItem('📦 Volledige data-export (GDPR art. 20)', 'exporteerAlleData')

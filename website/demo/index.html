@@ -8,6 +8,15 @@
 <meta name="description" content="Interactief voorbeeld van Boekhoudbaar met test-data: Dashboard, facturen, BTW-aangifte, balans. Zo ziet je administratie eruit zodra je het in je eigen Drive opent.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://www.boekhoudbaar.nl/demo/">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+  {"@type":"BreadcrumbList","itemListElement":[
+    {"@type":"ListItem","position":1,"name":"Boekhoudbaar","item":"https://www.boekhoudbaar.nl/"},
+    {"@type":"ListItem","position":2,"name":"Demo","item":"https://www.boekhoudbaar.nl/demo/"}
+  ]},
+  {"@type":"WebPage","name":"Bekijk Boekhoudbaar — interactief voorbeeld","url":"https://www.boekhoudbaar.nl/demo/","description":"Interactief voorbeeld van Boekhoudbaar zonder account: facturen, BTW-aangifte en dashboard in een Google Sheet.","isPartOf":{"@type":"WebSite","name":"Boekhoudbaar","url":"https://www.boekhoudbaar.nl/"}}
+]}
+</script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/logo.svg">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -354,10 +363,10 @@ footer a{color:rgba(255,255,255,.7);}
     <div class="mock-pane actief" data-mock-pane="dashboard">
       <!-- Navy greeting-bar + subline, exact zoals in het product -->
       <div class="mock-greetbar">Goedemorgen, <strong>Studio Veld</strong></div>
-      <div class="mock-subline">12-05-2026 08:05 · Boekjaar 2026 · Boekhoudbaar</div>
+      <div class="mock-subline">22-04-2026 08:05 · Boekjaar 2026 · Boekhoudbaar</div>
 
       <!-- Status-banner (groen) — verschijnt boven KPI's bij gevulde staat -->
-      <div class="mock-statusbanner">✓ Alles up-to-date — laatste bankimport: vandaag 08:00 · BTW Q1 ingediend op 24-04-2026</div>
+      <div class="mock-statusbanner">✓ Bijgewerkt — laatste bankimport: vandaag 08:00 · Q1-aangifte klaar om in te dienen (vóór 30 april)</div>
 
       <!-- 9 KPI's — exact dezelfde set + volgorde als het Dashboard -->
       <div class="mock-kpi-grid">
@@ -373,7 +382,7 @@ footer a{color:rgba(255,255,255,.7);}
       </div>
 
       <!-- Gezondheidsscore-balk -->
-      <div class="mock-gezondheid">⚠️ Gezondheid: <strong>92/100</strong> (0 fouten · 1 let op · gecheckt vandaag) — Menu: Boekhouding → Gezondheidscheck</div>
+      <div class="mock-gezondheid">⚠️ Gezondheid: <strong>92/100</strong> (0 fouten · 1 let op · gecheckt vandaag) — Menu: Boekhoudbaar → Controle &amp; Export → Gezondheidscheck uitvoeren</div>
 
       <!-- Besparing-sectie (3 kolommen) -->
       <div class="mock-sectiekop">💰 Wat Boekhoudbaar dit jaar voor je heeft bespaard</div>
@@ -385,8 +394,8 @@ footer a{color:rgba(255,255,255,.7);}
 
       <!-- BTW-reminder (kalender-gestuurd, zoals in product) -->
       <div class="mock-reminder">
-        <strong>📅 Mei: BTW-aangifte Q1</strong><br>
-        BTW-aangifte Q1 2026 indienen vóór 30 april. Boekhouding → BTW → BTW-aangifte Q1 genereert het overzicht. Tip: zet BTW direct na ontvangst van facturen apart op een spaarrekening.
+        <strong>📅 April: BTW-aangifte Q1</strong><br>
+        BTW-aangifte Q1 2026 indienen vóór 30 april. Boekhoudbaar → BTW → BTW-aangifte kwartaal 1 (jan-mrt) genereert het overzicht. Tip: zet BTW direct na ontvangst van facturen apart op een spaarrekening.
       </div>
 
       <!-- Recente verkoopfacturen — laatste 5, klikbaar in echte product -->

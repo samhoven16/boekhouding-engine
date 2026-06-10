@@ -830,26 +830,40 @@ function schrijfAuditLog_(actie, details) {
     // race-condition risico tussen dagelijkseTaken (auditKeten + formeel-
     // Bewijs schrijven parallel) en user-actie (PERIODE_ONTGRENDELD).
     // Nu: LockService.getScriptLock met 2s tryLock → atomair read+write.
+    //
+    // Audit ronde 3 (gas-runtime): tryLock kan stil falen (returnt false).
+    // Voorheen ging de write tóch door → race bleef open. Nu: bij lock-
+    // miss schrijven we de hash NIET — entry-buffer wordt nog wel bewaard
+    // (zonder hash-suffix) zodat de audit-log niet stilvalt, maar de chain
+    // wordt overgeslagen tot volgende write die wel de lock krijgt.
     let lock = null;
-    try { lock = LockService.getScriptLock(); lock.tryLock(2000); } catch (_) {}
-    let prevHash = '';
-    try { prevHash = String(props.getProperty('AUDIT_KETEN_HASH') || ''); } catch (_) {}
-    let entryHash = '';
+    let lockHeld = false;
     try {
-      const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, prevHash + '|' + entryBase);
-      entryHash = raw.map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); }).join('');
+      lock = LockService.getScriptLock();
+      lockHeld = lock.tryLock(2000);
     } catch (_) {}
-    const entry = entryBase + ' | ' + entryHash.slice(0, 16);
-    if (entryHash) {
-      try { props.setProperty('AUDIT_KETEN_HASH', entryHash); } catch (_) {}
+    let prevHash = '';
+    let entryHash = '';
+    if (lockHeld) {
+      try { prevHash = String(props.getProperty('AUDIT_KETEN_HASH') || ''); } catch (_) {}
+      try {
+        const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, prevHash + '|' + entryBase);
+        entryHash = raw.map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); }).join('');
+      } catch (_) {}
+      if (entryHash) {
+        try { props.setProperty('AUDIT_KETEN_HASH', entryHash); } catch (_) {}
+      }
+      try { lock.releaseLock(); } catch (_) {}
     }
-    if (lock) { try { lock.releaseLock(); } catch (_) {} }
+    const entry = lockHeld
+      ? entryBase + ' | ' + entryHash.slice(0, 16)
+      : entryBase + ' | NOLOCK';
     // KNOWN LIMITATION: klant heeft Editor-rechten op ScriptProperties dus
-    // kan AUDIT_KETEN_HASH resetten. Mitigatie: dagelijkseTaken stuurt
-    // huidige hash naar Sam-only inbox (mailDagelijksAuditAnchor_) zodat
-    // klant-reset detecteerbaar is via mismatch. Plus verifieerAuditChain_
-    // herrekent de chain over buffer ter detectie van midden-in-buffer-
-    // tampering. Beide hieronder geïmplementeerd.
+    // kan AUDIT_KETEN_HASH resetten. Mitigatie (ronde-3): dagelijkseTaken
+    // schrijft de hash append-only naar een verborgen tab in de klant z'n
+    // eigen sheet (schrijfDagelijksAuditAnchor_) zodat klant-reset zelf-
+    // verifieerbaar detecteerbaar is. Plus verifieerAuditChain_ herrekent
+    // de chain over de buffer ter detectie van midden-in-buffer-tampering.
 
     // Houd laatste 100 regels bij in ScriptProperties (max ~8KB om 9KB limit veilig te houden)
     const LOG_KEY = 'auditLogBuffer';
@@ -885,9 +899,9 @@ function slaBusinessTypeOp(type) {
  * Re-rekent SHA256-chain over alle entries en vergelijkt met AUDIT_KETEN_HASH.
  * Bij mismatch: klant heeft entries gewijzigd OF AUDIT_KETEN_HASH gereset.
  *
- * Externe anchor (mailDagelijksAuditAnchor_) detecteert daarnaast de
- * combinatie: klant reset zowel buffer ALS AUDIT_KETEN_HASH → server-side
- * vergelijking met laatst-gemailde hash flagt dit.
+ * Append-only anchor-tab (schrijfDagelijksAuditAnchor_) detecteert daarnaast
+ * de combinatie: klant reset zowel buffer ALS AUDIT_KETEN_HASH → de in de
+ * sheet bewaarde hash-historie wijkt dan af van de live waarde.
  *
  * @returns {{ok: boolean, totaal: number, gebroken: number|null, reden: string}}
  */
@@ -913,6 +927,14 @@ function verifieerAuditChain_() {
       if (lastPipe < 0) { gebroken = i; break; }
       const entryBase = r.slice(0, lastPipe);
       const opgeslagenSuffix = r.slice(lastPipe + 3);
+      // Ronde-3 (cross-PR): NOLOCK-entries ontstaan wanneer schrijfAuditLog_
+      // de ScriptLock niet kreeg (lock-miss). Die entries hebben BEWUST geen
+      // hash en updaten AUDIT_KETEN_HASH níet. Behandel ze als legitieme
+      // keten-gap: sla de vergelijking over en laat prevHash ongewijzigd,
+      // zodat de volgende wel-gelockte entry weer correct aansluit (die werd
+      // immers gehasht over diezelfde ongewijzigde prevHash). Zonder deze
+      // branch zou élke NOLOCK-entry een vals "chain gebroken"-alarm geven.
+      if (opgeslagenSuffix === 'NOLOCK') continue;
       const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, prevHash + '|' + entryBase);
       const computed = raw.map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); }).join('');
       if (computed.slice(0, 16) !== opgeslagenSuffix) {
@@ -937,48 +959,123 @@ function verifieerAuditChain_() {
 }
 
 /**
- * Audit-vondst ronde 2: externe trust-anchor voor audit-chain.
- * Mailt de huidige AUDIT_KETEN_HASH + entry-count naar Sam-only inbox.
- * Klant kan ScriptProperties resetten, maar de gemailde hash blijft als
- * onafhankelijke referentie. Sam kan vergelijken bij latere verificatie.
- *
- * Throttle: 1× per dag (idempotent via datum-prop).
- * Ontvanger: AUDIT_ANCHOR_EMAIL ScriptProperty, fallback OWNER_STATUS_EMAIL.
+ * Verifieer de continuïteit van de _Audit_Anchor-tab: elke rij z'n
+ * 'Vorige-hash' (kolom 4) moet gelijk zijn aan de 'Keten-hash' (kolom 3)
+ * van de vorige rij. Een gebroken schakel = een rij is verwijderd of
+ * gewijzigd. Geeft {ok, totaal, gebroken, reden}.
  */
 // eslint-disable-next-line no-unused-vars
-function mailDagelijksAuditAnchor_() {
+function verifieerAuditAnchorSheet_(ssArg) {
+  try {
+    const ss = ssArg || ((typeof getSpreadsheet_ === 'function')
+      ? getSpreadsheet_() : SpreadsheetApp.getActiveSpreadsheet());
+    if (!ss) return { ok: true, totaal: 0, gebroken: null, reden: 'Geen spreadsheet' };
+    const TAB = (typeof SHEETS === 'object' && SHEETS && SHEETS.AUDIT_ANCHOR)
+      ? SHEETS.AUDIT_ANCHOR : '_Audit_Anchor';
+    const sheet = ss.getSheetByName(TAB);
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { ok: true, totaal: 0, gebroken: null, reden: 'Nog geen anchor-rijen' };
+    }
+    const rijen = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+    for (let i = 1; i < rijen.length; i++) {
+      const vorigeHash = String(rijen[i - 1][2] || '');
+      const dezePrev = String(rijen[i][3] || '');
+      if (dezePrev !== vorigeHash) {
+        return { ok: false, totaal: rijen.length, gebroken: i + 1,
+          reden: 'Anchor-schakel gebroken op rij ' + (i + 2) + ' — rij verwijderd of gewijzigd' };
+      }
+    }
+    return { ok: true, totaal: rijen.length, gebroken: null, reden: 'Anchor-keten consistent' };
+  } catch (e) {
+    return { ok: false, totaal: 0, gebroken: null, reden: 'Anchor-verifier-fout: ' + e.message };
+  }
+}
+
+/**
+ * Menu-wrapper: verifieer beide audit-ketens (ScriptProperties-buffer +
+ * _Audit_Anchor-sheet) en toon het resultaat aan de gebruiker. Wired in
+ * Menu.gs onder Controle & Export (ronde-3: verifier was eerder dead code).
+ */
+// eslint-disable-next-line no-unused-vars
+function toonAuditKetenVerificatie() {
+  const ui = SpreadsheetApp.getUi();
+  const buffer = verifieerAuditChain_();
+  const anchor = verifieerAuditAnchorSheet_();
+  const regel = function(naam, r) {
+    return (r.ok ? '✓ ' : '✗ ') + naam + ' — ' + r.reden
+      + ' (' + r.totaal + ' entries' + (r.gebroken != null ? ', breuk op ' + r.gebroken : '') + ')';
+  };
+  const allesOk = buffer.ok && anchor.ok;
+  ui.alert(
+    'Audit-keten verificatie',
+    (allesOk ? '✓ Beide ketens consistent — geen manipulatie gedetecteerd.'
+             : '✗ Mogelijke manipulatie gedetecteerd — zie hieronder.') + '\n\n' +
+    regel('Buffer-keten (recente acties)', buffer) + '\n' +
+    regel('Anchor-keten (dagelijkse historie)', anchor) + '\n\n' +
+    (allesOk ? '' : 'Mogelijke oorzaken: herinstallatie, herstel uit back-up, of '
+      + 'handmatige wijziging. Neem bij twijfel contact op met support@boekhoudbaar.nl.'),
+    ui.ButtonSet.OK
+  );
+}
+
+/**
+ * Audit-vondst ronde 2/3: durable, zelf-verifieerbare trust-anchor.
+ *
+ * Ronde-3 verificatie (4 agents) vond dat de vorige mail-naar-Sam aanpak
+ * vier problemen had:
+ *   - privacy: de mail verliet het klant-account naar Sam's Gmail, in
+ *     directe tegenspraak met "jouw data blijft in jouw Drive";
+ *   - schaal: N klanten = N mails/dag in Sam's inbox;
+ *   - abandon: zodra Sam stopt mailt elke instance naar een dode inbox,
+ *     send faalt stil, throttle-datum werd tóch gezet → feature sterft
+ *     ongemerkt;
+ *   - bewaarplicht (art. 52 AWR): de ScriptProperties-ring-buffer roteert
+ *     na 100 entries → geen duurzame 7-jaars opslag.
+ *
+ * Nu: schrijf de dagelijkse keten-hash append-only naar een verborgen tab
+ * in de KLANT z'n eigen sheet. Voordelen:
+ *   - blijft in klant's Drive → geen privacy-tegenspraak;
+ *   - zelf-verifieerbaar door klant/accountant/Belastingdienst zonder Sam;
+ *   - overleeft product-abandon (geen externe afhankelijkheid);
+ *   - duurzame opslag voor de 7-jaars bewaarplicht.
+ *
+ * Tamper-model gelijk aan AUDIT_LOG-sheet: de klant is Editor en kan de
+ * tab editten, maar elke wijziging breekt de hash-chain bij verificatie
+ * (verifieerAuditChain_ / handmatige recompute).
+ *
+ * Throttle: 1×/dag. De throttle-datum wordt PAS gezet nadat de append is
+ * geslaagd (appendRow vóór setProperty, beide in dezelfde try) → geen
+ * stille-dood: faalt de append, dan wordt morgen opnieuw geprobeerd.
+ */
+// eslint-disable-next-line no-unused-vars
+function schrijfDagelijksAuditAnchor_() {
   try {
     const props = PropertiesService.getScriptProperties();
     const vandaag = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd');
-    const laatste = props.getProperty('AUDIT_ANCHOR_LAATSTE_MAIL') || '';
-    if (laatste === vandaag) return;  // throttle 1×/dag
+    if (props.getProperty('AUDIT_ANCHOR_LAATSTE') === vandaag) return;  // throttle 1×/dag
 
-    const ontvanger = props.getProperty('AUDIT_ANCHOR_EMAIL')
-      || props.getProperty('OWNER_STATUS_EMAIL') || '';
-    if (!ontvanger || !/@/.test(ontvanger)) return;
+    const ss = (typeof getSpreadsheet_ === 'function')
+      ? getSpreadsheet_() : SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return;
+    const TAB = (typeof SHEETS === 'object' && SHEETS && SHEETS.AUDIT_ANCHOR)
+      ? SHEETS.AUDIT_ANCHOR : '_Audit_Anchor';
+    let sheet = ss.getSheetByName(TAB);
+    if (!sheet) {
+      sheet = ss.insertSheet(TAB);
+      sheet.appendRow(['Datum', 'Entry-count', 'Keten-hash', 'Vorige-hash']);
+      sheet.setFrozenRows(1);
+      sheet.setTabColor('#616161'); // grijs — administratief
+      try { sheet.hideSheet(); } catch (_) {}
+    }
 
-    const hash = props.getProperty('AUDIT_KETEN_HASH') || '(leeg)';
+    const hash = String(props.getProperty('AUDIT_KETEN_HASH') || '(leeg)');
     const buffer = props.getProperty('auditLogBuffer') || '';
     const entryCount = buffer ? buffer.split('\n').filter(Boolean).length : 0;
-    let tenant = '';
-    try {
-      const ssId = SpreadsheetApp.getActiveSpreadsheet().getId();
-      tenant = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, ssId)
-        .map(function(b) { return ((b < 0 ? b + 256 : b)).toString(16).padStart(2, '0'); })
-        .join('').slice(0, 8);
-    } catch (_) { tenant = 'na'; }
+    const last = sheet.getLastRow();
+    const prevHash = last > 1 ? String(sheet.getRange(last, 3).getValue() || '') : '';
 
-    const onderwerp = 'Audit-anchor ' + tenant + ' — ' + vandaag;
-    const body =
-      'Dagelijkse audit-chain trust-anchor (niet klant-zichtbaar).\n\n' +
-      'Datum:       ' + vandaag + '\n' +
-      'Tenant:      ' + tenant + '\n' +
-      'Entry-count: ' + entryCount + '\n' +
-      'Hash:        ' + hash + '\n\n' +
-      'Bij Belastingdienst-controle: vergelijk deze hash met huidige\n' +
-      'AUDIT_KETEN_HASH ScriptProperty. Mismatch = klant heeft chain gereset.';
-    try { MailApp.sendEmail(ontvanger, onderwerp, body); } catch (_) {}
-    props.setProperty('AUDIT_ANCHOR_LAATSTE_MAIL', vandaag);
+    sheet.appendRow([vandaag, entryCount, hash, prevHash]);
+    props.setProperty('AUDIT_ANCHOR_LAATSTE', vandaag);
   } catch (_) { /* anchor mag nooit dagelijkseTaken breken */ }
 }
 

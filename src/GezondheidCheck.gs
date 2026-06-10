@@ -172,6 +172,30 @@ function diagnoseInstallatie() {
     }
   });
 
+  // ── 9. ScriptProperties-grootte (9KB/key + 500KB totaal) ──
+  // Ronde-3 pre-flight: de 9KB-per-key-limiet brak eerder GESLOTEN_PERIODES_
+  // HISTORIE stil. Waarschuw vóór de limiet i.p.v. na de silent throw.
+  check('ScriptProperties-grootte', function() {
+    const alle = PropertiesService.getScriptProperties().getProperties();
+    let totaal = 0;
+    let grootsteKey = '';
+    let grootsteBytes = 0;
+    Object.keys(alle).forEach(function(k) {
+      const bytes = k.length + String(alle[k] || '').length; // ~1 byte/char (ASCII-benadering)
+      totaal += bytes;
+      if (bytes > grootsteBytes) { grootsteBytes = bytes; grootsteKey = k; }
+    });
+    if (grootsteBytes > 8500) {
+      return { ok: false, melding: 'key "' + grootsteKey + '" is ' + grootsteBytes
+        + ' bytes — nadert 9KB-limiet (silent data-loss-risico)' };
+    }
+    if (totaal > 460000) {
+      return { ok: false, melding: 'totaal ' + totaal + ' bytes — nadert 500KB-limiet' };
+    }
+    return { detail: Object.keys(alle).length + ' keys, ' + totaal + ' bytes, grootste '
+      + grootsteBytes + 'B (' + grootsteKey + ')' };
+  });
+
   // ── Resultaat ──────────────────────────────────────────
   const fouten = regels.filter(function(r) { return r.indexOf('✗') === 0; });
   const koptekst = fouten.length === 0

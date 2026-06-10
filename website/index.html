@@ -16,8 +16,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0D1B4E">
 <meta name="color-scheme" content="light">
-<title>Boekhoudbaar — ZZP-boekhouding in 15 minuten per maand · eenmalig €49</title>
-<meta name="description" content="Boekhouding in 15 min/maand. Facturen, BTW-aangifte en overzicht in jouw Google Sheet. Eenmalig €49, geen abonnement, jouw data blijft van jou.">
+<title>Boekhoudprogramma ZZP zonder abonnement — eenmalig €49 | Boekhoudbaar</title>
+<meta name="description" content="Goedkoop boekhoudprogramma voor ZZP en eenmanszaak. Facturen, BTW-aangifte en overzicht in je Google Sheet. Eenmalig €49, geen abonnement.">
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
 <meta name="author" content="Sam Hoven">
 <meta name="keywords" content="boekhouding zzp, boekhoudprogramma, btw aangifte, factuur maken, google sheets boekhouding, boekhouden zelf doen, eenmalig betalen boekhoudpakket, zzp boekhouding nederland, boekhouden voor zzpers, btw aangifte nederland">
@@ -54,8 +54,8 @@
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
 
 <!-- Open Graph -->
-<meta property="og:title" content="Boekhoudbaar — ZZP-boekhouding in Google Sheets">
-<meta property="og:description" content="Eenmalig €49. Geen abonnement. Jouw data in jouw Drive.">
+<meta property="og:title" content="Boekhoudprogramma ZZP zonder abonnement — eenmalig €49">
+<meta property="og:description" content="Goedkoop boekhoudprogramma voor ZZP en eenmanszaak. Eenmalig €49. Geen abonnement. Jouw data in jouw Drive.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.boekhoudbaar.nl/">
 <meta property="og:locale" content="nl_NL">
@@ -70,8 +70,8 @@
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Boekhoudbaar — ZZP-boekhouding in Google Sheets">
-<meta name="twitter:description" content="Eenmalig €49. Geen abonnement. Jouw data in jouw Drive.">
+<meta name="twitter:title" content="Boekhoudprogramma ZZP zonder abonnement — eenmalig €49">
+<meta name="twitter:description" content="Goedkoop boekhoudprogramma voor ZZP en eenmanszaak. Eenmalig €49. Geen abonnement. Jouw data in jouw Drive.">
 <meta name="twitter:image" content="https://www.boekhoudbaar.nl/og-image.svg">
 <meta name="twitter:image:alt" content="Boekhoudbaar — ZZP-boekhouding in Google Sheets, eenmalig €49">
 
@@ -637,6 +637,22 @@
   /* ── SECTIONS ── */
   section { padding: 96px 24px; }
   .container { max-width: 1100px; margin: 0 auto; }
+
+  /* ── GIDS-HUB (SEO internal-linking naar koop-intent gidsen) ── */
+  .gids-hub { background: var(--bg, #F7F9FC); }
+  .gids-hub-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px; margin-top: 24px;
+  }
+  .gids-hub-kaart {
+    display: block; background: #fff; border: 1px solid var(--rand, #E5EAF2);
+    border-radius: 12px; padding: 20px 22px; text-decoration: none;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .gids-hub-kaart:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(13,27,78,.10); }
+  .gids-hub-kaart h3 { font-size: 16px; color: var(--blauw, #0D1B4E); margin-bottom: 6px; }
+  .gids-hub-kaart p { font-size: 13.5px; color: var(--grijs, #5F6B7A); margin: 0; line-height: 1.5; }
+  .gids-hub-alle { margin-top: 22px; font-weight: 600; }
   .section-label {
     font-size: 12px; font-weight: 700; letter-spacing: 2px;
     text-transform: uppercase; color: var(--accent);
@@ -1490,6 +1506,7 @@
       <img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52">
     </a>
     <ul class="nav-links" id="nav-menu" role="list">
+      <li><a href="/starters/">Voor starters</a></li>
       <li><a href="/functies/">Functies</a></li>
       <li><a href="/vergelijking/">Vergelijking</a></li>
       <li><a href="/gids/">Gidsen</a></li>
@@ -1517,7 +1534,7 @@
         <span class="hero-badge-dot" aria-hidden="true"></span>
         Eenmalig €49 · geen abonnement · jouw Drive
       </div>
-      <h1 id="hero-heading"><span class="hero-brand">Boekhoudbaar</span>Boekhouding zonder abonnement, in jouw Google Drive.</h1>
+      <h1 id="hero-heading"><span class="hero-brand">Boekhoudbaar</span>Boekhoudprogramma voor ZZP &amp; eenmanszaak — zonder abonnement.</h1>
       <p class="hero-sub">
         Voor ZZP'ers die klaar zijn met €30 per maand voor software die ze nooit echt bezitten. Facturen, BTW-aangifte en dashboard — in een Google Sheet die voor je werkt. Na vijf minuten setup ben je klaar. <a href="/tools/besparing/" class="hero-sub-link">Reken eerst je besparing uit →</a>
       </p>
@@ -1719,6 +1736,42 @@
   </div>
 </section>
 
+<!-- ── GIDS-HUB — internal linking naar koop-intent gidsen (SEO) ── -->
+<section id="gidsen" class="gids-hub" aria-labelledby="gidsen-heading">
+  <div class="container">
+    <p class="section-label">Gratis kennisbank</p>
+    <h2 id="gidsen-heading">Boekhouding voor ZZP &amp; eenmanszaak — uitgelegd</h2>
+    <p>Geen account nodig. 35+ gidsen over BTW-aangifte, aftrekposten, factureren en starten als ondernemer.</p>
+    <div class="gids-hub-grid">
+      <a class="gids-hub-kaart" href="/gids/btw-aangifte-zzp/">
+        <h3>BTW-aangifte voor ZZP</h3>
+        <p>Stap voor stap je eerste en volgende kwartaalaangifte, met voorbeeld.</p>
+      </a>
+      <a class="gids-hub-kaart" href="/gids/zelf-boekhouding-doen-zzp/">
+        <h3>Boekhouding zelf doen</h3>
+        <p>Zonder boekhouder, zonder duur pakket — wat je écht nodig hebt.</p>
+      </a>
+      <a class="gids-hub-kaart" href="/gids/moneybird-alternatief-2026/">
+        <h3>Moneybird-alternatief</h3>
+        <p>Waarom een eenmalig Google Sheet vaak goedkoper is dan €30/maand.</p>
+      </a>
+      <a class="gids-hub-kaart" href="/gids/aftrekbare-kosten-zzp/">
+        <h3>Aftrekbare kosten ZZP</h3>
+        <p>Welke kosten je mag aftrekken — en welke fouten geld kosten.</p>
+      </a>
+      <a class="gids-hub-kaart" href="/gids/zelfstandigenaftrek-2026/">
+        <h3>Zelfstandigenaftrek 2026</h3>
+        <p>Hoeveel je mag aftrekken, het urencriterium en de startersaftrek.</p>
+      </a>
+      <a class="gids-hub-kaart" href="/gids/factuur-opstellen-zzp/">
+        <h3>Factuur opstellen</h3>
+        <p>Verplichte velden, factuurnummers en btw correct op je factuur.</p>
+      </a>
+    </div>
+    <p class="gids-hub-alle"><a href="/gids/">Bekijk alle 35+ gidsen →</a></p>
+  </div>
+</section>
+
 <!-- ── FAQ — top 5 inline, rest op /faq/ ── -->
 <section id="faq">
   <div class="container">
@@ -1748,7 +1801,7 @@
 
       <details id="migratie">
         <summary>Kan ik vanuit Moneybird / Exact / e-Boekhouden overstappen?</summary>
-        <p>Ja, via CSV-import. De meeste tools laten je facturen en bankafschriften als CSV exporteren — die sleep je in Boekhoudbaar en de boekingen worden automatisch gemaakt. Voor specifieke stappen per concurrent: <a href="/gids/moneybird-alternatief-2026.html">Moneybird</a>, <a href="/gids/e-boekhouden-alternatief.html">e-Boekhouden</a>, <a href="/gids/exact-online-alternatief.html">Exact Online</a>.</p>
+        <p>Ja, via CSV-import. De meeste tools laten je facturen en bankafschriften als CSV exporteren — die sleep je in Boekhoudbaar en de boekingen worden automatisch gemaakt. Voor specifieke stappen per concurrent: <a href="/gids/moneybird-alternatief-2026/">Moneybird</a>, <a href="/gids/e-boekhouden-vs-moneybird-vs-boekhoudbaar/">e-Boekhouden</a>, <a href="/gids/exact-online-stoppen-besparing/">Exact Online</a>.</p>
         <p>Boekhoudbaar exporteert óók weg: <strong>CSV</strong> per sheet, <strong>XAF</strong> voor je accountant (RGS 3.5), <strong>JSONL</strong>-snapshot voor lange-termijn-archief. Geen vendor lock-in. Zie ook onze <a href="/continuiteit/">continuïteits-belofte</a>.</p>
       </details>
 
