@@ -120,37 +120,51 @@ describe('Fix #3 — verifieerAuditChain_ functie', () => {
   });
 });
 
-describe('Fix #4 — mailDagelijksAuditAnchor_ externe trust-anchor', () => {
-  test('Functie bestaat', () => {
-    expect(eng).toMatch(/function mailDagelijksAuditAnchor_/);
+describe('Fix #4 — schrijfDagelijksAuditAnchor_ append-only sheet-tab (R3-rework)', () => {
+  // Ronde-3: de mail-naar-Sam aanpak is vervangen door een append-only tab in
+  // de klant z'n eigen sheet (privacy, schaal, abandon, 7-jaars bewaarplicht).
+  test('Functie bestaat (sheet-tab i.p.v. mail)', () => {
+    expect(eng).toMatch(/function schrijfDagelijksAuditAnchor_/);
   });
 
-  test('Throttle: max 1× per dag (AUDIT_ANCHOR_LAATSTE_MAIL property)', () => {
-    expect(eng).toMatch(/AUDIT_ANCHOR_LAATSTE_MAIL/);
-    expect(eng).toMatch(/if \(laatste === vandaag\) return/);
+  test('Oude mail-functie is verwijderd', () => {
+    expect(eng).not.toMatch(/function mailDagelijksAuditAnchor_/);
+    expect(eng).not.toMatch(/_AUDIT_ANCHOR_SAM_FALLBACK/);
   });
 
-  test('Ontvanger: AUDIT_ANCHOR_EMAIL met fallback OWNER_STATUS_EMAIL', () => {
-    expect(eng).toMatch(/AUDIT_ANCHOR_EMAIL[\s\S]*?OWNER_STATUS_EMAIL/);
+  test('Throttle: max 1× per dag (AUDIT_ANCHOR_LAATSTE property)', () => {
+    expect(eng).toMatch(/AUDIT_ANCHOR_LAATSTE['"]?\)/);
+    expect(eng).toMatch(/=== vandaag\) return/);
   });
 
-  test('Mail-body bevat hash + entry-count + tenant + datum', () => {
-    const start = eng.indexOf('function mailDagelijksAuditAnchor_');
+  test('Schrijft naar append-only tab (geen MailApp meer in deze functie)', () => {
+    const start = eng.indexOf('function schrijfDagelijksAuditAnchor_');
     const eind = eng.indexOf('\nfunction ', start + 1);
     const blok = eng.slice(start, eind);
-    expect(blok).toMatch(/Entry-count:/);
-    expect(blok).toMatch(/Hash:/);
-    expect(blok).toMatch(/Tenant:/);
-    expect(blok).toMatch(/Datum:/);
+    expect(blok).toMatch(/insertSheet/);
+    expect(blok).toMatch(/appendRow/);
+    expect(blok).not.toMatch(/MailApp\.sendEmail/);
   });
 
-  test('Body legt verificatie-procedure uit voor Belastingdienst-controle', () => {
-    expect(eng).toMatch(/Belastingdienst-controle/);
-    expect(eng).toMatch(/Mismatch = klant heeft chain gereset/);
+  test('Throttle-datum wordt PAS na geslaagde append gezet (geen stille dood)', () => {
+    const start = eng.indexOf('function schrijfDagelijksAuditAnchor_');
+    const eind = eng.indexOf('\nfunction ', start + 1);
+    const blok = eng.slice(start, eind);
+    // appendRow staat vóór de setProperty van de throttle-datum
+    expect(blok.indexOf('appendRow')).toBeLessThan(blok.lastIndexOf('AUDIT_ANCHOR_LAATSTE'));
+  });
+
+  test('Anchor-rij bevat datum + entry-count + keten-hash + vorige-hash', () => {
+    const start = eng.indexOf('function schrijfDagelijksAuditAnchor_');
+    const eind = eng.indexOf('\nfunction ', start + 1);
+    const blok = eng.slice(start, eind);
+    expect(blok).toMatch(/Entry-count/);
+    expect(blok).toMatch(/Keten-hash/);
+    expect(blok).toMatch(/Vorige-hash/);
   });
 
   test('Fail-safe: throwt nooit (anchor mag dagelijkseTaken niet breken)', () => {
-    const start = eng.indexOf('function mailDagelijksAuditAnchor_');
+    const start = eng.indexOf('function schrijfDagelijksAuditAnchor_');
     const eind = eng.indexOf('\nfunction ', start + 1);
     const blok = eng.slice(start, eind);
     expect(blok).toMatch(/} catch \(_\) \{ \/\* anchor mag nooit/);
@@ -158,7 +172,8 @@ describe('Fix #4 — mailDagelijksAuditAnchor_ externe trust-anchor', () => {
 
   test('Wiring: _runTaak_("auditAnchor", ...) in dagelijkseTaken', () => {
     expect(trig).toMatch(/_runTaak_\(['"]auditAnchor['"]/);
-    expect(trig).toMatch(/mailDagelijksAuditAnchor_/);
+    expect(trig).toMatch(/schrijfDagelijksAuditAnchor_/);
+    expect(trig).not.toMatch(/mailDagelijksAuditAnchor_/);
   });
 
   test('auditAnchor staat vóór formeelBewijs (anchor eerst, dan verificatie)', () => {

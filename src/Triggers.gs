@@ -326,6 +326,44 @@ function _laatsteAuditHash_(auditSheet) {
 }
 
 /**
+ * Logt een business-event (geen cell-edit) DUURZAAM naar het AUDIT_LOG-sheet,
+ * in hetzelfde 7-koloms formaat + ketenhash als de onEdit-trigger. Ronde-3
+ * (accountant): schrijfAuditLog_ schrijft alleen naar de roterende
+ * ScriptProperties-buffer (max 100 entries) → legaal-significante events
+ * zoals PERIODE_ONTGRENDELD overleefden de 7-jaars bewaarplicht (art. 52
+ * AWR) niet. Deze helper geeft ze wél duurzame opslag, herleidbaar voor een
+ * Belastingdienst-controleur. Faalt nooit hard.
+ *
+ * @param {string} actie   bv. 'PERIODE_ONTGRENDELD'
+ * @param {string} detail  vrije tekst (max 500 chars bewaard)
+ */
+// eslint-disable-next-line no-unused-vars
+function logBusinessEventNaarAuditSheet_(actie, detail) {
+  try {
+    var ss = getSpreadsheet_();
+    if (!ss) return;
+    var auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+    if (!auditSheet) return;
+    var user = '';
+    try { user = Session.getActiveUser().getEmail() || 'systeem'; } catch (_) { user = 'systeem'; }
+    var rij = [
+      new Date(),
+      user,
+      'Systeem-actie',
+      '—',
+      '',
+      String(detail || '').slice(0, 500),
+      String(actie || 'BUSINESS_EVENT'),
+    ];
+    try { rij.push(_auditKetenHash_(_laatsteAuditHash_(auditSheet), rij)); } catch (_) {}
+    auditSheet.appendRow(rij);
+    if (typeof _trimAuditLog_ === 'function') { try { _trimAuditLog_(auditSheet); } catch (_) {} }
+  } catch (e) {
+    try { Logger.log('logBusinessEventNaarAuditSheet_ faalde: ' + e.message); } catch (_) {}
+  }
+}
+
+/**
  * Verifieert de hash-keten top-down. Herberekent elke schakel en vergelijkt
  * met de opgeslagen hash in kolom 8. Tolerant voor:
  *   • legacy-rijen van vóór cycle 69 (lege kolom 8) — niet te verifiëren,
@@ -1749,11 +1787,12 @@ function dagelijkseTaken() {
   // Schrijft per run één samenvatting naar _SYSTEM_LOG; bij schending komt
   // er een WARN-entry per axioma met tegenvoorbeeld. Faalt nooit hard — het
   // bewijs is observatie, niet enforcement.
-  // Audit-vondst ronde 2: dagelijkse trust-anchor voor audit-chain.
-  // Mailt huidige AUDIT_KETEN_HASH naar Sam-only inbox als externe
-  // referentie tegen klant-side reset. 1× per dag throttled.
+  // Audit-vondst ronde 2/3: dagelijkse trust-anchor voor audit-chain.
+  // Schrijft huidige AUDIT_KETEN_HASH append-only naar verborgen tab in de
+  // klant z'n eigen sheet (zelf-verifieerbaar, geen privacy-tegenspraak,
+  // overleeft product-abandon). 1× per dag throttled.
   _runTaak_('auditAnchor', function() {
-    if (typeof mailDagelijksAuditAnchor_ === 'function') mailDagelijksAuditAnchor_();
+    if (typeof schrijfDagelijksAuditAnchor_ === 'function') schrijfDagelijksAuditAnchor_();
   });
   _runTaak_('formeelBewijs', function() {
     if (typeof bewijsAlleInvarianten_ !== 'function') return;
