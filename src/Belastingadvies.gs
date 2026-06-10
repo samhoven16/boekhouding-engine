@@ -1320,6 +1320,12 @@ function _berekenBelastingadviesRaw_(ss) {
     taxVersie: meta ? meta.versie : null,
     taxBevestigd: meta ? meta.bevestigd : null,
     taxBron: meta ? meta.bron : null,
+    // Audit ronde 2 (documentatie): TARIEF_VEROUDERD flag voor UI-banner
+    BELASTING_meta: {
+      tariefVerouderd: !!BELASTING.TARIEF_VEROUDERD,
+      tariefBron: BELASTING.TARIEF_BRON || null,
+      tariefFallbackJaar: BELASTING.TARIEF_FALLBACK_JAAR || null,
+    },
   };
 }
 
@@ -1362,6 +1368,22 @@ function genereerBelastingadvies() {
     .setFontSize(10).setFontStyle('italic').setHorizontalAlignment('center')
     .setWrap(true);
   sheet.setRowHeight(3, 30);
+
+  // Audit ronde 2 (documentatie): TARIEF_VEROUDERD-banner. Bij placeholder
+  // (2027 vóór Belastingplan) of fallback (Sam stopt onderhouden) zien klant
+  // dat tarieven niet gevalideerd zijn. Voorkomt klant-vraag "Waarom rekent
+  // het programma met 2026-tarieven in 2027?" in januari-massa-event.
+  if (advies && advies.BELASTING_meta && advies.BELASTING_meta.tariefVerouderd) {
+    const bronTekst = advies.BELASTING_meta.tariefBron || 'oudere tarief-tabel';
+    sheet.getRange(4, 1, 1, 3).merge()
+      .setValue('⚠️ Tarieven gebruikt voor ' + jaar + ' zijn ' + bronTekst +
+                ' — controleer voor indiening tegen Belastingdienst.nl. ' +
+                'Updates komen bij volgende Boekhoudbaar-versie of via je accountant.')
+      .setBackground('#FEE2E2').setFontColor('#7F1D1D')
+      .setFontSize(10).setFontWeight('bold').setHorizontalAlignment('center')
+      .setWrap(true);
+    sheet.setRowHeight(4, 36);
+  }
 
   // Empty-state: nog geen omzet → tonen wat te doen, geen "lege" rijen advies.
   // Detectie via winstVoorAftrek + omzet — als beide 0 is er nog niets te
