@@ -21,6 +21,30 @@ describe('Belastingadvies helpers', () => {
     B = ctx.getBelasting_();
   });
 
+  describe('KIA-staffel 2026 — officiële waarden (belastingdienst.nl, 2026-06-10)', () => {
+    // Absolute pinning náást de config-relatieve tests hieronder: een
+    // onbedoelde config-wijziging mag niet stilletjes passeren omdat de
+    // relatieve tests meebewegen.
+    test('config bevat de definitieve 2026-staffel', () => {
+      expect(B.KIA_MIN).toBe(2901);
+      expect(B.KIA_VAST_VAN).toBe(71683);
+      expect(B.KIA_VAST_BEDRAG).toBe(20072);
+      expect(B.KIA_AFBOUW_START).toBe(132747);
+      expect(B.KIA_AFBOUW_PCT).toBe(0.0756);
+      expect(B.KIA_MAX).toBe(398236);
+    });
+
+    test('staffel-randen rekenen conform de officiële tabel', () => {
+      expect(ctx.berekenKiaAftrek_(2900, B)).toBe(0);
+      expect(ctx.berekenKiaAftrek_(2901, B)).toBeCloseTo(812.28, 2);   // 28%
+      expect(ctx.berekenKiaAftrek_(71684, B)).toBeCloseTo(20072, 2);   // vast
+      expect(ctx.berekenKiaAftrek_(132746, B)).toBeCloseTo(20072, 2);  // vast
+      // afbouw: €20.072 − 7,56% × deel boven €132.747
+      expect(ctx.berekenKiaAftrek_(200000, B)).toBeCloseTo(20072 - 0.0756 * (200000 - 132747), 2);
+      expect(ctx.berekenKiaAftrek_(398237, B)).toBe(0);                // boven max
+    });
+  });
+
   describe('berekenKiaAftrek_ (4-zone KIA-tabel)', () => {
     test('investering 0 → geen KIA', () => {
       expect(ctx.berekenKiaAftrek_(0, B)).toBe(0);

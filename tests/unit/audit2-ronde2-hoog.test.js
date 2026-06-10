@@ -189,9 +189,9 @@ describe('Fix #4 — schrijfDagelijksAuditAnchor_ append-only sheet-tab (R3-rewo
 });
 
 describe('Fix #5 — BelastingOptimizer.gs doc-comment bijgewerkt', () => {
-  test('Doc-comment toont nu €19.769 + €130.744 (config-aligned)', () => {
-    expect(opt).toMatch(/€19\.769/);
-    expect(opt).toMatch(/€130\.744/);
+  test('Doc-comment toont de definitieve 2026-staffel (config-aligned)', () => {
+    expect(opt).toMatch(/€20\.072/);
+    expect(opt).toMatch(/€132\.74[67]/);
   });
 
   test('Oude waarden €19.535 + €129.194 zijn weg uit code, behalve in audit-context', () => {

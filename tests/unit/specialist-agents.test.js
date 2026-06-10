@@ -86,10 +86,12 @@ describe('tax-compliance: kent de 10 axioma\'s + KIA-staffel', () => {
     });
   });
   test('Bevat KIA-staffel-grenzen die overeenkomen met BelastingOptimizer.gs', () => {
+    // Definitieve 2026-staffel (geverifieerd belastingdienst.nl 2026-06-10)
     expect(bron).toMatch(/2\.901/);
-    expect(bron).toMatch(/69\.765/);
-    expect(bron).toMatch(/19\.535/);
-    expect(bron).toMatch(/129\.194/);
+    expect(bron).toMatch(/71\.683/);
+    expect(bron).toMatch(/20\.072/);
+    expect(bron).toMatch(/132\.746/);
+    expect(bron).toMatch(/398\.236/);
   });
   test('Bevat verdict-format: AKKOORD / ZORGEN / BLOKKEER', () => {
     expect(bron).toMatch(/AKKOORD/);

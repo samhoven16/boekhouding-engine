@@ -62,7 +62,7 @@
 | H12 | Accountantspakket bevat geen XAF; LEESMIJ belooft importeerbaarheid die de CSV's niet bieden | `ExportAccountant.gs:64-91` | ✅ gefixt (PR #275) |
 | H13 | Twee factuurnummer-formaten naast elkaar (`F000001` hoofdpad vs `F1` legacy-pad) — art. 35 Wet OB | `Triggers.gs:628` vs `:1300` | ✅ gefixt (PR #275) |
 | H14 | Audit-log = roterende buffer van 100 regels; 7-jaar belofte niet waargemaakt (er is wél een anchor-tab, geen event-log) | `BoekingEngine.gs:868-873` | 📋 append-only event-log naar sheet |
-| H15 | KIA-staffelwaarden (19.769/130.744) wijken af van geverifieerde set (19.535/129.194); officiële bron gaf 403 | `Belastingadvies.gs:304-306` | ⚠️ verifieer Belastingdienst.nl vóór go-live; NIET gegokt aangepast |
+| H15 | KIA-staffelwaarden weken af van de definitieve 2026-tabel | `Belastingadvies.gs:300-306` | ✅ gefixt — Sam verifieerde belastingdienst.nl (2026-06-10): min 2.901 / 28% t/m 71.683 / vast 20.072 t/m 132.746 / afbouw 7,56% boven 132.747 / max 398.236 |
 | H16 | MIA als bevestigde aftrek meegerekend zonder RVO-meldings-voorwaarde → naheffingsrisico | `Belastingadvies.gs:1151-1161` | 📋 voorwaardelijke TIP maken |
 | H17 | Pro-rata-aftrek wordt silently toegepast zonder klant-keuze | `BTW.gs:289-334` | 📋 expliciete bevestiging |
 | H18 | Logo verbruikt tot 200KB van 500KB properties-budget | `Branding.gs:99-117` | 📋 naar Drive-bestand |
