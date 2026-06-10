@@ -26,11 +26,15 @@ describe('B2 — r5a-invariant telt r3a_btw NIET mee (conform axioma I₅)', () 
 describe('B4 — dunning-cleanup leest factuurnummer-kolom [1], niet ID-kolom [0]', () => {
   const triggers = lees('src/Triggers.gs');
   test('cleanupHerinneringsStap bouwt actieve-set uit data[i][1]', () => {
-    const blok = triggers.slice(
-      triggers.indexOf("_runTaak_('cleanupHerinneringsStap'"),
-      triggers.indexOf("_runTaak_('cleanupEmailIdem'"));
-    expect(blok).toMatch(/String\(data\[i\]\[1\] \|\| ''\)/);
-    expect(blok).not.toMatch(/const fnr = String\(data\[i\]\[0\]/);
+    // Anchor op de variabele 'actieveFacturen' die uniek is voor deze taak,
+    // i.p.v. een volgorde-afhankelijke slice (de cleanup-taken zijn nacht-PR
+    // gereorderd waardoor cleanupEmailIdem nu voor cleanupHerinneringsStap staat).
+    const start = triggers.indexOf("_runTaak_('cleanupHerinneringsStap'");
+    expect(start).toBeGreaterThan(-1);
+    // Zoek einde van deze taak: eerste '});' na 'actieveFacturen[fnr]'
+    const blokRuw = triggers.slice(start, start + 2000);
+    expect(blokRuw).toMatch(/String\(data\[i\]\[1\] \|\| ''\)/);
+    expect(blokRuw).not.toMatch(/const fnr = String\(data\[i\]\[0\]/);
   });
 });
 

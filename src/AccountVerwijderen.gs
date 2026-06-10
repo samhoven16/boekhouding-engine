@@ -69,7 +69,8 @@ function toonAccountVerwijderenDialog() {
 
     <div class="info">
       <b>Wat blijft staan (wettelijk verplicht):</b><br>
-      • Factuurnummers en bedragen — 7 jaar conform AWR art. 52<br>
+      • Transactiegegevens (datum, tegenpartij, omschrijving, bedrag, BTW-rubriek) en factuurnummers — 7 jaar conform AWR art. 52 (10 jaar voor onroerend-goed-administratie, Wet OB art. 35).<br>
+      • Je e-mail wordt vervangen door een hashed-pseudoniem; je fiscale gegevens blijven aan je factuurnummers gekoppeld tot de bewaartermijn verloopt (AVG art. 17 lid 3b: uitzondering bij wettelijke plicht).<br>
       • Je eigen Google-spreadsheet — die staat in <i>jouw</i> Drive, daar hebben wij geen toegang toe. Verwijder die zelf.
     </div>
 

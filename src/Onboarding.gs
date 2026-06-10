@@ -424,7 +424,7 @@ function _toonKritiekeUpdateModal_(huidigeVersie, nieuweVersie, toelichting, ins
       </div>
       <p>${toelichting || 'Deze versie bevat een correctie die invloed kan hebben op je fiscale aangifte of administratie.'}</p>
       <div class="warn">
-        <b>Waarom dit serieus is:</b> kritieke updates lossen fouten op in BTW-berekening, jaarafsluiting of compliance. Tot je geüpdatet bent, kunnen jouw berekeningen afwijken van de actuele wetgeving.
+        <b>Waarom dit serieus is:</b> kritieke updates lossen fouten op in BTW-berekening, jaarafsluiting of compliance. We streven ernaar deze binnen redelijke termijn beschikbaar te stellen. Verantwoordelijkheid voor de juistheid van je aangifte blijft bij jou als ondernemer (AWR art. 8); update tijdig om afwijkingen te voorkomen.
       </div>
       <p>De update-instructies (≈ 5 minuten werk) vind je op:</p>
       <p><a class="btn" href="${instructiesUrl}" target="_blank">Open update-instructies</a>
@@ -466,6 +466,30 @@ function _toonNormaleUpdateToast_(huidigeVersie, nieuweVersie) {
 function _isVersieKritiek_(huidigeVersie, kritiekVoor) {
   if (!Array.isArray(kritiekVoor) || kritiekVoor.length === 0) return false;
   return kritiekVoor.indexOf(String(huidigeVersie)) >= 0;
+}
+
+/**
+ * Cleanup: `kritiekeUpdateModalTs_X.Y.Z` keys groeien per kritieke release.
+ * Bij 50 releases over 5 jaar = 50 stale UserProperties-keys per gebruiker.
+ * Verwijder keys ouder dan 30 dagen (ruim voor 24u-throttle-window).
+ * Wordt aangeroepen door dagelijkseTaken cleanup-fase.
+ */
+function cleanupKritiekeUpdateModalKeys_() {
+  const userProps = PropertiesService.getUserProperties();
+  const alle = userProps.getProperties();
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  let verwijderd = 0;
+  Object.keys(alle).forEach(function(k) {
+    if (k.indexOf('kritiekeUpdateModalTs_') !== 0) return;
+    const ts = parseInt(alle[k] || '0');
+    if (isFinite(ts) && ts > 0 && ts < cutoff) {
+      try { userProps.deleteProperty(k); verwijderd++; } catch (_) {}
+    }
+  });
+  if (verwijderd > 0) {
+    try { safeAuditLog_('cleanupKritiekeUpdateModalKeys',
+      'Verwijderd ' + verwijderd + ' verlopen modal-throttle-keys'); } catch (_) {}
+  }
 }
 
 /**

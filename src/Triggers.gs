@@ -1843,6 +1843,45 @@ function dagelijkseTaken() {
       controleerEmailQuotaProactief_();
     }
   });
+  // Audit-vondst nacht-PR (gas-runtime): cleanup-taken VÓÓR dure UI-taken.
+  // Reden: budget-guard slaat tasks vanaf budget-overschrijding over. Als
+  // cleanup pas ná dashboard/backup staat → bij 5 jaar data wordt cleanup
+  // structureel geskipped → ScriptProperties-cliff (500KB cap). Cleanup is
+  // goedkoop (alleen Properties-iteratie, geen sheet-rendering) maar moet
+  // dagelijks draaien om groei tegen te houden.
+  _runTaak_('cleanupHerhIdem',  function() {
+    if (typeof cleanupHerhalendeKostenIdempotency_ === 'function') cleanupHerhalendeKostenIdempotency_();
+  });
+  _runTaak_('cleanupMollieIdem', function() {
+    if (typeof ruimMollieIdempotencyOp_ === 'function') ruimMollieIdempotencyOp_();
+  });
+  _runTaak_('cleanupKritiekeUpdateModalKeys', function() {
+    if (typeof cleanupKritiekeUpdateModalKeys_ === 'function') cleanupKritiekeUpdateModalKeys_();
+  });
+  // DR/SRE: emailVerzonden_F* idempotency-keys accumuleren zonder cleanup
+  // → quotum-cliff bij 10.000 facturen. Cleanup-window 180 dagen. Pure
+  // ScriptProperties-iteratie, geen sheet-IO → goedkoop, hoort in cleanup-fase.
+  _runTaak_('cleanupEmailIdem', function() {
+    const props = PropertiesService.getScriptProperties();
+    const alle = props.getProperties();
+    const cutoffMs = Date.now() - 180 * 24 * 60 * 60 * 1000;
+    let verwijderd = 0;
+    Object.keys(alle).forEach(function(k) {
+      if (k.indexOf('emailVerzonden_') !== 0) return;
+      try {
+        const ts = new Date(alle[k]).getTime();
+        if (isFinite(ts) && ts < cutoffMs) {
+          props.deleteProperty(k);
+          verwijderd++;
+        }
+      } catch (_) { /* corrupt timestamp → laat staan, niet riskant */ }
+    });
+    if (verwijderd > 0) {
+      try { schrijfAuditLog_('cleanupEmailIdem',
+        'Verwijderd ' + verwijderd + ' emailVerzonden_-keys ouder dan 180d'); } catch (_) {}
+    }
+  });
+
   // Audit-vondst ronde 2 (cross-PR): triggerSelfHeal verplaatst naar LAATSTE
   // positie in dagelijkseTaken-keten. Was midden in de keten, maar
   // sanitizeTriggers_ doet delete+recreate van alle triggers — als de
@@ -1874,14 +1913,6 @@ function dagelijkseTaken() {
   _runTaak_('dlqRetry',         function() {
     if (typeof featureAan_ === 'function' && !featureAan_('dlq_retry')) return;
     if (typeof dlqVerwerkRetries_ === 'function') dlqVerwerkRetries_();
-  });
-  // Idempotency-cleanup: voorkomt ScriptProperties-quota overschrijding na
-  // jaren herhalende-kosten-keys. Draait dagelijks; cleanup zelf is goedkoop.
-  _runTaak_('cleanupHerhIdem',  function() {
-    if (typeof cleanupHerhalendeKostenIdempotency_ === 'function') cleanupHerhalendeKostenIdempotency_();
-  });
-  _runTaak_('cleanupMollieIdem', function() {
-    if (typeof ruimMollieIdempotencyOp_ === 'function') ruimMollieIdempotencyOp_();
   });
 
   // Audit-vondst ronde 2 (GAS-runtime): herinneringsStap_<factuurnr> keys
@@ -1926,33 +1957,6 @@ function dagelijkseTaken() {
           'Verwijderd ' + verwijderd + ' herinneringsStap-keys voor facturen > 2 jaar oud'); } catch (_) {}
       }
     } catch (_) { /* fail-safe — cleanup mag dagelijkseTaken nooit breken */ }
-  });
-
-  // DR/SRE (criticus-rapport): emailVerzonden_F* idempotency-keys
-  // accumuleren zonder cleanup → quotum-cliff bij 10.000 facturen
-  // (ScriptProperties 500KB total / 9KB per key). Property bevat alleen
-  // ISO-timestamp string van emailverzending. Cleanup-window 180 dagen:
-  // ruim genoeg voor "ik heb een factuur dubbel verstuurd"-detectie,
-  // maar verwijdert de oudste 90% van de keys voor grote klanten.
-  _runTaak_('cleanupEmailIdem', function() {
-    const props = PropertiesService.getScriptProperties();
-    const alle = props.getProperties();
-    const cutoffMs = Date.now() - 180 * 24 * 60 * 60 * 1000;
-    let verwijderd = 0;
-    Object.keys(alle).forEach(function(k) {
-      if (k.indexOf('emailVerzonden_') !== 0) return;
-      try {
-        const ts = new Date(alle[k]).getTime();
-        if (isFinite(ts) && ts < cutoffMs) {
-          props.deleteProperty(k);
-          verwijderd++;
-        }
-      } catch (_) { /* corrupt timestamp → laat staan, niet riskant */ }
-    });
-    if (verwijderd > 0) {
-      try { schrijfAuditLog_('cleanupEmailIdem',
-        'Verwijderd ' + verwijderd + ' emailVerzonden_-keys ouder dan 180d'); } catch (_) {}
-    }
   });
 
   // SelfHeal trigger-check: ALLERLAATSTE step in dagelijkseTaken — beperkt
