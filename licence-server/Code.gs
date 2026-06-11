@@ -2026,8 +2026,11 @@ function getLicentieSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID');
   if (!id) throw new Error('LICENTIE_SHEET_ID niet ingesteld in Script Properties.');
   const ss    = SpreadsheetApp.openById(id);
-  const sheet = ss.getSheets()[0];
-  // Zet headers als het een nieuw blad is
+  // Sinds _bouwLicentieDatabase_ Dashboard op positie 0 inserteert, mag
+  // sheets()[0] NIET meer de data-sheet zijn. Altijd benoemd opvragen;
+  // val terug op de eerste tab voor pre-upgrade sheets.
+  let sheet = ss.getSheetByName('Licenties');
+  if (!sheet) sheet = ss.getSheets()[0];
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(['Sleutel','Naam','Email','Versie','Status','Vervaldatum',
                      'Installatie-ID','Aangemaakt op','Mollie betaling ID','Laatste validatie',
@@ -2240,6 +2243,101 @@ function _bouwLicentieDatabase_(ss) {
 
   // Volgorde: Dashboard eerst
   try { ss.setActiveSheet(ss.getSheetByName('Dashboard')); } catch (_) {}
+}
+
+/**
+ * Repareer een licentiebeheer-spreadsheet die in een kapotte staat is
+ * geraakt door eerdere bugs:
+ *   • #REF!-formules in Dashboard (formules zijn geschreven toen Licenties
+ *     nog niet bestond → Sheets bevroor de verwijzing als #REF!).
+ *   • Klant-rijen die per ongeluk in Dashboard zijn geappend doordat
+ *     getLicentieSheet_() vroeger sheets()[0] = Dashboard retourneerde.
+ *
+ * Idempotent — kan zonder schade meermaals draaien.
+ *
+ * @returns {{verplaatst:number, formulesHersteld:boolean, templateOk:boolean,
+ *            templateNaam:string, fouten:string[]}}
+ */
+function _repareerLicentieDatabase_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('LICENTIE_SHEET_ID');
+  if (!id) throw new Error('LICENTIE_SHEET_ID ontbreekt.');
+  const ss = SpreadsheetApp.openById(id);
+
+  const fouten = [];
+  let verplaatst = 0;
+  let formulesHersteld = false;
+
+  // 1. Zorg dat beide tabs bestaan in juiste structuur (idempotent).
+  _bouwLicentieDatabase_(ss);
+  const dash = ss.getSheetByName('Dashboard');
+  const lic  = ss.getSheetByName('Licenties');
+  if (!dash || !lic) throw new Error('Dashboard of Licenties-tab niet aanwezig na rebuild.');
+
+  // 2. Klant-rijen die in Dashboard staan (sleutel begint met 'BKHE-')
+  //    terugzetten naar Licenties.
+  try {
+    const dashData = dash.getDataRange().getValues();
+    const teVerplaatsen = [];
+    const teWissenRijen = [];
+    for (let i = 0; i < dashData.length; i++) {
+      const sleutel = String(dashData[i][0] || '');
+      if (/^BKHE-/.test(sleutel)) {
+        // Behoud alle kolommen 1..14 (Sleutel..Bouncereden)
+        const rij = [];
+        for (let k = 0; k < 14; k++) rij.push(dashData[i][k] != null ? dashData[i][k] : '');
+        teVerplaatsen.push(rij);
+        teWissenRijen.push(i + 1);
+      }
+    }
+    if (teVerplaatsen.length > 0) {
+      const start = lic.getLastRow() + 1;
+      lic.getRange(start, 1, teVerplaatsen.length, 14).setValues(teVerplaatsen);
+      // Verwijder van onder naar boven zodat indices kloppen blijven
+      for (let j = teWissenRijen.length - 1; j >= 0; j--) {
+        dash.deleteRow(teWissenRijen[j]);
+      }
+      verplaatst = teVerplaatsen.length;
+    }
+  } catch (e) { fouten.push('Verplaatsing klant-rijen mislukte: ' + e.message); }
+
+  // 3. KPI-formules opnieuw zetten — geforceerd, niet alleen bij eerste keer.
+  //    Lost #REF! op die ontstond toen de formule werd geschreven vóór Licenties
+  //    bestond.
+  try {
+    const kpis = [
+      ['Totaal licenties',     '=COUNTA(Licenties!A2:A)'],
+      ['Actief',               '=COUNTIF(Licenties!E2:E,"Actief*")'],
+      ['Onboarded',            '=COUNTA(Licenties!K2:K)'],
+      ['Ingetrokken/refund',   '=COUNTIF(Licenties!E2:E,"Ingetrokken*")+COUNTIF(Licenties!E2:E,"Verwijderd*")'],
+      ['Bouncing e-mails',     '=COUNTIF(Licenties!M2:M,"hard")'],
+      ['Validaties laatste 24u','=COUNTIFS(Licenties!J2:J,">"&(NOW()-1))'],
+    ];
+    dash.getRange(4, 1, kpis.length, 2).setValues(kpis);
+    SpreadsheetApp.flush();
+    formulesHersteld = true;
+  } catch (e) { fouten.push('KPI-formules herstellen mislukte: ' + e.message); }
+
+  // 4. TEMPLATE_SS_ID — verifieer dat we de file echt kunnen openen.
+  //    Vangt l/I-typo's en stale ID's vóór ze klanten breken.
+  let templateOk = false; let templateNaam = '';
+  try {
+    const tplId = props.getProperty('TEMPLATE_SS_ID');
+    if (tplId) {
+      templateNaam = DriveApp.getFileById(tplId).getName();
+      templateOk = true;
+    }
+  } catch (e) {
+    fouten.push('TEMPLATE_SS_ID verwijst naar onvindbaar bestand (' + e.message + ').');
+  }
+
+  return {
+    verplaatst: verplaatst,
+    formulesHersteld: formulesHersteld,
+    templateOk: templateOk,
+    templateNaam: templateNaam,
+    fouten: fouten,
+  };
 }
 
 /** Idempotent: zet headers + format op rij 1 zonder bestaande data te raken. */
