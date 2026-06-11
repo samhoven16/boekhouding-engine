@@ -1403,7 +1403,7 @@ function _meldAdminLockoutAanOwner_() {
  * ADMIN_WACHTWOORD + bekend wachtwoord-veld; rate-limit 30/u globaal.
  */
 function _adminAuthOk_(e) {
-  const ww = PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '';
+  const ww = String(PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '').trim();
   const input = String((e.parameter && e.parameter.ww) || '').trim();
   if (!ww || !input || !veiligVergelijk_(ww, input)) return false;
   return true;
@@ -1492,7 +1492,11 @@ function _adminPostBevestiging_(resp, e) {
 }
 
 function adminPaneel_(e) {
-  const ww    = PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '';
+  // .trim() op BEIDE kanten: een in Script Properties geplakt wachtwoord
+  // krijgt makkelijk een trailing spatie/newline. Zonder trim verschillen
+  // de lengtes → veiligVergelijk_ faalt → eeuwig login-formulier ondanks
+  // correct wachtwoord (Sam's "wit scherm na invullen"-bug).
+  const ww    = String(PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '').trim();
   const input = String((e.parameter.ww || '')).trim();
 
   if (!ww || !veiligVergelijk_(ww, input)) {
