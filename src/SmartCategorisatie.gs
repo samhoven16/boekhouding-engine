@@ -271,6 +271,13 @@ function slaansFuzzyKoppelTransacties_() {
     if (nr) factuurIndex[nr] = i;
   }
   const escapeRe_ = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Regex per factuurnummer ÉÉN keer compileren. Voorheen gebeurde dit in
+  // de binnenste loop: n transacties × m facturen = n×m compilaties
+  // (1000×1000 = 1M) — kwadratisch en de duurste stap van deze functie.
+  const factuurRegex = {};
+  for (const nr of Object.keys(factuurIndex)) {
+    factuurRegex[nr] = new RegExp('(^|\\W)' + escapeRe_(nr) + '(\\W|$)', 'i');
+  }
 
   let gekoppeld = 0;
 
@@ -289,8 +296,7 @@ function slaansFuzzyKoppelTransacties_() {
 
     // Methode 1: factuurnummer als heel woord in omschrijving
     for (const nr of Object.keys(factuurIndex)) {
-      const re = new RegExp('(^|\\W)' + escapeRe_(nr) + '(\\W|$)', 'i');
-      if (re.test(omschr)) {
+      if (factuurRegex[nr].test(omschr)) {
         gevondenFactuurRij = factuurIndex[nr];
         koppelMethode = 'factuurnummer in omschrijving';
         break;
