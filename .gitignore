@@ -138,3 +138,7 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 bundle-*.json
+
+# Test-output: door tests/integration/ultieme-stresstest.test.js geschreven,
+# door niemand gelezen. Stond getracked → veroorzaakte merge-conflicten.
+.claude/stresstest-findings-raw.json
