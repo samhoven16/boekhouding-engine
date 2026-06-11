@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0D1B4E">
+<title>Eerste keer Boekhoudbaar openen — 30 seconden voorbereiding</title>
+<meta name="description" content="Voor je je Boekhoudbaar opent: zo herken je het scherm waar je doorheen moet. Drie schermen, drie klikken.">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/start/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+
+<style>
+:root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--tekst:#1A1A1A;--grijs:#5F6B7A;--bg:#F7F9FC;--wit:#fff;--rand:#E5EAF2;--rood:#D93025;--groen:#1E8E3E;--oranje:#E65100;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--bg);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased;}
+
+.hero{padding:48px 24px 24px;text-align:center;}
+.hero h1{font-size:30px;color:var(--blauw);letter-spacing:-0.02em;margin-bottom:8px;font-weight:800;line-height:1.2;}
+.hero p{font-size:17px;color:var(--grijs);max-width:620px;margin:0 auto;line-height:1.55;}
+.tijd{display:inline-block;background:rgba(46,196,182,.14);color:#0D7355;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:14px;letter-spacing:.5px;}
+
+main{max-width:780px;margin:0 auto;padding:16px 24px 24px;}
+
+.stap{background:var(--wit);border:1px solid var(--rand);border-radius:14px;padding:24px 24px 22px;margin-top:18px;}
+.stap-kop{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;}
+.stap-num{flex-shrink:0;width:36px;height:36px;background:var(--blauw);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;}
+.stap-titel{flex:1;}
+.stap-titel h2{font-size:18px;color:var(--blauw);margin:0;font-weight:700;line-height:1.3;}
+.stap-titel .sub{font-size:13px;color:var(--grijs);margin-top:3px;}
+
+.stap p{font-size:14.5px;color:var(--tekst);line-height:1.65;margin:8px 0;}
+.stap p strong{color:var(--blauw);}
+
+/* Replica van Google-schermen */
+.scherm{background:#FFFFFF;border:1px solid #DADCE0;border-radius:8px;padding:0;margin:14px 0 8px;box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden;}
+.scherm-balk{background:#F1F3F4;padding:6px 10px;border-bottom:1px solid #DADCE0;display:flex;align-items:center;gap:8px;}
+.scherm-balk .punt{width:10px;height:10px;border-radius:50%;background:#DADCE0;}
+.scherm-balk .url{flex:1;background:#fff;border-radius:12px;padding:4px 10px;font-size:11px;color:#5F6368;font-family:monospace;}
+.scherm-inhoud{padding:24px 28px;color:#3C4043;font-size:13.5px;line-height:1.55;}
+.scherm-inhoud h3{font-size:15px;color:#3C4043;font-weight:500;margin-bottom:10px;}
+.scherm-inhoud .copy-titel{font-size:18px;color:#3C4043;font-weight:400;display:flex;align-items:center;gap:10px;}
+.scherm-inhoud .copy-titel .icoon{width:22px;height:22px;background:#1A73E8;border-radius:50%;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;}
+.scherm-inhoud .kopie-vraag{font-size:13px;color:#5F6368;margin:6px 0 18px;}
+
+.knop-rij{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+.knop{padding:7px 16px;border-radius:4px;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;border:none;}
+.knop-blauw{background:#1A73E8;color:#fff;}
+.knop-sec{background:#fff;color:#1A73E8;border:1px solid #DADCE0;}
+.knop-fout{background:#fff;color:#1A73E8;border:1px solid #DADCE0;position:relative;}
+
+.let-op{background:#FCE8E6;border:2px solid #D93025;border-radius:8px;padding:12px 14px;margin:12px 0;display:flex;gap:10px;align-items:flex-start;}
+.let-op .ico{font-size:18px;flex-shrink:0;line-height:1.2;}
+.let-op .tekst{flex:1;font-size:13.5px;color:#5A1010;line-height:1.55;}
+.let-op .tekst strong{color:#B91C1C;}
+
+.juist-zo{background:#E6F4EA;border:2px solid #1E8E3E;border-radius:8px;padding:12px 14px;margin:12px 0;display:flex;gap:10px;align-items:flex-start;}
+.juist-zo .ico{font-size:18px;flex-shrink:0;line-height:1.2;}
+.juist-zo .tekst{flex:1;font-size:13.5px;color:#0D652D;line-height:1.55;}
+.juist-zo .tekst strong{color:#1E8E3E;}
+
+.pijl-uit{display:inline-flex;align-items:center;gap:6px;background:#1E8E3E;color:#fff;padding:4px 10px;border-radius:14px;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;}
+.pijl-uit::before{content:"▶";font-size:9px;}
+
+.warn-link{color:#1A73E8;font-size:13px;cursor:pointer;text-decoration:underline;display:inline-block;margin-top:8px;}
+
+.uitgeklapt-blok{margin-top:14px;padding-top:14px;border-top:1px solid #DADCE0;display:none;}
+.uitgeklapt .uitgeklapt-blok{display:block;}
+.uitgeklapt .warn-link{display:none;}
+
+.toggle{margin-top:10px;text-align:center;}
+.toggle button{background:none;border:1px dashed var(--rand);color:var(--blauw);font-size:13px;font-family:inherit;font-weight:600;padding:8px 16px;border-radius:6px;cursor:pointer;}
+
+/* Grote actieknop onderaan */
+.actie{background:linear-gradient(135deg,var(--blauw) 0%,var(--blauw-licht) 100%);border-radius:14px;padding:28px;text-align:center;margin-top:28px;}
+.actie h3{font-size:20px;color:#fff;margin-bottom:6px;}
+.actie p{font-size:14.5px;color:rgba(255,255,255,.85);margin-bottom:18px;}
+.actie a{display:inline-block;background:var(--accent);color:var(--blauw);padding:14px 30px;border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;letter-spacing:.1px;transition:transform .12s,box-shadow .12s;}
+.actie a:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(46,196,182,.4);}
+.actie .later{display:block;margin-top:14px;color:rgba(255,255,255,.7);font-size:12.5px;text-decoration:none;}
+
+.hulp{margin-top:24px;background:var(--wit);border:1px solid var(--rand);border-radius:14px;padding:18px 22px;font-size:13px;color:var(--grijs);}
+.hulp strong{color:var(--blauw);}
+.hulp a{color:var(--blauw);font-weight:600;}
+
+footer{background:var(--blauw);color:#fff;padding:28px;text-align:center;font-size:13px;margin-top:32px;}
+footer a{color:rgba(255,255,255,.7);}
+
+@media (max-width:520px){
+  .hero h1{font-size:24px;}
+  .stap{padding:18px;}
+  .scherm-inhoud{padding:16px;}
+  .actie{padding:22px 18px;}
+  .actie h3{font-size:17px;}
+}
+</style>
+<link rel="stylesheet" href="/animations.css">
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
+</head>
+<body>
+
+<nav aria-label="Hoofdnavigatie">
+  <div class="nav-inner">
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home">
+      <img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52">
+    </a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="tijd">⏱ 30 seconden voorbereiding</div>
+  <h1>Voor je je Boekhoudbaar opent</h1>
+  <p>Je gaat zo door 3 Google-schermen heen. Bij elk scherm laat ik zien wat je moet aanklikken — en welke knop je beter NIET kunt klikken. Daarna ben je binnen.</p>
+</section>
+
+<main>
+
+<!-- ───────────────── STAP 1: KOPIE MAKEN ───────────────── -->
+<div class="stap">
+  <div class="stap-kop">
+    <span class="stap-num">1</span>
+    <div class="stap-titel">
+      <h2>Eerst: kopie maken</h2>
+      <div class="sub">Google opent dit scherm zodra je op de knop onderaan klikt</div>
+    </div>
+  </div>
+
+  <p>Boekhoudbaar werkt in <strong>jouw</strong> Google Drive. Het allereerste wat Google doet is je een kopie van het standaard-bestand laten maken.</p>
+
+  <div class="scherm">
+    <div class="scherm-balk">
+      <span class="punt"></span>
+      <span class="url">docs.google.com/spreadsheets/d/.../copy</span>
+    </div>
+    <div class="scherm-inhoud">
+      <div class="copy-titel">
+        <span class="icoon">📊</span>
+        Document kopiëren?
+      </div>
+      <p class="kopie-vraag">Wil je een kopie maken van <strong>Boekhoudbaar — Master Engine</strong>?</p>
+      <div style="font-size:12.5px;color:#5F6368;background:#F8F9FA;padding:10px 12px;border-radius:6px;">
+        ☐ Reacties kopiëren<br>
+        ☐ Bestand met dezelfde personen delen
+      </div>
+      <div class="knop-rij">
+        <button class="knop knop-sec" type="button">Annuleren</button>
+        <button class="knop knop-blauw" type="button">Een kopie maken</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="juist-zo">
+    <span class="ico">✅</span>
+    <div class="tekst">
+      Klik op de <strong>blauwe knop rechts: "Een kopie maken"</strong>.<br>
+      Vinkjes hoef je niet aan te zetten.
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────── STAP 2: TOESTEMMING ───────────────── -->
+<div class="stap">
+  <div class="stap-kop">
+    <span class="stap-num">2</span>
+    <div class="stap-titel">
+      <h2>Daarna: toestemming geven</h2>
+      <div class="sub">Pas zichtbaar wanneer je in je nieuwe Boekhoudbaar-bestand iets klikt</div>
+    </div>
+  </div>
+
+  <p>Boekhoudbaar moet in <strong>jouw</strong> Drive een paar dingen kunnen: facturen-PDF's maken, e-mails versturen, bestanden opslaan. Daarom verschijnt er een Google-scherm dat om toestemming vraagt.</p>
+
+  <div class="scherm">
+    <div class="scherm-balk">
+      <span class="punt"></span>
+      <span class="url">accounts.google.com/o/oauth2/auth</span>
+    </div>
+    <div class="scherm-inhoud">
+      <h3>Boekhoudbaar wil toegang tot je Google-account</h3>
+      <div style="font-size:12.5px;color:#5F6368;margin:10px 0;">
+        Hierdoor kan Boekhoudbaar:<br>
+        • Je e-mails namens jou versturen<br>
+        • Spreadsheets in je Drive openen en aanpassen<br>
+        • Bestanden in je Drive opslaan
+      </div>
+      <div class="knop-rij">
+        <button class="knop knop-sec" type="button">Annuleren</button>
+        <button class="knop knop-blauw" type="button">Toestaan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="juist-zo">
+    <span class="ico">✅</span>
+    <div class="tekst">
+      Klik op <strong>"Toestaan"</strong>.<br>
+      Boekhoudbaar werkt alleen in <em>jouw eigen</em> Drive — niet ergens anders. We hebben zelf geen toegang tot je data.
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────── STAP 3: NIET GEVERIFIEERD ───────────────── -->
+<div class="stap">
+  <div class="stap-kop">
+    <span class="stap-num">3</span>
+    <div class="stap-titel">
+      <h2>Het lastigste scherm: <span style="color:#D93025">"Niet geverifieerd"</span></h2>
+      <div class="sub">Onthoud dit goed — dit is waar 9 van de 10 mensen vastlopen</div>
+    </div>
+  </div>
+
+  <p>Na "Toestaan" laat Google een waarschuwingsscherm zien. Dat is normaal voor scripts die door één persoon zijn gemaakt (zoals Boekhoudbaar). Hier zien veel mensen alleen de grote knop — en klikken op de <em>verkeerde</em> knop.</p>
+
+  <div class="scherm" id="warn-replica">
+    <div class="scherm-balk">
+      <span class="punt"></span>
+      <span class="url">accounts.google.com/o/oauth2/auth</span>
+    </div>
+    <div class="scherm-inhoud">
+      <h3 style="color:#D93025;font-weight:500;">⚠️ Google heeft deze app niet geverifieerd</h3>
+      <div style="font-size:13px;color:#3C4043;margin:8px 0;">
+        De app verzoekt om toegang tot gevoelige informatie in je Google-account. Totdat de ontwikkelaar (Boekhoudbaar) zijn app verifieert bij Google, moet je deze nieuwe app voorzichtig gebruiken.
+      </div>
+      <div style="font-size:12.5px;color:#5F6368;margin:10px 0;">Ga alleen door als je de ontwikkelaar kent en vertrouwt.</div>
+
+      <span class="warn-link" id="warn-link">Geavanceerd</span>
+
+      <div class="uitgeklapt-blok">
+        <div style="font-size:12.5px;color:#5F6368;margin:6px 0;">
+          Ga alleen verder als je het risico begrijpt en de ontwikkelaar (boekhoudbaar.nl) vertrouwt.
+        </div>
+        <span style="color:#1A73E8;font-size:13px;text-decoration:underline;">Ga naar Boekhoudbaar (onveilig)</span>
+      </div>
+
+      <div class="knop-rij">
+        <button class="knop knop-blauw" type="button">Terug naar veiligheid</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="let-op">
+    <span class="ico">⚠️</span>
+    <div class="tekst">
+      <strong>Klik NIET op de grote blauwe knop "Terug naar veiligheid"</strong> — dan ben je weg en moet je opnieuw beginnen.<br><br>
+      <strong>Klik wel op het kleine grijze tekstje "Geavanceerd"</strong> linksonder het waarschuwingsblok. Daarna verschijnt er een tweede klein linkje: <em>"Ga naar Boekhoudbaar (onveilig)"</em>. Klik daarop.
+    </div>
+  </div>
+
+  <div class="toggle">
+    <button type="button" id="probeer-knop">▶ Klik "Geavanceerd" hierboven om te zien wat er gebeurt</button>
+  </div>
+
+  <div class="juist-zo">
+    <span class="ico">🛡️</span>
+    <div class="tekst">
+      <strong>Waarom is dit veilig?</strong> Boekhoudbaar is geen virus of nepapp. Het is een script gemaakt door één persoon (Sam Hoven, KvK 87254697). Google's verificatieproces kost €75/jaar en duurt 4-6 weken — voor een eenmanszaak nog niet doorlopen. Maar je <strong>data blijft 100% in jouw Drive</strong>. Wij hebben geen toegang. <a href="/voorwaarden/" style="color:#1E8E3E;font-weight:600">Lees de voorwaarden</a> of <a href="/over/" style="color:#1E8E3E;font-weight:600">leer Sam kennen</a>.
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────── ACTIE-KNOP ───────────────── -->
+<div class="actie">
+  <h3>Klaar? Dan gaan we nu beginnen.</h3>
+  <p>Onthoud: bij scherm 3 zoek je het kleine grijze "Geavanceerd" linkje. NIET de grote blauwe knop.</p>
+  <a href="#" id="naar-copy">Open mijn Boekhoudbaar →</a>
+  <a class="later" href="/mijn/">Later openen — toon me de drie wegen terug</a>
+</div>
+
+<div class="hulp">
+  <strong>Klik per ongeluk op "Terug naar veiligheid"?</strong> Geen paniek. Sluit het tabblad, kom terug naar deze pagina, en klik opnieuw op "Open mijn Boekhoudbaar". Of mail <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a> — we helpen direct.
+</div>
+
+</main>
+
+<footer>
+  <p>© 2026 Boekhoudbaar — gemaakt in Nederland</p>
+  <p style="margin-top:8px;"><a href="/">Home</a> · <a href="/bedankt/">Volledige walkthrough</a> · <a href="/voorwaarden/">Voorwaarden</a> · <a href="/privacy/">Privacy</a></p>
+</footer>
+
+<script>
+  // Pak template-ID + email uit URL params (welkomstmail geeft die mee)
+  (function() {
+    var p = new URLSearchParams(window.location.search);
+    var tplId = p.get('tpl') || p.get('template');
+    var em = p.get('mail') || p.get('email');
+    var link = document.getElementById('naar-copy');
+    if (tplId && /^[A-Za-z0-9_-]{20,}$/.test(tplId)) {
+      link.href = 'https://docs.google.com/spreadsheets/d/' + tplId + '/copy';
+    }
+  })();
+
+  // Walkthrough: klik "Geavanceerd" om het tweede linkje te tonen
+  (function() {
+    var btn = document.getElementById('probeer-knop');
+    var rep = document.getElementById('warn-replica');
+    var link = document.getElementById('warn-link');
+    if (!btn || !rep) return;
+    function toggle() {
+      rep.classList.toggle('uitgeklapt');
+      btn.textContent = rep.classList.contains('uitgeklapt')
+        ? '↺ Reset'
+        : '▶ Klik "Geavanceerd" hierboven om te zien wat er gebeurt';
+    }
+    btn.addEventListener('click', toggle);
+    if (link) link.addEventListener('click', toggle);
+  })();
+</script>
+
+</body></html>

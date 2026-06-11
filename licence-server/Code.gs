@@ -1741,9 +1741,13 @@ function stuurLicentiemail_(naam, email, sleutel) {
   }
 
   // Klant krijgt een "Maak een kopie"-link naar het master-sjabloon.
-  // Na het openen vult de klant zijn e-mailadres in, ontvangt een OTP en activeert.
+  // Klant gaat NIET direct naar Google's /copy — eerst naar boekhoudbaar.nl/start
+  // die 'm voorbereidt op de 3 Google-schermen (vooral het killer-scherm
+  // "Niet geverifieerd"). De /start-pagina pakt de template-id uit de URL en
+  // bouwt zelf de juiste copy-link. Resultaat: klant ziet eerst voorbereiding,
+  // dan pas Google's schermen — bewuste mens, minder paniek.
   const kopieerLink = templateId
-    ? 'https://docs.google.com/spreadsheets/d/' + templateId + '/copy'
+    ? 'https://www.boekhoudbaar.nl/start/?tpl=' + templateId + '&mail=' + encodeURIComponent(email)
     : '';
 
   // UX-principe: knop bovenaan, niet onderaan. Klanten lezen geen drie
@@ -1752,15 +1756,14 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const stappenHtml = kopieerLink ? `
     <div style="text-align:center;margin:8px 0 24px">
       <p style="font-size:13px;color:#5F6B7A;margin:0 0 10px;line-height:1.5">
-        Na de klik kom je in <strong>2 Google-schermen</strong>. In het tweede klik je<br>
-        <strong>Geavanceerd → Doorgaan</strong> — dat is de juiste knop.
+        Eerst <strong>30 seconden voorbereiding</strong>. Daarna kom je in <strong>2 Google-schermen</strong> — en in het tweede klik je op <strong>Geavanceerd → Doorgaan</strong>.
       </p>
       <a href="${kopieerLink}" style="background:#0D1B4E;color:#fff;padding:16px 36px;
          border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;letter-spacing:.1px;box-shadow:0 4px 12px rgba(13,27,78,.18)">
         Open mijn boekhouding →
       </a>
       <p style="font-size:13px;color:#5F6B7A;margin:12px 0 0">
-        Google maakt een kopie in <strong>jouw Drive</strong>.
+        We laten je eerst zien <strong>wat je gaat zien</strong>, dan klik je door.
       </p>
     </div>
 

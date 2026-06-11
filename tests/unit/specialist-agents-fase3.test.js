@@ -185,11 +185,22 @@ describe('Domein-disjoint: elke nieuwe agent verwijst naar andere 2', () => {
   });
 });
 
-describe('Totaal: 12 agents in setup (3 + 6 + 3)', () => {
-  test('Aantal .md bestanden in .claude/agents/', () => {
+describe('Totaal: 13 actieve agents (klantreis-simulator vervangen door 2 scherpere)', () => {
+  test('Aantal actieve .md bestanden in .claude/agents/', () => {
+    // .deprecated bestanden tellen niet — die zijn bewust uit roulatie
     const files = fs.readdirSync(AGENTS_DIR).filter(function(f) {
-      return f.endsWith('.md');
+      return f.endsWith('.md') && !f.endsWith('.deprecated');
     });
-    expect(files.length).toBe(12);
+    expect(files.length).toBe(13);
+  });
+  test('klantreis-simulator is gearchiveerd', () => {
+    const files = fs.readdirSync(AGENTS_DIR);
+    expect(files).toContain('_archived-klantreis-simulator.md.deprecated');
+    expect(files).not.toContain('klantreis-simulator.md');
+  });
+  test('onboarding-doorloop + friction-killer-google-niet-geverifieerd zijn aanwezig', () => {
+    const files = fs.readdirSync(AGENTS_DIR);
+    expect(files).toContain('onboarding-doorloop.md');
+    expect(files).toContain('friction-killer-google-niet-geverifieerd.md');
   });
 });
