@@ -60,6 +60,19 @@ describe('adminZetPrijsEndpoint_ — bereik + auth', () => {
     expect(propStore.PRODUCT_PRIJS).toBeUndefined();
   });
 
+  test('opgeslagen wachtwoord met trailing whitespace matcht alsnog (copy-paste-bug)', () => {
+    // ADMIN_WACHTWOORD met newline/spatie (zoals geplakt in Script Properties);
+    // ingevoerd wachtwoord schoon. Moet tóch matchen door trim aan beide kanten.
+    const { ctx, propStore } = maakCtx({
+      props: { ADMIN_WACHTWOORD: 'geheim123\n', PRODUCT_PRIJS: '49.00' },
+    });
+    const r = parseJson(ctx.adminZetPrijsEndpoint_({
+      parameter: { ww: 'geheim123', prijs: '0.01' },
+    }));
+    expect(r.ok).toBe(true);
+    expect(propStore.PRODUCT_PRIJS).toBe('0.01');
+  });
+
   test('happy: prijs 0.01 wordt geschreven als "0.01"', () => {
     const { ctx, propStore, auditCalls } = maakCtx();
     const r = parseJson(ctx.adminZetPrijsEndpoint_({
