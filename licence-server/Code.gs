@@ -2029,7 +2029,8 @@ function getLicentieSheet_() {
   // Sinds _bouwLicentieDatabase_ Dashboard op positie 0 inserteert, mag
   // sheets()[0] NIET meer de data-sheet zijn. Altijd benoemd opvragen;
   // val terug op de eerste tab voor pre-upgrade sheets.
-  let sheet = ss.getSheetByName('Licenties');
+  let sheet = null;
+  try { sheet = ss.getSheetByName && ss.getSheetByName('Licenties'); } catch (_) {}
   if (!sheet) sheet = ss.getSheets()[0];
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(['Sleutel','Naam','Email','Versie','Status','Vervaldatum',
