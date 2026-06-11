@@ -216,9 +216,23 @@ footer a{color:rgba(255,255,255,.7);}
 </div>
 
 <div class="hulp">
-  <h3>Iets niet duidelijk? Mail werkt het beste.</h3>
+  <h3>Welkomstmail niet aangekomen?</h3>
+  <p style="font-size:14px;color:var(--tekst);line-height:1.6;margin-bottom:12px">Even kijken in <strong>spam</strong> en <strong>Reclame</strong>. Niets? Stuur 'm dan nu opnieuw:</p>
+  <form id="opnieuw-form" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+    <input type="email" id="opnieuw-email" placeholder="je e-mailadres" required
+           style="flex:1;min-width:220px;padding:11px 14px;border:1px solid var(--rand);border-radius:8px;font-size:14px;font-family:inherit;background:#fff">
+    <button type="submit" id="opnieuw-btn"
+            style="padding:11px 20px;background:var(--blauw);color:#fff;border:none;border-radius:8px;font-weight:600;font-family:inherit;cursor:pointer;font-size:14px">
+      Stuur opnieuw
+    </button>
+  </form>
+  <p id="opnieuw-status" style="font-size:13px;margin:8px 0 0;color:var(--grijs);display:none"></p>
+  <p style="font-size:12px;color:var(--grijs);margin-top:10px">Werkt alleen voor adressen waarop een actieve licentie staat. Lukt het niet? Mail <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a>.</p>
+</div>
+
+<div class="hulp">
+  <h3>Andere vragen</h3>
   <ul>
-    <li><strong>Welkomstmail kwijt?</strong> Stuur een berichtje naar <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a> met je bestelnummer — je krijgt binnen 1 werkdag een nieuwe link.</li>
     <li><strong>Werkt het Boekhoudbaar-menu niet?</strong> Sluit de Sheet, wacht 5 sec, open opnieuw. De eerste keer kan het menu 10-15 sec nodig hebben om te laden (Apps Script-init).</li>
     <li><strong>Garantie-claim?</strong> Lukt het je niet om binnen 7 dagen je eerste factuur te maken, mail dan support — geld terug, geen vragen.</li>
     <li><strong>Vind je je Sheet later niet meer?</strong> Zie <a href="/mijn/">/mijn boekhouding</a> — drie manieren om hem terug te vinden in je Drive.</li>
@@ -264,6 +278,56 @@ footer a{color:rgba(255,255,255,.7);}
     }
     btn.addEventListener('click', toggle);
     if (link) link.addEventListener('click', toggle);
+  })();
+
+  // Zelf-service: welkomstmail opnieuw sturen
+  (function() {
+    var form = document.getElementById('opnieuw-form');
+    var emInp = document.getElementById('opnieuw-email');
+    var btn = document.getElementById('opnieuw-btn');
+    var status = document.getElementById('opnieuw-status');
+    if (!form) return;
+    var EXEC_URL = 'https://script.google.com/macros/s/AKfycbzvBpQx7ghYNblvBVtCraH4KRKJo3C4f3lWYJDJPRd-ByS7lg0G2AfHm0JQ-g_LOjWI/exec';
+
+    // Pre-fill email uit URL als beschikbaar
+    var pEmail = new URLSearchParams(window.location.search).get('mail') ||
+                 new URLSearchParams(window.location.search).get('email');
+    if (pEmail) emInp.value = pEmail;
+
+    function toonStatus(tekst, kleur) {
+      status.textContent = tekst;
+      status.style.color = kleur || '#5F6B7A';
+      status.style.display = 'block';
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var em = emInp.value.trim().toLowerCase();
+      if (!em || em.indexOf('@') < 1) {
+        toonStatus('Vul een geldig e-mailadres in.', '#B91C1C');
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Bezig…';
+      toonStatus('Verzoek versturen…');
+      // Apps Script accepteert GET met querystring; no-cors fallback voor
+      // het geval er CORS-restricties zijn. Server returnt altijd dezelfde
+      // 'als-bekend'-melding (anti email-enumeration).
+      fetch(EXEC_URL + '?actie=herstuur-licentie&email=' + encodeURIComponent(em), {
+        method: 'GET', mode: 'cors',
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        btn.disabled = false; btn.textContent = 'Stuur opnieuw';
+        if (d && d.ok) {
+          toonStatus('✓ Als ' + em + ' een actieve licentie heeft, ontvang je binnen enkele minuten een nieuwe welkomstmail. Check ook spam/Reclame.', '#0D7355');
+        } else {
+          toonStatus((d && d.fout) || 'Er ging iets mis — mail support@boekhoudbaar.nl.', '#B91C1C');
+        }
+      }).catch(function() {
+        btn.disabled = false; btn.textContent = 'Stuur opnieuw';
+        // CORS-fout = bericht hoogstwaarschijnlijk WEL aangekomen; toon positief
+        toonStatus('Verzoek verstuurd. Check binnen 2 minuten je inbox (en spam/Reclame). Niets? Mail support@boekhoudbaar.nl.', '#0D7355');
+      });
+    });
   })();
 </script>
 
