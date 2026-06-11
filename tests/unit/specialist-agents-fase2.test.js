@@ -33,9 +33,11 @@ function parseFrontmatter(bron) {
   return { frontmatter: fm, body: match[2] };
 }
 
+// klantreis-simulator gearchiveerd en vervangen door onboarding-doorloop +
+// friction-killer-google-niet-geverifieerd (concreter, scherper).
 const NIEUWE_AGENTS = [
   'red-team-adversary',
-  'klantreis-simulator',
+  'onboarding-doorloop',
   'accountant-en-belastingdienst',
   'cross-pr-regressie',
   'langlopend-onderhoud',
@@ -88,23 +90,35 @@ describe('red-team-adversary — adversariële denkwijze', () => {
   });
 });
 
-describe('klantreis-simulator — 4 personas + 12 stappen', () => {
-  const bron = leesAgent('klantreis-simulator');
-  test('4 personas gedefinieerd', () => {
-    expect(bron).toMatch(/### Persona 1/);
-    expect(bron).toMatch(/### Persona 2/);
-    expect(bron).toMatch(/### Persona 3/);
-    expect(bron).toMatch(/### Persona 4/);
+describe('onboarding-doorloop — concreet per scherm, niet abstract', () => {
+  const bron = leesAgent('onboarding-doorloop');
+  test('Walks 18 specifieke schermen door, niet 12 abstracte stappen', () => {
+    expect(bron).toMatch(/18 schermen|alle 18|18 \|/);
   });
-  test('12 stappen in de klantreis', () => {
-    for (let i = 1; i <= 12; i++) {
-      expect(bron).toContain(i + '. **');
-    }
+  test('Focus op EXACTE tekst en knoppen, niet "verwachtingen"', () => {
+    expect(bron).toMatch(/EXACTE tekst/i);
+    expect(bron).toMatch(/klikbare elementen/i);
   });
-  test('Per gevonden frictie: persona + stap + verwachting + fix', () => {
-    expect(bron).toMatch(/PERSONA:/);
-    expect(bron).toMatch(/WAT VERWACHTEN ZE/);
-    expect(bron).toMatch(/FIX-RICHTING/);
+  test('Vervangt verouderde klantreis-simulator (gearchiveerd)', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const archive = path.resolve(__dirname, '../../.claude/agents/_archived-klantreis-simulator.md.deprecated');
+    expect(fs.existsSync(archive)).toBe(true);
+  });
+});
+
+describe('friction-killer-google-niet-geverifieerd — één gericht probleem', () => {
+  const bron = leesAgent('friction-killer-google-niet-geverifieerd');
+  test('Beperkt zich tot HET ene scherm dat klanten doodt', () => {
+    expect(bron).toMatch(/Geavanceerd/);
+    expect(bron).toMatch(/Terug naar veiligheid/);
+  });
+  test('Audit checkt 5 dimensies: timing, voorbereiding, begeleiding, recovery, vertrouwen', () => {
+    expect(bron).toMatch(/A\. Timing/i);
+    expect(bron).toMatch(/B\. Voorbereiding/i);
+    expect(bron).toMatch(/C\. Begeleiding/i);
+    expect(bron).toMatch(/D\. Recovery/i);
+    expect(bron).toMatch(/E\. Vertrouwen/i);
   });
 });
 
@@ -171,11 +185,11 @@ describe('documentatie-volledigheid — typische klantvragen', () => {
   });
 });
 
-describe('Totaal: 12 agents in setup (na fase-3 SEO/positionering uitbreiding)', () => {
-  test('3 fase-1 + 6 fase-2 + 3 fase-3 = 12 agents in .claude/agents/', () => {
+describe('Totaal: 13 actieve agents (klantreis-simulator → onboarding-doorloop + friction-killer)', () => {
+  test('Aantal actieve .md bestanden (deprecated tellen niet)', () => {
     const files = fs.readdirSync(AGENTS_DIR).filter(function(f) {
-      return f.endsWith('.md');
+      return f.endsWith('.md') && !f.endsWith('.deprecated');
     });
-    expect(files.length).toBe(12);
+    expect(files.length).toBe(13);
   });
 });

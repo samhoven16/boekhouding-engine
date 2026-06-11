@@ -199,17 +199,23 @@ function adminData(token) {
   try {
     const sheet = getLicentieSheet_();
     const data = sheet.getDataRange().getValues();
-    kpis.totaal = Math.max(0, data.length - 1);
     for (let i = 1; i < data.length; i++) {
+      const sleutel = String(data[i][0] || '');
+      const email = String(data[i][2] || '');
+      // Skip ghost-rijen: alleen rijen met een echte sleutel (BKHE-...) of
+      // tenminste een email tellen als klant. Voorkomt dat KPI-labels uit
+      // een verkeerd geconfigureerd Dashboard-blad als klanten verschijnen.
+      if (!/^BKHE-/.test(sleutel) && !email) continue;
       const statusRaw = String(data[i][4] || '');
       const statusL = statusRaw.toLowerCase();
+      kpis.totaal++;
       if (statusL.indexOf('actief') === 0) kpis.actief++;
       if (data[i][10]) kpis.onboarded++;
       if (statusRaw.indexOf('wacht op TEMPLATE') !== -1) kpis.wachtTemplate++;
       klanten.push({
-        sleutel: String(data[i][0] || ''),
+        sleutel: sleutel,
         naam: String(data[i][1] || ''),
-        email: String(data[i][2] || ''),
+        email: email,
         status: statusRaw,
         onboarded: data[i][10] ? new Date(data[i][10]).toISOString().slice(0, 10) : '',
         laatsteValidatie: data[i][9] ? new Date(data[i][9]).toISOString().slice(0, 10) : '',
@@ -414,6 +420,22 @@ function adminSetupActie(token, welke) {
         nieuweSheetId: id };
     } catch (e) { return { ok: false, fout: e.message }; }
   }
+  if (welke === 'licentiebeheer-repareer') {
+    if (typeof _repareerLicentieDatabase_ !== 'function') {
+      return { ok: false, fout: '_repareerLicentieDatabase_ niet beschikbaar — push de laatste licence-server-code.' };
+    }
+    try {
+      const r = _repareerLicentieDatabase_();
+      const delen = [];
+      if (r.verplaatst > 0) delen.push(r.verplaatst + ' klant-rij(en) teruggezet naar Licenties-tab');
+      if (r.formulesHersteld) delen.push('KPI-formules herschreven');
+      if (r.templateOk) delen.push('Master Engine bereikbaar: ' + r.templateNaam);
+      else delen.push('⚠ Master Engine NIET bereikbaar — check TEMPLATE_SS_ID');
+      if (r.fouten && r.fouten.length) delen.push('Fouten: ' + r.fouten.join(' · '));
+      try { schrijfAuditLog_('Licentiebeheer gerepareerd (dashboard)', JSON.stringify(r)); } catch (_) {}
+      return { ok: r.templateOk && r.fouten.length === 0, bericht: delen.join(' — '), detail: r };
+    } catch (e) { return { ok: false, fout: e.message }; }
+  }
   if (welke === 'brevo-token') {
     if (typeof setupBrevoWebhookToken === 'function') {
       try {
@@ -480,7 +502,7 @@ function _zoekLicentieSheetKandidaten_() {
  * de waarde die de server retourneert om "code op server is ouder dan main"
  * te detecteren — zodat we de hele zoektocht van vannacht niet hoeven herhalen.
  */
-const ADMIN_DASHBOARD_VERSIE = '2026-06-11-E';
+const ADMIN_DASHBOARD_VERSIE = '2026-06-11-F';
 
 /**
  * google.script.run target. Verzamelt de observability-data die op
@@ -1093,7 +1115,9 @@ function _adminDashboardHtml_() {
     if(categorie==='integraties'){
       extra='<div class="kaart"><h2>Setup-acties</h2><p style="color:#5F6B7A;margin-bottom:12px">Eenmalige acties die je vroeger in de code-editor moest doen.</p>'+
         '<button class="btn-sec" data-setup="licentie-sheet">Licentie-sheet controleren</button> '+
-        '<button class="btn-sec" data-setup="brevo-token">Brevo-webhook-URL genereren</button></div>';
+        '<button class="btn-sec" data-setup="licentiebeheer-repareer">Licentiebeheer repareren</button> '+
+        '<button class="btn-sec" data-setup="brevo-token">Brevo-webhook-URL genereren</button>'+
+        '<p class="hint" style="margin-top:8px">Repareren: verplaatst klant-rijen die per ongeluk in Dashboard belandden, herstelt #REF!-formules, en test of Master Engine bereikbaar is.</p></div>';
     }
     var veldenHtml = velden.map(function(v){ return renderVeld(v); }).join('');
     return '<div class="kaart"><h2>'+esc(tabLabel(categorie))+'</h2>'+veldenHtml+'</div>'+extra;
