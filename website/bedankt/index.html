@@ -113,10 +113,10 @@ footer a{color:rgba(255,255,255,.7);}
   <h1>Bedankt! Je Boekhoudbaar is onderweg.</h1>
   <p>Binnen 2 minuten ontvang je een welkomstmail met de link naar jouw eigen Boekhoudbaar-Sheet. Hieronder lees je wat er nu gebeurt — en hoe je door het ene scherm heenkomt waar 90% van de nieuwe klanten over struikelt.</p>
   <div class="order-info">
-    <div><div class="lbl">Bestelnummer</div><div class="val" id="order-num">BHB-2026-—</div></div>
-    <div><div class="lbl">Bedrag</div><div class="val">€ 49,00 — eenmalig</div></div>
-    <div><div class="lbl">Mail naar</div><div class="val" id="order-mail">je e-mailadres</div></div>
+    <div><div class="lbl">Bedrag</div><div class="val" id="order-bedrag">€ 49,00 — eenmalig</div></div>
     <div><div class="lbl">Geldig voor</div><div class="val">Onbeperkt — geen abonnement</div></div>
+    <div><div class="lbl">Mail naar</div><div class="val" id="order-mail">je e-mailadres</div></div>
+    <div><div class="lbl">Bestelnummer</div><div class="val">Komt in welkomstmail</div></div>
   </div>
   <div class="belangrijk">
     <strong>⏰ Let op:</strong> de welkomstmail komt soms in de map "Reclame" of "Updates" terecht (vooral bij Gmail). Check daar als je hem niet binnen 5 minuten in je inbox ziet. Markeer hem dan als "Belangrijk" zodat updates wél bovenaan komen.
@@ -233,13 +233,21 @@ footer a{color:rgba(255,255,255,.7);}
 </footer>
 
 <script>
-  // Pak ordernr + email uit URL query (Mollie-redirect kan deze meegeven)
+  // Pak email + bedrag uit URL query (Mollie-redirect geeft deze mee).
+  // Geen Mollie payment-id meer — Mollie returnt 'm pas na de POST, dus we
+  // kunnen 'm niet via redirectUrl injecteren. Bestelnummer staat in mail.
   (function() {
     var p = new URLSearchParams(window.location.search);
-    var nr = p.get('order') || p.get('o');
     var em = p.get('mail') || p.get('email');
-    if (nr) document.getElementById('order-num').textContent = 'BHB-' + nr;
+    var bd = p.get('bedrag') || p.get('amount');
     if (em) document.getElementById('order-mail').textContent = em;
+    if (bd) {
+      var n = parseFloat(bd);
+      if (isFinite(n) && n > 0) {
+        var fmt = (n % 1 === 0) ? String(n) : n.toFixed(2).replace('.', ',');
+        document.getElementById('order-bedrag').textContent = '€ ' + fmt + ' — eenmalig';
+      }
+    }
   })();
 
   // Walkthrough-interactie: klik op "Geavanceerd" toont het 2e linkje

@@ -480,7 +480,7 @@ function _zoekLicentieSheetKandidaten_() {
  * de waarde die de server retourneert om "code op server is ouder dan main"
  * te detecteren — zodat we de hele zoektocht van vannacht niet hoeven herhalen.
  */
-const ADMIN_DASHBOARD_VERSIE = '2026-06-11-B';
+const ADMIN_DASHBOARD_VERSIE = '2026-06-11-C';
 
 /**
  * google.script.run target. Verzamelt de observability-data die op
@@ -568,7 +568,25 @@ function adminObservability(token) {
     const tplId = props.getProperty('TEMPLATE_SS_ID');
     if (tplId) {
       const tplSs = SpreadsheetApp.openById(tplId);
-      assets.template = { naam: 'Master Engine (klant-template)', url: tplSs.getUrl(), titel: tplSs.getName() };
+      // CRITICAL: check of het template "Anyone with the link" is. Zo niet,
+      // krijgen klanten een 404 op de copy-link. Dit was Sam's blocker
+      // tijdens de eerste echte test (proton-account kreeg 404).
+      let publiekZichtbaar = false;
+      try {
+        const f = DriveApp.getFileById(tplId);
+        const sharingAccess = f.getSharingAccess();
+        // ANYONE = iedereen, ANYONE_WITH_LINK = iedereen met de link
+        // DOMAIN/DOMAIN_WITH_LINK = alleen Workspace-collega's, PRIVATE = niemand
+        publiekZichtbaar = (sharingAccess === DriveApp.Access.ANYONE ||
+                            sharingAccess === DriveApp.Access.ANYONE_WITH_LINK);
+      } catch (_) {}
+      assets.template = {
+        naam: 'Master Engine (klant-template)',
+        url: tplSs.getUrl(),
+        titel: tplSs.getName(),
+        publiekZichtbaar: publiekZichtbaar,
+        kopieerUrl: 'https://docs.google.com/spreadsheets/d/' + tplId + '/copy',
+      };
     }
   } catch (_) {}
   try {
@@ -871,7 +889,27 @@ function _adminDashboardHtml_() {
           esc(item.naam)+(item.titel?' <span style="color:#5F6B7A;font-size:11px">— '+esc(item.titel)+'</span>':'')+
           '</a>';
       }
+      // KRITIEKE check: als de Master Engine niet publiek deelbaar is,
+      // krijgen klanten een 404 op de copy-link. Sam's eerste echte test
+      // liep hier vast.
+      var templateAlarm = '';
+      if(a.template && a.template.publiekZichtbaar === false){
+        templateAlarm =
+          '<div style="background:#FDECEC;border:2px solid #B91C1C;border-radius:8px;padding:14px 18px;margin-bottom:14px">'+
+          '<strong style="color:#B91C1C;font-size:14px">🚨 Master Engine is NIET deelbaar — klanten krijgen 404</strong>'+
+          '<p style="margin:6px 0 8px;font-size:13px;color:#5A1010">Je Master Engine staat op "Beperkt". Nieuwe klanten kunnen er geen kopie van maken — ze zien <em>"Sorry, the file you have requested does not exist"</em> en haken af.</p>'+
+          '<p style="margin:0 0 10px;font-size:13px;color:#5A1010"><strong>Fix in 30 seconden:</strong> open Master Engine → rechtsboven <strong>Delen</strong> → onder "Algemene toegang" zet <em>Beperkt</em> op <em>Iedereen met de link</em> (Kijker). Daarna refresh dit dashboard.</p>'+
+          '<a href="'+esc(a.template.url)+'" target="_blank" class="btn-rood" style="text-decoration:none;display:inline-block;padding:8px 16px">Open Master Engine om te delen →</a> '+
+          '<a href="'+esc(a.template.kopieerUrl)+'" target="_blank" class="btn-sec" style="margin-left:6px">Test copy-link (zou nu 404 zijn)</a>'+
+          '</div>';
+      } else if(a.template && a.template.publiekZichtbaar === true){
+        templateAlarm =
+          '<div style="background:#E6F7F4;border:1px solid #2EC4B6;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#0D7355">'+
+          '✓ Master Engine is publiek deelbaar — klanten kunnen kopiëren.'+
+          '</div>';
+      }
       blokken.push('<div class="kaart"><h2>Mijn assets — alles in één klik</h2>'+
+        templateAlarm+
         '<p style="font-size:13px;color:#5F6B7A;margin-bottom:10px">Eén Drive-map "Boekhoudbaar — Operations" bevat alle onderdelen. Bewerk altijd via dit dashboard zodat audit-trails kloppen.</p>'+
         '<div>'+link(a.opsMap)+link(a.script)+link(a.database)+link(a.template)+'</div>'+
         '</div>');

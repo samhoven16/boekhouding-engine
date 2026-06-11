@@ -561,7 +561,13 @@ function maakBetaling(klantnaam, klantEmail, refCode) {
         // Website-bedanktpagina i.p.v. de kale Apps Script-kaart: daar staat
         // de 5-stappen-walkthrough incl. het "Google heeft deze app niet
         // geverifieerd"-scherm waar de meeste activaties op stranden.
-        redirectUrl: 'https://www.boekhoudbaar.nl/bedankt/',
+        // Bedankt-pagina kan email + bedrag uit de URL halen — zo toont 'ie
+        // het echte betaalde bedrag (test-modus €0,01 of korting €44) i.p.v.
+        // de hardcoded €49. Mollie's eigen payment-id krijgen we niet in de
+        // redirect (komt pas terug NA deze POST), dus 'bestelnummer' op de
+        // bedankt-pagina vervalt — wordt vervangen door 'in welkomstmail'.
+        redirectUrl: 'https://www.boekhoudbaar.nl/bedankt/?mail=' +
+          encodeURIComponent(klantEmail) + '&bedrag=' + eindprijs,
         webhookUrl:  webAppUrl,
         metadata:    ref
           ? { naam: klantnaam, email: klantEmail, ref: ref, refKortingToegepast: refGeldig ? REF_KORTING : 0 }
@@ -1740,46 +1746,34 @@ function stuurLicentiemail_(naam, email, sleutel) {
     ? 'https://docs.google.com/spreadsheets/d/' + templateId + '/copy'
     : '';
 
+  // UX-principe: knop bovenaan, niet onderaan. Klanten lezen geen drie
+  // info-blokken voordat ze klikken — ze zoeken de knop. Hou de mail kort
+  // en verberg uitleg achter linkjes naar /bedankt/ (volledige walkthrough).
   const stappenHtml = kopieerLink ? `
-    <div style="background:#F7F9FC;border:1px solid #E5EAF2;border-left:3px solid #2EC4B6;border-radius:10px;padding:20px;margin:20px 0">
-      <p style="margin:0 0 12px;font-weight:700;color:#0D1B4E">In 3 stappen aan de slag:</p>
-      <p style="margin:0 0 8px;font-size:14px;color:#1A1A1A">① Klik op de knop hieronder om je spreadsheet te openen</p>
-      <p style="margin:0 0 8px;font-size:14px;color:#1A1A1A">② Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode</p>
-      <p style="margin:0;font-size:14px;color:#1A1A1A">③ Voer de code in en je boekhouding is direct klaar voor gebruik</p>
-    </div>
-
-    <div style="background:#E6F7F4;border:1px solid #2EC4B6;border-radius:10px;padding:16px 20px;margin:20px 0;font-size:13px;line-height:1.7;color:#0D4F47">
-      <p style="margin:0 0 8px;font-weight:700;color:#0D1B4E">📌 Heb je geen Gmail? Geen probleem.</p>
-      <p style="margin:0 0 8px">Boekhoudbaar draait op Google Sheets — daarom heb je een <strong>Google-account</strong> nodig om je spreadsheet te openen. Maar je hoeft <strong>geen Gmail-adres</strong> te gebruiken: je kunt een gratis Google-account aanmaken met je huidige email (Outlook, iCloud, Proton, eigen domein, etc.) in 2 minuten.</p>
-      <p style="margin:0">
-        Stappen: ga naar <a href="https://accounts.google.com/signup" style="color:#0D1B4E;text-decoration:underline">accounts.google.com/signup</a> →
-        kies <strong>"Use my existing email"</strong> → vul ${escHtml_(email)} in → bevestig via verificatiecode in je inbox.
-        Daarna log je hier op in.
+    <div style="text-align:center;margin:8px 0 24px">
+      <p style="font-size:13px;color:#5F6B7A;margin:0 0 10px;line-height:1.5">
+        Na de klik kom je in <strong>2 Google-schermen</strong>. In het tweede klik je<br>
+        <strong>Geavanceerd → Doorgaan</strong> — dat is de juiste knop.
       </p>
-    </div>
-
-    <div style="background:#FFF8E1;border:1px solid #FFECB3;border-radius:10px;padding:16px 20px;margin:20px 0;font-size:13px;line-height:1.7;color:#5f4b14">
-      <p style="margin:0 0 8px;font-weight:700;color:#5A3F00">Wat Google je zo gaat vragen:</p>
-      <p style="margin:0 0 6px"><strong>1.</strong> Toegang tot <strong>je eigen Google&nbsp;Drive</strong> — precies de bedoeling: dáár komt jouw boekhoudbestand te staan.</p>
-      <p style="margin:0 0 6px"><strong>2.</strong> Toestemming om <strong>namens jou e-mail te sturen</strong> — zodat je facturen direct uit de sheet verstuurt.</p>
-      <p style="margin:0 0 10px"><strong>3.</strong> Verbinding met <strong>externe diensten</strong> — voor licentie-validatie en (optioneel) bank/Mollie-koppelingen.</p>
-      <p style="margin:0;padding-top:10px;border-top:1px dashed #E0D08A">
-        Google toont mogelijk <em>"Deze app is niet geverifieerd door Google"</em>. Dat klopt — Boekhoudbaar is een éénpersoonszaak, geen Google-partner.
-        Klik op <strong>Geavanceerd → Ga naar Boekhoudbaar (onveilig)</strong>. Je data blijft 100% op jóuw Drive; wij kunnen er niet bij.
-      </p>
-    </div>
-
-    <div style="text-align:center;margin:24px 0">
-      <p style="font-size:14px;color:#5F6B7A;margin-bottom:12px;line-height:1.55">
-        Na de klik kom je in <strong>2 Google-schermen</strong>. In het tweede staat<br>
-        "<strong>Geavanceerd → Doorgaan</strong>" — dat is de juiste knop.
-      </p>
-      <a href="${kopieerLink}" style="background:#0D1B4E;color:#fff;padding:16px 32px;
-         border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;letter-spacing:.1px">
+      <a href="${kopieerLink}" style="background:#0D1B4E;color:#fff;padding:16px 36px;
+         border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;letter-spacing:.1px;box-shadow:0 4px 12px rgba(13,27,78,.18)">
         Open mijn boekhouding →
       </a>
+      <p style="font-size:13px;color:#5F6B7A;margin:12px 0 0">
+        Google maakt een kopie in <strong>jouw Drive</strong>.
+      </p>
     </div>
-    <p style="font-size:12px;color:#94a3b8;text-align:center;word-break:break-all">
+
+    <div style="background:#F7F9FC;border:1px solid #E5EAF2;border-left:3px solid #2EC4B6;border-radius:8px;padding:14px 18px;margin:0 0 18px;font-size:13.5px;line-height:1.6;color:#1A1A1A">
+      <strong style="color:#0D1B4E">Wat er straks gebeurt:</strong> Google vraagt om toestemming voor jouw eigen Drive en om mail-verzending namens jou. Je ziet mogelijk "<em>Deze app is niet geverifieerd door Google</em>" — dat is normaal voor scripts die door één persoon zijn gemaakt. Klik <strong>Geavanceerd → Ga naar Boekhoudbaar (onveilig)</strong>.
+      <br><br>
+      <a href="https://www.boekhoudbaar.nl/bedankt/" style="color:#0D1B4E;font-weight:600">Volledige walkthrough met screenshots →</a>
+    </div>
+
+    <p style="font-size:13px;color:#5F6B7A;margin:0 0 4px">
+      <strong style="color:#0D1B4E">Geen Gmail?</strong> Geen probleem — je kunt met élk e-mailadres een Google-account maken op <a href="https://accounts.google.com/signup" style="color:#0D1B4E">accounts.google.com/signup</a> (kies "Bestaand e-mailadres gebruiken").
+    </p>
+    <p style="font-size:12px;color:#94a3b8;margin:12px 0 0;word-break:break-all">
       Werkt de knop niet? Kopieer: ${kopieerLink}</p>
   ` : `
     <p style="font-size:14px;color:#64748b">Je ontvangt binnenkort een link om je boekhouding te openen.
@@ -1821,15 +1815,13 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const textBody =
     'Hoi ' + naam + ',\n\n' +
     'Bedankt voor je aankoop. Hieronder de stappen om aan de slag te gaan.\n\n' +
-    (kopieerLink ? 'In 3 stappen aan de slag:\n' +
-      '1. Open je spreadsheet via: ' + kopieerLink + '\n' +
-      '2. Vul je e-mailadres in — je ontvangt een 6-cijferige activeringscode\n' +
-      '3. Voer de code in en je boekhouding is direct klaar voor gebruik\n\n' +
-      'GEEN GMAIL? GEEN PROBLEEM.\n' +
-      'Boekhoudbaar draait op Google Sheets, dus je hebt een Google-account nodig.\n' +
-      'Maar je kunt gratis een Google-account aanmaken met je huidige email\n' +
-      '(Outlook, iCloud, Proton, eigen domein, etc.).\n' +
-      'Stappen: accounts.google.com/signup → "Use my existing email" → vul ' + email + ' in.\n\n' : '') +
+    (kopieerLink ? 'OPEN JE BOEKHOUDING\n' + kopieerLink + '\n\n' +
+      'Google vraagt straks toestemming voor jouw eigen Drive en om mail namens jou\n' +
+      'te sturen. Je ziet mogelijk "Deze app is niet geverifieerd" — klik dan op\n' +
+      'Geavanceerd → Ga naar Boekhoudbaar (onveilig). Volledige walkthrough:\n' +
+      'https://www.boekhoudbaar.nl/bedankt/\n\n' +
+      'Geen Gmail? Geen probleem — maak gratis een Google-account met je huidige\n' +
+      'e-mail op accounts.google.com/signup (kies "Bestaand e-mailadres gebruiken").\n\n' : '') +
     'Vragen? Stuur een e-mail naar ' + vanEmail + '.\n\n' +
     productnm + (kvk ? ' · KVK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') +
     '\nPrivacybeleid: ' + privacyUrl + '\n';
