@@ -178,7 +178,7 @@ function toonAccountVerwijderenDialog() {
             } else {
               document.getElementById('btnDelete').disabled = false;
               document.getElementById('btnDelete').textContent = 'Definitief verwijderen';
-              toon('status2', 'red', (res && res.fout) || 'Verwijdering mislukt.');
+              toon('status2', 'red', (res && res.fout) || 'Verwijdering mislukt — controleer je code of mail support@boekhoudbaar.nl.');
             }
           })
           .withFailureHandler(function(err) {

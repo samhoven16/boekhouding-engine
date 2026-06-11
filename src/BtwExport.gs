@@ -130,7 +130,7 @@ function toonBtwExportDialog() {
           })
           .withFailureHandler(function(err) {
             document.getElementById('btnPreview').disabled = false;
-            toon('red', (err && err.message) || 'Onbekende fout.');
+            toon('red', (err && err.message) || 'Er ging iets mis — probeer opnieuw of mail support@boekhoudbaar.nl.');
           })
           .berekenBtwExportPreview(periode);
       }
@@ -152,7 +152,7 @@ function toonBtwExportDialog() {
               toon('red', (res && res.fout) || 'Download mislukt.');
             }
           })
-          .withFailureHandler(function(err) { toon('red', (err && err.message) || 'Onbekende fout.'); })
+          .withFailureHandler(function(err) { toon('red', (err && err.message) || 'Er ging iets mis — probeer opnieuw of mail support@boekhoudbaar.nl.'); })
           .berekenBtwExportBestand(huidigePeriode, formaat);
       }
     </script>

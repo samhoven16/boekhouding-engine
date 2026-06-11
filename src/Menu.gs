@@ -156,7 +156,6 @@ function onOpen() {
     // ── Bankboek ──────────────────────────────
     .addSubMenu(ui.createMenu('Bank')
       .addItem('Bankafschrift importeren (CSV, auto-match)', 'openBankImportDialoog')
-      .addItem('Bankafschrift importeren — oude versie', 'importeerBankafschrift')
       .addSeparator()
       .addItem('Betalingen koppelen aan facturen', 'koppelTransactiesAanFacturen')
       .addItem('Transacties categoriseren', 'autoCategoriseerTransacties')
@@ -179,12 +178,13 @@ function onOpen() {
     )
 
     // ── Kwaliteit & Controle ──────────────────
+    // UX-audit: was 26 items — overweldigend voor niet-technische klanten.
+    // Klant-taken (backup, export, audit) blijven direct zichtbaar;
+    // engineering-diagnostiek zit in het "Voor support"-submenu.
     .addSubMenu(ui.createMenu('Controle & Export')
-      .addItem('✅ Werkt-alles-test (eerste-klant-readiness)', 'controleerEersteKlantReady')
+      .addItem('Alles werkt-check (controleer je installatie)', 'controleerEersteKlantReady')
       .addItem('Gezondheidscheck uitvoeren', 'voerGezondheidCheckUit')
-      .addItem('🔍 Installatie diagnoseren (is mijn setup OK?)', 'diagnoseInstallatie')
       .addItem('✨ Tabbladen opnieuw opmaken (kleuren + format)', 'verfraaiTabbladen')
-      .addItem('📚 Help & Compliance tab vernieuwen', 'vernieuwHelpTab')
       .addItem('💬 Fout melden of suggestie indienen', 'openFeedbackDialog')
       .addSeparator()
       .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
@@ -196,17 +196,23 @@ function onOpen() {
       .addSeparator()
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
       .addItem('🔐 Audit-keten verifiëren (is er niets gewijzigd?)', 'toonAuditKetenVerificatie')
-      .addItem('🔧 Systeemstatus (voor support)', 'toonSysteemStatus')
-      .addItem('📁 Audit-log naar JSON exporteren (90 dgn)', 'exporteerAuditLogJson')
       .addItem('📦 Volledige data-export (GDPR art. 20)', 'exporteerAlleData')
-      .addItem('📧 Ongeldige email-adressen tonen', 'toonOngeldigeEmailRelaties')
-      .addItem('🩺 Diagnostiek — autorisatie-check', 'controleerAutorisaties')
-      .addItem('📋 Geïnstalleerde triggers tonen', 'toonTriggers')
-      .addItem('📈 Apps Script executions openen', 'openExecutionsDashboard')
-      .addItem('🚩 Feature flags overzicht', 'toonFeatures')
-      .addItem('📨 Mislukte taken (DLQ) tonen', 'toonDlqOverzicht')
-      .addItem('🔁 Forceer DLQ-retry nu', 'forceerDlqRetry')
       .addItem('Gesloten periodes beheren', 'beheerGeslotenPeriodes')
+      .addSeparator()
+      .addSubMenu(ui.createMenu('Voor support (geavanceerd)')
+        .addItem('🔍 Installatie diagnoseren', 'diagnoseInstallatie')
+        .addItem('🔧 Systeemstatus', 'toonSysteemStatus')
+        .addItem('🩺 Autorisatie-check', 'controleerAutorisaties')
+        .addItem('📋 Geïnstalleerde triggers tonen', 'toonTriggers')
+        .addItem('📈 Apps Script executions openen', 'openExecutionsDashboard')
+        .addItem('🚩 Feature flags overzicht', 'toonFeatures')
+        .addItem('📨 Mislukte taken (DLQ) tonen', 'toonDlqOverzicht')
+        .addItem('🔁 Forceer DLQ-retry nu', 'forceerDlqRetry')
+        .addItem('📁 Audit-log naar JSON exporteren (90 dgn)', 'exporteerAuditLogJson')
+        .addItem('📧 Ongeldige email-adressen tonen', 'toonOngeldigeEmailRelaties')
+        .addItem('📚 Help & Compliance tab vernieuwen', 'vernieuwHelpTab')
+        .addItem('Bankafschrift importeren — oude versie', 'importeerBankafschrift')
+      )
     )
 
     // ── Hulp & advies (dagelijks gebruik op top-level) ─────────
@@ -307,8 +313,8 @@ function onOpen() {
       .addItem('Werkruimte opschonen (tabbladen)', 'herorganiseerWerkruimte')
       .addItem('🧹 Triggers schoonmaken (zombie-triggers verwijderen)', 'sanitizeTriggers')
       .addSeparator()
-      .addItem('🔒 Fortress Mode AAN (klant-proof maken)', 'fortressModeAan')
-      .addItem('🔓 Fortress Mode UIT (handmatig editen weer toestaan)', 'fortressModeUit')
+      .addItem('🔒 Beveiligde modus AAN (voorkom per-ongeluk-wijzigingen)', 'fortressModeAan')
+      .addItem('🔓 Beveiligde modus UIT (handmatig bewerken toestaan)', 'fortressModeUit')
       .addSeparator()
       .addItem('Setup opnieuw uitvoeren (reset)', 'resetSetup')
     )
@@ -593,9 +599,9 @@ function herlaadGrootboekschema() {
   const bevestiging = ui.alert(
     'Rekeningschema herladen',
     'Standaard-rekeningen worden hersteld (naam/categorie/type).\n\n' +
-    '• Klant-toegevoegde rekeningen blijven behouden.\n' +
+    '• Rekeningen die je zelf hebt toegevoegd blijven behouden.\n' +
     '• Bestaande saldi blijven behouden.\n' +
-    '• Standaard-rekeningen die u hernoemd had, krijgen weer hun originele naam.\n\n' +
+    '• Standaard-rekeningen die je hernoemd had, krijgen weer hun originele naam.\n\n' +
     'Doorgaan?',
     ui.ButtonSet.YES_NO
   );
