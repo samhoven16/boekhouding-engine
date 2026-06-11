@@ -747,20 +747,6 @@ function isFeatureIngeschakeld_(naam) {
   }
 }
 
-/**
- * Voor flags die een tekst-melding voor de gebruiker hebben.
- * Server kan zeggen: 'Deze functie is in onderhoud — verwacht binnen X uur'.
- */
-function featureMelding_(naam) {
-  try {
-    const cfg = haalConfigOp_();
-    if (!cfg || !cfg.featureMeldingen) return '';
-    return String(cfg.featureMeldingen[naam] || '');
-  } catch (_) {
-    return '';
-  }
-}
-
 // ─────────────────────────────────────────────
 //  TELEMETRY — anomaly reporting naar server (Tier 1 distribution)
 // ─────────────────────────────────────────────

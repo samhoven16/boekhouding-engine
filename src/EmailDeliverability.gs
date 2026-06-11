@@ -79,57 +79,6 @@ function detecteerBounceType_(foutTekst) {
 }
 
 /**
- * Wrapper rond GmailApp.sendEmail die bounce-detectie + DLQ-retry doet.
- * Drop-in replacement voor GmailApp.sendEmail in critical flows.
- *
- * @param {string} naar         email-adres
- * @param {string} onderwerp
- * @param {string} body         plain-text
- * @param {Object=} opties      GmailApp opties + meta { dlqType, dlqPayload }
- * @returns {boolean}           true = verzonden, false = bounce/fail
- */
-function stuurEmailVeilig_(naar, onderwerp, body, opties) {
-  if (!naar || !isGeldigEmail_(naar)) {
-    safeAuditLog_('Email OVERGESLAGEN', naar + ' — ongeldig formaat');
-    return false;
-  }
-  // Quota pre-flight
-  try {
-    if (MailApp.getRemainingDailyQuota() < 1) {
-      throw new Error('Dagelijkse e-mail-quota uitgeput');
-    }
-  } catch (_) {}
-
-  // List-Unsubscribe header (RFC 8058) — anti-spam
-  const opts = opties || {};
-  if (!opts.headers) opts.headers = {};
-  opts.headers['List-Unsubscribe'] = '<mailto:support@boekhoudbaar.nl?subject=Unsubscribe>';
-  opts.headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
-
-  try {
-    GmailApp.sendEmail(naar, onderwerp, body, opts);
-    return true;
-  } catch (err) {
-    const bounceType = detecteerBounceType_(err.message);
-    if (bounceType === 'hard') {
-      markeerEmailOngeldig_(naar, err.message);
-      safeAuditLog_('Hard-bounce', naar + ' — ' + err.message.slice(0, 120));
-    } else if (bounceType === 'soft' && opts.dlqType) {
-      // Soft-bounce: schedule retry in DLQ
-      try {
-        if (typeof dlqVoegToe_ === 'function') {
-          dlqVoegToe_(opts.dlqType, opts.dlqPayload || { naar: naar, onderwerp: onderwerp, body: body },
-            'Soft-bounce: ' + err.message);
-        }
-      } catch (_) {}
-    } else {
-      safeAuditLog_('Email-fout', naar + ' — ' + err.message.slice(0, 120));
-    }
-    return false;
-  }
-}
-
-/**
  * Menu: toon alle relaties met email-status 'ongeldig' — klant kan ze
  * handmatig bijwerken.
  */

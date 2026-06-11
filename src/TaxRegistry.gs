@@ -227,50 +227,6 @@ function controleerTaxBtwDeadline() {
   }
 }
 
-// ─────────────────────────────────────────────
-//  TAX-ADM-001 — BEWAARPLICHT ADMINISTRATIE
-// ─────────────────────────────────────────────
-
-/**
- * Evalueert of een document nog binnen de wettelijke bewaartermijn valt.
- * Bedoeld voor aanroep vóór elke document-delete poging.
- * Schrijft audit-log.
- * BLOKKEERT NOOIT — geeft signaal terug, gebruiker beslist.
- *
- * @param {Date|string} documentDatum
- * @param {string}      documentType - 'onroerend_goed' of 'standaard'
- * @returns {{ ruleId, binnentermijn, leeftijdJaar, termijnJaar, bericht }}
- */
-function controleerBewaartermijn_(documentDatum, documentType) {
-  const type       = (documentType === 'onroerend_goed') ? 'onroerend_goed' : 'standaard';
-  const termijnJaar = getTaxRegistryValue_('TAX-ADM-001', 'bewaartermijn.' + type + '.jaren') || 7;
-
-  const datum      = (documentDatum instanceof Date) ? documentDatum : (parseDatum_(documentDatum) || new Date(documentDatum));
-  const nu         = new Date();
-  const leeftijdJaar = (nu - datum) / (1000 * 60 * 60 * 24 * 365.25);
-  const binnentermijn = leeftijdJaar < termijnJaar;
-
-  logTaxSignaal_('TAX-ADM-001', {
-    actie:          'delete_check',
-    doc_type:       type,
-    leeftijd_jaar:  Math.round(leeftijdJaar * 10) / 10,
-    termijn_jaar:   termijnJaar,
-    binnen_termijn: binnentermijn,
-  });
-
-  return {
-    ruleId:        'TAX-ADM-001',
-    binnentermijn: binnentermijn,
-    leeftijdJaar:  Math.round(leeftijdJaar * 10) / 10,
-    termijnJaar:   termijnJaar,
-    bericht: binnentermijn
-      ? 'Dit document is ' + Math.floor(leeftijdJaar) + ' jaar oud. ' +
-        'De wettelijke bewaartermijn is ' + termijnJaar + ' jaar (art. 52 AWR). ' +
-        'Weet u zeker dat u het wilt verwijderen?'
-      : null,
-  };
-}
-
 /**
  * Toont de eenmalige onboarding-tip voor de bewaarplicht.
  * Idempotent: toont nooit twee keer aan dezelfde installatie.

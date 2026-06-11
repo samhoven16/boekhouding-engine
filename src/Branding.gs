@@ -12,23 +12,6 @@ const PROP_LOGO      = 'bedrijfsLogo';
 const PROP_LOGO_MIME = 'bedrijfsLogoMime';
 const PROP_KLEUR     = 'bedrijfsKleur';
 
-// ─────────────────────────────────────────────
-//  GETTERS (voor gebruik in andere bestanden)
-// ─────────────────────────────────────────────
-
-/**
- * Geeft het bedrijfslogo terug als data-URL (base64).
- * Geeft null terug als er geen logo is ingesteld.
- *
- * Het logo wordt chunked opgeslagen omdat ScriptProperties een 9KB-limiet
- * per waarde heeft. PROP_LOGO bevat alleen een aanwezigheidsstub van ~53
- * chars; de echte data zit in PROP_LOGO_chunks. Daarom delegate naar
- * getBedrijfsLogoVolledig_ — anders zou deze functie altijd null geven.
- */
-function getBedrijfsLogo_() {
-  return getBedrijfsLogoVolledig_();
-}
-
 /**
  * Geeft de primaire bedrijfskleur terug (hex, default #0D1B4E).
  */

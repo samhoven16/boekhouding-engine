@@ -111,20 +111,6 @@ function beheerRelaties() {
 }
 
 // ─────────────────────────────────────────────
-//  INKOOPFACTUUR VALIDATIE
-// ─────────────────────────────────────────────
-function valideerInkoopfactuur_(data) {
-  const fouten = [];
-
-  if (!data.leverancier) fouten.push('Leveranciernaam is verplicht');
-  if (!data.factuurnummer) fouten.push('Factuurnummer leverancier is verplicht');
-  if (!data.bedragExcl || data.bedragExcl <= 0) fouten.push('Bedrag excl. BTW moet groter dan 0 zijn');
-  if (!data.datum) fouten.push('Factuurdatum is verplicht');
-
-  return fouten;
-}
-
-// ─────────────────────────────────────────────
 //  INKOOPFACTUREN OVERZICHT (FILTERED)
 // ─────────────────────────────────────────────
 function toonOpenInkoopfacturen() {
