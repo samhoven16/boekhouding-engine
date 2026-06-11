@@ -231,8 +231,14 @@ describe('V2: rateLimit_ — robuustheid', () => {
 describe('V2: doGet-callers gebruiken de nieuwe signature', () => {
   const src = fs.readFileSync(CODE_GS, 'utf8');
 
-  test('aanvraag-otp roept rateLimit_ met opties-object aan', () => {
-    expect(src).toMatch(/aanvraag-otp[^\n]*rateLimit_\(e,\s*\{[^}]*perEmail[^}]*globaal[^}]*\}\)/);
+  test('aanvraag-otp roept rateLimit_ met opties-object aan (per-email op router)', () => {
+    // Sinds red-team #2 fix: router heeft alleen perEmail (anti-enumeration);
+    // globaal is verplaatst naar BINNEN aanvraagOtpEndpoint_ voor BEKENDE klanten,
+    // zodat fake-email aanvragen de globale 500/u cap niet kunnen saturen.
+    expect(src).toMatch(/aanvraag-otp[^\n]*rateLimit_\(e,\s*\{[^}]*perEmail[^}]*\}\)/);
+    // En de globaal-check moet ELDERS in het bestand zitten met de andere
+    // actie-naam (aanvraag-otp-bekend), specifiek voor BEKENDE klanten.
+    expect(src).toMatch(/actie:\s*['"]aanvraag-otp-bekend['"][^}]*globaal/);
   });
 
   test('activeer-otp roept rateLimit_ met opties-object aan', () => {

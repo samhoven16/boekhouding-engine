@@ -35,7 +35,10 @@ function doGet(e) {
 
   if (actie === 'health')        return healthEndpoint_();
   if (actie === 'valideer')      return valideerEndpoint_(e);
-  if (actie === 'aanvraag-otp')  return rateLimit_(e, { actie: 'aanvraag-otp', perEmail: 5,  globaal: 500, windowMin: 60 }) || aanvraagOtpEndpoint_(e);
+  // Globaal-cap verplaatst NAAR BINNEN aanvraagOtpEndpoint_ na klant-bekend-check.
+  // Voorkomt dat aanvaller met fake emails de globale 500/u cap saturen → legitieme
+  // klant zou anders 429 krijgen ondanks dat hij echt is (red-team #2 vondst).
+  if (actie === 'aanvraag-otp')  return rateLimit_(e, { actie: 'aanvraag-otp', perEmail: 5, windowMin: 60 }) || aanvraagOtpEndpoint_(e);
   if (actie === 'activeer-otp')  return rateLimit_(e, { actie: 'activeer-otp', perEmail: 12, globaal: 500, windowMin: 60 }) || activeerOtpEndpoint_(e);
   if (actie === 'herstuur-licentie') return rateLimit_(e, { actie: 'herstuur-licentie', perEmail: 3, globaal: 200, windowMin: 60 }) || herstuurLicentieEndpoint_(e);
   if (actie === 'onboarded')     return rateLimit_(e, { actie: 'onboarded', globaal: 500, windowMin: 60 }) || onboardedEndpoint_(e);
@@ -731,6 +734,12 @@ function aanvraagOtpEndpoint_(e) {
   if (!gevonden) {
     return jsonResp_({ ok: false, fout: 'Dit e-mailadres is niet bekend als klant. Controleer het e-mailadres waarmee je hebt gekocht.' });
   }
+
+  // Globaal-cap pas tellen voor BEKENDE klanten (red-team #2 fix). Unknown-email
+  // requests passeren router's per-email-cap (5/u) maar mogen niet bijdragen
+  // aan de globale bucket — anders kan 500 fake adressen de cap saturen.
+  const globaalLimit = rateLimit_(e, { actie: 'aanvraag-otp-bekend', globaal: 500, windowMin: 60 });
+  if (globaalLimit) return globaalLimit;
 
   // Rate limit: max 1 aanvraag per 60 seconden
   const props  = PropertiesService.getScriptProperties();
