@@ -1062,14 +1062,32 @@ function updateBundleEndpoint_(e) {
   }
 
   const props = PropertiesService.getScriptProperties();
-  const bundleRaw = props.getProperty('UPDATE_BUNDLE_' + versie);
-  if (!bundleRaw) {
+  const propValue = String(props.getProperty('UPDATE_BUNDLE_' + versie) || '').trim();
+  if (!propValue) {
     return jsonResp_({ ok: false, fout: 'Versie ' + versie + ' is (nog) niet gepubliceerd. Mail update@boekhoudbaar.nl.' });
   }
 
-  let bundle;
-  try { bundle = JSON.parse(bundleRaw); }
-  catch (_) { return jsonResp_({ ok: false, fout: 'Bundle-data corrupt op server. Mail support.' }); }
+  // Storage-strategie: ScriptProperty bevat ofwel een Drive-file-id (v3, default
+  // sinds chunking onhaalbaar bleek — veel files zijn alleen al > 9KB) ofwel
+  // een inline JSON-bundle (legacy v1, voor klein-test gebruik).
+  //
+  // Drive-file-id-detectie: alfanumeriek + underscores/strepen, lengte 25-50,
+  // geen JSON-structuur. Anders proberen we 'm als inline JSON te parsen.
+  let bundle = null;
+  const ziatErUitAlsFileId = /^[A-Za-z0-9_-]{20,60}$/.test(propValue);
+  if (ziatErUitAlsFileId) {
+    try {
+      const blob = DriveApp.getFileById(propValue).getBlob();
+      const inhoud = blob.getDataAsString('UTF-8');
+      bundle = JSON.parse(inhoud);
+    } catch (driveFout) {
+      return jsonResp_({ ok: false, fout: 'Bundle-file kon niet uit Drive gelezen worden: ' +
+        driveFout.message + '. Check of UPDATE_BUNDLE_' + versie + ' het juiste file-id heeft en of het bestand gedeeld is.' });
+    }
+  } else {
+    try { bundle = JSON.parse(propValue); }
+    catch (_) { return jsonResp_({ ok: false, fout: 'Bundle-data corrupt op server (geen file-id en geen geldige JSON).' }); }
+  }
 
   if (!bundle || !Array.isArray(bundle.files) || bundle.files.length === 0) {
     return jsonResp_({ ok: false, fout: 'Bundle bevat geen bestanden.' });

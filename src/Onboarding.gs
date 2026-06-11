@@ -176,7 +176,7 @@ input:focus,select:focus{outline:none;border-color:#2EC4B6}
 <h2>📋 Persoonlijk fiscaal profiel</h2>
 <div class="sub">
   6 vragen → Boekhoudbaar geeft daarna automatisch persoonlijke fiscale signalering
-  voor KIA, AOV, WBSO, AOW-leeftijd en alle aftrekposten waar u recht op heeft.
+  voor KIA, AOV, WBSO, AOW-leeftijd en alle aftrekposten waar je recht op hebt.
 </div>
 
 <div class="veld">
@@ -199,7 +199,7 @@ input:focus,select:focus{outline:none;border-color:#2EC4B6}
 
 <div class="row">
   <div class="veld">
-    <label>4. Heeft u een AOV?</label>
+    <label>4. Heb je een AOV?</label>
     <select id="aovActief">
       <option value="">— niet ingevuld —</option>
       <option value="Ja" ${huidig.aovActief === 'Ja' ? 'selected' : ''}>Ja, ik betaal AOV-premie</option>
@@ -209,7 +209,7 @@ input:focus,select:focus{outline:none;border-color:#2EC4B6}
   </div>
 
   <div class="veld">
-    <label>5. Doet u R&D / innovatie-werk?</label>
+    <label>5. Doe je R&D / innovatie-werk?</label>
     <select id="wbsoActief">
       <option value="">— niet ingevuld —</option>
       <option value="Ja" ${huidig.wbsoActief === 'Ja' ? 'selected' : ''}>Ja (≥500u/jaar)</option>
@@ -227,7 +227,7 @@ input:focus,select:focus{outline:none;border-color:#2EC4B6}
 
 <div class="tip">
   💡 Alle antwoorden gaan naar het tabblad "Instellingen" en kunnen later
-  altijd worden aangepast. Vragen die u openlaat blokkeren niets — het systeem
+  altijd worden aangepast. Vragen die je openlaat blokkeren niets — het systeem
   geeft dan minder gepersonaliseerd advies.
 </div>
 

@@ -5,19 +5,25 @@
  * Tier 2 #7 — release-bottleneck oplossen.
  *
  * Sam draait dit script voor elke release. Het leest src/*.gs, bouwt het
- * UPDATE_BUNDLE-formaat dat updateBundleEndpoint_ verwacht, en print
- * copy-pasteable JSON die in de licence-server ScriptProperty
- * `UPDATE_BUNDLE_<versie>` moet komen. Geen file-writes — voorkomt
- * "ik dacht dat ik 'm al had gedeployed"-foutmodus (zelfde principe als
- * scripts/release-instructions.js).
+ * bundle-formaat, en schrijft het naar EEN bestand op schijf
+ * (bundle-X.Y.Z.json). Sam upload dat bestand naar Drive, kopieert het
+ * Drive-file-id en zet dat in ScriptProperty UPDATE_BUNDLE_<versie>.
+ *
+ * Waarom geen ScriptProperty-storage zoals tier 2.1 dacht:
+ * de codebase is 1.7MB; ScriptProperties heeft 9KB per key + 500KB totaal.
+ * Veel individuele files zijn zelf al > 9KB. Drive-file omzeilt beide limits.
+ *
+ * Server-kant (updateBundleEndpoint_) leest de Drive-file via fileId,
+ * parseet de JSON en levert dezelfde API als voorheen aan de client.
+ * Klant-kant (haalUpdateBundleOp, voerAutomatischeUpdateUit_) ongewijzigd.
+ *
+ * Hash = SHA-256 van canonical(files-array). Server berekent 'm opnieuw
+ * en vergelijkt met manifest.hash om tampering met de Drive-file te
+ * detecteren — zo komt de hash twee keer langs (server + client).
  *
  * Gebruik:
  *   node scripts/bundle-create.js 2.8.0
- *   node scripts/bundle-create.js 2.8.0 > bundle-2.8.0.json   # optioneel save
- *
- * Output naar stdout: 1 regel "→ kopieer dit naar ScriptProperty
- * UPDATE_BUNDLE_2.8.0", dan het JSON-blok. Logs (stderr): aantal files,
- * totale grootte, hash-prefix voor sanity.
+ *   ls bundle-2.8.0.json   # bestand staat in repo-root
  */
 'use strict';
 
@@ -25,7 +31,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const SRC = path.resolve(__dirname, '..', 'src');
+const ROOT = path.resolve(__dirname, '..');
+const SRC = path.resolve(ROOT, 'src');
 
 function log(msg) { process.stderr.write(msg + '\n'); }
 function fout(msg) { process.stderr.write('FOUT: ' + msg + '\n'); process.exit(1); }
@@ -40,35 +47,32 @@ if (!fs.existsSync(SRC) || !fs.statSync(SRC).isDirectory()) {
   fout('src/ directory niet gevonden op ' + SRC);
 }
 
-// Lees alle .gs files in src/. Niet recursief — flat structure is conventie
-// (Apps Script ondersteunt geen subdirs).
 const entries = fs.readdirSync(SRC)
   .filter((n) => n.endsWith('.gs'))
-  .sort();  // deterministische volgorde → reproduceerbare hash
-
+  .sort();
 if (entries.length === 0) fout('Geen .gs files gevonden in ' + SRC);
 
 const files = entries.map((naam) => {
   const fp = path.join(SRC, naam);
   const source = fs.readFileSync(fp, 'utf8');
-  // Type 'server_js' = wat Apps Script in z'n manifest verwacht voor .gs files.
-  // HTML files zouden 'html' krijgen — staan niet in src/ voor deze codebase.
   return { naam: naam.replace(/\.gs$/, ''), source, type: 'server_js' };
 });
 
-// Canonical JSON voor hash — zelfde regel als updateBundleEndpoint_ + client
-// (`_berekenBundleHash_`): JSON.stringify(files-array) zonder spaties.
 const canonical = JSON.stringify(files);
 const hash = crypto.createHash('sha256').update(canonical).digest('hex');
-
 const totaalBytes = files.reduce((acc, f) => acc + Buffer.byteLength(f.source, 'utf8'), 0);
+const generatedAt = new Date().toISOString();
 
 const bundle = {
+  _schema: 'boekhoudbaar/update-bundle/v3-drive',
+  versie: versie,
   files: files,
-  generatedAt: new Date().toISOString(),
-  // versie komt niet in bundle — die zit in de ScriptProperty-naam
-  // (UPDATE_BUNDLE_<versie>) zodat 1 server meerdere versies kan serveren.
+  hash: hash,
+  generatedAt: generatedAt,
 };
+
+const bundleBestand = path.join(ROOT, 'bundle-' + versie + '.json');
+fs.writeFileSync(bundleBestand, JSON.stringify(bundle, null, 2) + '\n');
 
 log('');
 log('═══ BUNDLE GENERATED ═══');
@@ -77,31 +81,29 @@ log('Files:               ' + files.length);
 log('Totale source:       ' + totaalBytes.toLocaleString() + ' bytes (' +
   (totaalBytes / 1024).toFixed(1) + ' KB)');
 log('SHA-256 (canonical): ' + hash);
-log('Generated at:        ' + bundle.generatedAt);
+log('Generated at:        ' + generatedAt);
+log('');
+log('Geschreven naar:     ' + bundleBestand);
+log('Bestandsgrootte:     ' + Math.round(fs.statSync(bundleBestand).size / 1024) + ' KB');
 log('');
 log('───────────────────────────────────────────────');
-log('NEXT STEPS (handmatig, dwingt zelf-controle):');
-log('  1. Login licence-server Apps Script project');
-log('  2. Project Settings → Script Properties → Add property');
-log('  3. Property name:  UPDATE_BUNDLE_' + versie);
-log('  4. Property value: paste het JSON-blok hieronder');
-log('  5. Save');
-log('  6. Test: client menu "📦 Download laatste versie" → vul ' + versie);
+log('NEXT STEPS:');
+log('───────────────────────────────────────────────');
+log('  1. Upload ' + path.basename(bundleBestand) + ' naar Google Drive');
+log('     (folder maakt niet uit — server gebruikt fileId).');
+log('  2. Rechtermuisknop → "Share" → "Anyone with the link can VIEW".');
+log('     (Sam-only is OK; de licence-server kan zijn eigen Drive ook lezen.)');
+log('  3. Kopieer het file-id uit de URL:');
+log('     https://drive.google.com/file/d/FILE_ID_HIER/view');
+log('  4. Open licence-server Apps Script project → Project Settings →');
+log('     Script Properties → Add property:');
+log('       Naam:    UPDATE_BUNDLE_' + versie);
+log('       Waarde:  het file-id uit stap 3');
+log('  5. (Optioneel maar aangeraden) Zet ook deze property:');
+log('       Naam:    VERSIE_KRITIEK_VOOR');
+log('       Waarde:  ["2.7.0"]  ← versies die deze upgrade moeten zien');
+log('  6. Test: klant menu "📦 Download laatste versie" → vul ' + versie);
 log('───────────────────────────────────────────────');
 log('');
 
-// Output naar stdout zodat `> bundle-2.8.0.json` werkt voor save.
-// Pretty-print voor leesbaarheid in ScriptProperty editor, hash blijft
-// gelijk omdat de SERVER opnieuw stringifyt (zonder spaties) bij verify.
-process.stdout.write(JSON.stringify(bundle, null, 2) + '\n');
-
-// Sanity: ScriptProperties heeft 9KB-per-key cap. Onze JSON kan groter zijn.
-// Waarschuwing als > 8KB (laat 1KB marge voor JSON-overhead bij parse).
-const jsonBytes = Buffer.byteLength(JSON.stringify(bundle), 'utf8');
-if (jsonBytes > 8 * 1024) {
-  log('');
-  log('⚠ WAARSCHUWING: bundle is ' + (jsonBytes / 1024).toFixed(1) +
-    ' KB; ScriptProperties limiet is 9 KB per key.');
-  log('  Optie: chunk bundle in UPDATE_BUNDLE_' + versie + '_1, _2, ...');
-  log('  Voor nu: deploy alsnog, test of het werkt.');
-}
+process.stdout.write(bundleBestand + '\n');

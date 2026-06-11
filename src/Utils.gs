@@ -281,7 +281,7 @@ function vertaalFout_(e) {
   // audit-log naar exacte details + tenant-hash + tijdstip.
   const reqId = _genereerRequestId_();
   safeAuditLog_('FOUT_VERTAALD [' + reqId + ']', raw.slice(0, 240));
-  if (!raw) return 'Er ging iets mis. Probeer opnieuw of bekijk de Audit Log. (ref: ' + reqId + ')';
+  if (!raw) return 'Er ging iets mis. Probeer het opnieuw — lukt het dan nog niet, mail support@boekhoudbaar.nl met dit nummer: ' + reqId;
   const suffix = ' (ref: ' + reqId + ')';
   if (/too many times|rate.?limit|service invoked/i.test(raw)) return 'Te veel acties achter elkaar — wacht een minuut en probeer opnieuw.' + suffix;
   if (/permission|not.*authoriz|access.*denied|geen toegang/i.test(raw)) return 'Geen toegang tot dit bestand. Vraag de eigenaar of probeer opnieuw in te loggen.' + suffix;
@@ -292,7 +292,7 @@ function vertaalFout_(e) {
   if (/invalid|ongeldig|cannot read|undefined/i.test(raw)) return 'Ongeldige invoer — controleer de waarden en probeer opnieuw.' + suffix;
   // Behoud business-fouten die we zelf met `throw new Error(...)` gooien (NL-tekst)
   if (/^[A-Za-zÀ-ÿ ]/.test(raw) && raw.length < 200 && !/[a-z]:[A-Z]|stack|trace/i.test(raw)) return raw + suffix;
-  return 'Er ging iets mis. Controleer je invoer en probeer opnieuw.' + suffix;
+  return 'Er ging iets mis. Probeer het opnieuw — lukt het dan nog niet, mail support@boekhoudbaar.nl met het nummer hieronder.' + suffix;
 }
 
 /**
