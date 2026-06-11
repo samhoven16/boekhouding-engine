@@ -121,13 +121,15 @@ describe('CYCLE 35: integratie — 4 call-sites in Triggers.gs', () => {
     expect(src).not.toMatch(/parseDatum_\(data\[['"][A-Za-z]+datum['"]\]\)\s*\|\|\s*new Date\(\)/);
   });
 
-  test('_parseFormDatumStrikt_ wordt 5× aangeroepen op data[label] paths', () => {
+  // De 4 legacy form-handlers (verwerk*Formulier) zijn verwijderd — ze waren
+  // nooit aan een trigger gekoppeld (superseded door het hoofdformulier).
+  // De overgebleven call-sites zijn de LIVE paden; die moeten strikt blijven.
+  test('_parseFormDatumStrikt_ wordt op alle live data[label]-paden gebruikt', () => {
     const callSites = src.match(/_parseFormDatumStrikt_\(data\[/g) || [];
-    expect(callSites.length).toBe(5);   // 4 legacy + 1 hoofdform + helper-def = 5+1=6 totaal
+    expect(callSites.length).toBe(2);   // hoofdformulier-inkomsten + -uitgaven
   });
 
-  test('Verschillende label-namen voor Factuurdatum + Transactiedatum', () => {
+  test('Live paden gebruiken het Factuurdatum-label strikt', () => {
     expect(src).toMatch(/_parseFormDatumStrikt_\(data\[['"]Factuurdatum['"]\],\s*['"]Factuurdatum['"]\)/);
-    expect(src).toMatch(/_parseFormDatumStrikt_\(data\[['"]Transactiedatum['"]\],\s*['"]Transactiedatum['"]\)/);
   });
 });

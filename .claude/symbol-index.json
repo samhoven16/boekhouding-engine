@@ -1167,178 +1167,192 @@
       "kind": "function"
     }
   ],
+  "_gbRijCache_": [
+    {
+      "file": "Boekingen.gs",
+      "line": 329,
+      "kind": "const"
+    }
+  ],
+  "_gbVindRij_": [
+    {
+      "file": "Boekingen.gs",
+      "line": 331,
+      "kind": "function"
+    }
+  ],
   "updateGrootboekSaldo_": [
     {
       "file": "Boekingen.gs",
-      "line": 323,
+      "line": 352,
       "kind": "function"
     }
   ],
   "getGrootboekSaldo_": [
     {
       "file": "Boekingen.gs",
-      "line": 407,
+      "line": 462,
       "kind": "function"
     }
   ],
   "herberekeningGrootboekSaldi": [
     {
       "file": "Boekingen.gs",
-      "line": 421,
+      "line": 476,
       "kind": "function"
     }
   ],
   "exporteerGrootboekkaart": [
     {
       "file": "Boekingen.gs",
-      "line": 509,
+      "line": 564,
       "kind": "function"
     }
   ],
   "genereerGrootboekkaart_": [
     {
       "file": "Boekingen.gs",
-      "line": 531,
+      "line": 586,
       "kind": "function"
     }
   ],
   "boekAfschrijvingen": [
     {
       "file": "Boekingen.gs",
-      "line": 602,
+      "line": 657,
       "kind": "function"
     }
   ],
   "verwerkAfschrijvingen": [
     {
       "file": "Boekingen.gs",
-      "line": 681,
+      "line": 736,
       "kind": "function"
     }
   ],
   "vernieuwDebiteurenOverzicht": [
     {
       "file": "Boekingen.gs",
-      "line": 734,
+      "line": 789,
       "kind": "function"
     }
   ],
   "vernieuwCrediteurenOverzicht": [
     {
       "file": "Boekingen.gs",
-      "line": 865,
+      "line": 920,
       "kind": "function"
     }
   ],
   "koppelTransactiesAanFacturen": [
     {
       "file": "Boekingen.gs",
-      "line": 932,
+      "line": 987,
       "kind": "function"
     }
   ],
   "volgendFactuurnummer_": [
     {
       "file": "Boekingen.gs",
-      "line": 959,
+      "line": 1014,
       "kind": "function"
     }
   ],
   "volgendInkoopNummer_": [
     {
       "file": "Boekingen.gs",
-      "line": 972,
+      "line": 1027,
       "kind": "function"
     }
   ],
   "volgendBoekingId_": [
     {
       "file": "Boekingen.gs",
-      "line": 985,
+      "line": 1040,
       "kind": "function"
     }
   ],
   "volgendTransactieId_": [
     {
       "file": "Boekingen.gs",
-      "line": 998,
+      "line": 1053,
       "kind": "function"
     }
   ],
   "volgendRelatieId_": [
     {
       "file": "Boekingen.gs",
-      "line": 1012,
+      "line": 1067,
       "kind": "function"
     }
   ],
   "zoekGrootboekNaam_": [
     {
       "file": "Boekingen.gs",
-      "line": 1029,
+      "line": 1084,
       "kind": "function"
     }
   ],
   "zoekGrootboekType_": [
     {
       "file": "Boekingen.gs",
-      "line": 1034,
+      "line": 1089,
       "kind": "function"
     }
   ],
   "zoekOfMaakRelatie_": [
     {
       "file": "Boekingen.gs",
-      "line": 1042,
+      "line": 1097,
       "kind": "function"
     }
   ],
   "bepaalOmzetRekening_": [
     {
       "file": "Boekingen.gs",
-      "line": 1084,
+      "line": 1139,
       "kind": "function"
     }
   ],
   "bepaalBtwVerkoopRekening_": [
     {
       "file": "Boekingen.gs",
-      "line": 1096,
+      "line": 1151,
       "kind": "function"
     }
   ],
   "bepaalBtwVoorbelastingRekening_": [
     {
       "file": "Boekingen.gs",
-      "line": 1104,
+      "line": 1159,
       "kind": "function"
     }
   ],
   "_leesGeslotenPeriodes_": [
     {
       "file": "Boekingen.gs",
-      "line": 1124,
+      "line": 1179,
       "kind": "function"
     }
   ],
   "vergrendelPeriode_": [
     {
       "file": "Boekingen.gs",
-      "line": 1142,
+      "line": 1197,
       "kind": "function"
     }
   ],
   "beheerGeslotenPeriodes": [
     {
       "file": "Boekingen.gs",
-      "line": 1164,
+      "line": 1219,
       "kind": "function"
     }
   ],
   "openStornoDialog": [
     {
       "file": "Boekingen.gs",
-      "line": 1337,
+      "line": 1392,
       "kind": "function"
     }
   ],
@@ -3277,48 +3291,6 @@
       "kind": "function"
     }
   ],
-  "openNieuwInvoeren": [
-    {
-      "file": "InvoerenDialog.gs",
-      "line": 10,
-      "kind": "function"
-    }
-  ],
-  "toonFactuurDialog": [
-    {
-      "file": "InvoerenDialog.gs",
-      "line": 13,
-      "kind": "function"
-    }
-  ],
-  "toonKostenDialog": [
-    {
-      "file": "InvoerenDialog.gs",
-      "line": 16,
-      "kind": "function"
-    }
-  ],
-  "toonDeclaratieDialog": [
-    {
-      "file": "InvoerenDialog.gs",
-      "line": 19,
-      "kind": "function"
-    }
-  ],
-  "openBonUploadMetAI": [
-    {
-      "file": "InvoerenDialog.gs",
-      "line": 22,
-      "kind": "function"
-    }
-  ],
-  "stuurVerkoopfactuurPdfNaarKlant_": [
-    {
-      "file": "InvoerenDialog.gs",
-      "line": 30,
-      "kind": "function"
-    }
-  ],
   "REKENING_RESULTAAT_BOEKJAAR": [
     {
       "file": "Jaarafsluiting.gs",
@@ -4621,94 +4593,80 @@
       "kind": "function"
     }
   ],
-  "maakGoogleForms_": [
-    {
-      "file": "Setup.gs",
-      "line": 997,
-      "kind": "function"
-    }
-  ],
-  "koppeelFormAanTabblad_": [
-    {
-      "file": "Setup.gs",
-      "line": 1183,
-      "kind": "function"
-    }
-  ],
   "slaFormUrlsOp_": [
     {
       "file": "Setup.gs",
-      "line": 1194,
+      "line": 998,
       "kind": "function"
     }
   ],
   "getFormUrl_": [
     {
       "file": "Setup.gs",
-      "line": 1213,
+      "line": 1017,
       "kind": "function"
     }
   ],
   "installeelTriggers_": [
     {
       "file": "Setup.gs",
-      "line": 1226,
+      "line": 1030,
       "kind": "function"
     }
   ],
   "herstelKritiekeTriggersIndienNodig_": [
     {
       "file": "Setup.gs",
-      "line": 1328,
+      "line": 1132,
       "kind": "function"
     }
   ],
   "setupAuditLogSheet_": [
     {
       "file": "Setup.gs",
-      "line": 1367,
+      "line": 1171,
       "kind": "function"
     }
   ],
   "zetHeaderRij_": [
     {
       "file": "Setup.gs",
-      "line": 1397,
+      "line": 1201,
       "kind": "function"
     }
   ],
   "_instellingenCache": [
     {
       "file": "Setup.gs",
-      "line": 1425,
+      "line": 1229,
       "kind": "const"
     }
   ],
   "wisInstellingenCache_": [
     {
       "file": "Setup.gs",
-      "line": 1426,
+      "line": 1230,
       "kind": "function"
     }
   ],
   "getInstelling_": [
     {
       "file": "Setup.gs",
-      "line": 1433,
+      "line": 1237,
       "kind": "function"
     }
   ],
   "setInstelling_": [
     {
       "file": "Setup.gs",
-      "line": 1460,
+      "line": 1264,
       "kind": "function"
     }
   ],
   "resetSetup": [
     {
       "file": "Setup.gs",
-      "line": 1480,
+      "line": 1284,
       "kind": "function"
     }
   ],
@@ -4743,14 +4701,14 @@
   "leerCategorie_": [
     {
       "file": "SmartCategorisatie.gs",
-      "line": 414,
+      "line": 420,
       "kind": "function"
     }
   ],
   "zoekGeleerdeCategorie_": [
     {
       "file": "SmartCategorisatie.gs",
-      "line": 431,
+      "line": 437,
       "kind": "function"
     }
   ],
@@ -5041,178 +4999,150 @@
       "kind": "function"
     }
   ],
-  "verwerkInkoopfactuurFormulier": [
-    {
-      "file": "Triggers.gs",
-      "line": 1397,
-      "kind": "function"
-    }
-  ],
-  "verwerkBanktransactieFormulier": [
-    {
-      "file": "Triggers.gs",
-      "line": 1493,
-      "kind": "function"
-    }
-  ],
-  "verwerkRelatieFormulier": [
-    {
-      "file": "Triggers.gs",
-      "line": 1563,
-      "kind": "function"
-    }
-  ],
-  "verwerkJournaalpostFormulier": [
-    {
-      "file": "Triggers.gs",
-      "line": 1605,
-      "kind": "function"
-    }
-  ],
   "_HEALTHCHECK_FALLBACK_URL": [
     {
       "file": "Triggers.gs",
-      "line": 1660,
+      "line": 1411,
       "kind": "const"
     }
   ],
   "_getHealthcheckUrls_": [
     {
       "file": "Triggers.gs",
-      "line": 1676,
+      "line": 1427,
       "kind": "function"
     }
   ],
   "_pingAlleHealthchecks_": [
     {
       "file": "Triggers.gs",
-      "line": 1710,
+      "line": 1461,
       "kind": "function"
     }
   ],
   "DAGELIJKSE_TAKEN_BUDGET_MS_DEFAULT": [
     {
       "file": "Triggers.gs",
-      "line": 1748,
+      "line": 1499,
       "kind": "const"
     }
   ],
   "_dagelijksBudget_": [
     {
       "file": "Triggers.gs",
-      "line": 1749,
+      "line": 1500,
       "kind": "function"
     }
   ],
   "_huidigDagelijksBudgetStart": [
     {
       "file": "Triggers.gs",
-      "line": 1761,
+      "line": 1512,
       "kind": "const"
     }
   ],
   "_huidigDagelijksBudgetOverschreden": [
     {
       "file": "Triggers.gs",
-      "line": 1762,
+      "line": 1513,
       "kind": "const"
     }
   ],
   "dagelijkseTaken": [
     {
       "file": "Triggers.gs",
-      "line": 1764,
+      "line": 1515,
       "kind": "function"
     }
   ],
   "_runTaak_": [
     {
       "file": "Triggers.gs",
-      "line": 1999,
+      "line": 1750,
       "kind": "function"
     }
   ],
   "_updateTaakStatus_": [
     {
       "file": "Triggers.gs",
-      "line": 2038,
+      "line": 1789,
       "kind": "function"
     }
   ],
   "stuurWeeklySamenvatting_": [
     {
       "file": "Triggers.gs",
-      "line": 2080,
+      "line": 1831,
       "kind": "function"
     }
   ],
   "controleerSheetGrootte_": [
     {
       "file": "Triggers.gs",
-      "line": 2213,
+      "line": 1964,
       "kind": "function"
     }
   ],
   "stuurAutomatischeBetalingsherinneringen_": [
     {
       "file": "Triggers.gs",
-      "line": 2255,
+      "line": 2006,
       "kind": "function"
     }
   ],
   "koppelBankTransactieAanFactuur_": [
     {
       "file": "Triggers.gs",
-      "line": 2390,
+      "line": 2141,
       "kind": "function"
     }
   ],
   "markeerVervallenFacturen_": [
     {
       "file": "Triggers.gs",
-      "line": 2474,
+      "line": 2225,
       "kind": "function"
     }
   ],
   "controleerBtwDeadlines_": [
     {
       "file": "Triggers.gs",
-      "line": 2523,
+      "line": 2274,
       "kind": "function"
     }
   ],
   "stuurFoutEmail_": [
     {
       "file": "Triggers.gs",
-      "line": 2567,
+      "line": 2318,
       "kind": "function"
     }
   ],
   "stuurBetalingsherinneringen": [
     {
       "file": "Triggers.gs",
-      "line": 2584,
+      "line": 2335,
       "kind": "function"
     }
   ],
   "bouwRelatieEmailMap_": [
     {
       "file": "Triggers.gs",
-      "line": 2676,
+      "line": 2427,
       "kind": "function"
     }
   ],
   "toonAuditLog": [
     {
       "file": "Triggers.gs",
-      "line": 2695,
+      "line": 2446,
       "kind": "function"
     }
   ],
   "_bouwInkoopSig_": [
     {
       "file": "Triggers.gs",
-      "line": 2726,
+      "line": 2477,
       "kind": "function"
     }
   ],
