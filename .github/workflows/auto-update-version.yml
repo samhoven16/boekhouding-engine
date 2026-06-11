@@ -1,0 +1,48 @@
+name: Auto-update website/version.json + changelog.json
+
+on:
+  push:
+    branches: [main]
+
+# Voorkomt merge-conflicten op PR's. Voorheen liep update-version.js +
+# update-changelog.js in de pre-commit-hook bij ELKE commit — main en
+# branches conflicteerden continu op website/version.json. Nu draait
+# het alleen op main-push, en pusht de bijgewerkte file terug.
+#
+# Loop-bescherming: [skip ci] in commit-message zodat de bot zichzelf
+# niet eindeloos triggert.
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout (volledige history voor changelog)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Regenereer version.json + changelog.json
+        run: |
+          node scripts/update-version.js
+          node scripts/update-changelog.js
+
+      - name: Commit + push als er wijzigingen zijn
+        run: |
+          if git diff --quiet website/version.json website/changelog.json; then
+            echo "Geen wijzigingen — niets te committen."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add website/version.json website/changelog.json
+          git commit -m "chore(version): bump version.json + changelog.json [skip ci]"
+          git push

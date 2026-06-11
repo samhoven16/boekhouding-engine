@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Boekhoudbaar updaten — handmatig + binnenkort automatisch</title>
+<meta name="description" content="Hoe je een Boekhoudbaar-update installeert. Stap-voor-stap voor de huidige tier-1 procedure; tier-2 auto-update komt in een latere versie.">
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#0D1B4E">
+<link rel="canonical" href="https://www.boekhoudbaar.nl/update/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.boekhoudbaar.nl/"},{"@type":"ListItem","position":2,"name":"Update","item":"https://www.boekhoudbaar.nl/update/"}]}
+</script>
+<style>
+  :root{--blauw:#0D1B4E;--blauw-licht:#1A2A6B;--accent:#2EC4B6;--rood:#B91C1C;--tekst:#1A1A1A;--grijs:#5F6B7A;--bg:#F7F9FC;--wit:#ffffff;--rand:#E5EAF2;--radius:12px;}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--tekst);background:var(--wit);line-height:1.7;font-size:16px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+  .logo{font-weight:800;font-size:20px;color:var(--blauw);text-decoration:none;}
+  .logo span{color:var(--accent);}
+  main{max-width:780px;margin:0 auto;padding:56px 24px 80px;}
+  .page-label{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:12px;}
+  h1{font-size:clamp(28px,4vw,42px);font-weight:800;color:var(--blauw);line-height:1.15;letter-spacing:-0.022em;margin-bottom:10px;}
+  .meta{font-size:14px;color:var(--grijs);margin-bottom:40px;}
+  h2{font-size:22px;font-weight:700;color:var(--blauw);margin:40px 0 14px;}
+  h3{font-size:16px;font-weight:700;margin:24px 0 8px;}
+  p{margin-bottom:14px;color:#333;}
+  ul,ol{margin:0 0 14px 24px;}
+  li{margin-bottom:8px;color:#333;}
+  a{color:var(--blauw);text-decoration:underline;}
+  .info{background:#E6F7F4;border-left:4px solid var(--accent);padding:14px 18px;border-radius:0 8px 8px 0;margin:20px 0;}
+  .warn{background:#FDECEC;border-left:4px solid var(--rood);padding:14px 18px;border-radius:0 8px 8px 0;margin:20px 0;}
+  .warn b{color:var(--rood);}
+  .steps{counter-reset:s;padding-left:0;}
+  .steps li{list-style:none;counter-increment:s;padding-left:44px;position:relative;margin-bottom:14px;}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:-2px;width:30px;height:30px;border-radius:50%;background:var(--blauw);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:13px;}
+  code{background:#F7F9FC;border:1px solid var(--rand);padding:2px 7px;border-radius:4px;font-size:14px;font-family:Menlo,Consolas,monospace;color:var(--blauw);}
+  .btn{display:inline-block;background:var(--blauw);color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;}
+  .btn:hover{background:var(--blauw-licht);}
+  footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px;font-size:13.5px;border-top:1px solid rgba(255,255,255,.06);}
+  .footer-inner{max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;}
+  .footer-links{display:flex;gap:20px;flex-wrap:wrap;}
+  .footer-links a{color:rgba(255,255,255,.5);text-decoration:none;}
+  .footer-links a:hover{color:var(--wit);}
+  :focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px;}
+</style>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
+<link rel="stylesheet" href="/animations.css">
+<link rel="stylesheet" href="/nav.css">
+<script defer src="/nav.js"></script>
+</head>
+<body>
+<nav aria-label="Hoofdnavigatie">
+  <div class="nav-inner">
+    <a href="/" class="logo" aria-label="Boekhoudbaar — home">
+      <img src="/logo.svg" alt="Boekhoudbaar" width="260" height="52">
+    </a>
+    <ul class="nav-links" id="nav-menu" role="list">
+      <li><a href="/functies/">Functies</a></li>
+      <li><a href="/gids/">Gidsen</a></li>
+      <li><a href="/faq/">FAQ</a></li>
+      <li><a href="/kopen/" class="cta">Kopen — €49</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+  <div class="page-label">Updates</div>
+  <h1>Boekhoudbaar updaten</h1>
+  <p class="meta">Hoe je een nieuwere versie krijgt — eerlijk uitgelegd, inclusief wat nog niet automatisch werkt.</p>
+
+  <div class="info">
+    <b>De korte versie</b><br>
+    Op dit moment is updaten een handmatige stap (5–10 minuten). Voor kritieke fiscale fixes krijg je een melding bij het openen van je spreadsheet. Volledig automatische updates volgen in een latere versie — die staan bewust nog niet aan omdat een half-werkende auto-update zelf een groter risico is dan handmatige updates.
+  </div>
+
+  <h2>Wanneer moet ik updaten?</h2>
+  <p>Drie scenario's, in volgorde van urgentie:</p>
+  <ul>
+    <li><b>Kritieke update</b> (rode modal bij openen sheet) — bevat een BTW-correctie, jaarafsluiting-fix of compliance-aanpassing. Doe dit binnen een week, en in elk geval vóór je volgende BTW-aangifte.</li>
+    <li><b>Nieuwe versie beschikbaar</b> (gele toast onderaan scherm) — niet-urgent. Update wanneer het uitkomt. Bevat meestal nieuwe functies of UX-verbeteringen.</li>
+    <li><b>Geen melding</b> — je bent up-to-date. Je kunt het altijd zelf checken via menu <em>Boekhoudbaar → Licentie &amp; Updates → Hoe update ik?</em></li>
+  </ul>
+
+  <h2>Procedure (handmatig, tier 1)</h2>
+  <p>Stuur Sam een mail. Tot we tier 2 (zelf-update vanuit de sheet) aanzetten, doet hij het persoonlijk voor je — meestal binnen 24 uur.</p>
+
+  <ol class="steps">
+    <li><strong>Open menu <em>Boekhoudbaar → Licentie &amp; Updates → Licentie-informatie</em></strong> en noteer je versie + spreadsheet-ID.</li>
+    <li><strong>Mail naar <a href="mailto:update@boekhoudbaar.nl?subject=Update%20aanvraag">update@boekhoudbaar.nl</a></strong> met: huidige versie, gewenste versie (of "nieuwste"), je spreadsheet-ID. Bij kritieke updates ook de melding-tekst die je zag.</li>
+    <li><strong>Wacht op antwoord met stappenplan</strong> — bevat een unieke link met de nieuwe code-files en exacte plak-instructies, afgestemd op jouw versie-sprong. Stappen zijn altijd reversible (je administratie blijft intact).</li>
+    <li><strong>Volg het stappenplan</strong> — meestal: Apps Script editor openen, een aantal bestanden vervangen, één keer <code>setup()</code> uitvoeren. Sam blijft beschikbaar terwijl je het doet.</li>
+    <li><strong>Verifieer</strong> — open de sheet opnieuw, check via <em>Boekhoudbaar → Licentie &amp; Updates → Hoe update ik?</em> dat de versie nu matched.</li>
+  </ol>
+
+  <div class="warn">
+    <b>Lees dit voordat je begint:</b> verander niets in de Apps Script editor zonder duidelijke instructie. Je administratie staat in jouw eigen Google Drive — die kan Sam niet zien en niet herstellen als de code stuk gaat. Daarom is een mail-bevestiging vooraf de veiligste route.
+  </div>
+
+  <h2>Wat als ik niets doe?</h2>
+  <p>Bij een normale update: niets ergs. Je krijgt elke 7 dagen één toast tot je update, daarna stopt 'ie. Je administratie blijft werken op je huidige versie.</p>
+  <p>Bij een <b>kritieke</b> update: je administratie blijft werken, maar berekeningen kunnen onjuist zijn. Een BTW-aangifte op een verouderde versie kan bijvoorbeeld een rubriek (r1a/r1b/r1e) onjuist berekenen of een tariefgrens missen die de Belastingdienst wel toepast. Verantwoordelijkheid voor de juistheid van de aangifte blijft bij de ondernemer (AWR art. 8) — update tijdig. De modal blijft elke 24u terugkomen tot je update.</p>
+
+  <h2>Tier 2 — automatische update (komt later)</h2>
+  <p>Een ingebouwd <em>"Update nu"</em>-menu-item dat de nieuwste code direct in jouw sheet zet, via de Apps Script API met SHA-256-handtekening-verificatie. Werkt voor minor updates; major updates blijven handmatig vanwege migraties.</p>
+  <p>Reden voor wachten: code-injection-risico. Tier 2 vereist dat jouw script eigen broncode mag aanpassen — dat is een gevoelige scope. We zetten dit pas aan als (a) de licence-server-handtekening geverifieerd, (b) een rollback-pad bewezen, en (c) een gefaalde update altijd kan terugkeren naar de vorige versie. Komt na go-live in een gefocuste release.</p>
+
+  <h2>Vragen / hulp nodig?</h2>
+  <p><a class="btn" href="mailto:update@boekhoudbaar.nl?subject=Hulp%20bij%20update">Mail Sam direct</a></p>
+  <p>Antwoord meestal binnen 24 uur op werkdagen. Bij urgente fiscale deadlines: meld dat in het onderwerp.</p>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div>&copy; 2026 Boekhoudbaar — Sam Hoven</div>
+    <div class="footer-links">
+      <a href="/voorwaarden/">Voorwaarden</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="/dpa/">DPA</a>
+      <a href="/faq/">FAQ</a>
+      <a href="/over/">Over</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

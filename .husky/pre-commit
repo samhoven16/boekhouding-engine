@@ -1,15 +1,8 @@
 npx lint-staged
 
-# Cycle 85: update website/version.json met laatste commit-datum + short hash.
-# De HEAD bij dit pre-commit moment is de VORIGE commit; dat is precies wat we
-# willen tonen ("laatste gedeployde update"). De net-te-committen wijziging
-# wordt zelf de "laatste update" zodra de volgende commit draait — eenvoudig
-# en zelf-corrigerend.
-node scripts/update-version.js
-git add website/version.json
-
-# Cycle 88: update website/changelog.json met de meest recente "Cycle N: ..."
-# commits voor de "Recente updates"-sectie op de homepage. Zelfde principe:
-# loopt op pre-commit, stage't het resultaat.
-node scripts/update-changelog.js
-git add website/changelog.json
+# website/version.json + website/changelog.json worden NIET meer hier
+# bijgewerkt. Voorheen deed dit elke commit, wat bij elke PR een merge-
+# conflict opleverde tussen main en branch. Beide files worden nu pas op
+# push naar main bijgewerkt door .github/workflows/auto-update-version.yml.
+# Lokaal kun je 'm handmatig draaien:
+#   node scripts/update-version.js && node scripts/update-changelog.js

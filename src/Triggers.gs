@@ -1740,9 +1740,32 @@ function _pingAlleHealthchecks_(suffix, payload) {
   }
 }
 
+// 6-min GAS execution cap. Budget = 4 min laat 2 min marge voor afronding
+// + healthcheck-pings. Bij langlopende administraties (>5 jaar data) waar
+// vroege taken meer tijd kosten, voorkomt dit dat triggerSelfHeal/cleanup
+// nooit meer aan bod komen. _runTaak_ slaat tasks over zodra budget op is.
+// Override via ScriptProperty 'DAGELIJKSE_TAKEN_BUDGET_MS' (1000-300000).
+const DAGELIJKSE_TAKEN_BUDGET_MS_DEFAULT = 4 * 60 * 1000;
+function _dagelijksBudget_() {
+  try {
+    const v = parseInt(PropertiesService.getScriptProperties()
+      .getProperty('DAGELIJKSE_TAKEN_BUDGET_MS') || '', 10);
+    if (isFinite(v) && v >= 1000 && v <= 300000) return v;
+  } catch (_) {}
+  return DAGELIJKSE_TAKEN_BUDGET_MS_DEFAULT;
+}
+// Module-niveau: gezet door dagelijkseTaken aan start, gelezen door
+// _runTaak_, geleegd aan einde. Eén trigger-context = geen race.
+// var (niet let) zodat de waarden ook in VM-sandbox properties op globalThis
+// zijn — anders kunnen Jest-tests _huidigDagelijksBudgetStart niet zetten.
+var _huidigDagelijksBudgetStart = 0;
+var _huidigDagelijksBudgetOverschreden = false;
+
 function dagelijkseTaken() {
   const ss = getSpreadsheet_();
   const dagelijksTotaal0 = Date.now();
+  _huidigDagelijksBudgetStart = dagelijksTotaal0;
+  _huidigDagelijksBudgetOverschreden = false;
 
   // START-ping: laat alle geconfigureerde monitors weten dat we begonnen zijn.
   // Bij crash halverwege missen ze de SUCCESS-ping en krijgt owner alert.
@@ -1820,6 +1843,45 @@ function dagelijkseTaken() {
       controleerEmailQuotaProactief_();
     }
   });
+  // Audit-vondst nacht-PR (gas-runtime): cleanup-taken VÓÓR dure UI-taken.
+  // Reden: budget-guard slaat tasks vanaf budget-overschrijding over. Als
+  // cleanup pas ná dashboard/backup staat → bij 5 jaar data wordt cleanup
+  // structureel geskipped → ScriptProperties-cliff (500KB cap). Cleanup is
+  // goedkoop (alleen Properties-iteratie, geen sheet-rendering) maar moet
+  // dagelijks draaien om groei tegen te houden.
+  _runTaak_('cleanupHerhIdem',  function() {
+    if (typeof cleanupHerhalendeKostenIdempotency_ === 'function') cleanupHerhalendeKostenIdempotency_();
+  });
+  _runTaak_('cleanupMollieIdem', function() {
+    if (typeof ruimMollieIdempotencyOp_ === 'function') ruimMollieIdempotencyOp_();
+  });
+  _runTaak_('cleanupKritiekeUpdateModalKeys', function() {
+    if (typeof cleanupKritiekeUpdateModalKeys_ === 'function') cleanupKritiekeUpdateModalKeys_();
+  });
+  // DR/SRE: emailVerzonden_F* idempotency-keys accumuleren zonder cleanup
+  // → quotum-cliff bij 10.000 facturen. Cleanup-window 180 dagen. Pure
+  // ScriptProperties-iteratie, geen sheet-IO → goedkoop, hoort in cleanup-fase.
+  _runTaak_('cleanupEmailIdem', function() {
+    const props = PropertiesService.getScriptProperties();
+    const alle = props.getProperties();
+    const cutoffMs = Date.now() - 180 * 24 * 60 * 60 * 1000;
+    let verwijderd = 0;
+    Object.keys(alle).forEach(function(k) {
+      if (k.indexOf('emailVerzonden_') !== 0) return;
+      try {
+        const ts = new Date(alle[k]).getTime();
+        if (isFinite(ts) && ts < cutoffMs) {
+          props.deleteProperty(k);
+          verwijderd++;
+        }
+      } catch (_) { /* corrupt timestamp → laat staan, niet riskant */ }
+    });
+    if (verwijderd > 0) {
+      try { schrijfAuditLog_('cleanupEmailIdem',
+        'Verwijderd ' + verwijderd + ' emailVerzonden_-keys ouder dan 180d'); } catch (_) {}
+    }
+  });
+
   // Audit-vondst ronde 2 (cross-PR): triggerSelfHeal verplaatst naar LAATSTE
   // positie in dagelijkseTaken-keten. Was midden in de keten, maar
   // sanitizeTriggers_ doet delete+recreate van alle triggers — als de
@@ -1851,14 +1913,6 @@ function dagelijkseTaken() {
   _runTaak_('dlqRetry',         function() {
     if (typeof featureAan_ === 'function' && !featureAan_('dlq_retry')) return;
     if (typeof dlqVerwerkRetries_ === 'function') dlqVerwerkRetries_();
-  });
-  // Idempotency-cleanup: voorkomt ScriptProperties-quota overschrijding na
-  // jaren herhalende-kosten-keys. Draait dagelijks; cleanup zelf is goedkoop.
-  _runTaak_('cleanupHerhIdem',  function() {
-    if (typeof cleanupHerhalendeKostenIdempotency_ === 'function') cleanupHerhalendeKostenIdempotency_();
-  });
-  _runTaak_('cleanupMollieIdem', function() {
-    if (typeof ruimMollieIdempotencyOp_ === 'function') ruimMollieIdempotencyOp_();
   });
 
   // Audit-vondst ronde 2 (GAS-runtime): herinneringsStap_<factuurnr> keys
@@ -1905,33 +1959,6 @@ function dagelijkseTaken() {
     } catch (_) { /* fail-safe — cleanup mag dagelijkseTaken nooit breken */ }
   });
 
-  // DR/SRE (criticus-rapport): emailVerzonden_F* idempotency-keys
-  // accumuleren zonder cleanup → quotum-cliff bij 10.000 facturen
-  // (ScriptProperties 500KB total / 9KB per key). Property bevat alleen
-  // ISO-timestamp string van emailverzending. Cleanup-window 180 dagen:
-  // ruim genoeg voor "ik heb een factuur dubbel verstuurd"-detectie,
-  // maar verwijdert de oudste 90% van de keys voor grote klanten.
-  _runTaak_('cleanupEmailIdem', function() {
-    const props = PropertiesService.getScriptProperties();
-    const alle = props.getProperties();
-    const cutoffMs = Date.now() - 180 * 24 * 60 * 60 * 1000;
-    let verwijderd = 0;
-    Object.keys(alle).forEach(function(k) {
-      if (k.indexOf('emailVerzonden_') !== 0) return;
-      try {
-        const ts = new Date(alle[k]).getTime();
-        if (isFinite(ts) && ts < cutoffMs) {
-          props.deleteProperty(k);
-          verwijderd++;
-        }
-      } catch (_) { /* corrupt timestamp → laat staan, niet riskant */ }
-    });
-    if (verwijderd > 0) {
-      try { schrijfAuditLog_('cleanupEmailIdem',
-        'Verwijderd ' + verwijderd + ' emailVerzonden_-keys ouder dan 180d'); } catch (_) {}
-    }
-  });
-
   // SelfHeal trigger-check: ALLERLAATSTE step in dagelijkseTaken — beperkt
   // blast-radius als sanitize-recreate halverwege faalt op ScriptApp-quota.
   // Alle nuttige work is dan al gedaan. Throttle 24u via SelfHeal.gs.
@@ -1950,6 +1977,10 @@ function dagelijkseTaken() {
   // geconfigureerde monitors markeren deze run als groen. Duur (ms) in
   // body voor monitoring-trends.
   _pingAlleHealthchecks_('', 'duur_ms=' + totaleDuur);
+
+  // Budget-context vrijgeven — next dagelijkseTaken zet 'm opnieuw.
+  _huidigDagelijksBudgetStart = 0;
+  _huidigDagelijksBudgetOverschreden = false;
 }
 
 /**
@@ -1960,6 +1991,22 @@ function dagelijkseTaken() {
  *  - audit-log bij fout
  */
 function _runTaak_(naam, fn) {
+  // Budget-guard: bij langlopende administraties kan de cumulatieve duur
+  // van vroege taken latere taken (triggerSelfHeal, cleanup-taken) uit de
+  // 6-min GAS-cap drukken. Sla over zodra budget op is — markeert SKIP,
+  // audit-logt één keer per run zodat Sam kan zien welke installaties
+  // budget overschrijden en welke taken erdoor worden geraakt.
+  if (_huidigDagelijksBudgetStart > 0 &&
+      Date.now() - _huidigDagelijksBudgetStart > _dagelijksBudget_()) {
+    if (!_huidigDagelijksBudgetOverschreden) {
+      _huidigDagelijksBudgetOverschreden = true;
+      try { safeAuditLog_('Dagelijkse taken: budget overschreden',
+        'eerste skip: ' + naam + ' na ' + (Date.now() - _huidigDagelijksBudgetStart) + 'ms'); } catch (_) {}
+    }
+    try { _updateTaakStatus_(naam, 'SKIP', 0, 'budget overschreden'); } catch (_) {}
+    return;
+  }
+
   const t0 = Date.now();
   let status = 'OK';
   let foutBericht = '';

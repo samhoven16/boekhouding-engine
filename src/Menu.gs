@@ -29,6 +29,8 @@ function onOpen() {
         .addItem('Exporteer als XAF (auditfile)', 'exporteerXaf')
         .addItem('Volledige data-export', 'exporteerAlleData')
         .addItem('Backup maken', 'maakBackup'))
+      .addSeparator()
+      .addItem('🗑 Mijn account verwijderen (AVG art. 17)', 'toonAccountVerwijderenDialog')
       .addToUi();
     return;
   }
@@ -324,6 +326,9 @@ function onOpen() {
       .addItem('Licentie-informatie bekijken', 'toonLicentieInfo')
       .addSeparator()
       .addItem('Wat is er nieuw?', 'toonWatIsErNieuw')
+      .addItem('↑ Hoe update ik?', 'toonHoeUpdateIk')
+      .addSeparator()
+      .addItem('🗑 Mijn account verwijderen (AVG art. 17)', 'toonAccountVerwijderenDialog')
     )
 
     .addToUi();

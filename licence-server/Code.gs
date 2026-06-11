@@ -35,7 +35,10 @@ function doGet(e) {
 
   if (actie === 'health')        return healthEndpoint_();
   if (actie === 'valideer')      return valideerEndpoint_(e);
-  if (actie === 'aanvraag-otp')  return rateLimit_(e, { actie: 'aanvraag-otp', perEmail: 5,  globaal: 500, windowMin: 60 }) || aanvraagOtpEndpoint_(e);
+  // Globaal-cap verplaatst NAAR BINNEN aanvraagOtpEndpoint_ na klant-bekend-check.
+  // Voorkomt dat aanvaller met fake emails de globale 500/u cap saturen → legitieme
+  // klant zou anders 429 krijgen ondanks dat hij echt is (red-team #2 vondst).
+  if (actie === 'aanvraag-otp')  return rateLimit_(e, { actie: 'aanvraag-otp', perEmail: 5, windowMin: 60 }) || aanvraagOtpEndpoint_(e);
   if (actie === 'activeer-otp')  return rateLimit_(e, { actie: 'activeer-otp', perEmail: 12, globaal: 500, windowMin: 60 }) || activeerOtpEndpoint_(e);
   if (actie === 'herstuur-licentie') return rateLimit_(e, { actie: 'herstuur-licentie', perEmail: 3, globaal: 200, windowMin: 60 }) || herstuurLicentieEndpoint_(e);
   if (actie === 'onboarded')     return rateLimit_(e, { actie: 'onboarded', globaal: 500, windowMin: 60 }) || onboardedEndpoint_(e);
@@ -732,6 +735,12 @@ function aanvraagOtpEndpoint_(e) {
     return jsonResp_({ ok: false, fout: 'Dit e-mailadres is niet bekend als klant. Controleer het e-mailadres waarmee je hebt gekocht.' });
   }
 
+  // Globaal-cap pas tellen voor BEKENDE klanten (red-team #2 fix). Unknown-email
+  // requests passeren router's per-email-cap (5/u) maar mogen niet bijdragen
+  // aan de globale bucket — anders kan 500 fake adressen de cap saturen.
+  const globaalLimit = rateLimit_(e, { actie: 'aanvraag-otp-bekend', globaal: 500, windowMin: 60 });
+  if (globaalLimit) return globaalLimit;
+
   // Rate limit: max 1 aanvraag per 60 seconden
   const props  = PropertiesService.getScriptProperties();
   const lastTs = parseInt(props.getProperty('otp_ts_' + email) || '0');
@@ -991,16 +1000,25 @@ function configEndpoint_(e) {
   let flags = {};
   let belastingTarieven = null;
   let featureMeldingen = {};
+  let versieKritiekVoor = [];
   try { flags = JSON.parse(props.getProperty('FEATURE_FLAGS') || '{}'); } catch (_) {}
   try { belastingTarieven = JSON.parse(props.getProperty('BELASTING_TARIEVEN') || 'null'); } catch (_) {}
   try { featureMeldingen = JSON.parse(props.getProperty('FEATURE_MELDINGEN') || '{}'); } catch (_) {}
+  // Lijst van versie-strings waarvoor een kritieke upgrade nodig is (bijv. BTW-fix
+  // in 2.8.0 → ['2.7.0', '2.6.0', ...] zodat alleen die klanten de modal zien).
+  // Lege lijst = geen kritieke updates op dit moment.
+  try { versieKritiekVoor = JSON.parse(props.getProperty('VERSIE_KRITIEK_VOOR') || '[]'); } catch (_) {}
   return jsonResp_({
-    versie:           props.getProperty('PRODUCT_VERSIE') || '2.1.0',
-    bericht:          props.getProperty('GLOBAL_BERICHT') || '',
-    flags:            flags,
-    features:         flags,           // alias voor isFeatureIngeschakeld_
-    featureMeldingen: featureMeldingen,
-    belastingTarieven: belastingTarieven,  // null = client gebruikt lokale fallback
+    versie:               props.getProperty('PRODUCT_VERSIE') || '2.1.0',
+    versieErnst:          props.getProperty('VERSIE_ERNST') || 'normaal',  // 'normaal' | 'kritiek'
+    versieToelichting:    props.getProperty('VERSIE_TOELICHTING') || '',
+    versieInstructiesUrl: props.getProperty('VERSIE_INSTRUCTIES_URL') || 'https://boekhoudbaar.nl/update/',
+    versieKritiekVoor:    versieKritiekVoor,
+    bericht:              props.getProperty('GLOBAL_BERICHT') || '',
+    flags:                flags,
+    features:             flags,           // alias voor isFeatureIngeschakeld_
+    featureMeldingen:     featureMeldingen,
+    belastingTarieven:    belastingTarieven,  // null = client gebruikt lokale fallback
   });
 }
 
@@ -2124,10 +2142,14 @@ function verwijderEndpoint_(e) {
   if (geraakt === 0) {
     return jsonResp_({ ok: false, fout: 'Geen licentie gevonden voor dit e-mailadres.' });
   }
-  Logger.log('GDPR Art. 17 pseudonymisering: ' + geraakt + ' rij(en) voor ' +
-    email.slice(0, 3) + '***');
+  // PII-redactie: SHA-256 truncate i.p.v. `email.slice(0,3)+'***'` — laatste
+  // is reconstrueerbaar in klein klantenbestand (red-team-audit nacht-PR).
+  const emailHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(email))
+    .map(function(b) { return ('0' + (b & 0xff).toString(16)).slice(-2); })
+    .join('').slice(0, 12);
+  Logger.log('GDPR Art. 17 pseudonymisering: ' + geraakt + ' rij(en) voor email-hash=' + emailHash);
   try { schrijfAuditLog_('GDPR Art. 17 — pseudonymisering',
-    email.slice(0, 3) + '*** — ' + geraakt + ' rij(en)'); } catch (_) {}
+    'email-hash=' + emailHash + ' — ' + geraakt + ' rij(en)'); } catch (_) {}
   return jsonResp_({ ok: true, bericht: 'Je gegevens zijn gepseudonymiseerd. Je behoudt 14 dagen toegang via de grace-period; daarna vervalt je licentie. De fiscale gegevens (factuurnummers, bedragen) blijven 7 jaar bewaard conform AWR art. 52.' });
 }
 
