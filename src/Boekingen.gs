@@ -320,6 +320,35 @@ function _markeerFactuurGestorneerd_(ss, ref, stornoId) {
 // ─────────────────────────────────────────────
 //  GROOTBOEKSALDO BIJWERKEN
 // ─────────────────────────────────────────────
+// Executie-scoped cache: rekeningcode → rij (1-based) in GROOTBOEKSCHEMA.
+// Voorheen las elke updateGrootboekSaldo_-call de HELE sheet om één rij te
+// vinden; maakJournaalpost_ doet 2 calls per boeking, de herhalende-kosten-
+// inhaal tot 36 boekingen per regel → honderden full-sheet-reads per run.
+// Rij-posities zijn stabiel binnen één executie; het SALDO wordt nog steeds
+// vers gelezen onder de lock (de write-write-bescherming verandert niet).
+let _gbRijCache_ = null;
+
+function _gbVindRij_(sheet, rekeningCode) {
+  const code = String(rekeningCode);
+  // Cache alleen als de sheet identificeerbaar is (echte GAS-sheets altijd;
+  // kale test-mocks niet) — zonder id zou de cache tussen verschillende
+  // spreadsheets kunnen lekken. Zonder id: vers opbouwen, niet bewaren.
+  const cachebaar = typeof sheet.getSheetId === 'function';
+  const sheetId = cachebaar ? sheet.getSheetId() : null;
+  if (cachebaar && _gbRijCache_ && _gbRijCache_.sheetId === sheetId) {
+    return (code in _gbRijCache_.map) ? _gbRijCache_.map[code] : null;
+  }
+  const laatste = sheet.getLastRow();
+  const codes = laatste > 0 ? sheet.getRange(1, 1, laatste, 1).getValues() : [];
+  const map = {};
+  for (let i = 1; i < codes.length; i++) {
+    const c = String(codes[i][0]);
+    if (c && !(c in map)) map[c] = i + 1; // eerste match wint, zoals de oude lineaire scan
+  }
+  if (cachebaar) _gbRijCache_ = { sheetId: sheetId, map: map };
+  return (code in map) ? map[code] : null;
+}
+
 function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
   if (!rekeningCode) return;
   // Coerce bedrag → numeriek, anders 0+'100' = '0100' string-concat → corrupte cel.
@@ -347,29 +376,55 @@ function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
       safeAuditLog_('GROOTBOEK SHEET ONTBREEKT', 'updateGrootboekSaldo_ kon ' + rekeningCode + ' niet bijwerken');
       return;
     }
-    const data = sheet.getDataRange().getValues();
-
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]) === String(rekeningCode)) {
-        const type = data[i][2]; // Actief / Passief / Opbrengst / Kosten
-        let huidigSaldo = parseFloat(data[i][5]) || 0;
-
-        // Dubbel boekhouden regels:
-        // Activa: Debet = plus, Credit = min
-        // Passiva: Debet = min, Credit = plus
-        // Opbrengsten: Debet = min, Credit = plus
-        // Kosten: Debet = plus, Credit = min
-        const isDebet = zijde === 'debet';
-
-        if (type === 'Actief' || type === 'Kosten') {
-          huidigSaldo += isDebet ? bedragNum : -bedragNum;
-        } else {
-          huidigSaldo += isDebet ? -bedragNum : bedragNum;
-        }
-
-        sheet.getRange(i + 1, 6).setValue(rondBedrag_(huidigSaldo));
-        return;
+    // Rij + type + saldo bepalen. Snel pad (echte GAS-sheet): rij via
+    // executie-cache, saldo VERS gelezen onder de lock. Als de cel-code niet
+    // matcht (rij mid-executie verschoven) of de rekening pas ná de
+    // cache-opbouw is toegevoegd: cache weggooien en één keer opnieuw.
+    // Kale sheet-objecten (test-mocks zonder getSheetId/getLastRow) nemen
+    // het oude getDataRange-pad — gedrag identiek, alleen langzamer.
+    let rij = null;
+    let type = null;
+    let huidigSaldo = 0;
+    const echteSheet = typeof sheet.getSheetId === 'function' &&
+                       typeof sheet.getLastRow === 'function';
+    if (echteSheet) {
+      for (let poging = 0; poging < 2 && rij === null; poging++) {
+        const kandidaat = _gbVindRij_(sheet, rekeningCode);
+        if (kandidaat === null) { _gbRijCache_ = null; continue; }
+        const rijData = sheet.getRange(kandidaat, 1, 1, 6).getValues()[0];
+        if (String(rijData[0]) !== String(rekeningCode)) { _gbRijCache_ = null; continue; }
+        rij = kandidaat;
+        type = rijData[2]; // Actief / Passief / Opbrengst / Kosten
+        huidigSaldo = parseFloat(rijData[5]) || 0;
       }
+    } else {
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(rekeningCode)) {
+          rij = i + 1;
+          type = data[i][2];
+          huidigSaldo = parseFloat(data[i][5]) || 0;
+          break;
+        }
+      }
+    }
+
+    if (rij !== null) {
+      // Dubbel boekhouden regels:
+      // Activa: Debet = plus, Credit = min
+      // Passiva: Debet = min, Credit = plus
+      // Opbrengsten: Debet = min, Credit = plus
+      // Kosten: Debet = plus, Credit = min
+      const isDebet = zijde === 'debet';
+
+      if (type === 'Actief' || type === 'Kosten') {
+        huidigSaldo += isDebet ? bedragNum : -bedragNum;
+      } else {
+        huidigSaldo += isDebet ? -bedragNum : bedragNum;
+      }
+
+      sheet.getRange(rij, 6).setValue(rondBedrag_(huidigSaldo));
+      return;
     }
 
     // Onbekende rekening — log + audit-trail zodat self-healing dit kan oppikken.
