@@ -43,6 +43,7 @@ function doGet(e) {
   if (actie === 'herstuur-licentie') return rateLimit_(e, { actie: 'herstuur-licentie', perEmail: 3, globaal: 200, windowMin: 60 }) || herstuurLicentieEndpoint_(e);
   if (actie === 'onboarded')     return rateLimit_(e, { actie: 'onboarded', globaal: 500, windowMin: 60 }) || onboardedEndpoint_(e);
   if (actie === 'config')        return configEndpoint_(e);
+  if (actie === 'update-bundle') return rateLimit_(e, { actie: 'update-bundle', perEmail: 10, globaal: 500, windowMin: 60 }) || updateBundleEndpoint_(e);
   if (actie === 'telemetry')     return telemetryEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   // CYCLE-41: rate-limit admin-login om brute-force op ADMIN_WACHTWOORD
@@ -1019,6 +1020,79 @@ function configEndpoint_(e) {
     features:             flags,           // alias voor isFeatureIngeschakeld_
     featureMeldingen:     featureMeldingen,
     belastingTarieven:    belastingTarieven,  // null = client gebruikt lokale fallback
+  });
+}
+
+// ─────────────────────────────────────────────
+//  UPDATE-BUNDLE — code-bundle voor assisted manual update (Tier 2.1)
+// ─────────────────────────────────────────────
+/**
+ * Klant haalt code-bundle op voor handmatige update. Geen auto-write:
+ * klant moet zelf in Apps Script editor plakken. Veilig deel van tier-2;
+ * auto-apply (Apps Script Projects API) komt in tier 2.2 met rollback-infra.
+ *
+ * Sam zet per release: ScriptProperty `UPDATE_BUNDLE_<versie>` = JSON met:
+ *   { files: [ {naam, source, type} ], generatedAt: ISO-date }
+ * Server berekent SHA-256 hash voor verify, voegt expiry toe (15 min),
+ * vereist licentiesleutel + email om aan elkaar gebonden te zijn.
+ */
+function updateBundleEndpoint_(e) {
+  const sleutel = String((e.parameter.sleutel || '')).trim().toUpperCase();
+  const email   = String((e.parameter.email   || '')).trim().toLowerCase();
+  const versie  = String((e.parameter.versie  || '')).trim();
+
+  if (!sleutel || !email || !versie) {
+    return jsonResp_({ ok: false, fout: 'sleutel, email en versie zijn verplicht.' });
+  }
+  if (!/^[\d]+\.[\d]+\.[\d]+$/.test(versie)) {
+    return jsonResp_({ ok: false, fout: 'Ongeldig versie-formaat (verwacht X.Y.Z).' });
+  }
+
+  // Verify klant-binding: sleutel moet bij email horen + status startsWith 'actief'.
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  let geldig = false;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0] || '').toUpperCase() !== sleutel) continue;
+    if (String(data[i][2] || '').toLowerCase() !== email) continue;
+    if (String(data[i][4] || '').toLowerCase().startsWith('actief')) { geldig = true; break; }
+  }
+  if (!geldig) {
+    return jsonResp_({ ok: false, fout: 'Sleutel + email komen niet overeen met een actieve licentie.' });
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  const bundleRaw = props.getProperty('UPDATE_BUNDLE_' + versie);
+  if (!bundleRaw) {
+    return jsonResp_({ ok: false, fout: 'Versie ' + versie + ' is (nog) niet gepubliceerd. Mail update@boekhoudbaar.nl.' });
+  }
+
+  let bundle;
+  try { bundle = JSON.parse(bundleRaw); }
+  catch (_) { return jsonResp_({ ok: false, fout: 'Bundle-data corrupt op server. Mail support.' }); }
+
+  if (!bundle || !Array.isArray(bundle.files) || bundle.files.length === 0) {
+    return jsonResp_({ ok: false, fout: 'Bundle bevat geen bestanden.' });
+  }
+
+  // Hash = SHA-256 van geserialiseerde files-array, hex-string. Klant
+  // verifieert lokaal door zelfde berekening uit te voeren. Mismatch = tamper.
+  const canonical = JSON.stringify(bundle.files);
+  const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, canonical)
+    .map(function(b) { return ('0' + (b & 0xff).toString(16)).slice(-2); })
+    .join('');
+
+  try { schrijfAuditLog_('update-bundle geleverd',
+    'versie=' + versie + ' sleutel=' + sleutel.slice(0, 8) + '*** files=' + bundle.files.length); } catch (_) {}
+
+  return jsonResp_({
+    ok: true,
+    versie: versie,
+    files: bundle.files,
+    hash: hash,
+    expiry: Date.now() + 15 * 60 * 1000,
+    generatedAt: bundle.generatedAt || null,
+    bestandenAantal: bundle.files.length,
   });
 }
 
@@ -2100,9 +2174,23 @@ function _verwijderDripKeys_(sleutel) {
  * verwijderen — wij hebben geen toegang.
  */
 function verwijderEndpoint_(e) {
-  const email = String((e.parameter.email || '')).trim().toLowerCase();
-  const otp   = String((e.parameter.otp   || '')).trim();
+  const email   = String((e.parameter.email   || '')).trim().toLowerCase();
+  const otp     = String((e.parameter.otp     || '')).trim();
+  const sleutel = String((e.parameter.sleutel || '')).trim().toUpperCase();
   if (!email || !otp) return jsonResp_({ ok: false, fout: 'E-mail en code zijn verplicht.' });
+
+  // Opt-in defense-in-depth (red-team #1): bij ScriptProperty
+  // AVG_VEREIS_LICENTIESLEUTEL='true' vereist verwijdering óók de licentie-
+  // sleutel. Beschermt tegen post-compromise email-only scenarios: aanvaller
+  // moet dan zowel mail (voor OTP) als toegang tot de spreadsheet OF de
+  // welkomstmail hebben (voor sleutel). Default OFF zodat go-live niet
+  // verandert; Sam kan dit aanzetten na dreigingsmodel-discussie.
+  const propsTop = PropertiesService.getScriptProperties();
+  if (String(propsTop.getProperty('AVG_VEREIS_LICENTIESLEUTEL') || '').toLowerCase() === 'true') {
+    if (!sleutel) {
+      return jsonResp_({ ok: false, fout: 'Licentiesleutel is verplicht. Vind hem in menu: Boekhoudbaar → Licentie & Updates → Licentie-informatie.' });
+    }
+  }
 
   const props = PropertiesService.getScriptProperties();
   const otpRaw = props.getProperty('otp_' + email);
@@ -2124,9 +2212,18 @@ function verwijderEndpoint_(e) {
 
   const sheet = getLicentieSheet_();
   const data  = sheet.getDataRange().getValues();
+  const vereistSleutel = String(propsTop.getProperty('AVG_VEREIS_LICENTIESLEUTEL') || '').toLowerCase() === 'true';
   let geraakt = 0;
+  let sleutelMismatch = false;
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][2] || '').toLowerCase() !== email) continue;
+    // Opt-in check (red-team #1): bij vereistSleutel moet parameter exact
+    // matchen met kolom 0 (Sleutel) van de rij die we pseudonymiseren. Anders
+    // overslaan + mismatch-flag voor diagnostische fout aan eind.
+    if (vereistSleutel && String(data[i][0] || '').toUpperCase() !== sleutel) {
+      sleutelMismatch = true;
+      continue;
+    }
     const rij = i + 1;
     // Pseudonymiseer kolommen (1-based):
     //   2 Naam, 3 Email, 5 Status, 7 SpreadsheetId, 10 LaatsteValidatie, 12 Verwijzer
@@ -2140,6 +2237,9 @@ function verwijderEndpoint_(e) {
   }
 
   if (geraakt === 0) {
+    if (sleutelMismatch) {
+      return jsonResp_({ ok: false, fout: 'Licentiesleutel klopt niet — controleer hem in menu Licentie & Updates → Licentie-informatie.' });
+    }
     return jsonResp_({ ok: false, fout: 'Geen licentie gevonden voor dit e-mailadres.' });
   }
   // PII-redactie: SHA-256 truncate i.p.v. `email.slice(0,3)+'***'` — laatste

@@ -327,6 +327,7 @@ function onOpen() {
       .addSeparator()
       .addItem('Wat is er nieuw?', 'toonWatIsErNieuw')
       .addItem('↑ Hoe update ik?', 'toonHoeUpdateIk')
+      .addItem('📦 Download laatste versie (beta)', 'toonUpdateBundleDialog')
       .addSeparator()
       .addItem('🗑 Mijn account verwijderen (AVG art. 17)', 'toonAccountVerwijderenDialog')
     )
