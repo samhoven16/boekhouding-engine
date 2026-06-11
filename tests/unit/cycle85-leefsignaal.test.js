@@ -34,10 +34,15 @@ describe('CYCLE 85: version.json + update-script', () => {
     expect(json.lastUpdate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  test('.husky/pre-commit roept update-version.js aan + git add het resultaat', () => {
-    const hook = fs.readFileSync(path.join(ROOT, '.husky/pre-commit'), 'utf8');
-    expect(hook).toMatch(/node\s+scripts\/update-version\.js/);
-    expect(hook).toMatch(/git add website\/version\.json/);
+  test('GitHub workflow auto-update-version.yml roept update-version.js aan', () => {
+    // Voorheen liep dit in de pre-commit hook bij ELKE commit; veroorzaakte
+    // perpetueel merge-conflict tussen main en PR-branches op version.json.
+    // Nu alleen op push naar main via workflow + bot-commit met [skip ci].
+    const wf = fs.readFileSync(
+      path.join(ROOT, '.github/workflows/auto-update-version.yml'), 'utf8');
+    expect(wf).toMatch(/node scripts\/update-version\.js/);
+    expect(wf).toMatch(/git add website\/version\.json/);
+    expect(wf).toMatch(/\[skip ci\]/);
   });
 });
 

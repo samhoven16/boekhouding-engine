@@ -49,10 +49,13 @@ describe('CYCLE 88: changelog.json + update-script', () => {
     expect(json.entries.length).toBeLessThanOrEqual(8);
   });
 
-  test('.husky/pre-commit roept update-changelog.js aan', () => {
-    const hook = fs.readFileSync(path.join(ROOT, '.husky/pre-commit'), 'utf8');
-    expect(hook).toMatch(/node\s+scripts\/update-changelog\.js/);
-    expect(hook).toMatch(/git add website\/changelog\.json/);
+  test('GitHub workflow auto-update-version.yml roept update-changelog.js aan', () => {
+    // Verplaatst van pre-commit hook naar main-push workflow om
+    // version.json/changelog.json merge-conflicten te voorkomen.
+    const wf = fs.readFileSync(
+      path.join(ROOT, '.github/workflows/auto-update-version.yml'), 'utf8');
+    expect(wf).toMatch(/node scripts\/update-changelog\.js/);
+    expect(wf).toMatch(/git add website\/version\.json website\/changelog\.json/);
   });
 });
 
