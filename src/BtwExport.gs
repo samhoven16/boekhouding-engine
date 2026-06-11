@@ -61,6 +61,14 @@ function toonBtwExportDialog() {
       pre{background:#fff;border:1px solid #E5EAF2;border-radius:8px;padding:10px;font-size:11px;
           font-family:Menlo,Consolas,monospace;overflow:auto;max-height:240px;white-space:pre-wrap}
       hr{border:none;border-top:1px solid #E5EAF2;margin:14px 0}
+      table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;font-size:12px;margin:8px 0}
+      th{background:#0D1B4E;color:#fff;text-align:left;padding:8px 10px;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+      td{padding:8px 10px;border-bottom:1px solid #F0F2F7;color:#1A1A1A}
+      td.code{font-family:Menlo,Consolas,monospace;color:#0D1B4E;font-weight:600;width:50px}
+      td.num{text-align:right;font-variant-numeric:tabular-nums}
+      tr.totaal td{background:#F7F9FC;font-weight:700;color:#0D1B4E}
+      tr.saldo td{background:#E6F7F4;font-weight:700;color:#0D1B4E;font-size:13px}
+      .periode-koplabel{font-size:11px;color:#5A6478;margin:6px 0 2px}
     </style>
     <div class="label">Export</div>
     <h3>BTW-aangifte exporteren</h3>
@@ -95,13 +103,53 @@ function toonBtwExportDialog() {
     <hr>
     <div id="previewWrapper" style="display:none">
       <p><b>Preview</b> — controleer of de cijfers kloppen vóór je 'm gebruikt:</p>
-      <pre id="preview"></pre>
+      <div class="periode-koplabel" id="periodeKop"></div>
+      <div id="previewTabel"></div>
     </div>
     <div class="status" id="status"></div>
 
     <script>
       var huidigePeriode = null;
 
+      function fmtEuro(n) {
+        if (n === null || n === undefined) return '—';
+        var num = Number(n);
+        if (!isFinite(num)) return '—';
+        return '€ ' + num.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      function escHtml(s) {
+        return String(s == null ? '' : s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+      function renderPreviewTabel(exp) {
+        if (!exp || !exp.rubrieken) {
+          document.getElementById('previewTabel').textContent = 'Geen data.';
+          return;
+        }
+        document.getElementById('periodeKop').textContent =
+          'Kwartaal ' + exp.periode.kwartaal + ' ' + exp.periode.jaar +
+          ' (' + exp.periode.vanaf + ' t/m ' + exp.periode.totEnMet + ')';
+        var rijen = ['<table><thead><tr>' +
+          '<th>Rubriek</th><th>Omschrijving</th>' +
+          '<th style="text-align:right">Grondslag</th>' +
+          '<th style="text-align:right">BTW</th></tr></thead><tbody>'];
+        var totaalKeys = { r5a:true, r5b:true, r5c:true };
+        var saldoKey = 'r5d';
+        Object.keys(exp.rubrieken).forEach(function(code) {
+          var r = exp.rubrieken[code];
+          var rowClass = (code === saldoKey) ? ' class="saldo"' :
+                         (totaalKeys[code] ? ' class="totaal"' : '');
+          rijen.push('<tr' + rowClass + '>' +
+            '<td class="code">' + escHtml(code) + '</td>' +
+            '<td>' + escHtml(r.naam) + '</td>' +
+            '<td class="num">' + (r.grondslag == null ? '—' : fmtEuro(r.grondslag)) + '</td>' +
+            '<td class="num">' + fmtEuro(r.btw) + '</td>' +
+            '</tr>');
+        });
+        rijen.push('</tbody></table>');
+        document.getElementById('previewTabel').innerHTML = rijen.join('');
+      }
       function toon(kleur, tekst) {
         var el = document.getElementById('status');
         el.style.display = 'block';
@@ -119,7 +167,7 @@ function toonBtwExportDialog() {
           .withSuccessHandler(function(res) {
             document.getElementById('btnPreview').disabled = false;
             if (res && res.ok) {
-              document.getElementById('preview').textContent = JSON.stringify(res.export, null, 2);
+              renderPreviewTabel(res.export);
               document.getElementById('previewWrapper').style.display = 'block';
               document.getElementById('btnJson').disabled = false;
               document.getElementById('btnCsv').disabled = false;
