@@ -75,6 +75,9 @@ function doGet(e) {
     }
     return adminPaneel_(e);
   }
+  // POST-actie's vanuit admin-paneel — vereisen ADMIN_WACHTWOORD in body
+  if (actie === 'admin-zet-prijs')   return adminZetPrijsEndpoint_(e);
+  if (actie === 'admin-test-modus')  return adminTestModusEndpoint_(e);
   if (actie === 'roteer')        return rateLimit_(e, { actie: 'roteer', perEmail: 3, globaal: 100, windowMin: 60 }) || roteerEndpoint_(e);
   if (actie === 'revoke')        return revokeEndpoint_(e);
   // Cycle 80: GDPR Art. 17 — recht op vergetelheid. OTP-gated zodat alleen
@@ -88,11 +91,20 @@ function doGet(e) {
 
 function doPost(e) {
   // Router: Mollie stuurt form-urlencoded met `id=tr_…`. Brevo stuurt JSON met
-  // `event` veld. We dispatchen op basis van wat er binnenkomt.
+  // `event` veld. Admin-formulieren sturen form-urlencoded met `actie=admin-...`.
   const isBrevo = e && e.postData && e.postData.type &&
     /json/i.test(e.postData.type) && /"event"/.test(e.postData.contents || '');
+  const adminActie = e && e.parameter && String(e.parameter.actie || '');
+  const isAdminWrite = adminActie && adminActie.indexOf('admin-') === 0;
 
   try {
+    if (isAdminWrite) {
+      // Forward naar doGet's dispatcher (zelfde actie-routing).
+      // Return is HtmlService HTML met JSON-body — bevestiging in browser.
+      if (adminActie === 'admin-zet-prijs')   return _adminPostBevestiging_(adminZetPrijsEndpoint_(e), e);
+      if (adminActie === 'admin-test-modus')  return _adminPostBevestiging_(adminTestModusEndpoint_(e), e);
+      return _adminPostBevestiging_(jsonResp_({ ok: false, fout: 'Onbekende admin-actie.' }), e);
+    }
     if (isBrevo) {
       verwerkBrevoBounce_(e);
     } else {
@@ -506,11 +518,15 @@ function maakBetaling(klantnaam, klantEmail, refCode) {
   // Cycle 67: pas €5 referral-korting toe bij geldige ref. fail-closed →
   // bij sheet-fout, lege/onbekende ref of self-referral blijft het volle
   // bedrag staan (geen revenue-leak).
-  const REF_KORTING = 5;
+  // Bij test-prijs (€0.01) zou korting de eindprijs onder Mollie's minimum
+  // brengen → klem op €0.01 zodat de checkout altijd werkt.
+  const REF_KORTING_RW = parseFloat(props.getProperty('REF_KORTING') || '5');
+  const REF_KORTING   = isFinite(REF_KORTING_RW) && REF_KORTING_RW >= 0 ? REF_KORTING_RW : 5;
   const refGeldig   = _isGeldigeRefCode_(ref, klantEmail);
-  const eindprijs   = refGeldig
-    ? Math.max(0, parseFloat(prijs) - REF_KORTING).toFixed(2)
-    : parseFloat(prijs).toFixed(2);
+  const eindprijsRw = refGeldig
+    ? Math.max(0.01, parseFloat(prijs) - REF_KORTING)
+    : parseFloat(prijs);
+  const eindprijs = eindprijsRw.toFixed(2);
 
   try {
     const resp = UrlFetchApp.fetch('https://api.mollie.com/v2/payments', {
@@ -640,8 +656,9 @@ function verwerkMollieWebhook_(e) {
     const verwachtPrijs = (parseFloat(prijsRw) >= 100 && !/[.,]/.test(String(prijsRw).trim()))
       ? parseFloat(prijsRw) / 100
       : parseFloat(prijsRw);
-    const REF_KORTING = 5; // identiek aan maakBetaling()
-    const minPrijs = Math.max(0, verwachtPrijs - REF_KORTING);
+    const REF_KORTING_RW = parseFloat(props.getProperty('REF_KORTING') || '5');
+    const REF_KORTING = isFinite(REF_KORTING_RW) && REF_KORTING_RW >= 0 ? REF_KORTING_RW : 5;
+    const minPrijs = Math.max(0.01, verwachtPrijs - REF_KORTING);
     const amount = betaling.amount || {};
     const betaaldBedrag = parseFloat(amount.value || '0');
     if (amount.currency !== 'EUR' || betaaldBedrag < minPrijs) {
@@ -1378,6 +1395,102 @@ function _meldAdminLockoutAanOwner_() {
   } catch (_) {}
 }
 
+// ─────────────────────────────────────────────
+//  ADMIN — PRIJS-INSTEL ENDPOINTS
+// ─────────────────────────────────────────────
+/**
+ * Validatie + jsonResp_-helper voor admin-write-acties. Vereist
+ * ADMIN_WACHTWOORD + bekend wachtwoord-veld; rate-limit 30/u globaal.
+ */
+function _adminAuthOk_(e) {
+  const ww = PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '';
+  const input = String((e.parameter && e.parameter.ww) || '').trim();
+  if (!ww || !input || !veiligVergelijk_(ww, input)) return false;
+  return true;
+}
+
+/**
+ * POST actie=admin-zet-prijs ww=... prijs=0.01
+ * Zet PRODUCT_PRIJS (1 cent t/m 999.00). Bereik-validatie + audit-log.
+ * Komma's worden naar punten geconverteerd voor consistente opslag.
+ */
+function adminZetPrijsEndpoint_(e) {
+  const blocked = rateLimit_(e, { actie: 'admin-zet-prijs', globaal: 30, windowMin: 60 });
+  if (blocked) return blocked;
+  if (!_adminAuthOk_(e)) return jsonResp_({ ok: false, fout: 'Niet ingelogd.' });
+
+  const raw = String((e.parameter && e.parameter.prijs) || '').trim().replace(',', '.');
+  const n = parseFloat(raw);
+  if (!isFinite(n) || n < 0.01 || n > 999) {
+    return jsonResp_({ ok: false, fout: 'Prijs moet tussen €0,01 en €999,00 zijn.' });
+  }
+  const props = PropertiesService.getScriptProperties();
+  const oud = props.getProperty('PRODUCT_PRIJS') || '(leeg)';
+  props.setProperty('PRODUCT_PRIJS', n.toFixed(2));
+  try { schrijfAuditLog_('PRODUCT_PRIJS aangepast', 'oud=' + oud + ' nieuw=' + n.toFixed(2)); } catch (_) {}
+  return jsonResp_({ ok: true, prijs: n.toFixed(2) });
+}
+
+/**
+ * POST actie=admin-test-modus ww=... aan=ja|nee
+ * Aan: zet PRODUCT_PRIJS=0.01 + REF_KORTING=0 (zodat checkout altijd op
+ * Mollie-minimum belandt). Uit: herstelt PRODUCT_PRIJS=49.00 + verwijdert
+ * REF_KORTING (terug naar default 5).
+ * Bedoeld voor end-to-end smoke-tests met echte Mollie/Drive/email.
+ */
+function adminTestModusEndpoint_(e) {
+  const blocked = rateLimit_(e, { actie: 'admin-test-modus', globaal: 30, windowMin: 60 });
+  if (blocked) return blocked;
+  if (!_adminAuthOk_(e)) return jsonResp_({ ok: false, fout: 'Niet ingelogd.' });
+
+  const aanRaw = String((e.parameter && e.parameter.aan) || '').toLowerCase().trim();
+  const aan = (aanRaw === 'ja' || aanRaw === 'true' || aanRaw === '1');
+
+  const props = PropertiesService.getScriptProperties();
+  if (aan) {
+    props.setProperty('PRODUCT_PRIJS', '0.01');
+    props.setProperty('REF_KORTING', '0');
+    try { schrijfAuditLog_('Test-modus AAN', 'prijs=0.01 ref-korting=0'); } catch (_) {}
+    return jsonResp_({ ok: true, modus: 'test', prijs: '0.01', refKorting: '0' });
+  }
+  props.setProperty('PRODUCT_PRIJS', '49.00');
+  props.deleteProperty('REF_KORTING');
+  try { schrijfAuditLog_('Test-modus UIT', 'prijs=49.00 ref-korting=default(5)'); } catch (_) {}
+  return jsonResp_({ ok: true, modus: 'live', prijs: '49.00', refKorting: '5 (default)' });
+}
+
+/**
+ * Bouwt een mini HTML-pagina als bevestiging na een admin-write. Klant ziet
+ * "✓ Opgeslagen — terug naar paneel"-knop die naar het admin-paneel linkt
+ * met het wachtwoord meegegeven (zelfde sessie).
+ */
+function _adminPostBevestiging_(resp, e) {
+  let parsed = { ok: false, fout: 'Geen antwoord' };
+  try {
+    if (resp && typeof resp.getContent === 'function') {
+      parsed = JSON.parse(resp.getContent());
+    }
+  } catch (_) {}
+  const ww = String((e && e.parameter && e.parameter.ww) || '');
+  const url = ScriptApp.getService().getUrl() +
+    '?actie=admin&ww=' + encodeURIComponent(ww);
+  const ok = parsed.ok === true;
+  const titel = ok ? '✓ Opgeslagen' : '⚠ Mislukt';
+  const kleur = ok ? '#0D7355' : '#B91C1C';
+  const detail = ok
+    ? ('PRODUCT_PRIJS = €' + (parsed.prijs || '—') +
+       (parsed.modus ? ' (modus: ' + parsed.modus + ')' : '') +
+       (parsed.refKorting ? ' · korting: €' + parsed.refKorting : ''))
+    : ('Reden: ' + (parsed.fout || 'onbekend'));
+  return HtmlService.createHtmlOutput(
+    '<div style="font-family:Arial;padding:30px;max-width:520px;margin:40px auto">' +
+    '<h2 style="color:' + kleur + ';margin-top:0">' + escHtml_(titel) + '</h2>' +
+    '<p>' + escHtml_(detail) + '</p>' +
+    '<p><a href="' + escHtml_(url) + '" style="display:inline-block;padding:10px 18px;background:#0D1B4E;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">← Terug naar admin-paneel</a></p>' +
+    '</div>'
+  ).setTitle('Admin — ' + titel);
+}
+
 function adminPaneel_(e) {
   const ww    = PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '';
   const input = String((e.parameter.ww || '')).trim();
@@ -1468,6 +1581,41 @@ function adminPaneel_(e) {
       tr.hidden{display:none}
     </style>
     ${banners}
+
+    <h3>Prijs &amp; test-modus</h3>
+    <div style="background:#F7F9FC;border:1px solid #E5EAF2;border-radius:8px;padding:14px;margin:10px 0 18px;font-size:13px">
+      <p style="margin:0 0 10px">
+        Huidige <code>PRODUCT_PRIJS</code> = <strong>€${escHtml_(props.getProperty('PRODUCT_PRIJS') || '49.00')}</strong>
+        &nbsp;·&nbsp;
+        <code>REF_KORTING</code> = <strong>€${escHtml_(props.getProperty('REF_KORTING') || '5 (default)')}</strong>
+      </p>
+      <form method="post" action="${escHtml_(ScriptApp.getService().getUrl())}" style="display:flex;gap:8px;align-items:center;margin:8px 0">
+        <input type="hidden" name="actie" value="admin-zet-prijs">
+        <input type="hidden" name="ww" value="${escHtml_(String(e.parameter.ww || ''))}">
+        <label for="prijs" style="font-weight:600">Zet prijs:</label>
+        <input id="prijs" name="prijs" type="text" inputmode="decimal" placeholder="0.01"
+               style="padding:6px 10px;border:1px solid #E5EAF2;border-radius:6px;width:100px;font-family:inherit">
+        <button type="submit" style="padding:6px 14px;border:none;background:#0D1B4E;color:#fff;border-radius:6px;cursor:pointer">Opslaan</button>
+        <span style="color:#5F6B7A;font-size:12px">€0,01 t/m €999,00</span>
+      </form>
+      <form method="post" action="${escHtml_(ScriptApp.getService().getUrl())}" style="display:inline-flex;gap:8px;margin-top:6px">
+        <input type="hidden" name="actie" value="admin-test-modus">
+        <input type="hidden" name="ww" value="${escHtml_(String(e.parameter.ww || ''))}">
+        <input type="hidden" name="aan" value="ja">
+        <button type="submit" style="padding:6px 12px;border:1px solid #2EC4B6;background:#E6F7F4;color:#0D1B4E;border-radius:6px;cursor:pointer;font-weight:600">
+          ⚡ Test-modus AAN (€0,01, geen korting)
+        </button>
+      </form>
+      <form method="post" action="${escHtml_(ScriptApp.getService().getUrl())}" style="display:inline-flex;gap:8px;margin-top:6px">
+        <input type="hidden" name="actie" value="admin-test-modus">
+        <input type="hidden" name="ww" value="${escHtml_(String(e.parameter.ww || ''))}">
+        <input type="hidden" name="aan" value="nee">
+        <button type="submit" style="padding:6px 12px;border:1px solid #E5EAF2;background:#fff;color:#0D1B4E;border-radius:6px;cursor:pointer;font-weight:600">
+          ↺ Herstel naar live (€49,00)
+        </button>
+      </form>
+    </div>
+
     <h3>Klanten-overzicht</h3>
     <div class="metrics">
       <div class="metric"><div class="v">${totaal}</div><div class="l">Totaal</div></div>
