@@ -214,10 +214,25 @@ function aanvraagVerwijderOtp(email) {
     const url = serverUrl + '?actie=aanvraag-otp&email=' + encodeURIComponent(email);
     const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
     const res = parseServerJson_(resp.getContentText());
-    try { safeAuditLog_('AVG Art. 17 — code aangevraagd', email.slice(0, 3) + '***'); } catch (_) {}
+    try { safeAuditLog_('AVG Art. 17 — code aangevraagd', 'email-hash=' + _hashEmail_(email)); } catch (_) {}
     return res;
   } catch (err) {
     return { ok: false, fout: 'Netwerkfout: ' + err.message };
+  }
+}
+
+/**
+ * Privacy-respecterende PII-redactie voor audit-log. `email.slice(0,3)+'***'`
+ * was reconstrueerbaar in klein klantenbestand (red-team-audit vondst). SHA-256
+ * truncate is onomkeerbaar én blijft uniek voor latere correlatie.
+ */
+function _hashEmail_(email) {
+  try {
+    const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(email || ''));
+    return bytes.map(function(b) { return ('0' + (b & 0xff).toString(16)).slice(-2); })
+      .join('').slice(0, 12);
+  } catch (_) {
+    return 'hash-fail';
   }
 }
 
@@ -256,7 +271,7 @@ function voerAccountVerwijdering(email, otp) {
         const props = PropertiesService.getScriptProperties();
         props.deleteProperty(LICENTIE_CACHE_KEY);
       } catch (_) {}
-      try { safeAuditLog_('AVG Art. 17 — verwijdering bevestigd', email.slice(0, 3) + '***'); } catch (_) {}
+      try { safeAuditLog_('AVG Art. 17 — verwijdering bevestigd', 'email-hash=' + _hashEmail_(email)); } catch (_) {}
     }
     return res;
   } catch (err) {

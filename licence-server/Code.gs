@@ -2133,10 +2133,14 @@ function verwijderEndpoint_(e) {
   if (geraakt === 0) {
     return jsonResp_({ ok: false, fout: 'Geen licentie gevonden voor dit e-mailadres.' });
   }
-  Logger.log('GDPR Art. 17 pseudonymisering: ' + geraakt + ' rij(en) voor ' +
-    email.slice(0, 3) + '***');
+  // PII-redactie: SHA-256 truncate i.p.v. `email.slice(0,3)+'***'` — laatste
+  // is reconstrueerbaar in klein klantenbestand (red-team-audit nacht-PR).
+  const emailHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(email))
+    .map(function(b) { return ('0' + (b & 0xff).toString(16)).slice(-2); })
+    .join('').slice(0, 12);
+  Logger.log('GDPR Art. 17 pseudonymisering: ' + geraakt + ' rij(en) voor email-hash=' + emailHash);
   try { schrijfAuditLog_('GDPR Art. 17 — pseudonymisering',
-    email.slice(0, 3) + '*** — ' + geraakt + ' rij(en)'); } catch (_) {}
+    'email-hash=' + emailHash + ' — ' + geraakt + ' rij(en)'); } catch (_) {}
   return jsonResp_({ ok: true, bericht: 'Je gegevens zijn gepseudonymiseerd. Je behoudt 14 dagen toegang via de grace-period; daarna vervalt je licentie. De fiscale gegevens (factuurnummers, bedragen) blijven 7 jaar bewaard conform AWR art. 52.' });
 }
 

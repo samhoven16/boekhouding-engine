@@ -397,8 +397,7 @@ function _toonKritiekeUpdateModal_(huidigeVersie, nieuweVersie, toelichting, ins
   huidigeVersie = esc(huidigeVersie);
   nieuweVersie  = esc(nieuweVersie);
   toelichting   = esc(toelichting);
-  // URL: alleen http(s) toestaan om javascript: te blokkeren
-  if (!/^https?:\/\//i.test(String(instructiesUrl || ''))) instructiesUrl = 'https://boekhoudbaar.nl/update/';
+  instructiesUrl = _veiligeUpdateUrl_(instructiesUrl);
 
   try {
     const html = HtmlService.createHtmlOutput(`
@@ -469,6 +468,30 @@ function _isVersieKritiek_(huidigeVersie, kritiekVoor) {
 }
 
 /**
+ * Domain-allowlist op update-instructies-URL. Server-config kan momenteel
+ * alleen door Sam worden gezet, maar bij toekomstig admin-dashboard kan
+ * iemand anders die zetten — dan wordt deze URL klikbare phishing-vector.
+ * Allowlist: alleen boekhoudbaar.nl-subdomeinen + github.com/samhoven16.
+ * Bij mismatch: fallback naar default https://boekhoudbaar.nl/update/.
+ */
+function _veiligeUpdateUrl_(url) {
+  const fallback = 'https://boekhoudbaar.nl/update/';
+  const s = String(url || '').trim();
+  if (!s) return fallback;
+  // Eerst scheme: alleen https (geen javascript:, geen http: voor anti-MITM)
+  if (!/^https:\/\//i.test(s)) return fallback;
+  // Dan host extraheren: alles tussen https:// en eerste /, ? of #
+  const m = s.match(/^https:\/\/([^/?#]+)/i);
+  if (!m) return fallback;
+  const host = m[1].toLowerCase();
+  // Allowed: boekhoudbaar.nl, *.boekhoudbaar.nl, github.com (Sam's gist/pages)
+  if (host === 'boekhoudbaar.nl') return s;
+  if (host.endsWith('.boekhoudbaar.nl')) return s;
+  if (host === 'github.com' || host === 'gist.github.com') return s;
+  return fallback;
+}
+
+/**
  * Cleanup: `kritiekeUpdateModalTs_X.Y.Z` keys groeien per kritieke release.
  * Bij 50 releases over 5 jaar = 50 stale UserProperties-keys per gebruiker.
  * Verwijder keys ouder dan 30 dagen (ruim voor 24u-throttle-window).
@@ -500,8 +523,15 @@ function cleanupKritiekeUpdateModalKeys_() {
 function toonHoeUpdateIk() {
   let cfg = null;
   try {
-    // Cache invalideren zodat klant altijd verse info ziet
-    PropertiesService.getUserProperties().deleteProperty('licentieConfigTs');
+    // Cache-spam guard: max 1× per 60s een geforceerde server-fetch. Voorkomt
+    // dat klant door menu-klikken een burst richting `?actie=config` triggert
+    // (gas-runtime-audit vondst). Onder de 60s = cache gebruiken zoals die is.
+    const userProps = PropertiesService.getUserProperties();
+    const lastForce = parseInt(userProps.getProperty('toonHoeUpdateIkForceTs') || '0');
+    if (Date.now() - lastForce > 60 * 1000) {
+      userProps.setProperty('toonHoeUpdateIkForceTs', String(Date.now()));
+      userProps.deleteProperty('licentieConfigTs');
+    }
     cfg = haalConfigOp_();
   } catch (_) {}
 
@@ -511,8 +541,7 @@ function toonHoeUpdateIk() {
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   };
   const nieuw = esc((cfg && cfg.versie) || 'onbekend');
-  let url = (cfg && cfg.versieInstructiesUrl) || 'https://boekhoudbaar.nl/update/';
-  if (!/^https?:\/\//i.test(String(url))) url = 'https://boekhoudbaar.nl/update/';
+  const url = _veiligeUpdateUrl_(cfg && cfg.versieInstructiesUrl);
   const isNieuwer = cfg && cfg.versie && _versieIsNieuwer_(cfg.versie, HUIDIGE_VERSIE);
   const isKritiek = isNieuwer && cfg.versieErnst === 'kritiek' &&
     _isVersieKritiek_(HUIDIGE_VERSIE, cfg.versieKritiekVoor);

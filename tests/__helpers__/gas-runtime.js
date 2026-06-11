@@ -58,6 +58,25 @@ function createGasRuntime(files, overrides = {}) {
       sleep:         jest.fn(),
       newBlob:       jest.fn(() => ({ getAs: jest.fn(() => ({ setName: jest.fn(), name: '' })) })),
       base64Decode:  jest.fn(() => new Uint8Array()),
+      // computeDigest / DigestAlgorithm: deterministische FNV-achtige mock zodat
+      // code-paden die SHA-256-hashes gebruiken geen TypeError krijgen. Tests die
+      // de echte hash-output willen verifiëren moeten dit override-en.
+      computeDigest: jest.fn((_alg, s) => {
+        const str = String(s);
+        let h = 2166136261;
+        for (let i = 0; i < str.length; i++) {
+          h = ((h ^ str.charCodeAt(i)) * 16777619) >>> 0;
+        }
+        const bytes = [];
+        for (let i = 0; i < 32; i++) {
+          h = ((h * 31) + i) >>> 0;
+          bytes.push(h & 0xff);
+        }
+        return bytes;
+      }),
+      DigestAlgorithm: { SHA_256: 'SHA_256', MD5: 'MD5', SHA_1: 'SHA_1' },
+      computeHmacSha256Signature: jest.fn(() => new Uint8Array()),
+      getUuid: jest.fn(() => '00000000-0000-0000-0000-000000000000'),
     },
 
     // ── PropertiesService ───────────────────────────────────────────────
