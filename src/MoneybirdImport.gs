@@ -26,10 +26,9 @@
 
 /**
  * Hoofd-entrypoint. Opent file-picker via HTML-dialog, klant kiest XAF.
- * Na upload roept verwerkXafBestand_ aan. Aan menu te koppelen via
+ * Na upload roept verwerkXafBestand aan. Aan menu te koppelen via
  * Menu.gs: 'Migreer vanuit Moneybird (XAF-import)'.
  */
-// eslint-disable-next-line no-unused-vars
 function openMoneybirdImportDialoog() {
   const ui = SpreadsheetApp.getUi();
   if (!controleerSetupGedaan_()) {
@@ -79,7 +78,7 @@ function openMoneybirdImportDialoog() {
               document.getElementById('status').innerHTML = '<span class="err">Fout: ' + (err.message || err) + '</span>';
               document.getElementById('startBtn').disabled = false;
             })
-            .verwerkXafBestand_(ev.target.result);
+            .verwerkXafBestand(ev.target.result);
         };
         reader.readAsText(f);
       }
@@ -95,8 +94,7 @@ function openMoneybirdImportDialoog() {
  * @param {string} xafTekst  rauwe XML van het XAF-bestand
  * @returns {Object} { relaties, facturen, fouten, melding }
  */
-// eslint-disable-next-line no-unused-vars
-function verwerkXafBestand_(xafTekst) {
+function verwerkXafBestand(xafTekst) {
   if (!xafTekst || xafTekst.length < 100) {
     throw new Error('XAF-bestand is leeg of onvolledig.');
   }

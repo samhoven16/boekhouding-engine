@@ -30,7 +30,7 @@ const SUPPLETIE_DREMPEL        = 1000;    // Onder = volgende aangifte; boven = 
  * @param {Object} inv  { bedrag, isMilieuLijst, isEnergieLijst, totaalKiaJaar, jaar }
  * @returns {Object}    aftrek-bedragen + uitleg
  */
-function berekenInvesteringsAftrek_(inv) {
+function berekenInvesteringsAftrek(inv) {
   const B = (typeof getBelasting_ === 'function') ? getBelasting_() : {};
   const bedrag = parseFloat(inv.bedrag) || 0;
   if (bedrag <= 0) return { kia: 0, mia: 0, eia: 0, totaal: 0, uitleg: 'Geen bedrag' };
@@ -149,7 +149,7 @@ function toonInvesteringsAftrekStapeling() {
               '</div>' +
               '<div class="sub2">' + r.uitleg + '. Bij IB-tarief ${_ibPct1Display} scheelt dit ' + f(r.totaal * ${_ibPct1}) + ' aan belasting.</div>' +
             '</div>';
-        }).berekenInvesteringsAftrek_(data);
+        }).berekenInvesteringsAftrek(data);
       }
       document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('btnBereken').addEventListener('click', bereken);
