@@ -2079,31 +2079,199 @@ function jsonResp_(data) {
 //  EENMALIGE SETUP (run handmatig in de editor)
 // ─────────────────────────────────────────────
 /**
- * Maak een nieuwe licentie-spreadsheet aan en sla het ID op.
- * Voer deze functie éénmalig uit in de Apps Script editor.
+ * Maakt of upgrade de licentie-database:
+ *  - Drive-map "Boekhoudbaar — Operations" (alle assets bij elkaar)
+ *  - Spreadsheet met tabs: Dashboard, Licenties, Audit Log, Telemetry, Revoke
+ *  - Headers, frozen rij, gekleurd, conditional formatting op status, data-
+ *    validatie op statuskolom. Geen leeg vel meer.
+ *  - Verplaatst (indien mogelijk) Master Engine + licentieserver-script naar
+ *    dezelfde Operations-map zodat alles fysiek bij elkaar staat.
+ *
+ * Idempotent: bestaande sheet wordt geüpgraded; ontbrekende tabs/format wordt
+ * toegevoegd; bestaande data blijft staan.
  */
 function setupLicentieSheet() {
-  const ss = SpreadsheetApp.create('Boekhoudbaar — Licentiebeheer');
   const props = PropertiesService.getScriptProperties();
-  props.setProperty('LICENTIE_SHEET_ID', ss.getId());
+  const opsMap = _zorgVoorOperationsMap_();
 
-  // Stel alleen niet-gevoelige defaults in. Gevoelige properties
-  // (MOLLIE_API_KEY, ADMIN_WACHTWOORD, BREVO_API_KEY, TEMPLATE_SS_ID,
-  // KVK_NUMMER, BTW_NUMMER) moeten handmatig worden ingevuld per
-  // environment — nooit hardcoden.
+  // Bestaande sheet? Anders nieuwe in operations-map
+  let ss;
+  const huidigId = String(props.getProperty('LICENTIE_SHEET_ID') || '').trim();
+  if (huidigId) {
+    try { ss = SpreadsheetApp.openById(huidigId); }
+    catch (_) { ss = null; }
+  }
+  if (!ss) {
+    ss = SpreadsheetApp.create('Boekhoudbaar — Licentiebeheer (database)');
+    try { DriveApp.getFileById(ss.getId()).moveTo(opsMap); } catch (_) {}
+    props.setProperty('LICENTIE_SHEET_ID', ss.getId());
+  } else {
+    // Bestaande sheet ook naar operations-map (idempotent — als hij er al in staat, no-op)
+    try { DriveApp.getFileById(ss.getId()).moveTo(opsMap); } catch (_) {}
+  }
+
+  _bouwLicentieDatabase_(ss);
+  _verzamelAssetsInOperationsMap_(opsMap);
+
   if (!props.getProperty('PRODUCT_NAAM'))  props.setProperty('PRODUCT_NAAM',  'Boekhoudbaar');
   if (!props.getProperty('PRODUCT_PRIJS')) props.setProperty('PRODUCT_PRIJS', '49.00');
 
-  const ontbrekend = [];
-  if (!props.getProperty('MOLLIE_API_KEY'))    ontbrekend.push('MOLLIE_API_KEY');
-  if (!props.getProperty('ADMIN_WACHTWOORD'))  ontbrekend.push('ADMIN_WACHTWOORD');
-  if (!props.getProperty('TEMPLATE_SS_ID'))    ontbrekend.push('TEMPLATE_SS_ID');
+  Logger.log('Licentie-database: ' + ss.getUrl());
+  Logger.log('Operations-map:    ' + opsMap.getUrl());
+}
 
-  Logger.log('Licentie-spreadsheet aangemaakt: ' + ss.getUrl());
-  if (ontbrekend.length) {
-    Logger.log('::warning:: Verplichte Script Properties ontbreken nog: ' + ontbrekend.join(', '));
-    Logger.log('Vul ze in via Project Settings → Script Properties voordat je deployt.');
+/** Vindt of maakt de Boekhoudbaar — Operations Drive-map. */
+function _zorgVoorOperationsMap_() {
+  const NAAM = 'Boekhoudbaar — Operations';
+  const it = DriveApp.getFoldersByName(NAAM);
+  if (it.hasNext()) return it.next();
+  return DriveApp.createFolder(NAAM);
+}
+
+/**
+ * Bouwt de hele database op een spreadsheet. Vijf tabs met headers, kleuren,
+ * frozen rijen, kolombreedtes, status-validatie en conditional formatting.
+ * Idempotent: ontbrekende tabs worden aangemaakt; bestaande tabs krijgen
+ * alleen ontbrekende headers/format.
+ */
+function _bouwLicentieDatabase_(ss) {
+  const BLAUW = '#0D1B4E', WIT = '#FFFFFF';
+
+  // ── 1. Dashboard-tab (KPI's via formule, geen code nodig)
+  let dash = ss.getSheetByName('Dashboard');
+  if (!dash) {
+    dash = ss.insertSheet('Dashboard', 0);
+    dash.setHiddenGridlines(true);
+    dash.getRange('A1').setValue('📊 Boekhoudbaar — overzicht')
+      .setFontSize(18).setFontWeight('bold').setFontColor(BLAUW);
+    dash.getRange('A2').setValue('Live cijfers, automatisch berekend uit het tabblad Licenties.')
+      .setFontColor('#5F6B7A').setFontStyle('italic');
+
+    const kpis = [
+      ['Totaal licenties',     '=COUNTA(Licenties!A2:A)'],
+      ['Actief',               '=COUNTIF(Licenties!E2:E,"Actief*")'],
+      ['Onboarded',            '=COUNTA(Licenties!K2:K)'],
+      ['Ingetrokken/refund',   '=COUNTIF(Licenties!E2:E,"Ingetrokken*")+COUNTIF(Licenties!E2:E,"Verwijderd*")'],
+      ['Bouncing e-mails',     '=COUNTIF(Licenties!M2:M,"hard")'],
+      ['Validaties laatste 24u','=COUNTIFS(Licenties!J2:J,">"&(NOW()-1))'],
+    ];
+    dash.getRange(4, 1, kpis.length, 2).setValues(kpis);
+    dash.getRange(4, 1, kpis.length, 1).setFontWeight('bold').setFontColor('#5F6B7A').setFontSize(11);
+    dash.getRange(4, 2, kpis.length, 1).setFontSize(20).setFontWeight('bold').setFontColor(BLAUW).setHorizontalAlignment('left');
+    dash.setColumnWidth(1, 220);
+    dash.setColumnWidth(2, 180);
+
+    dash.getRange(11, 1).setValue('🛟 Hulp')
+      .setFontWeight('bold').setFontColor(BLAUW).setFontSize(13);
+    dash.getRange(12, 1).setValue('Beheer alles vanuit het centrale dashboard. De spreadsheet hier is de database — kijk gerust, maar bewerk vanuit het dashboard zodat alle audit-trails kloppen.')
+      .setFontColor('#5F6B7A').setWrap(true);
+    dash.getRange(12, 1, 1, 4).merge();
   }
+
+  // ── 2. Licenties (de echte database)
+  const LIC_HEADERS = ['Sleutel','Naam','Email','Versie','Status','Vervaldatum',
+    'Installatie-ID','Aangemaakt op','Mollie betaling ID','Laatste validatie',
+    'Onboarded op','Verwijzer','Bouncestatus','Bouncereden'];
+  let lic = ss.getSheetByName('Licenties');
+  if (!lic) {
+    // Eventuele "Sheet1" hernoemen of nieuwe insert. We hernoemen Sheet1 als
+    // hij leeg is — anders maken we Licenties als nieuwe tab.
+    const eerste = ss.getSheets()[0];
+    if (eerste.getName() === 'Sheet1' && eerste.getLastRow() <= 1 && eerste.getName() !== 'Dashboard') {
+      eerste.setName('Licenties'); lic = eerste;
+    } else {
+      lic = ss.insertSheet('Licenties');
+    }
+  }
+  _zorgHeadersEnFormat_(lic, LIC_HEADERS, BLAUW, WIT);
+  lic.setFrozenRows(1);
+  // Kolombreedtes (Sleutel/Email breder dan default)
+  try {
+    lic.setColumnWidth(1, 160); // Sleutel
+    lic.setColumnWidth(2, 140); // Naam
+    lic.setColumnWidth(3, 220); // Email
+    lic.setColumnWidth(5, 140); // Status
+    lic.setColumnWidth(9, 130); // Mollie ID
+  } catch (_) {}
+
+  // Status-kolom (E): data-validatie
+  try {
+    const statusRange = lic.getRange(2, 5, Math.max(1, lic.getMaxRows() - 1));
+    const rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Actief','Actief — handmatig','Actief — trial',
+        'Actief — wacht op TEMPLATE_SS_ID',
+        'Ingetrokken','Ingetrokken — rotatie','Ingetrokken — refund','Ingetrokken — chargeback',
+        'Verwijderd op verzoek (Art. 17)','Bounce'], false)
+      .setAllowInvalid(true).build();
+    statusRange.setDataValidation(rule);
+  } catch (_) {}
+
+  // Conditional formatting op Status-kolom
+  try {
+    const rules = lic.getConditionalFormatRules();
+    const range = [lic.getRange(2, 5, Math.max(1, lic.getMaxRows() - 1))];
+    const f = SpreadsheetApp.newConditionalFormatRule;
+    // Wis bestaande regels op de status-kolom — anders stapelen we bij upgrade
+    const overige = rules.filter(function(r){
+      const ranges = r.getRanges();
+      for (let i=0;i<ranges.length;i++) if (ranges[i].getColumn() === 5) return false;
+      return true;
+    });
+    overige.push(f().whenTextStartsWith('Actief').setBackground('#E6F7F4').setFontColor('#0D7355').setRanges(range).build());
+    overige.push(f().whenTextStartsWith('Ingetrokken').setBackground('#FDECEC').setFontColor('#B91C1C').setRanges(range).build());
+    overige.push(f().whenTextStartsWith('Verwijderd').setBackground('#F1F3F5').setFontColor('#5F6B7A').setRanges(range).build());
+    overige.push(f().whenTextEqualTo('Bounce').setBackground('#FFF8E1').setFontColor('#8B5A00').setRanges(range).build());
+    lic.setConditionalFormatRules(overige);
+  } catch (_) {}
+
+  // ── 3. Audit Log (wordt al gevuld door schrijfAuditLog_)
+  let aud = ss.getSheetByName('Audit Log');
+  if (!aud) aud = ss.insertSheet('Audit Log');
+  _zorgHeadersEnFormat_(aud, ['Datum','Actie','Details'], BLAUW, WIT);
+  aud.setFrozenRows(1);
+  try { aud.setColumnWidth(1, 160); aud.setColumnWidth(2, 200); aud.setColumnWidth(3, 500); } catch (_) {}
+
+  // ── 4. Telemetry (gevuld door telemetryEndpoint_)
+  let tel = ss.getSheetByName('Telemetry');
+  if (!tel) tel = ss.insertSheet('Telemetry');
+  _zorgHeadersEnFormat_(tel, ['Datum','Klant-hash','Code','Bericht','Versie'], BLAUW, WIT);
+  tel.setFrozenRows(1);
+
+  // ── 5. Revoke-audit (gevuld door revokeEndpoint_)
+  let rev = ss.getSheetByName('Revoke-audit');
+  if (!rev) rev = ss.insertSheet('Revoke-audit');
+  _zorgHeadersEnFormat_(rev, ['Datum','Sleutel (eerste 8)','Status','Sheet-rij'], BLAUW, WIT);
+  rev.setFrozenRows(1);
+
+  // Volgorde: Dashboard eerst
+  try { ss.setActiveSheet(ss.getSheetByName('Dashboard')); } catch (_) {}
+}
+
+/** Idempotent: zet headers + format op rij 1 zonder bestaande data te raken. */
+function _zorgHeadersEnFormat_(sheet, headers, achterkleur, voorkleur) {
+  if (sheet.getLastColumn() < headers.length) {
+    // Te weinig kolommen: append wat ontbreekt
+    sheet.insertColumnsAfter(Math.max(1, sheet.getLastColumn()), headers.length - sheet.getLastColumn());
+  }
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold').setBackground(achterkleur).setFontColor(voorkleur);
+}
+
+/**
+ * Verplaatst de Master Engine (TEMPLATE_SS_ID) en het licentieserver-script
+ * zelf naar de Operations-map zodat alles fysiek bij elkaar staat.
+ * Best-effort: failures niet propagateren — als rights ontbreken, doen we
+ * niets en het systeem blijft werken.
+ */
+function _verzamelAssetsInOperationsMap_(opsMap) {
+  const props = PropertiesService.getScriptProperties();
+  try {
+    const templateId = props.getProperty('TEMPLATE_SS_ID');
+    if (templateId) DriveApp.getFileById(templateId).moveTo(opsMap);
+  } catch (_) {}
+  try {
+    DriveApp.getFileById(ScriptApp.getScriptId()).moveTo(opsMap);
+  } catch (_) {}
 }
 
 /**

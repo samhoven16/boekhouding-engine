@@ -480,7 +480,7 @@ function _zoekLicentieSheetKandidaten_() {
  * de waarde die de server retourneert om "code op server is ouder dan main"
  * te detecteren — zodat we de hele zoektocht van vannacht niet hoeven herhalen.
  */
-const ADMIN_DASHBOARD_VERSIE = '2026-06-11-A';
+const ADMIN_DASHBOARD_VERSIE = '2026-06-11-B';
 
 /**
  * google.script.run target. Verzamelt de observability-data die op
@@ -550,6 +550,35 @@ function adminObservability(token) {
     try { fouten.push(JSON.parse(raw)); } catch (_) {}
   }
 
+  // Assets: directe links naar de drie kernpunten van het systeem
+  const assets = { script: null, database: null, template: null, opsMap: null };
+  try {
+    const scriptId = ScriptApp.getScriptId();
+    assets.script = { naam: 'Licentieserver (Apps Script)',
+      url: 'https://script.google.com/d/' + scriptId + '/edit' };
+  } catch (_) {}
+  try {
+    const dbId = props.getProperty('LICENTIE_SHEET_ID');
+    if (dbId) {
+      const dbSs = SpreadsheetApp.openById(dbId);
+      assets.database = { naam: 'Licentie-database', url: dbSs.getUrl(), titel: dbSs.getName() };
+    }
+  } catch (_) {}
+  try {
+    const tplId = props.getProperty('TEMPLATE_SS_ID');
+    if (tplId) {
+      const tplSs = SpreadsheetApp.openById(tplId);
+      assets.template = { naam: 'Master Engine (klant-template)', url: tplSs.getUrl(), titel: tplSs.getName() };
+    }
+  } catch (_) {}
+  try {
+    const opsIt = DriveApp.getFoldersByName('Boekhoudbaar — Operations');
+    if (opsIt.hasNext()) {
+      const folder = opsIt.next();
+      assets.opsMap = { naam: 'Operations-map (alles bij elkaar)', url: folder.getUrl() };
+    }
+  } catch (_) {}
+
   return {
     ok: true,
     dashboardVersie: ADMIN_DASHBOARD_VERSIE,
@@ -557,6 +586,7 @@ function adminObservability(token) {
     webhook: webhook,
     stilleKlanten: stilleKlanten,
     laatsteFouten: fouten,
+    assets: assets,
     ownerEmail: props.getProperty('OWNER_STATUS_EMAIL') || '',
   };
 }
@@ -831,6 +861,21 @@ function _adminDashboardHtml_() {
   function renderObservability(o){
     var wrap=document.getElementById('obsWrap'); if(!wrap) return;
     var blokken=[];
+
+    // 0) Assets — directe links naar alle Boekhoudbaar-onderdelen
+    if(o.assets){
+      var a=o.assets;
+      function link(item){
+        if(!item) return '';
+        return '<a class="btn-sec" href="'+esc(item.url)+'" target="_blank" style="margin:4px 6px 4px 0">'+
+          esc(item.naam)+(item.titel?' <span style="color:#5F6B7A;font-size:11px">— '+esc(item.titel)+'</span>':'')+
+          '</a>';
+      }
+      blokken.push('<div class="kaart"><h2>Mijn assets — alles in één klik</h2>'+
+        '<p style="font-size:13px;color:#5F6B7A;margin-bottom:10px">Eén Drive-map "Boekhoudbaar — Operations" bevat alle onderdelen. Bewerk altijd via dit dashboard zodat audit-trails kloppen.</p>'+
+        '<div>'+link(a.opsMap)+link(a.script)+link(a.database)+link(a.template)+'</div>'+
+        '</div>');
+    }
 
     // 1) Deploy-versie: matchen we wat het dashboard hier in de browser denkt?
     var lokaalDV = window.DASHBOARD_VERSIE_LOKAAL;
