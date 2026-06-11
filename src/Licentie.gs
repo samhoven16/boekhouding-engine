@@ -409,9 +409,8 @@ function toonActivatieDialog_() {
           <div class="check">✓</div>
           <h2 id="succes_titel" style="margin-bottom:6px">Geactiveerd</h2>
           <p id="succes_naam" class="sub" style="margin-bottom:14px"></p>
-          <p class="sub" style="font-size:13px">
-            Je boekhouding wordt nu ingericht.<br>
-            <strong style="color:#0D1B4E">Ververs straks de pagina</strong> (Ctrl+R of Cmd+R) om het volledige menu te laden.
+          <p class="sub" style="font-size:13px" id="succes_status">
+            Je boekhouding wordt nu ingericht…
           </p>
         </div>
       </div>
@@ -467,8 +466,23 @@ function toonActivatieDialog_() {
             schakelNaar('stap3');
             document.getElementById('succes_naam').textContent =
               res.naam ? 'Welkom, ' + res.naam + '.' : '';
-            // Setup draaien op achtergrond
-            google.script.run.initialiseerNaActivatie();
+            // Setup draaien op achtergrond + automatische reload na voltooiing
+            // zodat de klant het volledige menu krijgt zonder Ctrl+R te hoeven.
+            google.script.run
+              .withSuccessHandler(function() {
+                var s = document.getElementById('succes_status');
+                if (s) s.innerHTML = 'Klaar! De pagina vernieuwt zich vanzelf <span style="color:#5F6B7A">(2 sec)</span>…';
+                setTimeout(function() {
+                  try { window.top.location.reload(); }
+                  catch (_) { try { google.script.host.close(); } catch (_) {} }
+                }, 2000);
+              })
+              .withFailureHandler(function() {
+                // Setup faalde — toon klant fallback-instructie
+                var s = document.getElementById('succes_status');
+                if (s) s.innerHTML = 'Bijna klaar. <strong style="color:#0D1B4E">Ververs de pagina handmatig</strong> (Cmd/Ctrl+R) om verder te gaan.';
+              })
+              .initialiseerNaActivatie();
           } else {
             btn.disabled = false;
             btn.textContent = 'Activeer Boekhoudbaar';

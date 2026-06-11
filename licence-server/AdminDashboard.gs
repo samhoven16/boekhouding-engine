@@ -480,7 +480,7 @@ function _zoekLicentieSheetKandidaten_() {
  * de waarde die de server retourneert om "code op server is ouder dan main"
  * te detecteren — zodat we de hele zoektocht van vannacht niet hoeven herhalen.
  */
-const ADMIN_DASHBOARD_VERSIE = '2026-06-11-B';
+const ADMIN_DASHBOARD_VERSIE = '2026-06-11-E';
 
 /**
  * google.script.run target. Verzamelt de observability-data die op
@@ -568,7 +568,25 @@ function adminObservability(token) {
     const tplId = props.getProperty('TEMPLATE_SS_ID');
     if (tplId) {
       const tplSs = SpreadsheetApp.openById(tplId);
-      assets.template = { naam: 'Master Engine (klant-template)', url: tplSs.getUrl(), titel: tplSs.getName() };
+      // CRITICAL: check of het template "Anyone with the link" is. Zo niet,
+      // krijgen klanten een 404 op de copy-link. Dit was Sam's blocker
+      // tijdens de eerste echte test (proton-account kreeg 404).
+      let publiekZichtbaar = false;
+      try {
+        const f = DriveApp.getFileById(tplId);
+        const sharingAccess = f.getSharingAccess();
+        // ANYONE = iedereen, ANYONE_WITH_LINK = iedereen met de link
+        // DOMAIN/DOMAIN_WITH_LINK = alleen Workspace-collega's, PRIVATE = niemand
+        publiekZichtbaar = (sharingAccess === DriveApp.Access.ANYONE ||
+                            sharingAccess === DriveApp.Access.ANYONE_WITH_LINK);
+      } catch (_) {}
+      assets.template = {
+        naam: 'Master Engine (klant-template)',
+        url: tplSs.getUrl(),
+        titel: tplSs.getName(),
+        publiekZichtbaar: publiekZichtbaar,
+        kopieerUrl: 'https://docs.google.com/spreadsheets/d/' + tplId + '/copy',
+      };
     }
   } catch (_) {}
   try {
@@ -579,6 +597,41 @@ function adminObservability(token) {
     }
   } catch (_) {}
 
+  // URL-mismatch-check: scant /kopen én /bedankt op hardcoded deployment-URLs
+  // en vergelijkt met WEB_APP_EXEC_URL. Voorkomt 'fossiele deployment'-bug
+  // (Sam betaalde €49 i.p.v. €0,01 omdat /kopen naar oude deployment wees).
+  let kopenCheck = { ok: 'onbekend', huidig: '', mismatches: [], matches: [] };
+  try {
+    const huidigExec = props.getProperty('WEB_APP_EXEC_URL') || '';
+    kopenCheck.huidig = huidigExec;
+    if (huidigExec) {
+      const huidigId = (huidigExec.match(/macros\/s\/([A-Za-z0-9_-]+)/) || [])[1] || '';
+      const paginas = ['kopen', 'bedankt'];
+      for (let i = 0; i < paginas.length; i++) {
+        const slug = paginas[i];
+        try {
+          const resp = UrlFetchApp.fetch('https://www.boekhoudbaar.nl/' + slug + '/', {
+            muteHttpExceptions: true, followRedirects: true,
+          });
+          if (resp.getResponseCode() === 200) {
+            const html = resp.getContentText();
+            const idsGezien = {};
+            const re = /script\.google\.com\/macros\/s\/([A-Za-z0-9_-]+)/g;
+            let m;
+            while ((m = re.exec(html))) idsGezien[m[1]] = true;
+            const ids = Object.keys(idsGezien);
+            ids.forEach(function(id) {
+              const eintraag = { pagina: '/' + slug + '/', url: 'https://script.google.com/macros/s/' + id + '/exec' };
+              if (id === huidigId) kopenCheck.matches.push(eintraag);
+              else kopenCheck.mismatches.push(eintraag);
+            });
+          }
+        } catch (_) {}
+      }
+      kopenCheck.ok = kopenCheck.mismatches.length === 0 ? 'match' : 'mismatch';
+    }
+  } catch (e) { kopenCheck = { ok: 'fout', fout: e.message, matches: [], mismatches: [] }; }
+
   return {
     ok: true,
     dashboardVersie: ADMIN_DASHBOARD_VERSIE,
@@ -587,6 +640,7 @@ function adminObservability(token) {
     stilleKlanten: stilleKlanten,
     laatsteFouten: fouten,
     assets: assets,
+    kopenCheck: kopenCheck,
     ownerEmail: props.getProperty('OWNER_STATUS_EMAIL') || '',
   };
 }
@@ -871,7 +925,27 @@ function _adminDashboardHtml_() {
           esc(item.naam)+(item.titel?' <span style="color:#5F6B7A;font-size:11px">— '+esc(item.titel)+'</span>':'')+
           '</a>';
       }
+      // KRITIEKE check: als de Master Engine niet publiek deelbaar is,
+      // krijgen klanten een 404 op de copy-link. Sam's eerste echte test
+      // liep hier vast.
+      var templateAlarm = '';
+      if(a.template && a.template.publiekZichtbaar === false){
+        templateAlarm =
+          '<div style="background:#FDECEC;border:2px solid #B91C1C;border-radius:8px;padding:14px 18px;margin-bottom:14px">'+
+          '<strong style="color:#B91C1C;font-size:14px">🚨 Master Engine is NIET deelbaar — klanten krijgen 404</strong>'+
+          '<p style="margin:6px 0 8px;font-size:13px;color:#5A1010">Je Master Engine staat op "Beperkt". Nieuwe klanten kunnen er geen kopie van maken — ze zien <em>"Sorry, the file you have requested does not exist"</em> en haken af.</p>'+
+          '<p style="margin:0 0 10px;font-size:13px;color:#5A1010"><strong>Fix in 30 seconden:</strong> open Master Engine → rechtsboven <strong>Delen</strong> → onder "Algemene toegang" zet <em>Beperkt</em> op <em>Iedereen met de link</em> (Kijker). Daarna refresh dit dashboard.</p>'+
+          '<a href="'+esc(a.template.url)+'" target="_blank" class="btn-rood" style="text-decoration:none;display:inline-block;padding:8px 16px">Open Master Engine om te delen →</a> '+
+          '<a href="'+esc(a.template.kopieerUrl)+'" target="_blank" class="btn-sec" style="margin-left:6px">Test copy-link (zou nu 404 zijn)</a>'+
+          '</div>';
+      } else if(a.template && a.template.publiekZichtbaar === true){
+        templateAlarm =
+          '<div style="background:#E6F7F4;border:1px solid #2EC4B6;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#0D7355">'+
+          '✓ Master Engine is publiek deelbaar — klanten kunnen kopiëren.'+
+          '</div>';
+      }
       blokken.push('<div class="kaart"><h2>Mijn assets — alles in één klik</h2>'+
+        templateAlarm+
         '<p style="font-size:13px;color:#5F6B7A;margin-bottom:10px">Eén Drive-map "Boekhoudbaar — Operations" bevat alle onderdelen. Bewerk altijd via dit dashboard zodat audit-trails kloppen.</p>'+
         '<div>'+link(a.opsMap)+link(a.script)+link(a.database)+link(a.template)+'</div>'+
         '</div>');
@@ -916,6 +990,22 @@ function _adminDashboardHtml_() {
         '<div style="margin-top:10px"><button class="btn-rood" data-nieuw-sheet="1">Maak een NIEUWE licentie-sheet aan</button> '+
         '<span style="font-size:12px;color:#5F6B7A;margin-left:8px">Bestaande klantgegevens uit een oude sheet komen daarmee niet automatisch terug.</span></div>'+
         '</div>');
+    }
+
+    // 2b) Website-URL match-check (/kopen + /bedankt)
+    var kc = o.kopenCheck || {};
+    if(kc.ok==='mismatch' && kc.mismatches && kc.mismatches.length){
+      var mismatchHtml = kc.mismatches.map(function(m){
+        return '<li style="margin:6px 0;font-size:13px;color:#5A1010"><strong>'+esc(m.pagina)+'</strong> → '+esc(m.url)+'</li>';
+      }).join('');
+      blokken.push('<div class="kaart" style="border:2px solid #B91C1C"><h2 style="color:#B91C1C">🚨 Website wijst naar fossiele deployments</h2>'+
+        '<p style="font-size:13px;color:#5A1010;margin:4px 0 6px"><strong>Jouw huidige beheer:</strong> '+esc(kc.huidig||'')+'</p>'+
+        '<p style="font-size:13px;color:#5A1010;margin:0 0 6px"><strong>Mismatch op deze pagina(\'s):</strong></p>'+
+        '<ul style="margin:0 0 10px 22px">'+mismatchHtml+'</ul>'+
+        '<p style="font-size:13px;color:#5A1010">Klanten die deze pagina\'s bezoeken landen op een oude/verlaten deployment. Update de URL in de HTML-bestanden en deploy via Cloudflare.</p></div>');
+    } else if(kc.ok==='match'){
+      blokken.push('<div class="kaart"><h2>Website-URLs (kopen + bedankt)</h2>'+
+        '<div class="health"><span class="pil ok">Beide pagina\'s wijzen naar jouw huidige deployment</span></div></div>');
     }
 
     // 3) Webhook gezondheid
