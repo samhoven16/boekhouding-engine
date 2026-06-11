@@ -116,16 +116,6 @@ function maandNaam_(maandNr) {
   return namen[(maandNr - 1) % 12] || '';
 }
 
-/**
- * Geeft begin en einde van een maand
- */
-function getMaandPeriode_(jaar, maand) {
-  return {
-    van: new Date(jaar, maand - 1, 1),
-    tot: new Date(jaar, maand, 0),
-  };
-}
-
 // ─────────────────────────────────────────────
 //  GETAL / BEDRAG FUNCTIES
 // ─────────────────────────────────────────────
@@ -232,13 +222,6 @@ function parseDatumStrict_(ruw, veldnaam) {
     throw new Error(label + " heeft een onwaarschijnlijk jaartal (" + jaar + "). Controleer de invoer.");
   }
   return d;
-}
-
-/**
- * Formatteert een percentage
- */
-function formatPct_(waarde) {
-  return (parseFloat(waarde) || 0).toFixed(1) + '%';
 }
 
 // ─────────────────────────────────────────────
@@ -364,17 +347,6 @@ function exporteerAuditLogJson() {
   safeAuditLog_('Audit-log JSON-export', naam + ' (' + events.length + ' events)');
 }
 
-// ─────────────────────────────────────────────
-//  VALIDATIE FUNCTIES
-// ─────────────────────────────────────────────
-
-function isGeldigIBAN_(iban) {
-  iban = String(iban || '');
-  if (!iban) return false;
-  const cleaned = iban.replace(/\s/g, '').toUpperCase();
-  return /^[A-Z]{2}\d{2}[A-Z0-9]{4,}$/.test(cleaned);
-}
-
 function isGeldigBTWNummer_(btwNr) {
   btwNr = String(btwNr || '');
   if (!btwNr) return false;
@@ -445,12 +417,6 @@ function isGeldigEuBTWNummer_(btwNr) {
   return regex ? regex.test(schoon) : false;
 }
 
-function isGeldigKvKNummer_(kvk) {
-  kvk = String(kvk || '');
-  if (!kvk) return false;
-  return /^\d{8}$/.test(kvk.replace(/\s/g, ''));
-}
-
 function isGeldigEmail_(email) {
   email = String(email || '').trim();
   if (!email || email.length > 254) return false;
@@ -513,84 +479,6 @@ function leesSheetVeilig_(ss, naam) {
   }
 }
 
-/**
- * Voegt dropdown validatie toe aan een bereik
- */
-function zetDropdown_(sheet, rij, kolom, keuzes) {
-  const regel = SpreadsheetApp.newDataValidation()
-    .requireValueInList(keuzes, true)
-    .setAllowInvalid(false)
-    .build();
-  sheet.getRange(rij, kolom).setDataValidation(regel);
-}
-
-/**
- * Voegt datum validatie toe
- */
-function zetDatumValidatie_(sheet, rij, kolom) {
-  const regel = SpreadsheetApp.newDataValidation()
-    .requireDate()
-    .setAllowInvalid(false)
-    .build();
-  sheet.getRange(rij, kolom).setDataValidation(regel);
-}
-
-/**
- * Voegt getal validatie toe (positief bedrag)
- */
-function zetBedragValidatie_(sheet, rij, kolom) {
-  const regel = SpreadsheetApp.newDataValidation()
-    .requireNumberGreaterThanOrEqualTo(0)
-    .setAllowInvalid(false)
-    .setHelpText('Voer een positief bedrag in')
-    .build();
-  sheet.getRange(rij, kolom).setDataValidation(regel);
-}
-
-/**
- * Zoek de laatste rij met data in een kolom
- */
-function getLaatsteRij_(sheet, kolom) {
-  const waarden = sheet.getRange(1, kolom, sheet.getMaxRows()).getValues();
-  for (let i = waarden.length - 1; i >= 0; i--) {
-    if (waarden[i][0] !== '') return i + 1;
-  }
-  return 0;
-}
-
-// ─────────────────────────────────────────────
-//  EXPORT FUNCTIES
-// ─────────────────────────────────────────────
-
-/**
- * Exporteer tabblad naar CSV string
- */
-function exporteerSheetAlsCsv_(sheet) {
-  const data = sheet.getDataRange().getValues();
-  return data.map(r => r.map(cel => {
-    const s = String(cel);
-    return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
-  }).join(',')).join('\n');
-}
-
-/**
- * Exporteer rapport als e-mail bijlage
- */
-function stuurRapportPerEmail_(titel, inhoud, ontvanger) {
-  if (!ontvanger) {
-    ontvanger = getInstelling_('Email rapporten naar');
-  }
-  if (!ontvanger) return;
-
-  const bedrijf = getInstelling_('Bedrijfsnaam') || '';
-  GmailApp.sendEmail(
-    ontvanger,
-    `${bedrijf} – ${titel}`,
-    inhoud,
-    { name: bedrijf + ' Boekhouding' }
-  );
-}
-
 // ─────────────────────────────────────────────
 //  LOGGING
 // ─────────────────────────────────────────────
@@ -628,16 +516,6 @@ function getBoekjaarPeriode_() {
     van: parseDatum_(startStr) || new Date(new Date().getFullYear(), 0, 1),
     tot: parseDatum_(eindeStr) || new Date(new Date().getFullYear(), 11, 31, 23, 59, 59, 999),
   };
-}
-
-/**
- * Bepaalt of een datum in het huidige boekjaar valt.
- * Gebruikt rolling boekjaar als ingesteld.
- */
-function isInBoekjaar_(datum) {
-  if (!datum || !(datum instanceof Date) || isNaN(datum.getTime())) return false;
-  const p = getBoekjaarPeriode_();
-  return datum >= p.van && datum <= p.tot;
 }
 
 /**
@@ -934,21 +812,6 @@ function getWisselkoers_(valuta) {
     Logger.log('getWisselkoers_ fout: ' + e.message);
   }
   return 1.0;
-}
-
-/**
- * Converteert een bedrag van een vreemde valuta naar EUR.
- *
- * @param {number} bedrag Bedrag in vreemde valuta.
- * @param {string} valuta ISO-code.
- * @return {number} Bedrag in EUR (afgerond op 2 decimalen).
- */
-function naarEuro_(bedrag, valuta) {
-  const n = Number(bedrag);
-  if (!isFinite(n)) return 0;
-  const rate = getWisselkoers_(valuta);
-  if (!rate || rate === 1) return Math.round(n * 100) / 100;
-  return Math.round((n / rate) * 100) / 100;
 }
 
 // ─────────────────────────────────────────────
@@ -1614,7 +1477,6 @@ function zetKvkApiKey() {
   ui.alert('✅ KvK API-key opgeslagen (versleuteld). Auto-fill werkt nu bij ingevoerde KvK-nummers.');
 }
 
-
 // ─────────────────────────────────────────────
 //  PATTERN WRAPPERS — withLock, withRetry, withCheckpoint
 // ─────────────────────────────────────────────
@@ -1755,7 +1617,6 @@ function withCheckpoint_(taak, stappen) {
   clearCheckpoint_(taak);
   return { voltooid: true, laatsteStap: stappen[stappen.length - 1].naam };
 }
-
 
 // ─────────────────────────────────────────────
 //  CHAOS-MITIGATIES — formule-injection, IBAN-checksum

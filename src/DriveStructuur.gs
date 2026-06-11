@@ -102,16 +102,8 @@ function getDriveMapVerkoopfacturen_(jaar) {
   return getDriveMapViaKey_('DRIVE_VERKOOPFACTUREN_' + (jaar || new Date().getFullYear()));
 }
 
-function getDriveMapInkoopfacturen_(jaar) {
-  return getDriveMapViaKey_('DRIVE_INKOOPFACTUREN_' + (jaar || new Date().getFullYear()));
-}
-
 function getDriveMapBtw_(jaar) {
   return getDriveMapViaKey_('DRIVE_BTW_' + (jaar || new Date().getFullYear()));
-}
-
-function getDriveMapBankafschriften_(jaar) {
-  return getDriveMapViaKey_('DRIVE_BANKAFSCHRIFTEN_' + (jaar || new Date().getFullYear()));
 }
 
 function getDriveMapJaarrekening_(jaar) {
@@ -129,36 +121,6 @@ function getDriveMapViaKey_(key) {
   } catch (e) {
     return null;
   }
-}
-
-// ─────────────────────────────────────────────
-//  BESTAND OPSLAAN IN JUISTE MAP
-// ─────────────────────────────────────────────
-function slaFactuurOpInDrive_(pdfBlob, factuurnummer, jaar) {
-  let map = getDriveMapVerkoopfacturen_(jaar);
-  if (!map) map = maakDriveStructuur_(jaar) && getDriveMapVerkoopfacturen_(jaar);
-  if (!map) map = DriveApp.getRootFolder();
-
-  // Verwijder eventueel bestaand bestand met zelfde naam
-  const bestaand = map.getFilesByName(pdfBlob.getName());
-  while (bestaand.hasNext()) bestaand.next().setTrashed(true);
-
-  const bestand = map.createFile(pdfBlob);
-  return bestand.getUrl();
-}
-
-function slaBtwAangifteOpInDrive_(pdfBlob, kwartaal, jaar) {
-  let map = getDriveMapBtw_(jaar);
-  if (!map) map = DriveApp.getRootFolder();
-  const bestand = map.createFile(pdfBlob);
-  return bestand.getUrl();
-}
-
-function slaJaarrekeningOpInDrive_(pdfBlob, jaar) {
-  let map = getDriveMapJaarrekening_(jaar);
-  if (!map) map = DriveApp.getRootFolder();
-  const bestand = map.createFile(pdfBlob);
-  return bestand.getUrl();
 }
 
 // ─────────────────────────────────────────────

@@ -22,13 +22,6 @@ function getBanksaldo_(ss, rekeningCode) {
 }
 
 // ─────────────────────────────────────────────
-//  KASBOEK
-// ─────────────────────────────────────────────
-function getKassaldo_(ss) {
-  return getBanksaldo_(ss, '1210');
-}
-
-// ─────────────────────────────────────────────
 //  BANKAFSTEMMING (RECONCILIATIE)
 // ─────────────────────────────────────────────
 function bankAfstemming() {
@@ -81,62 +74,6 @@ function bankAfstemming() {
   }
 
   ui.alert('Bankafstemming', bericht, ui.ButtonSet.OK);
-}
-
-// ─────────────────────────────────────────────
-//  BANKTRANSACTIE HANDMATIG AANMAKEN
-// ─────────────────────────────────────────────
-function maakHandmatigeBankTransactie_(ss, opt) {
-  const transactieId = volgendTransactieId_();
-  const datum = (opt.datum instanceof Date) ? opt.datum : (parseDatum_(opt.datum) || new Date());
-  const rij = [
-    transactieId,
-    datum,
-    opt.omschr || '',
-    opt.bedrag || 0,
-    opt.type || 'Betaling (af)',
-    opt.rekening || '1200',
-    opt.tegenrekening || '',
-    opt.tegenpartij || '',
-    opt.referentie || '',
-    opt.grootboek || '',
-    '', '',
-    'Handmatig',
-    opt.notities || '',
-    new Date(),
-  ];
-  ss.getSheetByName(SHEETS.BANKTRANSACTIES).appendRow(rij);
-  return transactieId;
-}
-
-// ─────────────────────────────────────────────
-//  MUTATIEOVERZICHT PER PERIODE
-// ─────────────────────────────────────────────
-function getMutaties_(ss, rekeningCode, vanDatum, totDatum) {
-  const sheet = ss.getSheetByName(SHEETS.BANKTRANSACTIES);
-  const data = sheet.getDataRange().getValues();
-  const mutaties = [];
-
-  for (let i = 1; i < data.length; i++) {
-    const rekening = String(data[i][5] || '');
-    if (rekening !== String(rekeningCode)) continue;
-
-    const datum = data[i][1] ? parseDatum_(data[i][1]) : null;
-    if (datum && vanDatum && datum < vanDatum) continue;
-    if (datum && totDatum && datum > totDatum) continue;
-
-    mutaties.push({
-      id: data[i][0],
-      datum,
-      omschr: data[i][2],
-      bedrag: parseFloat(data[i][3]) || 0,
-      type: data[i][4],
-      ref: data[i][8],
-      status: data[i][12],
-    });
-  }
-
-  return mutaties;
 }
 
 // ─────────────────────────────────────────────

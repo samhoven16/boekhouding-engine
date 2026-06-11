@@ -159,54 +159,6 @@ function toonInvesteringsAftrekStapeling() {
   ui.showModalDialog(html, '💎 Investerings-aftrek stapelen');
 }
 
-// ─────────────────────────────────────────────
-//  B7 — STAKINGSWIZARD (bedrijfsoverdracht)
-// ─────────────────────────────────────────────
-
-/**
- * Bereken alle staking-gerelateerde aftrekken bij bedrijfsoverdracht.
- * @param {Object} input  { stakingswinst, FOR_saldo, lijfrente_premie, isStaker_eenmaal }
- * @returns {Object}      uitsplitsing + totaal + advies
- */
-function berekenStakingsfiscaliteit_(input) {
-  const B = (typeof getBelasting_ === 'function') ? getBelasting_() : {};
-  const stakingswinst = parseFloat(input.stakingswinst) || 0;
-  const forSaldo = parseFloat(input.FOR_saldo) || 0;
-  const lijfrentePremie = parseFloat(input.lijfrente_premie) || 0;
-  const stakingsaftrek = parseFloat(B.STAKINGSAFTREK) || 3630;
-
-  // Stakingsaftrek: éénmalig per leven, max €3.630 (2026)
-  const stakingsaftrekToegepast = input.isStaker_eenmaal === false ? 0 : Math.min(stakingsaftrek, stakingswinst);
-
-  // FOR-vrijval: hele saldo telt als winst → belast als stakingswinst, MAAR
-  // mag worden omgezet in stakingslijfrente (uitstellen tot uitkering).
-  // Klant kiest: laten vrijvallen (belast nu) OF omzetten naar lijfrente.
-  const forVrijval = forSaldo;
-  const forNaarLijfrente = parseFloat(input.for_naar_lijfrente) || 0;
-  const forBelastNu = forVrijval - forNaarLijfrente;
-
-  // Stakingslijfrente: extra aftrek bovenop reguliere lijfrente-jaarruimte
-  // op moment van staking — geldt voor stakingswinst + FOR-vrijval omgezet
-  const stakingslijfrenteMax = stakingswinst + forNaarLijfrente;
-  const stakingslijfrenteToegepast = Math.min(lijfrentePremie + forNaarLijfrente, stakingslijfrenteMax);
-
-  // Belastbare stakingswinst
-  const belastbareStaking = Math.max(0, stakingswinst - stakingsaftrekToegepast - stakingslijfrenteToegepast + forBelastNu);
-
-  return {
-    stakingswinst: stakingswinst,
-    stakingsaftrek: stakingsaftrekToegepast,
-    forVrijval: forVrijval,
-    forNaarLijfrente: forNaarLijfrente,
-    forBelastNu: forBelastNu,
-    stakingslijfrente: stakingslijfrenteToegepast,
-    belastbareStaking: rondBedrag_(belastbareStaking),
-    advies: belastbareStaking > 50000
-      ? 'Overweeg meer FOR om te zetten in stakingslijfrente — verlaagt directe belastingdruk.'
-      : 'Combinatie lijkt fiscaal gunstig.',
-  };
-}
-
 /**
  * Menu-entry: stakingswizard.
  */

@@ -40,17 +40,6 @@ function valideerBtwNummer_(btwNr) {
   return { geldig: true, genormaliseerd: schoon };
 }
 
-/**
- * Helper: normaliseert een BTW-nummer naar canonieke vorm zonder validatie.
- * Gebruik vóór opslaan in sheet/PDF zodat 'nl 123 456 789 b01' wordt
- * opgeslagen als 'NL123456789B01'. Returns originele input als input geen
- * geldig BTW-format heeft (caller is verantwoordelijk voor valideer-call).
- */
-function normaliseerBtwNummer_(btwNr) {
-  const r = valideerBtwNummer_(btwNr);
-  return r.geldig ? r.genormaliseerd : String(btwNr || '').trim();
-}
-
 // ─────────────────────────────────────────────
 //  IBAN VALIDATIE (NL-focus, accepteert ook EU)
 //  NL IBAN: NL + 2 check digits + 4 letters bank + 10 digits
@@ -151,32 +140,6 @@ function valideerPostcode_(postcode) {
       geldig: false,
       fout: `Postcode "${postcode}" heeft het verkeerde formaat.\n` +
             `Juist formaat: 4 cijfers + 2 letters (bijv. 1234 AB).`,
-    };
-  }
-
-  return { geldig: true };
-}
-
-// ─────────────────────────────────────────────
-//  BEDRAG VALIDATIE
-// ─────────────────────────────────────────────
-
-function valideerBedrag_(bedrag, minBedrag, maxBedragWaarschuwing) {
-  const b = parseFloat(String(bedrag || '').replace(',', '.'));
-
-  if (isNaN(b)) {
-    return { geldig: false, fout: `"${bedrag}" is geen geldig bedrag. Gebruik cijfers, bijv. 1250.50` };
-  }
-
-  if (minBedrag !== undefined && b < minBedrag) {
-    return { geldig: false, fout: `Bedrag (${formatBedrag_(b)}) is te laag. Minimum: ${formatBedrag_(minBedrag)}` };
-  }
-
-  if (maxBedragWaarschuwing !== undefined && b > maxBedragWaarschuwing) {
-    // Waarschuwing maar niet blokkeren
-    return {
-      geldig: true,
-      waarschuwing: `Let op: Dit is een hoog bedrag (${formatBedrag_(b)}). Controleer of dit correct is.`,
     };
   }
 

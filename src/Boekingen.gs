@@ -1036,11 +1036,6 @@ function zoekGrootboekType_(code) {
   return item ? item.type : 'Onbekend';
 }
 
-function zoekGrootboekBwType_(code) {
-  const item = STANDAARD_GROOTBOEK.find(r => r.code === String(code));
-  return item ? item.bw : '';
-}
-
 // ─────────────────────────────────────────────
 //  HELPERS RELATIES
 // ─────────────────────────────────────────────
