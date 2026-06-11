@@ -1700,6 +1700,30 @@ function adminPaneel_(e) {
 // ─────────────────────────────────────────────
 //  E-MAIL NAAR KLANT
 // ─────────────────────────────────────────────
+/**
+ * Checkt of de Master Engine (template) publiek deelbaar is, zodat de
+ * /copy-link voor de klant werkt. ANYONE / ANYONE_WITH_LINK = OK;
+ * DOMAIN(_WITH_LINK) / PRIVATE = klant krijgt 404.
+ *
+ * Fail-CLOSED: als we de sharing-state niet kunnen bepalen (Drive-fout),
+ * retourneren we false — beter de eigenaar alarmeren dan een klant een
+ * kapotte link sturen.
+ *
+ * @param {string} tplId  TEMPLATE_SS_ID
+ * @returns {boolean} true als publiek deelbaar
+ */
+function _templateIsDeelbaar_(tplId) {
+  if (!tplId) return false;
+  try {
+    const access = DriveApp.getFileById(tplId).getSharingAccess();
+    return access === DriveApp.Access.ANYONE ||
+           access === DriveApp.Access.ANYONE_WITH_LINK;
+  } catch (e) {
+    Logger.log('_templateIsDeelbaar_ kon sharing niet bepalen (fail-closed): ' + e.message);
+    return false;
+  }
+}
+
 function stuurLicentiemail_(naam, email, sleutel) {
   const props       = PropertiesService.getScriptProperties();
   const productnm   = props.getProperty('PRODUCT_NAAM')    || 'Boekhoudbaar';
@@ -1738,6 +1762,32 @@ function stuurLicentiemail_(naam, email, sleutel) {
       });
     } catch (_) {}
     throw new Error('TEMPLATE_SS_ID ontbreekt — activatiemail niet verstuurd voor ' + email);
+  }
+
+  // CYCLE 93: geen mail zonder DEELBARE link. TEMPLATE_SS_ID kan bestaan maar
+  // op "Beperkt" staan (Google's default na het klonen of na een share-wijziging).
+  // De klant krijgt dan "Het gewenste bestand bestaat niet" / 404 op de copy-link.
+  // Dit was Sam's blocker tijdens de eerste echte test (proton-account → 404).
+  // Zelfde precedent als de TEMPLATE_SS_ID-guard hierboven: alert de eigenaar,
+  // stuur GEEN kapotte link naar de klant.
+  if (!_templateIsDeelbaar_(templateId)) {
+    Logger.log('::error:: Master Engine (' + templateId + ') niet publiek deelbaar — geen activatiemail voor ' + email + '.');
+    try {
+      MailApp.sendEmail({
+        to: vanEmail,
+        subject: '🚨 URGENT: Master Engine niet deelbaar — klant ' + email + ' kan niet activeren',
+        htmlBody: '<p>Klant <strong>' + escHtml_(naam) + '</strong> (' + escHtml_(email) + ') heeft betaald, ' +
+                  'maar de Master Engine (<code>TEMPLATE_SS_ID</code>) staat op <strong>"Beperkt"</strong>. ' +
+                  'Een kopieer-link zou de klant een 404 ("Het gewenste bestand bestaat niet") geven.</p>' +
+                  '<p>Er is <strong>bewust GEEN mail naar de klant gestuurd</strong>. Herstel:</p>' +
+                  '<ol><li>Open de Master Engine in Drive</li>' +
+                  '<li>Delen → Algemene toegang → <strong>"Iedereen met de link"</strong> → rol <strong>Kijker</strong></li>' +
+                  '<li>De Mollie-webhook retryt automatisch — óf run ' +
+                  '<code>herstuurLicentiemailHandmatig("' + escHtml_(sleutel) + '")</code></li></ol>' +
+                  '<p>Licentiesleutel: <code>' + escHtml_(sleutel) + '</code></p>',
+      });
+    } catch (_) {}
+    throw new Error('Master Engine niet deelbaar — activatiemail niet verstuurd voor ' + email);
   }
 
   // Klant krijgt een "Maak een kopie"-link naar het master-sjabloon.

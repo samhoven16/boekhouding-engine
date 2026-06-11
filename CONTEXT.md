@@ -71,7 +71,8 @@ boekhouding-engine/
 
 ### Licentieserver (GAS Web App)
 - **Script ID:** `1BCD4S3n9rL0zWDufqBpiGZotYw5ihJ6NSIyKRXSB3ji7BlN5M7pD-tRc`
-- **Deployment ID:** `AKfycbyq5Xrvh4bFXkcjpjsdaPS-UJm3b7h-X7kGyfdTnDNcNS2brUX0q86pRU7Q2nSMCOWsMg`
+- **Deployment ID:** `AKfycbzvBpQx7ghYNblvBVtCraH4KRKJo3C4f3lWYJDJPRd-ByS7lg0G2AfHm0JQ-g_LOjWI`
+  - ⚠️ Moet ALTIJD matchen met `website/kopen/index.html` + `website/bedankt/index.html`. Oude fossiel was `AKfycbyq5Xrv…` (wees ooit naar €49 i.p.v. €0,01). Bewaakt door `tests/unit/deployment-url-consistentie.test.js`.
 - **URL:** `https://script.google.com/macros/s/[deployment-id]/exec`
 - **Endpoints:**
   - `?actie=health` — gezondheidscheck (JSON)
