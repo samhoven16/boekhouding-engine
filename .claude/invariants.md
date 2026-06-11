@@ -229,3 +229,23 @@ Pre-flight check throws if either missing.
 4. Prefix + boekjaar-instellingen update
 5. Reset factuurnr-tellers (NA prefix, anders duplicate facturen)
 6. Drive-mappen (non-fatal: alleen waarschuwing)
+
+## FORMELE TRANSACTIE-VALIDATOR (Invariants.gs — issue #123 batch 1)
+
+`valideerTransactieFormeel_(ss, regels, datum)` — draait in maakJournaalpost_
+VÓÓR enige sheet-write. Genormaliseerde vorm: regels in INTEGER CENTEN
+(`naarCenten_`). Geen float-epsilon in de boekhoudkern.
+
+| Code | Regel |
+|------|-------|
+| TRANSACTIE_ENKELZIJDIG | < 2 regels geweigerd |
+| TRANSACTIE_REGEL_ONGELDIG | per regel: precies één zijde, positief geheel aantal centen |
+| TRANSACTIE_ONBALANS | Σ debetCents !== Σ creditCents — exact, 1 cent is al een weigering |
+| REKENING_ONBEKEND | rekening niet in GROOTBOEKSCHEMA → weigering vóór de write (voorheen: stille log ná de write = zwevende boeking) |
+| PERIODE_AFGESLOTEN | datum in afgesloten boekjaar |
+| BEDRAG_GEEN_CENTEN | bedrag valt niet exact op de cent |
+
+LET OP: rekening-check wordt overgeslagen als het GROOTBOEKSCHEMA-tabblad
+geheel ontbreekt (test-omgevingen/setup) — in productie bestaat het altijd.
+Tests: tests/unit/formele-transactie-validator.test.js (12 acceptatietests,
+één per criterium uit issue #123).

@@ -73,6 +73,20 @@ function maakJournaalpost_(ss, opt) {
     throw invErr;
   }
 
+  // Formele transactie-validator (issue #123): normaliseer naar regels in
+  // integer centen en valideer balans + rekening-existentie VÓÓR enige write.
+  // Een onbekende rekening werd voorheen pas in updateGrootboekSaldo_ stil
+  // gelogd — de journaalpost-rij stond dan al in het journaal terwijl het
+  // grootboek niet bewoog (zwevende boeking, onzichtbare balansdrift).
+  // Nu: heldere weigering, niets geschreven, balans blijft bewijsbaar kloppend.
+  if (typeof valideerTransactieFormeel_ === 'function') {
+    const centen = naarCenten_(bedragGevalideerd);
+    valideerTransactieFormeel_(ss, [
+      { rekening: opt.debet,  debetCents: centen, creditCents: 0 },
+      { rekening: opt.credit, debetCents: 0,      creditCents: centen },
+    ], boekDatum);
+  }
+
   const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
   if (!sheet) {
     noodLog_('JOURNAALPOST GEEN SHEET', 'debet=' + opt.debet + ' bedrag=' + bedragGevalideerd);

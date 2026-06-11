@@ -449,6 +449,134 @@ function valideerInvariantsVoorJournaalpost_(debet, credit, bedrag) {
   valideerJournaalpostBalans_(debet, credit, bedrag);
 }
 
+// ─────────────────────────────────────────────
+//  FORMELE TRANSACTIE-VALIDATOR (issue #123, batch 1)
+// ─────────────────────────────────────────────
+
+/**
+ * Euro-bedrag → integer centen. Weigert bedragen die niet exact op de cent
+ * vallen (10.005 is geen geldig boekingsbedrag). Alle balans-vergelijkingen
+ * gebeuren in GEHELE centen — float-epsilon-vergelijkingen zijn verboden in
+ * de boekhoudkern (een 0,01-onbalans moet exact 1 cent verschil zijn, geen
+ * afrondingsruis).
+ *
+ * @param {number|string} bedrag
+ * @returns {number} integer centen
+ * @throws {InvariantSchending} code=BEDRAG_GEEN_CENTEN
+ */
+function naarCenten_(bedrag) {
+  const num = parseFloat(bedrag);
+  if (!isFinite(num)) {
+    throw new InvariantSchending('BEDRAG_GEEN_CENTEN',
+      'Bedrag "' + bedrag + '" is geen getal.', { bedrag: bedrag });
+  }
+  const centen = Math.round(num * 100);
+  if (Math.abs(num * 100 - centen) > 1e-6) {
+    throw new InvariantSchending('BEDRAG_GEEN_CENTEN',
+      'Bedrag ' + bedrag + ' valt niet exact op de cent. ' +
+      'Boekingsbedragen hebben maximaal 2 decimalen.', { bedrag: bedrag });
+  }
+  return centen;
+}
+
+/**
+ * Formele transactie-validator (issue #123). Valideert een genormaliseerde
+ * transactie — een lijst boekingsregels in integer centen — vóór ENIGE
+ * sheet-write. Dit is de toekomstige JOURNAL_MUTATIES-vorm; de huidige
+ * enkelbedrag-journaalpost wordt door de caller genormaliseerd naar twee
+ * regels (debet + credit).
+ *
+ * Afgedwongen (throw bij schending, niets wordt geschreven):
+ *   T1  transactie heeft ≥ 2 regels (enkelzijdig = geweigerd)
+ *   T2  elke regel boekt op precies één zijde (debet XOR credit, > 0)
+ *   T3  Σ debetCenten === Σ creditCenten — EXACT, in gehele centen
+ *   T4  elke rekening bestaat in GROOTBOEKSCHEMA (alleen wanneer dat
+ *       tabblad aanwezig is; ontbreekt het hele tabblad, dan logt
+ *       updateGrootboekSaldo_ dat al via het GROOTBOEK-ONTBREEKT-pad)
+ *   T5  datum valt niet in een afgesloten boekjaar
+ *
+ * @param {Spreadsheet} ss
+ * @param {Array<{rekening:(string|number), debetCents:number, creditCents:number}>} regels
+ * @param {Date} [datum]
+ * @throws {InvariantSchending}
+ */
+function valideerTransactieFormeel_(ss, regels, datum) {
+  if (!Array.isArray(regels) || regels.length < 2) {
+    throw new InvariantSchending('TRANSACTIE_ENKELZIJDIG',
+      'Een boeking moet minimaal een debet- én een creditregel hebben ' +
+      '(dubbel boekhouden). Ontvangen: ' + (Array.isArray(regels) ? regels.length : 0) + ' regel(s).',
+      { aantalRegels: Array.isArray(regels) ? regels.length : 0 });
+  }
+
+  let somDebet = 0;
+  let somCredit = 0;
+  for (let i = 0; i < regels.length; i++) {
+    const r = regels[i];
+    const d = r.debetCents;
+    const c = r.creditCents;
+    if (!Number.isInteger(d) || !Number.isInteger(c) ||
+        d < 0 || c < 0 || (d > 0) === (c > 0)) {
+      throw new InvariantSchending('TRANSACTIE_REGEL_ONGELDIG',
+        'Boekingsregel ' + (i + 1) + ' (rekening ' + r.rekening + ') moet op ' +
+        'precies één zijde een positief geheel aantal centen boeken.',
+        { regel: i, debetCents: r.debetCents, creditCents: r.creditCents });
+    }
+    somDebet += d;
+    somCredit += c;
+  }
+
+  if (somDebet !== somCredit) {
+    throw new InvariantSchending('TRANSACTIE_ONBALANS',
+      'Boeking is niet in balans: debet ' + (somDebet / 100).toFixed(2) +
+      ' ≠ credit ' + (somCredit / 100).toFixed(2) + ' (verschil ' +
+      ((somDebet - somCredit) / 100).toFixed(2) + '). ' +
+      'Een onbalans — hoe klein ook — kan niet worden geboekt.',
+      { somDebetCents: somDebet, somCreditCents: somCredit });
+  }
+
+  // T4 — rekening-existentie. Hergebruik de rij-cache uit Boekingen.gs als
+  // die geladen is; anders één kolom-read. Tabblad afwezig (test-omgeving,
+  // setup nog niet gedraaid) → check overslaan, zie docstring.
+  const gb = ss && typeof ss.getSheetByName === 'function'
+    ? ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA) : null;
+  if (gb) {
+    for (let i = 0; i < regels.length; i++) {
+      const code = String(regels[i].rekening);
+      let gevonden = false;
+      // Zelfde echte-sheet-detectie als updateGrootboekSaldo_: de rij-cache
+      // vereist getSheetId/getLastRow; kale mocks nemen het getDataRange-pad.
+      if (typeof _gbVindRij_ === 'function' &&
+          typeof gb.getSheetId === 'function' &&
+          typeof gb.getLastRow === 'function') {
+        gevonden = _gbVindRij_(gb, code) !== null;
+      } else {
+        const codes = gb.getDataRange().getValues();
+        for (let j = 1; j < codes.length; j++) {
+          if (String(codes[j][0]) === code) { gevonden = true; break; }
+        }
+      }
+      if (!gevonden) {
+        throw new InvariantSchending('REKENING_ONBEKEND',
+          'Rekening ' + code + ' bestaat niet in het grootboekschema. ' +
+          'De boeking is NIET uitgevoerd — zo blijft de balans kloppend. ' +
+          'Herstel het schema via Boekhoudbaar → Onderhoud → Tabbladen controleren, ' +
+          'of kies een bestaande rekening.',
+          { rekening: code });
+      }
+    }
+  }
+
+  // T5 — afgesloten periode (zelfde check als maakJournaalpost_; hier zodat
+  // toekomstige directe validator-callers hem niet kunnen vergeten).
+  if (datum instanceof Date && !isNaN(datum.getTime()) &&
+      typeof jaarAlAfgesloten_ === 'function' && jaarAlAfgesloten_(ss, datum.getFullYear())) {
+    throw new InvariantSchending('PERIODE_AFGESLOTEN',
+      'Boekjaar ' + datum.getFullYear() + ' is afgesloten. Boek de correctie ' +
+      'in het huidige jaar, of maak de jaarafsluiting eerst ongedaan.',
+      { jaar: datum.getFullYear() });
+  }
+}
+
 
 // ─────────────────────────────────────────────
 //  RED-TEAM: BTW-TARIEF CONSISTENCY CHECK

@@ -1156,203 +1156,203 @@
   "maakStornoJournaalpost_": [
     {
       "file": "Boekingen.gs",
-      "line": 191,
+      "line": 205,
       "kind": "function"
     }
   ],
   "_markeerFactuurGestorneerd_": [
     {
       "file": "Boekingen.gs",
-      "line": 282,
+      "line": 296,
       "kind": "function"
     }
   ],
   "_gbRijCache_": [
     {
       "file": "Boekingen.gs",
-      "line": 329,
+      "line": 343,
       "kind": "const"
     }
   ],
   "_gbVindRij_": [
     {
       "file": "Boekingen.gs",
-      "line": 331,
+      "line": 345,
       "kind": "function"
     }
   ],
   "updateGrootboekSaldo_": [
     {
       "file": "Boekingen.gs",
-      "line": 352,
+      "line": 366,
       "kind": "function"
     }
   ],
   "getGrootboekSaldo_": [
     {
       "file": "Boekingen.gs",
-      "line": 462,
+      "line": 476,
       "kind": "function"
     }
   ],
   "herberekeningGrootboekSaldi": [
     {
       "file": "Boekingen.gs",
-      "line": 476,
+      "line": 490,
       "kind": "function"
     }
   ],
   "exporteerGrootboekkaart": [
     {
       "file": "Boekingen.gs",
-      "line": 564,
+      "line": 578,
       "kind": "function"
     }
   ],
   "genereerGrootboekkaart_": [
     {
       "file": "Boekingen.gs",
-      "line": 586,
+      "line": 600,
       "kind": "function"
     }
   ],
   "boekAfschrijvingen": [
     {
       "file": "Boekingen.gs",
-      "line": 657,
+      "line": 671,
       "kind": "function"
     }
   ],
   "verwerkAfschrijvingen": [
     {
       "file": "Boekingen.gs",
-      "line": 736,
+      "line": 750,
       "kind": "function"
     }
   ],
   "vernieuwDebiteurenOverzicht": [
     {
       "file": "Boekingen.gs",
-      "line": 789,
+      "line": 803,
       "kind": "function"
     }
   ],
   "vernieuwCrediteurenOverzicht": [
     {
       "file": "Boekingen.gs",
-      "line": 920,
+      "line": 934,
       "kind": "function"
     }
   ],
   "koppelTransactiesAanFacturen": [
     {
       "file": "Boekingen.gs",
-      "line": 987,
+      "line": 1001,
       "kind": "function"
     }
   ],
   "volgendFactuurnummer_": [
     {
       "file": "Boekingen.gs",
-      "line": 1014,
+      "line": 1028,
       "kind": "function"
     }
   ],
   "volgendInkoopNummer_": [
     {
       "file": "Boekingen.gs",
-      "line": 1027,
+      "line": 1041,
       "kind": "function"
     }
   ],
   "volgendBoekingId_": [
     {
       "file": "Boekingen.gs",
-      "line": 1040,
+      "line": 1054,
       "kind": "function"
     }
   ],
   "volgendTransactieId_": [
     {
       "file": "Boekingen.gs",
-      "line": 1053,
+      "line": 1067,
       "kind": "function"
     }
   ],
   "volgendRelatieId_": [
     {
       "file": "Boekingen.gs",
-      "line": 1067,
+      "line": 1081,
       "kind": "function"
     }
   ],
   "zoekGrootboekNaam_": [
     {
       "file": "Boekingen.gs",
-      "line": 1084,
+      "line": 1098,
       "kind": "function"
     }
   ],
   "zoekGrootboekType_": [
     {
       "file": "Boekingen.gs",
-      "line": 1089,
+      "line": 1103,
       "kind": "function"
     }
   ],
   "zoekOfMaakRelatie_": [
     {
       "file": "Boekingen.gs",
-      "line": 1097,
+      "line": 1111,
       "kind": "function"
     }
   ],
   "bepaalOmzetRekening_": [
     {
       "file": "Boekingen.gs",
-      "line": 1139,
+      "line": 1153,
       "kind": "function"
     }
   ],
   "bepaalBtwVerkoopRekening_": [
     {
       "file": "Boekingen.gs",
-      "line": 1151,
+      "line": 1165,
       "kind": "function"
     }
   ],
   "bepaalBtwVoorbelastingRekening_": [
     {
       "file": "Boekingen.gs",
-      "line": 1159,
+      "line": 1173,
       "kind": "function"
     }
   ],
   "_leesGeslotenPeriodes_": [
     {
       "file": "Boekingen.gs",
-      "line": 1179,
+      "line": 1193,
       "kind": "function"
     }
   ],
   "vergrendelPeriode_": [
     {
       "file": "Boekingen.gs",
-      "line": 1197,
+      "line": 1211,
       "kind": "function"
     }
   ],
   "beheerGeslotenPeriodes": [
     {
       "file": "Boekingen.gs",
-      "line": 1219,
+      "line": 1233,
       "kind": "function"
     }
   ],
   "openStornoDialog": [
     {
       "file": "Boekingen.gs",
-      "line": 1392,
+      "line": 1406,
       "kind": "function"
     }
   ],
@@ -3263,31 +3263,45 @@
       "kind": "function"
     }
   ],
-  "BTW_LAAG_TARIEF_KEYWORDS": [
+  "naarCenten_": [
     {
       "file": "Invariants.gs",
-      "line": 469,
-      "kind": "const"
+      "line": 467,
+      "kind": "function"
     }
   ],
-  "BTW_HOOG_TARIEF_KEYWORDS": [
-    {
-      "file": "Invariants.gs",
-      "line": 489,
-      "kind": "const"
-    }
-  ],
-  "checkBtwTariefVerdacht_": [
+  "valideerTransactieFormeel_": [
     {
       "file": "Invariants.gs",
       "line": 503,
       "kind": "function"
     }
   ],
+  "BTW_LAAG_TARIEF_KEYWORDS": [
+    {
+      "file": "Invariants.gs",
+      "line": 597,
+      "kind": "const"
+    }
+  ],
+  "BTW_HOOG_TARIEF_KEYWORDS": [
+    {
+      "file": "Invariants.gs",
+      "line": 617,
+      "kind": "const"
+    }
+  ],
+  "checkBtwTariefVerdacht_": [
+    {
+      "file": "Invariants.gs",
+      "line": 631,
+      "kind": "function"
+    }
+  ],
   "detecteerOngekoppeldeBankuitgaven_": [
     {
       "file": "Invariants.gs",
-      "line": 560,
+      "line": 688,
       "kind": "function"
     }
   ],
