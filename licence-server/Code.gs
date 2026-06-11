@@ -43,6 +43,7 @@ function doGet(e) {
   if (actie === 'herstuur-licentie') return rateLimit_(e, { actie: 'herstuur-licentie', perEmail: 3, globaal: 200, windowMin: 60 }) || herstuurLicentieEndpoint_(e);
   if (actie === 'onboarded')     return rateLimit_(e, { actie: 'onboarded', globaal: 500, windowMin: 60 }) || onboardedEndpoint_(e);
   if (actie === 'config')        return configEndpoint_(e);
+  if (actie === 'update-bundle') return rateLimit_(e, { actie: 'update-bundle', perEmail: 10, globaal: 500, windowMin: 60 }) || updateBundleEndpoint_(e);
   if (actie === 'telemetry')     return telemetryEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   // CYCLE-41: rate-limit admin-login om brute-force op ADMIN_WACHTWOORD
@@ -1019,6 +1020,79 @@ function configEndpoint_(e) {
     features:             flags,           // alias voor isFeatureIngeschakeld_
     featureMeldingen:     featureMeldingen,
     belastingTarieven:    belastingTarieven,  // null = client gebruikt lokale fallback
+  });
+}
+
+// ─────────────────────────────────────────────
+//  UPDATE-BUNDLE — code-bundle voor assisted manual update (Tier 2.1)
+// ─────────────────────────────────────────────
+/**
+ * Klant haalt code-bundle op voor handmatige update. Geen auto-write:
+ * klant moet zelf in Apps Script editor plakken. Veilig deel van tier-2;
+ * auto-apply (Apps Script Projects API) komt in tier 2.2 met rollback-infra.
+ *
+ * Sam zet per release: ScriptProperty `UPDATE_BUNDLE_<versie>` = JSON met:
+ *   { files: [ {naam, source, type} ], generatedAt: ISO-date }
+ * Server berekent SHA-256 hash voor verify, voegt expiry toe (15 min),
+ * vereist licentiesleutel + email om aan elkaar gebonden te zijn.
+ */
+function updateBundleEndpoint_(e) {
+  const sleutel = String((e.parameter.sleutel || '')).trim().toUpperCase();
+  const email   = String((e.parameter.email   || '')).trim().toLowerCase();
+  const versie  = String((e.parameter.versie  || '')).trim();
+
+  if (!sleutel || !email || !versie) {
+    return jsonResp_({ ok: false, fout: 'sleutel, email en versie zijn verplicht.' });
+  }
+  if (!/^[\d]+\.[\d]+\.[\d]+$/.test(versie)) {
+    return jsonResp_({ ok: false, fout: 'Ongeldig versie-formaat (verwacht X.Y.Z).' });
+  }
+
+  // Verify klant-binding: sleutel moet bij email horen + status startsWith 'actief'.
+  const sheet = getLicentieSheet_();
+  const data  = sheet.getDataRange().getValues();
+  let geldig = false;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0] || '').toUpperCase() !== sleutel) continue;
+    if (String(data[i][2] || '').toLowerCase() !== email) continue;
+    if (String(data[i][4] || '').toLowerCase().startsWith('actief')) { geldig = true; break; }
+  }
+  if (!geldig) {
+    return jsonResp_({ ok: false, fout: 'Sleutel + email komen niet overeen met een actieve licentie.' });
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  const bundleRaw = props.getProperty('UPDATE_BUNDLE_' + versie);
+  if (!bundleRaw) {
+    return jsonResp_({ ok: false, fout: 'Versie ' + versie + ' is (nog) niet gepubliceerd. Mail update@boekhoudbaar.nl.' });
+  }
+
+  let bundle;
+  try { bundle = JSON.parse(bundleRaw); }
+  catch (_) { return jsonResp_({ ok: false, fout: 'Bundle-data corrupt op server. Mail support.' }); }
+
+  if (!bundle || !Array.isArray(bundle.files) || bundle.files.length === 0) {
+    return jsonResp_({ ok: false, fout: 'Bundle bevat geen bestanden.' });
+  }
+
+  // Hash = SHA-256 van geserialiseerde files-array, hex-string. Klant
+  // verifieert lokaal door zelfde berekening uit te voeren. Mismatch = tamper.
+  const canonical = JSON.stringify(bundle.files);
+  const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, canonical)
+    .map(function(b) { return ('0' + (b & 0xff).toString(16)).slice(-2); })
+    .join('');
+
+  try { schrijfAuditLog_('update-bundle geleverd',
+    'versie=' + versie + ' sleutel=' + sleutel.slice(0, 8) + '*** files=' + bundle.files.length); } catch (_) {}
+
+  return jsonResp_({
+    ok: true,
+    versie: versie,
+    files: bundle.files,
+    hash: hash,
+    expiry: Date.now() + 15 * 60 * 1000,
+    generatedAt: bundle.generatedAt || null,
+    bestandenAantal: bundle.files.length,
   });
 }
 
