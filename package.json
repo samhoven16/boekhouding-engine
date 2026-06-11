@@ -24,6 +24,7 @@
     "deploy:licence": "npm run push:licence",
     "deploy:all": "npm test && npm run push:gas && npm run push:licence",
     "deploy:check": "node scripts/deploy-check.js",
+    "release:check": "node scripts/release-instructions.js",
     "env:dev": "cp .clasp.dev.json .clasp.json && echo 'Switched to DEV — clasp push gaat naar dev-script'",
     "env:prod": "cp .clasp.prod.json .clasp.json && echo 'Switched to PROD — clasp push gaat naar productie-script'",
     "deploy:dev": "npm run env:dev && npm test && npm run push:gas",
