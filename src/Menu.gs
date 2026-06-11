@@ -188,6 +188,7 @@ function onOpen() {
       .addItem('💬 Fout melden of suggestie indienen', 'openFeedbackDialog')
       .addSeparator()
       .addItem('Backup maken (XLSX naar Drive)', 'maakBackup')
+      .addItem('📧 Email me een backup nu', 'stuurBackupEmailNu')
       .addItem('💾 Exporteer als XAF (Auditfile — bezit je administratie)', 'exporteerXaf')
       .addItem('Accountantspakket exporteren', 'exporteerAccountantsPakket')
       .addItem('Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
@@ -273,6 +274,8 @@ function onOpen() {
       .addItem('Kleineondernemersregeling (KOR) check', 'controleerKor')
       .addSeparator()
       .addItem('BTW reminder instellen', 'instelBtwReminderTrigger')
+      .addSeparator()
+      .addItem('💾 BTW-aangifte naar JSON/CSV (voor accountant)', 'toonBtwExportDialog')
     )
 
     // ── Instellingen & Beheer ─────────────────

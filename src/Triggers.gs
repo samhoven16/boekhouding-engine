@@ -1858,6 +1858,12 @@ function dagelijkseTaken() {
   _runTaak_('cleanupKritiekeUpdateModalKeys', function() {
     if (typeof cleanupKritiekeUpdateModalKeys_ === 'function') cleanupKritiekeUpdateModalKeys_();
   });
+  // Tier-2 #5: cross-account backup via mail. Opt-in (default OFF), throttled
+  // 1×/7 dagen. Lichte taak voor opt-in klanten; voor opt-out = no-op early
+  // return na 1 getInstelling_-call.
+  _runTaak_('backupEmail', function() {
+    if (typeof backupEmailIndienNodig_ === 'function') backupEmailIndienNodig_();
+  });
   // DR/SRE: emailVerzonden_F* idempotency-keys accumuleren zonder cleanup
   // → quotum-cliff bij 10.000 facturen. Cleanup-window 180 dagen. Pure
   // ScriptProperties-iteratie, geen sheet-IO → goedkoop, hoort in cleanup-fase.
