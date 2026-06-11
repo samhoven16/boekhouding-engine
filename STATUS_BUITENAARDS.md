@@ -70,9 +70,17 @@ Geen claim dat "alles miljoen keer gecheckt is". Dat zou de retoriek zijn die de
 | Licentiesleutel als 3e param bij AVG-verwijder | Smal scenario; vereist mail-tekst aanpassing + UX-discussie + extra test. Heroverwegen met dreigingsmodel. |
 | BTW XBRL/SBR-export naar Belastingdienst | Overtypen werkt; XBRL is multi-week werk. |
 | Backup-egress naar S3/Dropbox | Klant-Drive-verlies blijft risico. Tier 2: opt-in cross-storage. |
-| PII-hash voor audit-log redactie | Verbetering, niet blocker. Post-launch. |
-| Domein-allowlist op `versieInstructiesUrl` | Toekomstig admin-dashboard-risico, niet acuut. |
+| OTP-rate-limit split (server-side) | Aanvraag-otp globaal 500/u kan door fake emails worden gesaturated → DoS. Fix vereist `aanvraagOtpEndpoint_`-refactor met dedicated tests. Niet veilig overnight. |
 | `cleanupHerinneringsStap` runs LockService | Bestaand patroon, niet door deze PR introduced. |
+| `_runTaak_` O(n²) bij mass-SKIP | Performance-fix; verergerd door budget-guard maar niet acuut. |
+
+## Wel afgehandeld in ronde 2 (commit 3e989c6)
+
+| Item | Hoe |
+|---|---|
+| PII-hash voor audit-log | `_hashEmail_` (SHA-256 truncate) vervangt `email.slice(0,3)+'***'` in 3 locaties |
+| Domain-allowlist op `versieInstructiesUrl` | `_veiligeUpdateUrl_` valideert scheme=https + host in {boekhoudbaar.nl, *.boekhoudbaar.nl, github.com, gist.github.com} |
+| `toonHoeUpdateIk` cache-spam | 60s min-interval voor force-fetch |
 
 ---
 
