@@ -49,19 +49,19 @@ describe('Fix #1 — Noodsleutel min 24→32 chars', () => {
 
 describe('Fix #2 — Post-noodsleutel rate-limit (anti unlimited brute-force)', () => {
   test('Bypass-pad gaat door rateLimit_ met "admin-met-noodsleutel"-actie', () => {
-    const start = code.indexOf("if (actie === 'admin')");
+    const start = code.indexOf("if (actie === 'admin-legacy')");
     const blok = code.slice(start, start + 1500);
     expect(blok).toMatch(/actie:\s*['"]admin-met-noodsleutel['"]/);
   });
 
   test('Soepelere globaal-limit 200/uur op bypass (Sam-gebruik OK, anti-brute)', () => {
-    const start = code.indexOf("if (actie === 'admin')");
+    const start = code.indexOf("if (actie === 'admin-legacy')");
     const blok = code.slice(start, start + 1500);
     expect(blok).toMatch(/admin-met-noodsleutel[\s\S]*?globaal:\s*200[\s\S]*?windowMin:\s*60/);
   });
 
   test('Bij bypass-block: return blocked (anti-loop)', () => {
-    const start = code.indexOf("if (actie === 'admin')");
+    const start = code.indexOf("if (actie === 'admin-legacy')");
     const blok = code.slice(start, start + 1500);
     expect(blok).toMatch(/const bypassBlocked = rateLimit_/);
     expect(blok).toMatch(/if \(bypassBlocked\) return bypassBlocked/);
