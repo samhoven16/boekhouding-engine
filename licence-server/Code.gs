@@ -1024,8 +1024,10 @@ function valideerEndpoint_(e) {
     }
     return jsonResp_({ geldig: false, fout: 'Licentiesleutel niet gevonden.' });
   } catch (err) {
+    // Geen err.message naar buiten — kan sheet-id's/interne paden lekken
+    // naar elke klant-kopie (consistent met revoke-/roteerEndpoint_).
     Logger.log('Valideer fout: ' + err.message);
-    return jsonResp_({ geldig: false, fout: 'Serverfout: ' + err.message });
+    return jsonResp_({ geldig: false, fout: 'Interne fout — probeer het later opnieuw.' });
   }
 }
 
@@ -2483,8 +2485,13 @@ function verwijderOudeFollowUpTrigger_() {
  *           actie. Raakt normaal verkeer nooit (ook niet bij een drukke
  *           launch-dag); stopt uitsluitend massale geautomatiseerde abuse.
  *
- * Fail-open: bij een CacheService-storing gaat de request door — een
- * tijdelijke infra-hapering mag geen klant buitensluiten.
+ * Fail-open voor publieke endpoints: bij een CacheService-storing gaat de
+ * request door — een tijdelijke infra-hapering mag geen klant buitensluiten.
+ * Fail-CLOSED voor admin-acties: zonder werkende rate-limit zou een
+ * aanvaller die CacheService-storingen uitlokt het admin-wachtwoord
+ * ongeremd kunnen brute-forcen. Admin-toegang is geen klantflow — een
+ * tijdelijke 429 voor de eigenaar is acceptabel, een ongelimiteerde
+ * brute-force-window niet. (Red-team-audit 2026-06-11.)
  *
  * @param {Object} e       doGet/doPost event-object.
  * @param {Object} opties  { actie:string, perEmail:number, globaal:number,
@@ -2493,10 +2500,10 @@ function verwijderOudeFollowUpTrigger_() {
  *         anders null (= ga door met het endpoint).
  */
 function rateLimit_(e, opties) {
+  opties = opties || {};
+  const actie     = opties.actie || 'algemeen';
+  const windowMin = opties.windowMin || 60;
   try {
-    opties = opties || {};
-    const actie     = opties.actie || 'algemeen';
-    const windowMin = opties.windowMin || 60;
     const windowSec = windowMin * 60;
     const cache     = CacheService.getScriptCache();
 
@@ -2524,6 +2531,10 @@ function rateLimit_(e, opties) {
     }
     return null;  // OK, ga door
   } catch (err) {
+    if (String(actie).indexOf('admin') === 0) {
+      Logger.log('rateLimit_ fout (fail-CLOSED voor admin-actie ' + actie + '): ' + err.message);
+      return _rl429_(windowMin);  // geen ongeremde brute-force-window op admin
+    }
     Logger.log('rateLimit_ fout (fail-open): ' + err.message);
     return null;  // fail-open — beter functioneel dan klanten buitensluiten
   }
@@ -3386,6 +3397,10 @@ function controleerKritiekeConfig_() {
   if (!props.getProperty('TEMPLATE_SS_ID'))     crit.push('TEMPLATE_SS_ID');
   if (!props.getProperty('MOLLIE_API_KEY'))     crit.push('MOLLIE_API_KEY');
   if (!props.getProperty('ADMIN_WACHTWOORD'))   crit.push('ADMIN_WACHTWOORD');
+  // Zonder noodsleutel is de globale login-rate-limit (20/u, geen IP-
+  // partitie in GAS) een permanente self-DoS: 20 foute logins van een
+  // aanvaller sluiten de eigenaar buiten zijn eigen dashboard.
+  if (!props.getProperty('ADMIN_NOODSLEUTEL'))  crit.push('ADMIN_NOODSLEUTEL');
 
   // WARN-niveau: fallback bestaat, maar beperkt
   if (!props.getProperty('BREVO_API_KEY'))      warn.push('BREVO_API_KEY (Brevo email → MailApp fallback)');

@@ -48,10 +48,21 @@ function inspecteerTriggerInstallatie_() {
   const verwacht = _HYGIENE_VERWACHTE_TRIGGERS.map(function(v) { return v.handler; });
   const missend = verwacht.filter(function(h) { return handlers.indexOf(h) === -1; });
   const present = verwacht.filter(function(h) { return handlers.indexOf(h) !== -1; });
+  // Orphans: triggers naar handlers die niet (meer) in de canonical set
+  // zitten. Ontstaan bij klanten die een oude versie draaiden waarvan de
+  // handler-functie inmiddels is verwijderd (bv. de oude multi-formulier-
+  // architectuur, verwijderd juni 2026) → ReferenceError bij elke run,
+  // stil in de trigger-log. Behoud-lijst (bewust extern geïnstalleerde
+  // handlers) telt niet als orphan.
+  const behoud = (typeof _HYGIENE_BEHOUD_HANDLERS !== 'undefined') ? _HYGIENE_BEHOUD_HANDLERS : [];
+  const orphans = handlers.filter(function(h) {
+    return verwacht.indexOf(h) === -1 && behoud.indexOf(h) === -1;
+  });
   return {
     volledig: missend.length === 0,
     missend: missend,
     present: present,
+    orphans: orphans,
     bereikbaar: true,
   };
 }
@@ -79,7 +90,8 @@ function controleerVolledigeTriggerInstallatie_() {
   if (!rapport.bereikbaar) {
     return { staat: 'LIMITED_AUTH', missend: [], gehealed: false };
   }
-  if (rapport.volledig) {
+  const heeftOrphans = Array.isArray(rapport.orphans) && rapport.orphans.length > 0;
+  if (rapport.volledig && !heeftOrphans) {
     return { staat: 'OK', missend: [], gehealed: false };
   }
 
@@ -100,18 +112,23 @@ function controleerVolledigeTriggerInstallatie_() {
   }
 
   // Heal via sanitizeTriggers_ (Hygiene.gs) — single source of truth voor
-  // trigger-installatie. Deletet alles + recreate canonical.
+  // trigger-installatie. Deletet alles + recreate canonical (ruimt daarmee
+  // ook orphan-triggers naar verwijderde handlers op).
+  const healReden = []
+    .concat(rapport.missend.length ? ['ontbrak: ' + rapport.missend.join(', ')] : [])
+    .concat(heeftOrphans ? ['orphan: ' + rapport.orphans.join(', ')] : [])
+    .join(' | ');
   try {
     if (typeof sanitizeTriggers_ === 'function') {
       const heal = sanitizeTriggers_();
       try {
         if (typeof structuredLog_ === 'function') {
           structuredLog_('WARN', 'SelfHeal.controleerVolledige',
-            'Triggers ontbraken: ' + rapport.missend.join(', ') + ' — hersteld',
-            { missend: rapport.missend, heal: heal });
+            'Triggers hersteld (' + healReden + ')',
+            { missend: rapport.missend, orphans: rapport.orphans || [], heal: heal });
         }
       } catch (_) {}
-      try { safeAuditLog_('SelfHeal', 'Triggers hersteld: ' + rapport.missend.join(', ')); } catch (_) {}
+      try { safeAuditLog_('SelfHeal', 'Triggers hersteld: ' + healReden); } catch (_) {}
       return { staat: 'GEHEALED', missend: rapport.missend, gehealed: true };
     }
   } catch (e) {
