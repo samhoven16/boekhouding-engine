@@ -272,6 +272,13 @@ function adminZetConfig(token, key, waarde) {
 }
 
 function _adminValideerConfig_(veld, ruw) {
+  // Sheet/Drive-ID-velden: tolereer dat klant een hele URL plakt i.p.v.
+  // alleen het ID. Het patroon /d/<id>/ uit Google's URLs eruit halen
+  // bespaart hem een cryptische "Illegal spreadsheet id"-fout.
+  if (veld.key === 'LICENTIE_SHEET_ID' || veld.key === 'TEMPLATE_SS_ID') {
+    const m = ruw.match(/\/d\/([A-Za-z0-9_-]{20,})/);
+    if (m) ruw = m[1];
+  }
   switch (veld.type) {
     case 'prijs': {
       const n = parseFloat(ruw.replace(',', '.'));
@@ -394,11 +401,18 @@ function adminSetupActie(token, welke) {
   if (sessieFout) return sessieFout;
 
   if (welke === 'licentie-sheet') {
-    if (typeof setupLicentieSheet === 'function') {
-      try { setupLicentieSheet(); return { ok: true, bericht: 'Licentie-sheet gecontroleerd/aangemaakt.' }; }
-      catch (e) { return { ok: false, fout: e.message }; }
+    return _adminCheckLicentieSheet_();
+  }
+  if (welke === 'licentie-sheet-aanmaken') {
+    if (typeof setupLicentieSheet !== 'function') {
+      return { ok: false, fout: 'setupLicentieSheet niet beschikbaar.' };
     }
-    return { ok: false, fout: 'setupLicentieSheet niet beschikbaar.' };
+    try {
+      setupLicentieSheet();
+      const id = PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID');
+      return { ok: true, bericht: 'Nieuwe licentie-sheet aangemaakt. ID staat ingesteld.',
+        nieuweSheetId: id };
+    } catch (e) { return { ok: false, fout: e.message }; }
   }
   if (welke === 'brevo-token') {
     if (typeof setupBrevoWebhookToken === 'function') {
@@ -410,6 +424,194 @@ function adminSetupActie(token, welke) {
     return { ok: false, fout: 'setupBrevoWebhookToken niet beschikbaar.' };
   }
   return { ok: false, fout: 'Onbekende setup-actie.' };
+}
+
+/**
+ * Intelligente sheet-check. Drie uitkomsten voor de UI:
+ *   ok:'leesbaar'      → groen, X licenties
+ *   ok:'leeg'          → groen, nul licenties (verse sheet)
+ *   ok:'fout'          → rood, met code: 'geen-id' | 'niet-gevonden' | 'geen-toegang'
+ *                       + kandidaten uit jouw Drive om handmatig te kiezen.
+ */
+function _adminCheckLicentieSheet_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = String(props.getProperty('LICENTIE_SHEET_ID') || '').trim();
+  if (!id) {
+    return { ok: 'fout', code: 'geen-id', fout: 'Geen Licentie-sheet ID ingesteld.',
+      kandidaten: _zoekLicentieSheetKandidaten_() };
+  }
+  try {
+    const ss = SpreadsheetApp.openById(id);
+    const sheet = ss.getSheets()[0];
+    const rijen = sheet ? Math.max(0, sheet.getLastRow() - 1) : 0;
+    return { ok: 'leesbaar', sheetNaam: ss.getName(),
+      sheetUrl: ss.getUrl(), licenties: rijen };
+  } catch (e) {
+    const msg = String(e && e.message || e);
+    const code = /not found|ontbreekt/i.test(msg) ? 'niet-gevonden' :
+                 (/access|toestemming|denied/i.test(msg) ? 'geen-toegang' : 'fout');
+    return { ok: 'fout', code: code, fout: msg,
+      kandidaten: _zoekLicentieSheetKandidaten_() };
+  }
+}
+
+/** Zoek in eigen Drive naar plausibele licentie-sheets. Max 5 resultaten. */
+function _zoekLicentieSheetKandidaten_() {
+  const lijst = [];
+  try {
+    const it = DriveApp.searchFiles(
+      "mimeType='application/vnd.google-apps.spreadsheet' and " +
+      "(title contains 'Licentie' or title contains 'Boekhoudbaar')");
+    let n = 0;
+    while (it.hasNext() && n < 5) {
+      const f = it.next();
+      lijst.push({ id: f.getId(), naam: f.getName(), url: f.getUrl() });
+      n++;
+    }
+  } catch (_) {}
+  return lijst;
+}
+
+// ─────────────────────────────────────────────
+//  OBSERVABILITY — health, foutmeldingen, deploy-marker
+// ─────────────────────────────────────────────
+/**
+ * Versie-marker. Bij elke push verhogen; client vergelijkt deze met
+ * de waarde die de server retourneert om "code op server is ouder dan main"
+ * te detecteren — zodat we de hele zoektocht van vannacht niet hoeven herhalen.
+ */
+const ADMIN_DASHBOARD_VERSIE = '2026-06-11-A';
+
+/**
+ * google.script.run target. Verzamelt de observability-data die op
+ * de Overzicht-tab verschijnt. Apart van adminData() om die snel + lichtgewicht
+ * te houden; deze call mag rustig wat traag zijn.
+ */
+function adminObservability(token) {
+  const sessieFout = _adminVereisSessie_(token);
+  if (sessieFout) return sessieFout;
+
+  const props = PropertiesService.getScriptProperties();
+  const now = Date.now();
+
+  // Sheet-status (slimme check uit de licentie-sheet-knop hergebruikt)
+  const sheetCheck = _adminCheckLicentieSheet_();
+
+  // Webhook-gezondheid: hoeveel klanten in 7d met PaymentId (= echte Mollie-betaling)?
+  let webhook = { ok: true, betalingen7d: 0, fout: null };
+  try {
+    if (sheetCheck.ok === 'leesbaar' || sheetCheck.ok === 'leeg') {
+      const sheet = getLicentieSheet_();
+      const data = sheet.getDataRange().getValues();
+      const grens = now - 7 * 86400000;
+      let betalingen = 0;
+      for (let i = 1; i < data.length; i++) {
+        const aangemaakt = data[i][7];
+        const paymentId = String(data[i][8] || '');
+        if (aangemaakt instanceof Date && aangemaakt.getTime() >= grens
+            && paymentId && paymentId.indexOf('tr_') === 0) {
+          betalingen++;
+        }
+      }
+      webhook.betalingen7d = betalingen;
+    }
+  } catch (e) { webhook = { ok: false, fout: e.message, betalingen7d: 0 }; }
+
+  // Stille klanten: actief, > 7d geleden ingeschreven, geen validatie in 48u
+  let stilleKlanten = { ok: true, aantal: 0, namen: [] };
+  try {
+    if (sheetCheck.ok === 'leesbaar') {
+      const sheet = getLicentieSheet_();
+      const data = sheet.getDataRange().getValues();
+      const grens48u = now - 48 * 3600 * 1000;
+      const grens7d = now - 7 * 86400000;
+      let aantal = 0;
+      const namen = [];
+      for (let i = 1; i < data.length; i++) {
+        const status = String(data[i][4] || '').toLowerCase();
+        if (status.indexOf('actief') !== 0) continue;
+        const aangemaakt = data[i][7];
+        if (!(aangemaakt instanceof Date) || aangemaakt.getTime() > grens7d) continue;
+        const lv = data[i][9];
+        if (!(lv instanceof Date) || lv.getTime() < grens48u) {
+          aantal++;
+          if (namen.length < 5) namen.push(String(data[i][1] || '—'));
+        }
+      }
+      stilleKlanten = { ok: true, aantal: aantal, namen: namen };
+    }
+  } catch (e) { stilleKlanten = { ok: false, fout: e.message, aantal: 0, namen: [] }; }
+
+  // Laatste fouten (uit ScriptProperties: serverFouten_<n>)
+  const fouten = [];
+  for (let i = 1; i <= 5; i++) {
+    const raw = props.getProperty('serverFout_' + i);
+    if (!raw) continue;
+    try { fouten.push(JSON.parse(raw)); } catch (_) {}
+  }
+
+  return {
+    ok: true,
+    dashboardVersie: ADMIN_DASHBOARD_VERSIE,
+    sheetCheck: sheetCheck,
+    webhook: webhook,
+    stilleKlanten: stilleKlanten,
+    laatsteFouten: fouten,
+    ownerEmail: props.getProperty('OWNER_STATUS_EMAIL') || '',
+  };
+}
+
+/**
+ * Fout-feed: log een server-fout naar ScriptProperties en (throttled 1×/uur
+ * per type) mailen naar OWNER_STATUS_EMAIL. Aanroepen vanuit elke catch-blok
+ * dat anders stil zou falen. Maakt onverwachte storingen zichtbaar voor Sam.
+ *
+ * @param {string} categorie  Korte code: 'webhook' | 'config' | 'mail' | ...
+ * @param {string} bericht    Mens-leesbare beschrijving
+ * @param {Object=} extra     Optionele context (paymentId, sleutel, etc)
+ */
+function logServerFout_(categorie, bericht, extra) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    // Schuif op: 1→2, 2→3 ... oudste valt eraf
+    for (let i = 5; i > 1; i--) {
+      const v = props.getProperty('serverFout_' + (i - 1));
+      if (v) props.setProperty('serverFout_' + i, v);
+      else props.deleteProperty('serverFout_' + i);
+    }
+    const entry = {
+      ts: new Date().toISOString(),
+      categorie: String(categorie || 'onbekend').slice(0, 32),
+      bericht: String(bericht || '').slice(0, 500),
+      extra: extra || {},
+    };
+    props.setProperty('serverFout_1', JSON.stringify(entry));
+
+    // Throttled mail: max 1× per uur per categorie
+    const mailKey = 'foutMailTs_' + entry.categorie;
+    const laatst = parseInt(props.getProperty(mailKey) || '0', 10);
+    if (Date.now() - laatst > 3600 * 1000) {
+      props.setProperty(mailKey, String(Date.now()));
+      const ontvanger = props.getProperty('OWNER_STATUS_EMAIL') || '';
+      if (ontvanger) {
+        try {
+          MailApp.sendEmail({
+            to: ontvanger,
+            subject: '⚠ Boekhoudbaar server-fout: ' + entry.categorie,
+            htmlBody: '<p><strong>' + escHtml_(entry.categorie) + '</strong> — ' +
+              escHtml_(entry.bericht) + '</p>' +
+              '<p style="font-size:11px;color:#888">Tijdstip: ' + entry.ts + '</p>' +
+              (Object.keys(entry.extra).length
+                ? '<pre style="background:#f5f5f5;padding:10px;font-size:11px">' +
+                  escHtml_(JSON.stringify(entry.extra, null, 2)) + '</pre>'
+                : '') +
+              '<p style="font-size:11px;color:#888">Volgende soortgelijke fout pas over 1 uur — zo blijft je inbox leefbaar.</p>',
+            name: 'Boekhoudbaar Observability',
+          });
+        } catch (_) {}
+      }
+    }
+  } catch (_) { /* fail-silent: een fout in fout-logging mag nooit een fout in productie maken */ }
 }
 
 // ─────────────────────────────────────────────
@@ -506,6 +708,10 @@ function _adminDashboardHtml_() {
 <div class="status-toast" id="toast"></div>
 
 <script>
+  // Versie-marker komt uit ADMIN_DASHBOARD_VERSIE (server-zijde) zodat we
+  // browser ↔ server drift kunnen detecteren — voorkomt de "code op server is
+  // niet de code uit main"-blindheid van 11-juni.
+  window.DASHBOARD_VERSIE_LOKAAL = '` + ADMIN_DASHBOARD_VERSIE + `';
   var TOKEN = sessionStorage.getItem('bhb_admin_token') || null;
   var DATA = null;
   var actieveTab = 'overzicht';
@@ -581,8 +787,10 @@ function _adminDashboardHtml_() {
   function render(){
     if(!DATA){ return; }
     var c=document.getElementById('content');
-    if(actieveTab==='overzicht') c.innerHTML=renderOverzicht();
-    else if(actieveTab==='klanten') c.innerHTML=renderKlanten();
+    if(actieveTab==='overzicht'){
+      c.innerHTML=renderOverzicht();
+      laadObservability();
+    } else if(actieveTab==='klanten') c.innerHTML=renderKlanten();
     else c.innerHTML=renderConfigTab(CAT_PER_TAB[actieveTab]);
     bindConfigVelden();
     if(actieveTab==='verkoop') bindVerkoop();
@@ -609,7 +817,117 @@ function _adminDashboardHtml_() {
       pil(h.template,'Template OK','Template ontbreekt')+
       pil(h.mollie,'Mollie OK ('+esc(h.mollieMode)+')','Mollie ontbreekt')+
       pil(h.brevo,'Brevo OK','Brevo (fallback MailApp)')+
-      '</div></div>';
+      '</div></div>'+
+      '<div id="obsWrap"><div class="kaart"><div style="color:#5F6B7A;font-size:13px">Observability laden…</div></div></div>';
+  }
+
+  function laadObservability(){
+    google.script.run.withSuccessHandler(function(o){
+      if(!o || o.sessieVerlopen){ if(o&&o.sessieVerlopen) uitloggen(); return; }
+      renderObservability(o);
+    }).withFailureHandler(function(){}).adminObservability(TOKEN);
+  }
+
+  function renderObservability(o){
+    var wrap=document.getElementById('obsWrap'); if(!wrap) return;
+    var blokken=[];
+
+    // 1) Deploy-versie: matchen we wat het dashboard hier in de browser denkt?
+    var lokaalDV = window.DASHBOARD_VERSIE_LOKAAL;
+    var serverDV = o.dashboardVersie || '?';
+    var deployOk = (lokaalDV && serverDV && lokaalDV===serverDV);
+    blokken.push(
+      '<div class="kaart"><h2>Deploy-status</h2>'+
+      '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">'+
+      '<span class="pil '+(deployOk?'ok':'nee')+'">'+
+      (deployOk?'Code op server matched de browser-sessie':
+        'Server draait dashboard '+esc(serverDV)+' · browser laadde '+esc(lokaalDV||'?'))+
+      '</span>'+
+      (deployOk?'':'<button class="btn-sec" onclick="location.reload()">Refresh</button>')+
+      '</div>'+
+      '<p style="margin:10px 0 0;font-size:12px;color:#5F6B7A">Wijzigt als je een nieuwe versie pusht naar de licentieserver maar de browser-tab nog een oude versie heeft. Refresh lost dat op.</p>'+
+      '</div>');
+
+    // 2) Licentie-sheet status
+    var sc = o.sheetCheck || {};
+    if(sc.ok==='leesbaar'){
+      blokken.push('<div class="kaart"><h2>Licentie-sheet</h2><div class="health">'+
+        '<span class="pil ok">'+esc(sc.sheetNaam||'OK')+' · '+sc.licenties+' licenties</span>'+
+        (sc.sheetUrl?' <a class="btn-sec" href="'+esc(sc.sheetUrl)+'" target="_blank">Open in Drive</a>':'')+
+        '</div></div>');
+    } else {
+      var kand='';
+      if(sc.kandidaten && sc.kandidaten.length){
+        kand='<p style="margin:10px 0 4px;font-size:13px"><strong>Gevonden in je Drive:</strong></p>'+
+          '<ul style="margin:0 0 8px;font-size:13px">'+
+          sc.kandidaten.map(function(k){
+            return '<li style="margin:4px 0">'+esc(k.naam)+' — <button class="btn-sec" data-pak-sheet="'+esc(k.id)+'">Gebruik deze</button> '+
+              '<a href="'+esc(k.url)+'" target="_blank" style="font-size:12px">openen</a></li>';
+          }).join('')+'</ul>';
+      }
+      blokken.push('<div class="kaart"><h2>Licentie-sheet</h2>'+
+        '<div class="health"><span class="pil nee">'+esc(sc.fout||'Sheet niet bereikbaar')+'</span></div>'+
+        kand+
+        '<div style="margin-top:10px"><button class="btn-rood" data-nieuw-sheet="1">Maak een NIEUWE licentie-sheet aan</button> '+
+        '<span style="font-size:12px;color:#5F6B7A;margin-left:8px">Bestaande klantgegevens uit een oude sheet komen daarmee niet automatisch terug.</span></div>'+
+        '</div>');
+    }
+
+    // 3) Webhook gezondheid
+    var w = o.webhook || {};
+    blokken.push('<div class="kaart"><h2>Mollie-webhook (laatste 7 dagen)</h2><div class="health">'+
+      '<span class="pil '+(w.ok===false?'nee':'ok')+'">'+
+      (w.ok===false ? ('Fout: '+esc(w.fout||'')) : (w.betalingen7d+' betalingen verwerkt')) +
+      '</span></div>'+
+      '<p style="margin:8px 0 0;font-size:12px;color:#5F6B7A">Tel klanten met geldig Mollie-paymentId (tr_…). Nul = óf geen verkoop, óf de webhook is stuk. Check Mollie-dashboard als je toch verkoop verwachtte.</p>'+
+      '</div>');
+
+    // 4) Stille klanten
+    var s = o.stilleKlanten || {};
+    if(s.aantal>0){
+      blokken.push('<div class="kaart"><h2>Stille klanten (>48u geen check-in)</h2><div class="health">'+
+        '<span class="pil nee">'+s.aantal+' klanten</span></div>'+
+        '<p style="font-size:13px;color:#1A1A1A;margin:8px 0 4px">Eerste vijf: '+s.namen.map(esc).join(', ')+'</p>'+
+        '<p style="font-size:12px;color:#5F6B7A">Mogelijk: OAuth-revoke, spreadsheet verwijderd, of klant gewoon op vakantie. Wel iets om in de gaten te houden.</p>'+
+        '</div>');
+    } else {
+      blokken.push('<div class="kaart"><h2>Stille klanten</h2><div class="health">'+
+        '<span class="pil ok">Iedereen ping recent</span></div></div>');
+    }
+
+    // 5) Foutmeld-feed
+    if(o.laatsteFouten && o.laatsteFouten.length){
+      var rijen=o.laatsteFouten.map(function(f){
+        return '<tr><td style="white-space:nowrap;font-family:monospace;font-size:11px">'+esc((f.ts||'').slice(0,16).replace('T',' '))+'</td>'+
+          '<td><strong>'+esc(f.categorie||'?')+'</strong></td>'+
+          '<td>'+esc(f.bericht||'')+'</td></tr>';
+      }).join('');
+      blokken.push('<div class="kaart"><h2>Recente server-fouten</h2>'+
+        '<div style="overflow-x:auto"><table><thead><tr><th>Tijd</th><th>Type</th><th>Bericht</th></tr></thead><tbody>'+rijen+'</tbody></table></div>'+
+        '<p style="font-size:12px;color:#5F6B7A;margin-top:8px">Soortgelijke fouten mailen 1×/uur naar '+esc(o.ownerEmail||'(geen owner-email gezet)')+'.</p>'+
+        '</div>');
+    }
+
+    wrap.innerHTML = blokken.join('');
+    Array.prototype.forEach.call(wrap.querySelectorAll('[data-pak-sheet]'), function(btn){
+      btn.addEventListener('click', function(){ pakLicentieSheet(btn.getAttribute('data-pak-sheet')); });
+    });
+    Array.prototype.forEach.call(wrap.querySelectorAll('[data-nieuw-sheet]'), function(btn){
+      btn.addEventListener('click', function(){
+        if(!confirm('Een nieuwe licentie-sheet aanmaken. Eventuele oude klanten uit de huidige (kapotte) sheet komen NIET terug. Doorgaan?')) return;
+        google.script.run.withSuccessHandler(function(r){
+          if(r&&r.ok){ toast('Nieuwe sheet aangemaakt','groen'); laadData(); laadObservability(); }
+          else toast((r&&r.fout)||'Mislukt','rood');
+        }).adminSetupActie(TOKEN, 'licentie-sheet-aanmaken');
+      });
+    });
+  }
+
+  function pakLicentieSheet(id){
+    google.script.run.withSuccessHandler(function(r){
+      if(r&&r.ok){ toast('Licentie-sheet gekoppeld','groen'); laadObservability(); laadData(); }
+      else toast((r&&r.fout)||'Mislukt','rood');
+    }).adminZetConfig(TOKEN, 'LICENTIE_SHEET_ID', id);
   }
 
   function renderKlanten(){

@@ -125,6 +125,15 @@ function doPost(e) {
     return ContentService.createTextOutput('OK');
   } catch (err) {
     Logger.log('Webhook fout: ' + err.message + '\n' + (err.stack || ''));
+    // Naast Logger.log óók naar de observability-feed in het beheer-dashboard
+    // (en throttled mail naar OWNER_STATUS_EMAIL). Voorheen verdwenen
+    // webhook-fouten in de Apps Script logs die niemand bekijkt.
+    try {
+      if (typeof logServerFout_ === 'function') {
+        logServerFout_(isBrevo ? 'brevo-webhook' : 'mollie-webhook', err.message,
+          { stack: String(err.stack || '').slice(0, 600) });
+      }
+    } catch (_) {}
     // Re-throw zodat Apps Script HTTP 500 retourneert. Mollie retried
     // (max 10x over 26 uur); Brevo retried tot 24u. Een returned ContentService
     // output zou 200 teruggeven en de retry-flow uitschakelen.
