@@ -191,3 +191,35 @@ describe('Source-level: doPost herkent admin-acties', () => {
     expect(src).toMatch(/Herstel naar live/);
   });
 });
+
+describe('Sandbox-fix: forms + links navigeren naar _top (geen wit scherm)', () => {
+  // Apps Script HtmlService draait in een sandbox-iframe. Een form/link
+  // zonder target="_top" + expliciete action submit naar de sandbox-URL
+  // i.p.v. /exec → wit scherm. Dit was de bug waardoor inloggen wit werd.
+  const fs = require('fs');
+  const src = fs.readFileSync(CODE_GS, 'utf8');
+
+  test('login-formulier heeft method=get, target=_top en expliciete action', () => {
+    const idx = src.indexOf('Beheerpaneel');
+    const blok = src.slice(idx - 250, idx + 200);
+    expect(blok).toMatch(/method="get"/);
+    expect(blok).toMatch(/target="_top"/);
+    expect(blok).toMatch(/action="' \+ escHtml_\(execUrl\)/);
+  });
+
+  test('login-formulier toont foutmelding bij onjuist wachtwoord (geen stil falen)', () => {
+    expect(src).toMatch(/Onjuist wachtwoord/);
+  });
+
+  test('alle admin POST-forms hebben target="_top"', () => {
+    const matches = src.match(/<form method="post"[^>]*>/g) || [];
+    expect(matches.length).toBeGreaterThanOrEqual(3);
+    matches.forEach((m) => { expect(m).toMatch(/target="_top"/); });
+  });
+
+  test('bevestigingspagina "terug"-link heeft target="_top"', () => {
+    const idx = src.indexOf('Terug naar admin-paneel');
+    const blok = src.slice(idx - 250, idx + 50);
+    expect(blok).toMatch(/target="_top"/);
+  });
+});
