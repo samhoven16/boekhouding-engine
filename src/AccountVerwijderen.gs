@@ -255,11 +255,18 @@ function voerAccountVerwijdering(email, otp) {
   if (!serverUrl) {
     return { ok: false, fout: 'Licentieserver niet geconfigureerd. Mail support@boekhoudbaar.nl.' };
   }
+  // Lokale licentiesleutel meesturen (red-team #1 fix, opt-in server-side).
+  // Server checkt alleen als AVG_VEREIS_LICENTIESLEUTEL='true'; anders genegeerd.
+  // Sleutel staat lokaal in ScriptProperties (gezet bij activatie); klant typt
+  // 'm niet — hij komt automatisch uit de spreadsheet zelf.
+  const sleutel = String(PropertiesService.getScriptProperties()
+    .getProperty(LICENTIE_PROP_KEY) || '').trim();
   try {
     const url = serverUrl
       + '?actie=verwijder'
       + '&email=' + encodeURIComponent(email)
-      + '&otp=' + encodeURIComponent(otp);
+      + '&otp=' + encodeURIComponent(otp)
+      + (sleutel ? '&sleutel=' + encodeURIComponent(sleutel) : '');
     const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
     const res = parseServerJson_(resp.getContentText());
 

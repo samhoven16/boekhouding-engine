@@ -2100,9 +2100,23 @@ function _verwijderDripKeys_(sleutel) {
  * verwijderen — wij hebben geen toegang.
  */
 function verwijderEndpoint_(e) {
-  const email = String((e.parameter.email || '')).trim().toLowerCase();
-  const otp   = String((e.parameter.otp   || '')).trim();
+  const email   = String((e.parameter.email   || '')).trim().toLowerCase();
+  const otp     = String((e.parameter.otp     || '')).trim();
+  const sleutel = String((e.parameter.sleutel || '')).trim().toUpperCase();
   if (!email || !otp) return jsonResp_({ ok: false, fout: 'E-mail en code zijn verplicht.' });
+
+  // Opt-in defense-in-depth (red-team #1): bij ScriptProperty
+  // AVG_VEREIS_LICENTIESLEUTEL='true' vereist verwijdering óók de licentie-
+  // sleutel. Beschermt tegen post-compromise email-only scenarios: aanvaller
+  // moet dan zowel mail (voor OTP) als toegang tot de spreadsheet OF de
+  // welkomstmail hebben (voor sleutel). Default OFF zodat go-live niet
+  // verandert; Sam kan dit aanzetten na dreigingsmodel-discussie.
+  const propsTop = PropertiesService.getScriptProperties();
+  if (String(propsTop.getProperty('AVG_VEREIS_LICENTIESLEUTEL') || '').toLowerCase() === 'true') {
+    if (!sleutel) {
+      return jsonResp_({ ok: false, fout: 'Licentiesleutel is verplicht. Vind hem in menu: Boekhoudbaar → Licentie & Updates → Licentie-informatie.' });
+    }
+  }
 
   const props = PropertiesService.getScriptProperties();
   const otpRaw = props.getProperty('otp_' + email);
@@ -2124,9 +2138,18 @@ function verwijderEndpoint_(e) {
 
   const sheet = getLicentieSheet_();
   const data  = sheet.getDataRange().getValues();
+  const vereistSleutel = String(propsTop.getProperty('AVG_VEREIS_LICENTIESLEUTEL') || '').toLowerCase() === 'true';
   let geraakt = 0;
+  let sleutelMismatch = false;
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][2] || '').toLowerCase() !== email) continue;
+    // Opt-in check (red-team #1): bij vereistSleutel moet parameter exact
+    // matchen met kolom 0 (Sleutel) van de rij die we pseudonymiseren. Anders
+    // overslaan + mismatch-flag voor diagnostische fout aan eind.
+    if (vereistSleutel && String(data[i][0] || '').toUpperCase() !== sleutel) {
+      sleutelMismatch = true;
+      continue;
+    }
     const rij = i + 1;
     // Pseudonymiseer kolommen (1-based):
     //   2 Naam, 3 Email, 5 Status, 7 SpreadsheetId, 10 LaatsteValidatie, 12 Verwijzer
@@ -2140,6 +2163,9 @@ function verwijderEndpoint_(e) {
   }
 
   if (geraakt === 0) {
+    if (sleutelMismatch) {
+      return jsonResp_({ ok: false, fout: 'Licentiesleutel klopt niet — controleer hem in menu Licentie & Updates → Licentie-informatie.' });
+    }
     return jsonResp_({ ok: false, fout: 'Geen licentie gevonden voor dit e-mailadres.' });
   }
   // PII-redactie: SHA-256 truncate i.p.v. `email.slice(0,3)+'***'` — laatste
