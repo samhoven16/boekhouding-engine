@@ -480,7 +480,7 @@ function _zoekLicentieSheetKandidaten_() {
  * de waarde die de server retourneert om "code op server is ouder dan main"
  * te detecteren — zodat we de hele zoektocht van vannacht niet hoeven herhalen.
  */
-const ADMIN_DASHBOARD_VERSIE = '2026-06-11-D';
+const ADMIN_DASHBOARD_VERSIE = '2026-06-11-E';
 
 /**
  * google.script.run target. Verzamelt de observability-data die op
@@ -597,34 +597,40 @@ function adminObservability(token) {
     }
   } catch (_) {}
 
-  // /kopen-URL-check: detecteert "fossiele deployment"-bug. boekhoudbaar.nl/kopen
-  // bevat een hardcoded URL naar een specifieke deployment. Als die niet matched
-  // met de huidige exec-URL, sturen klanten geld naar een oude/dode deployment.
-  let kopenCheck = { ok: 'onbekend', huidig: '', kopenUrl: '', match: null };
+  // URL-mismatch-check: scant /kopen én /bedankt op hardcoded deployment-URLs
+  // en vergelijkt met WEB_APP_EXEC_URL. Voorkomt 'fossiele deployment'-bug
+  // (Sam betaalde €49 i.p.v. €0,01 omdat /kopen naar oude deployment wees).
+  let kopenCheck = { ok: 'onbekend', huidig: '', mismatches: [], matches: [] };
   try {
     const huidigExec = props.getProperty('WEB_APP_EXEC_URL') || '';
     kopenCheck.huidig = huidigExec;
     if (huidigExec) {
-      // Lees de live /kopen pagina om hardcoded URL te vinden
-      const resp = UrlFetchApp.fetch('https://www.boekhoudbaar.nl/kopen/', {
-        muteHttpExceptions: true, followRedirects: true,
-      });
-      if (resp.getResponseCode() === 200) {
-        const html = resp.getContentText();
-        const m = html.match(/script\.google\.com\/macros\/s\/([A-Za-z0-9_-]+)/);
-        if (m) {
-          const kopenId = m[1];
-          const huidigId = (huidigExec.match(/macros\/s\/([A-Za-z0-9_-]+)/) || [])[1] || '';
-          kopenCheck.kopenUrl = 'https://script.google.com/macros/s/' + kopenId + '/exec';
-          kopenCheck.match = (kopenId === huidigId);
-          kopenCheck.ok = kopenCheck.match ? 'match' : 'mismatch';
-        }
-      } else {
-        kopenCheck.ok = 'fout';
-        kopenCheck.fout = 'HTTP ' + resp.getResponseCode();
+      const huidigId = (huidigExec.match(/macros\/s\/([A-Za-z0-9_-]+)/) || [])[1] || '';
+      const paginas = ['kopen', 'bedankt'];
+      for (let i = 0; i < paginas.length; i++) {
+        const slug = paginas[i];
+        try {
+          const resp = UrlFetchApp.fetch('https://www.boekhoudbaar.nl/' + slug + '/', {
+            muteHttpExceptions: true, followRedirects: true,
+          });
+          if (resp.getResponseCode() === 200) {
+            const html = resp.getContentText();
+            const idsGezien = {};
+            const re = /script\.google\.com\/macros\/s\/([A-Za-z0-9_-]+)/g;
+            let m;
+            while ((m = re.exec(html))) idsGezien[m[1]] = true;
+            const ids = Object.keys(idsGezien);
+            ids.forEach(function(id) {
+              const eintraag = { pagina: '/' + slug + '/', url: 'https://script.google.com/macros/s/' + id + '/exec' };
+              if (id === huidigId) kopenCheck.matches.push(eintraag);
+              else kopenCheck.mismatches.push(eintraag);
+            });
+          }
+        } catch (_) {}
       }
+      kopenCheck.ok = kopenCheck.mismatches.length === 0 ? 'match' : 'mismatch';
     }
-  } catch (e) { kopenCheck = { ok: 'fout', fout: e.message }; }
+  } catch (e) { kopenCheck = { ok: 'fout', fout: e.message, matches: [], mismatches: [] }; }
 
   return {
     ok: true,
@@ -986,16 +992,20 @@ function _adminDashboardHtml_() {
         '</div>');
     }
 
-    // 2b) /kopen-URL match-check
+    // 2b) Website-URL match-check (/kopen + /bedankt)
     var kc = o.kopenCheck || {};
-    if(kc.ok==='mismatch'){
-      blokken.push('<div class="kaart" style="border:2px solid #B91C1C"><h2 style="color:#B91C1C">🚨 boekhoudbaar.nl/kopen wijst naar een andere deployment</h2>'+
-        '<p style="font-size:13px;color:#5A1010;margin:4px 0 8px"><strong>Huidig (jouw beheer):</strong><br>'+esc(kc.huidig||'')+'</p>'+
-        '<p style="font-size:13px;color:#5A1010;margin:0 0 12px"><strong>/kopen wijst naar:</strong><br>'+esc(kc.kopenUrl||'')+'</p>'+
-        '<p style="font-size:13px;color:#5A1010">Klanten die op /kopen klikken landen NIET op jouw huidige licentieserver. Resultaat: ze zien mogelijk oude prijs, oude code, of een totaal verlaten checkout. Update de URL in <code>website/kopen/index.html</code> naar je huidige exec-URL en deploy.</p></div>');
+    if(kc.ok==='mismatch' && kc.mismatches && kc.mismatches.length){
+      var mismatchHtml = kc.mismatches.map(function(m){
+        return '<li style="margin:6px 0;font-size:13px;color:#5A1010"><strong>'+esc(m.pagina)+'</strong> → '+esc(m.url)+'</li>';
+      }).join('');
+      blokken.push('<div class="kaart" style="border:2px solid #B91C1C"><h2 style="color:#B91C1C">🚨 Website wijst naar fossiele deployments</h2>'+
+        '<p style="font-size:13px;color:#5A1010;margin:4px 0 6px"><strong>Jouw huidige beheer:</strong> '+esc(kc.huidig||'')+'</p>'+
+        '<p style="font-size:13px;color:#5A1010;margin:0 0 6px"><strong>Mismatch op deze pagina(\'s):</strong></p>'+
+        '<ul style="margin:0 0 10px 22px">'+mismatchHtml+'</ul>'+
+        '<p style="font-size:13px;color:#5A1010">Klanten die deze pagina\'s bezoeken landen op een oude/verlaten deployment. Update de URL in de HTML-bestanden en deploy via Cloudflare.</p></div>');
     } else if(kc.ok==='match'){
-      blokken.push('<div class="kaart"><h2>boekhoudbaar.nl/kopen</h2>'+
-        '<div class="health"><span class="pil ok">URL match jouw huidige deployment</span></div></div>');
+      blokken.push('<div class="kaart"><h2>Website-URLs (kopen + bedankt)</h2>'+
+        '<div class="health"><span class="pil ok">Beide pagina\'s wijzen naar jouw huidige deployment</span></div></div>');
     }
 
     // 3) Webhook gezondheid
