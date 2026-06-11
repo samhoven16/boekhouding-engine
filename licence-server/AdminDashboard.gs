@@ -480,7 +480,7 @@ function _zoekLicentieSheetKandidaten_() {
  * de waarde die de server retourneert om "code op server is ouder dan main"
  * te detecteren — zodat we de hele zoektocht van vannacht niet hoeven herhalen.
  */
-const ADMIN_DASHBOARD_VERSIE = '2026-06-11-C';
+const ADMIN_DASHBOARD_VERSIE = '2026-06-11-D';
 
 /**
  * google.script.run target. Verzamelt de observability-data die op
@@ -597,6 +597,35 @@ function adminObservability(token) {
     }
   } catch (_) {}
 
+  // /kopen-URL-check: detecteert "fossiele deployment"-bug. boekhoudbaar.nl/kopen
+  // bevat een hardcoded URL naar een specifieke deployment. Als die niet matched
+  // met de huidige exec-URL, sturen klanten geld naar een oude/dode deployment.
+  let kopenCheck = { ok: 'onbekend', huidig: '', kopenUrl: '', match: null };
+  try {
+    const huidigExec = props.getProperty('WEB_APP_EXEC_URL') || '';
+    kopenCheck.huidig = huidigExec;
+    if (huidigExec) {
+      // Lees de live /kopen pagina om hardcoded URL te vinden
+      const resp = UrlFetchApp.fetch('https://www.boekhoudbaar.nl/kopen/', {
+        muteHttpExceptions: true, followRedirects: true,
+      });
+      if (resp.getResponseCode() === 200) {
+        const html = resp.getContentText();
+        const m = html.match(/script\.google\.com\/macros\/s\/([A-Za-z0-9_-]+)/);
+        if (m) {
+          const kopenId = m[1];
+          const huidigId = (huidigExec.match(/macros\/s\/([A-Za-z0-9_-]+)/) || [])[1] || '';
+          kopenCheck.kopenUrl = 'https://script.google.com/macros/s/' + kopenId + '/exec';
+          kopenCheck.match = (kopenId === huidigId);
+          kopenCheck.ok = kopenCheck.match ? 'match' : 'mismatch';
+        }
+      } else {
+        kopenCheck.ok = 'fout';
+        kopenCheck.fout = 'HTTP ' + resp.getResponseCode();
+      }
+    }
+  } catch (e) { kopenCheck = { ok: 'fout', fout: e.message }; }
+
   return {
     ok: true,
     dashboardVersie: ADMIN_DASHBOARD_VERSIE,
@@ -605,6 +634,7 @@ function adminObservability(token) {
     stilleKlanten: stilleKlanten,
     laatsteFouten: fouten,
     assets: assets,
+    kopenCheck: kopenCheck,
     ownerEmail: props.getProperty('OWNER_STATUS_EMAIL') || '',
   };
 }
@@ -954,6 +984,18 @@ function _adminDashboardHtml_() {
         '<div style="margin-top:10px"><button class="btn-rood" data-nieuw-sheet="1">Maak een NIEUWE licentie-sheet aan</button> '+
         '<span style="font-size:12px;color:#5F6B7A;margin-left:8px">Bestaande klantgegevens uit een oude sheet komen daarmee niet automatisch terug.</span></div>'+
         '</div>');
+    }
+
+    // 2b) /kopen-URL match-check
+    var kc = o.kopenCheck || {};
+    if(kc.ok==='mismatch'){
+      blokken.push('<div class="kaart" style="border:2px solid #B91C1C"><h2 style="color:#B91C1C">🚨 boekhoudbaar.nl/kopen wijst naar een andere deployment</h2>'+
+        '<p style="font-size:13px;color:#5A1010;margin:4px 0 8px"><strong>Huidig (jouw beheer):</strong><br>'+esc(kc.huidig||'')+'</p>'+
+        '<p style="font-size:13px;color:#5A1010;margin:0 0 12px"><strong>/kopen wijst naar:</strong><br>'+esc(kc.kopenUrl||'')+'</p>'+
+        '<p style="font-size:13px;color:#5A1010">Klanten die op /kopen klikken landen NIET op jouw huidige licentieserver. Resultaat: ze zien mogelijk oude prijs, oude code, of een totaal verlaten checkout. Update de URL in <code>website/kopen/index.html</code> naar je huidige exec-URL en deploy.</p></div>');
+    } else if(kc.ok==='match'){
+      blokken.push('<div class="kaart"><h2>boekhoudbaar.nl/kopen</h2>'+
+        '<div class="health"><span class="pil ok">URL match jouw huidige deployment</span></div></div>');
     }
 
     // 3) Webhook gezondheid
