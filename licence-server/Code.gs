@@ -1486,7 +1486,7 @@ function _adminPostBevestiging_(resp, e) {
     '<div style="font-family:Arial;padding:30px;max-width:520px;margin:40px auto">' +
     '<h2 style="color:' + kleur + ';margin-top:0">' + escHtml_(titel) + '</h2>' +
     '<p>' + escHtml_(detail) + '</p>' +
-    '<p><a href="' + escHtml_(url) + '" style="display:inline-block;padding:10px 18px;background:#0D1B4E;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">← Terug naar admin-paneel</a></p>' +
+    '<p><a href="' + escHtml_(url) + '" target="_top" style="display:inline-block;padding:10px 18px;background:#0D1B4E;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">← Terug naar admin-paneel</a></p>' +
     '</div>'
   ).setTitle('Admin — ' + titel);
 }
@@ -1496,12 +1496,22 @@ function adminPaneel_(e) {
   const input = String((e.parameter.ww || '')).trim();
 
   if (!ww || !veiligVergelijk_(ww, input)) {
+    // Apps Script HtmlService draait in een sandbox-iframe. Een gewoon
+    // <form> zonder action/target submit naar de sandbox-URL i.p.v. naar
+    // /exec → wit scherm. Fix: expliciete action naar de exec-URL +
+    // target="_top" zodat de hele pagina navigeert, niet alleen het iframe.
+    const execUrl = ScriptApp.getService().getUrl();
+    const foutmelding = input
+      ? '<p style="color:#B91C1C;font-size:13px;margin:0 0 12px">Onjuist wachtwoord — probeer opnieuw.</p>'
+      : '';
     return HtmlService.createHtmlOutput(
-      '<form style="font-family:Arial;padding:30px">' +
+      '<form method="get" target="_top" action="' + escHtml_(execUrl) + '" style="font-family:Arial;padding:30px">' +
       '<h3>Beheerpaneel</h3>' +
-      '<input name="ww" type="password" placeholder="Wachtwoord" style="padding:8px;margin-right:8px">' +
+      foutmelding +
+      '<input name="ww" type="password" placeholder="Wachtwoord" style="padding:8px;margin-right:8px" autofocus>' +
       '<input name="actie" type="hidden" value="admin">' +
-      '<button type="submit">Inloggen</button></form>'
+      '<button type="submit" style="padding:8px 14px;border:none;background:#0D1B4E;color:#fff;border-radius:6px;cursor:pointer">Inloggen</button>' +
+      '</form>'
     ).setTitle('Admin');
   }
 
@@ -1589,7 +1599,7 @@ function adminPaneel_(e) {
         &nbsp;·&nbsp;
         <code>REF_KORTING</code> = <strong>€${escHtml_(props.getProperty('REF_KORTING') || '5 (default)')}</strong>
       </p>
-      <form method="post" action="${escHtml_(ScriptApp.getService().getUrl())}" style="display:flex;gap:8px;align-items:center;margin:8px 0">
+      <form method="post" target="_top" action="${escHtml_(ScriptApp.getService().getUrl())}" style="display:flex;gap:8px;align-items:center;margin:8px 0">
         <input type="hidden" name="actie" value="admin-zet-prijs">
         <input type="hidden" name="ww" value="${escHtml_(String(e.parameter.ww || ''))}">
         <label for="prijs" style="font-weight:600">Zet prijs:</label>
@@ -1598,7 +1608,7 @@ function adminPaneel_(e) {
         <button type="submit" style="padding:6px 14px;border:none;background:#0D1B4E;color:#fff;border-radius:6px;cursor:pointer">Opslaan</button>
         <span style="color:#5F6B7A;font-size:12px">€0,01 t/m €999,00</span>
       </form>
-      <form method="post" action="${escHtml_(ScriptApp.getService().getUrl())}" style="display:inline-flex;gap:8px;margin-top:6px">
+      <form method="post" target="_top" action="${escHtml_(ScriptApp.getService().getUrl())}" style="display:inline-flex;gap:8px;margin-top:6px">
         <input type="hidden" name="actie" value="admin-test-modus">
         <input type="hidden" name="ww" value="${escHtml_(String(e.parameter.ww || ''))}">
         <input type="hidden" name="aan" value="ja">
@@ -1606,7 +1616,7 @@ function adminPaneel_(e) {
           ⚡ Test-modus AAN (€0,01, geen korting)
         </button>
       </form>
-      <form method="post" action="${escHtml_(ScriptApp.getService().getUrl())}" style="display:inline-flex;gap:8px;margin-top:6px">
+      <form method="post" target="_top" action="${escHtml_(ScriptApp.getService().getUrl())}" style="display:inline-flex;gap:8px;margin-top:6px">
         <input type="hidden" name="actie" value="admin-test-modus">
         <input type="hidden" name="ww" value="${escHtml_(String(e.parameter.ww || ''))}">
         <input type="hidden" name="aan" value="nee">
