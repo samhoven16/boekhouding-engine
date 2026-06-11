@@ -5163,56 +5163,56 @@
   "koppelBankTransactieAanFactuur_": [
     {
       "file": "Triggers.gs",
-      "line": 2388,
+      "line": 2390,
       "kind": "function"
     }
   ],
   "markeerVervallenFacturen_": [
     {
       "file": "Triggers.gs",
-      "line": 2472,
+      "line": 2474,
       "kind": "function"
     }
   ],
   "controleerBtwDeadlines_": [
     {
       "file": "Triggers.gs",
-      "line": 2521,
+      "line": 2523,
       "kind": "function"
     }
   ],
   "stuurFoutEmail_": [
     {
       "file": "Triggers.gs",
-      "line": 2565,
+      "line": 2567,
       "kind": "function"
     }
   ],
   "stuurBetalingsherinneringen": [
     {
       "file": "Triggers.gs",
-      "line": 2582,
+      "line": 2584,
       "kind": "function"
     }
   ],
-  "haalRelatieEmail_": [
+  "bouwRelatieEmailMap_": [
     {
       "file": "Triggers.gs",
-      "line": 2660,
+      "line": 2676,
       "kind": "function"
     }
   ],
   "toonAuditLog": [
     {
       "file": "Triggers.gs",
-      "line": 2677,
+      "line": 2695,
       "kind": "function"
     }
   ],
   "_bouwInkoopSig_": [
     {
       "file": "Triggers.gs",
-      "line": 2708,
+      "line": 2726,
       "kind": "function"
     }
   ],

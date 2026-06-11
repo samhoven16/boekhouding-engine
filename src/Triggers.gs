@@ -2276,6 +2276,8 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
   const bedrijf = getInstelling_('Bedrijfsnaam') || '';
   const props = PropertiesService.getScriptProperties();
   const STAP_DAGEN = [1, 7, 14];
+  // RELATIES één keer inlezen i.p.v. per factuur (voorkomt N×M sheet-reads).
+  const relatieEmailMap = bouwRelatieEmailMap_(ss);
 
   // Resume-cursor: bij crash halverwege wordt dunningCursor opgeslagen, bij
   // volgende run hervatten we vanaf die rij. Voorkomt dat eerste 50 rijen 2x
@@ -2316,7 +2318,7 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
     if (volgendeStap <= gestuurdeStap) continue;
 
     const klantId = data[i][4];
-    const klantEmail = haalRelatieEmail_(ss, klantId);
+    const klantEmail = relatieEmailMap[String(klantId)] || null;
     if (!klantEmail) continue;
 
     const klantnaam   = data[i][5];
@@ -2585,15 +2587,16 @@ function stuurBetalingsherinneringen() {
   const data = sheet.getDataRange().getValues();
   const vandaag = new Date();
   let aantalVerstuurd = 0;
+  // RELATIES één keer inlezen i.p.v. per factuur (voorkomt N×M sheet-reads).
+  const relatieEmailMap = bouwRelatieEmailMap_(ss);
 
   for (let i = 1; i < data.length; i++) {
     const status = data[i][14];
-    const email = ''; // Haal e-mail op uit relaties
     const klantId = data[i][4];
 
     if (status !== FACTUUR_STATUS.VERVALLEN && status !== FACTUUR_STATUS.VERZONDEN) continue;
 
-    const klantEmail = haalRelatieEmail_(ss, klantId);
+    const klantEmail = relatieEmailMap[String(klantId)] || null;
     if (!klantEmail) continue;
 
     const fnr = data[i][1];
@@ -2657,14 +2660,29 @@ function stuurBetalingsherinneringen() {
   SpreadsheetApp.getUi().alert(`${aantalVerstuurd} herinneringen verstuurd.`);
 }
 
-function haalRelatieEmail_(ss, relatieId) {
+/**
+ * Bouwt éénmalig een {relatie-id → e-mailadres}-map uit het RELATIES-blad.
+ * Vervangt haalRelatieEmail_, dat de hele RELATIES-sheet opnieuw las PER
+ * factuur in de dagelijkse aanmaningen-loop (N×M sheet-reads → 6-min-
+ * timeoutrisico bij groei). Bouw de map één keer vóór de loop en doe
+ * in-memory lookups.
+ *
+ * Bij dubbele id's wint de EERSTE rij — gelijk aan het oude lineaire-zoek-
+ * gedrag (dat de eerste match retourneerde).
+ *
+ * @param {Spreadsheet} ss
+ * @returns {Object<string,string>} id → e-mail (kolom 10, 0-based)
+ */
+function bouwRelatieEmailMap_(ss) {
   const sheet = ss.getSheetByName(SHEETS.RELATIES);
+  if (!sheet) return {};
   const data = sheet.getDataRange().getValues();
-  const idStr = String(relatieId);
+  const map = {};
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === idStr) return data[i][10]; // E-mailadres kolom
+    const id = String(data[i][0]);
+    if (id && !(id in map)) map[id] = data[i][10]; // E-mailadres kolom
   }
-  return null;
+  return map;
 }
 
 // ─────────────────────────────────────────────
