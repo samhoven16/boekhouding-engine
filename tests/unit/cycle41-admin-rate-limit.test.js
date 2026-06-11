@@ -21,7 +21,7 @@ describe('CYCLE 41: adminPaneel_ rate-limit op login', () => {
     // Audit 2026-06-09: structuur is van one-liner naar multi-line
     // if-block met noodsleutel-bypass (eerste return = adminPaneel_)
     // + rate-limit + alert-mail + finale adminPaneel_-call.
-    const adminStart = src.indexOf("if (actie === 'admin')");
+    const adminStart = src.indexOf("if (actie === 'admin-legacy')");
     expect(adminStart).toBeGreaterThan(-1);
     const adminBlok = src.slice(adminStart, adminStart + 1500);
     expect(adminBlok).toMatch(/rateLimit_\(e/);
@@ -34,7 +34,7 @@ describe('CYCLE 41: adminPaneel_ rate-limit op login', () => {
   });
 
   test('Rate-limit-config: actie="admin-login", globaal=20, windowMin=60', () => {
-    const adminStart = src.indexOf("if (actie === 'admin')");
+    const adminStart = src.indexOf("if (actie === 'admin-legacy')");
     const adminBlok = src.slice(adminStart, adminStart + 1500);
     expect(adminBlok).toMatch(/actie:\s*['"]admin-login['"]/);
     expect(adminBlok).toMatch(/globaal:\s*20/);
@@ -46,7 +46,7 @@ describe('CYCLE 41: adminPaneel_ rate-limit op login', () => {
     //   1. Bypass-pad: `if (_adminNoodsleutelOk_(e)) return adminPaneel_(e);`
     //   2. Hoofdpad: na rate-limit `return adminPaneel_(e);`
     const dispatcher = src.slice(0, src.indexOf('function _adminNoodsleutelOk_'));
-    const adminStart = dispatcher.indexOf("if (actie === 'admin')");
+    const adminStart = dispatcher.indexOf("if (actie === 'admin-legacy')");
     const adminEnd   = dispatcher.indexOf("if (actie === 'roteer')", adminStart);
     const buitenBlok = dispatcher.slice(0, adminStart) + dispatcher.slice(adminEnd);
     expect(buitenBlok).not.toMatch(/adminPaneel_\(e\)/);

@@ -92,7 +92,7 @@ describe('Fix #2 — Admin brute-force lockout: noodsleutel + alert', () => {
   });
 
   test('doGet-route wires noodsleutel-bypass vóór rate-limit', () => {
-    const start = codeBron.indexOf("if (actie === 'admin')");
+    const start = codeBron.indexOf("if (actie === 'admin-legacy')");
     const blok = codeBron.slice(start, start + 800);
     const idxBypass = blok.indexOf('_adminNoodsleutelOk_');
     const idxRateLimit = blok.indexOf('rateLimit_(e');
@@ -102,7 +102,7 @@ describe('Fix #2 — Admin brute-force lockout: noodsleutel + alert', () => {
   });
 
   test('Bij lockout wordt _meldAdminLockoutAanOwner_ aangeroepen', () => {
-    const start = codeBron.indexOf("if (actie === 'admin')");
+    const start = codeBron.indexOf("if (actie === 'admin-legacy')");
     const blok = codeBron.slice(start, start + 800);
     expect(blok).toMatch(/_meldAdminLockoutAanOwner_/);
   });

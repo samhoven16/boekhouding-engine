@@ -59,10 +59,22 @@ function doGet(e) {
   //      mits query-param ?noodsleutel=<waarde> matched. Sam weet, attacker
   //      niet. Tijdelijk gebruiken bij lockout incident.
   if (actie === 'admin') {
-    // Audit ronde 2 (red-team): bypass-pad krijgt soepelere rate-limit
-    // i.p.v. unlimited. Bij gelekte noodsleutel + zwak ADMIN_WACHTWOORD
-    // anders unbounded brute-force. 200/uur = ruim voor Sam's gebruik,
-    // maar belet >3 raden/sec sustained.
+    // Centraal beheer-dashboard (AdminDashboard.gs). De pagina zelf vraagt om
+    // login via google.script.run; wachtwoord-check + rate-limit gebeuren
+    // server-side in adminLogin(). Het renderen van de (nog niet-ingelogde)
+    // SPA-shell vereist geen wachtwoord — er staat geen data in tot login.
+    if (typeof renderAdminDashboard_ === 'function') return renderAdminDashboard_();
+    // Dashboard-bestand ontbreekt (niet gepusht?). Verwijs naar legacy i.p.v.
+    // adminPaneel_ hier direct aan te roepen — houdt alle ongegate-paneel-
+    // calls binnen het admin-legacy-blok (regressie-guard cycle 41).
+    return HtmlService.createHtmlOutput(
+      'Beheer-dashboard niet beschikbaar. Gebruik <a href="?actie=admin-legacy" target="_top">het klassieke paneel</a>.'
+    ).setTitle('Beheer');
+  }
+  // Legacy admin-endpoint (oud paneel). Behouden voor backward-compat met
+  // bookmarks; het nieuwe dashboard (actie=admin) gebruikt google.script.run.
+  // Volledige oude bescherming intact: noodsleutel-bypass + rate-limit + alert.
+  if (actie === 'admin-legacy') {
     if (_adminNoodsleutelOk_(e)) {
       const bypassBlocked = rateLimit_(e, { actie: 'admin-met-noodsleutel', globaal: 200, windowMin: 60 });
       if (bypassBlocked) return bypassBlocked;
@@ -75,7 +87,7 @@ function doGet(e) {
     }
     return adminPaneel_(e);
   }
-  // POST-actie's vanuit admin-paneel — vereisen ADMIN_WACHTWOORD in body
+  // POST-actie's vanuit het oude admin-paneel — vereisen ADMIN_WACHTWOORD in body
   if (actie === 'admin-zet-prijs')   return adminZetPrijsEndpoint_(e);
   if (actie === 'admin-test-modus')  return adminTestModusEndpoint_(e);
   if (actie === 'roteer')        return rateLimit_(e, { actie: 'roteer', perEmail: 3, globaal: 100, windowMin: 60 }) || roteerEndpoint_(e);
