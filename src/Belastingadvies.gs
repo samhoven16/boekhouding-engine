@@ -165,13 +165,16 @@ const BELASTING_PER_JAAR = {
     // Logies-BTW 2026: VERHOOGD naar 21% per 1-1-2026 (was 9% in 2025)
     LOGIES_BTW_PCT:         0.21,
     IB_SCHIJVEN: [
-      { tot: 38883,    pct: 0.357  },  // schijf 1
-      { tot: 79137,    pct: 0.3756 },  // schijf 2
+      // Bron: belastingdienst.nl + Belastingplan 2026 (geverifieerd 2026-06-12).
+      // Schijf 2 grens 78.426 (NIET 79.137 — kleine drift uit 2025-snapshot).
+      // Schijf 1 % = 8,10 (IB) + 27,65 (volksverz.) = 35,75% (NIET 35,7%).
+      { tot: 38883,    pct: 0.3575 },  // schijf 1 (zonder AOW)
+      { tot: 78426,    pct: 0.3756 },  // schijf 2
       { tot: Infinity, pct: 0.495  },  // schijf 3
     ],
     IB_SCHIJVEN_AOW: [
       { tot: 38883,    pct: 0.1770 },  // schijf 1 voor AOW-gerechtigden
-      { tot: 79137,    pct: 0.3756 },
+      { tot: 78426,    pct: 0.3756 },
       { tot: Infinity, pct: 0.495  },
     ],
     // Box 2 — aanmerkelijk belang (BV-dividend). 2025+: 24,5% / 31%.

@@ -106,9 +106,12 @@ function genereerNotificaties_() {
   if (maand >= 11) {
     const urenRaw = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0', 10);
     const uren = isFinite(urenRaw) ? urenRaw : 0;
+    // Fallbacks zijn 2026-waarden — was 2470 (2025-waarde) wat divergeerde
+    // van Belastingadvies.gs (€1.200) → klant zag ander bedrag per scherm.
+    // Audit 2026-06-12, bron belastingdienst.nl.
     const urenGrens = (B && B.URENCRITERIUM) || 1225;
-    const zaftrek = (B && B.ZELFSTANDIGENAFTREK) || 2470;
-    const ibPct1 = (B && B.IB_SCHIJVEN && B.IB_SCHIJVEN[0] && B.IB_SCHIJVEN[0].pct) || 0.37;
+    const zaftrek = (B && B.ZELFSTANDIGENAFTREK) || 1200;
+    const ibPct1 = (B && B.IB_SCHIJVEN && B.IB_SCHIJVEN[0] && B.IB_SCHIJVEN[0].pct) || 0.3575;
     const aftrekImpactEuro = Math.round(zaftrek * ibPct1);
     if (uren > 0 && uren < urenGrens) {
       const tekort = urenGrens - uren;

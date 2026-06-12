@@ -79,23 +79,28 @@ function _cf_tarievenVoorJaar_(jaar) {
     }
     if (jaren.length) return beschikbaar[jaren[jaren.length - 1]];
   }
-  // Last-resort hardcoded 2025-snapshot (mocht BELASTING_PER_JAAR ontbreken)
+  // Last-resort hardcoded 2026-snapshot (mocht BELASTING_PER_JAAR
+  // én getBelasting_() beide ontbreken — alleen in zwaar-degraded modus).
+  // Audit 2026-06-12: was 2025-snapshot (€2.470, 38441/76817) wat leidde
+  // tot verschillende waardes per UI-scherm. Nu strak op 2026, single
+  // bron-of-truth blijft Belastingadvies.gs:130 BELASTING_PER_JAAR[2026].
+  // Bronnen geverifieerd via belastingdienst.nl 2026-06-12.
   return {
-    ZELFSTANDIGENAFTREK: 2470,
-    MKB_WINSTVRIJSTELLING: 0.127,
+    ZELFSTANDIGENAFTREK: 1200,        // 2026 verlaagd van 2470
+    MKB_WINSTVRIJSTELLING: 0.127,     // 12,70%, ongewijzigd
     HEFFINGSKORTING_MAX: 3068,
     HEFFINGSKORTING_AFBOUW_VAN: 28406,
     HEFFINGSKORTING_AFBOUW_PCT: 0.0634,
-    HEFFINGSKORTING_NUL_VAN: 76817,
+    HEFFINGSKORTING_NUL_VAN: 78426,   // 2026 schijf-2-grens
     ARBEIDSKORTING_MAX: 5599,
     ARBEIDSKORTING_TOP_TOT: 43071,
     ARBEIDSKORTING_AFBOUW_PCT: 0.0651,
-    ZVW_PCT: 0.0526,
-    ZVW_MAX_INKOMEN: 75864,
-    IB_SCHIJF_1_MAX: 76817,
+    ZVW_PCT: 0.0485,                  // 2026 verlaagd van 5,26%
+    ZVW_MAX_INKOMEN: 79409,           // 2026
+    IB_SCHIJF_1_MAX: 38883,           // 2026 schijf-1-grens (was 38441 in 2025)
     IB_SCHIJVEN: [
-      { tot: 38441,    pct: 0.3582 },
-      { tot: 76817,    pct: 0.3748 },
+      { tot: 38883,    pct: 0.3575 },  // 2026: 8,10% IB + 27,65% volksverz.
+      { tot: 78426,    pct: 0.3756 },  // 2026 (was 76817 in 2025)
       { tot: Infinity, pct: 0.495  },
     ],
   };
