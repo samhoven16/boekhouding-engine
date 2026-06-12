@@ -469,6 +469,17 @@ function verwerkHoofdformulier(e) {
     const ss = getSpreadsheet_();
     schrijfAuditLog_('Formulier ontvangen', 'type: ' + type);
 
+    // D3 (audit 2026-06-12): bij eerste boeking in een nieuw kalenderjaar
+    // waarvoor géén bevestigde tarieven bestaan, waarschuw eenmalig owner
+    // + toast + audit-log. Voorkomt dat een klant in 2028 stil doorboekt
+    // met 2026-tarieven omdat de TARIEF_VEROUDERD-vlag alleen op het
+    // Belastingadvies-tabblad zichtbaar was.
+    try {
+      if (typeof controleerTariefVerouderdWaarschuwing_ === 'function') {
+        controleerTariefVerouderdWaarschuwing_(ss);
+      }
+    } catch (_) {}
+
     if (type.includes('Inkomsten')) {
       verwerkInkomstenUitHoofdformulier_(ss, data);
     } else if (type.includes('Uitgaven')) {

@@ -325,6 +325,66 @@ function getBelasting_() {
   }, tarieven, klantOverrides || {});
 }
 
+/**
+ * D3 (audit 2026-06-12) — controleerTariefVerouderdWaarschuwing_.
+ *
+ * Detecteert of de tarieven voor het lopende kalenderjaar verouderd zijn
+ * (fallback of placeholder). Per-jaar éénmalig waarschuwt het:
+ *   - Toast op de spreadsheet (zichtbaar voor klant)
+ *   - schrijfAuditLog_ (forensisch spoor)
+ *   - meldFataalAanOwner_ (push naar Sam)
+ *
+ * Throttle: ScriptProperty TARIEF_VEROUDERD_GEZIEN_<jaar>=1 voorkomt
+ * spam bij elke boeking. Reset bij jaarwisseling.
+ *
+ * Bedoeld voor aanroep vanuit boeking-flows die in trigger-context lopen
+ * (verwerkHoofdformulier). UI-modal in form-trigger is niet mogelijk —
+ * toast + owner-alert is wel zichtbaar en log-baar.
+ *
+ * @param {Spreadsheet} ss
+ * @returns {{verouderd: boolean, getoond: boolean}} status voor tests
+ */
+function controleerTariefVerouderdWaarschuwing_(ss) {
+  const huidigJaar = new Date().getFullYear();
+  let BELASTING;
+  try { BELASTING = getBelasting_(); } catch (_) {
+    return { verouderd: false, getoond: false };
+  }
+  if (!BELASTING || !BELASTING.TARIEF_VEROUDERD) {
+    return { verouderd: false, getoond: false };
+  }
+  const propsKey = 'TARIEF_VEROUDERD_GEZIEN_' + huidigJaar;
+  let props;
+  try { props = PropertiesService.getScriptProperties(); } catch (_) {
+    return { verouderd: true, getoond: false };
+  }
+  if (props.getProperty(propsKey) === '1') {
+    return { verouderd: true, getoond: false };
+  }
+  // Zet de seen-flag VOORAF zodat een crash later niet leidt tot herhaalde mails.
+  try { props.setProperty(propsKey, '1'); } catch (_) {}
+
+  const fallbackJaar = BELASTING.TARIEF_FALLBACK_JAAR || (huidigJaar - 1);
+  const bron = BELASTING.TARIEF_BRON || 'onbekend';
+  const boodschap = 'Belastingtarieven voor ' + huidigJaar +
+    ' zijn nog niet bevestigd — boekingen gebruiken tijdelijk tarieven van ' +
+    fallbackJaar + ' (' + bron + '). Update via Boekhoudbaar of pas Instellingen handmatig aan.';
+
+  try {
+    if (ss && typeof ss.toast === 'function') {
+      ss.toast(boodschap, '⚠️ Verouderde tarieven', 30);
+    }
+  } catch (_) {}
+  try { schrijfAuditLog_('Tarieven verouderd', boodschap); } catch (_) {}
+  try {
+    if (typeof meldFataalAanOwner_ === 'function') {
+      meldFataalAanOwner_('TARIEF_VEROUDERD', boodschap,
+        { jaar: huidigJaar, fallbackJaar: fallbackJaar, bron: bron });
+    }
+  } catch (_) {}
+  return { verouderd: true, getoond: true };
+}
+
 // ─────────────────────────────────────────────
 //  KLANT-OVERRIDES VIA INSTELLINGEN-TAB
 // ─────────────────────────────────────────────
