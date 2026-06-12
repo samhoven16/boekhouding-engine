@@ -115,3 +115,76 @@ Quote: `ctx._valideerEnSaneerAiOutput_(raw); if (Object.prototype[sleutel] === w
 Probleem: JSON.parse zet __proto__ als own-property; Object.prototype wordt nooit geraakt ongeacht de functie ⇒ assertie is tautologie — valse zekerheid over pollution-defense.
 Fix: payload via merge-pad dat prototype echt kan raken; of testen dat safe geen erfelijke keys overneemt.
 Owner: Sam (dev)
+
+## Batch CPR-T2 — aanvraag-otp, account-verwijderen, admin-dashboard, admin-prijs-test-modus, audit-fixes-nacht-pr-2, audit2-continuiteit, audit2-fiscaal-high, audit2-med-low-batch1
+
+### aanvraag-otp-endpoint.test.js — Gelezen: 1-190. Isolatie OK (verse maakCtx per test). VONDSTEN F-CPR-040..042.
+### account-verwijderen.test.js — Gelezen: 1-194. Isolatie OK; fetch-mock API-consistent. VONDST F-CPR-043.
+### admin-dashboard.test.js — Gelezen: 1-292. Override-mechaniek geverifieerd veilig (geen hoisting-shadow). VONDSTEN F-CPR-044, 045.
+### admin-prijs-test-modus.test.js — Gelezen: 1-238. VONDST F-CPR-046.
+### audit-fixes-nacht-pr-2.test.js — Gelezen: 1-223. VONDSTEN F-CPR-047, 048.
+### audit2-continuiteit.test.js — Gelezen: 1-162. VONDSTEN F-CPR-049, 050.
+### audit2-fiscaal-high.test.js — Gelezen: 1-141. VONDSTEN F-CPR-051, 052.
+### audit2-med-low-batch1.test.js — Gelezen: 1-153. Alle anchor-strings geverifieerd aanwezig. VONDST F-CPR-053.
+
+#### F-CPR-040 [LAAG] aanvraag-otp-endpoint.test.js:49-55
+Quote: `computeDigest: (_alg, s) => { ... bytes.push((str.charCodeAt(i % str.length) + i) & 0xff); }`
+Probleem: mock negeert alg-argument; werkt toevallig voor MD5-gebruik in _rlHash_; latente onvoorspelbaarheid zodra perEmail-bucket wordt toegevoegd.
+Fix: alg respecteren of assertie op afwezigheid e-mail-bucket-key. Owner: Sam (dev)
+
+#### F-CPR-041 [LAAG] aanvraag-otp-endpoint.test.js:58-60
+Quote: `ctx.stuurOtpMail_ = stuurOtpMailMock;`
+Probleem: post-hoc property-reassign werkt alleen door vm-resolutie op call-time — ongedocumenteerd fragiel bij load-time-caching.
+Fix: override via createGasRuntime-param. Owner: Sam (dev)
+
+#### F-CPR-042 [MIDDEL] aanvraag-otp-endpoint.test.js:109-118 (+ Code.gs:786 vs 792)
+Quote: `props: { 'otp_ts_klant@example.nl': String(Date.now() - 30000) }, ... expect(r.ok).toBe(false);`
+Probleem: globaal-rate-limit hoogt teller op VÓÓR de per-email-60s-check ⇒ legitieme klant-retries satureren de globale 500/u-bucket; test assert alleen ok:false, niet dat de globaal-counter onaangeroerd bleef — order-afhankelijk seam ongedekt.
+Fix: assertie op globaal-counter + in source per-email-check vóór globaal-increment. Owner: Sam (dev)
+
+#### F-CPR-043 [LAAG] account-verwijderen.test.js:118-132
+Quote: `expect(src).toMatch(/\.aanvraagVerwijderOtp\(email\)/);`
+Probleem: regex op argument-namen breekt bij onschuldige rename en vangt echte breuk (vergeten successHandler) niet.
+Fix: alleen functienaam matchen of DOM-test. Owner: Sam (dev)
+
+#### F-CPR-044 [LAAG] admin-dashboard.test.js:272-273 — gedeelde src op describe-scope (read-only, latent). Fix: per test inlezen. Owner: Sam.
+
+#### F-CPR-045 [MIDDEL] admin-dashboard.test.js:27-33
+Quote: `put: (k, v) => { cacheStore[k] = v; }` (TTL genegeerd)
+Probleem: cache-mock zonder TTL ⇒ brute-force-blokkade-opheffing en sessie-token-expiry kunnen NOOIT getest worden — vals-groen op de expiry-dimensie (raakt F-RED-006).
+Fix: tijdsbewust cache-model met injecteerbare klok + window-verloop-test. Owner: Sam (dev)
+
+#### F-CPR-046 [MIDDEL] admin-prijs-test-modus.test.js:165-188
+Quote: `expect(src).toMatch(/REF_KORTING.*props.*getProperty\(.REF_KORTING./);`
+Probleem: admin-schrijft-property ↔ webhook-leest-property-seam uitsluitend via regex getoetst; prijslogica wordt nooit uitgevoerd ⇒ semantische breuk (korting 2× toegepast) blijft onzichtbaar.
+Fix: gedrags-test verwerkMollieWebhook_/maakBetaling met gemockte deps + eindprijs-assertie. Owner: Sam (dev)
+
+#### F-CPR-047 [LAAG] audit-fixes-nacht-pr-2.test.js:83-84 — beforeAll-gedeelde ctx (pure functie, benign maar inconsistent). Fix: beforeEach. Owner: Sam.
+#### F-CPR-048 [LAAG] audit-fixes-nacht-pr-2.test.js:24-38 — FNV-mock toetst vorm, geen crypto-eigenschap die _hashEmail_ claimt. Fix: documenteren + echte SHA-256-test in Node. Owner: Sam.
+
+#### F-CPR-049 [MIDDEL] audit2-continuiteit.test.js:22-126
+Quote: `expect(licentie).toMatch(/dagenSinds >= _licentieGraceDagen_\(\)/);`
+Probleem: continuïteit-fixes volledig via regex op source/markdown geverifieerd; geen productie-functie uitgevoerd ⇒ broos bij refactor, blind voor runtime-regressie op een continuïteits-blocker.
+Fix: gedrags-tests via createGasRuntime rond de grace-grens. Owner: Sam (dev)
+
+#### F-CPR-050 [MIDDEL] audit2-continuiteit.test.js:129-161
+Quote: `function resolveGrace(prop, defaultVal) { ... return defaultVal; }`
+Probleem: test verifieert een geHERimplementeerde kopie van grace-resolutie, niet _licentieGraceDagen_ zelf — kopie en origineel kunnen divergeren (schijnzekerheid).
+Fix: echte functies aanroepen. Owner: Sam (dev)
+
+#### F-CPR-051 [LAAG] audit2-fiscaal-high.test.js:55-57
+Quote: `expect(blok).toMatch(/Motivatie:\s+\$\{motivatie\.slice\(0, 200\)\}/);`
+Probleem: AWR-relevante ontgrendel-flow uitsluitend via regex incl. exacte template-spelling — breekt bij cosmetische refactor, vangt echte flow-regressie niet.
+Fix: gemockte doorloop van beheerGeslotenPeriodes. Owner: Sam (dev)
+
+#### F-CPR-052 [MIDDEL] audit2-fiscaal-high.test.js:118-140
+Quote: `function valideerMotivatie(tekst) { ... if (trimmed.length < 20) return { ok: false, ... } }`
+Probleem: motivatie-/label-validatie als lokale kopie getest; productie kan stil afwijken (< vs <=) terwijl test groen blijft — fiscaal-juridisch relevant.
+Fix: drempelchecks naar testbare helper in Boekingen.gs refactoren en die aanroepen. Owner: Sam (dev)
+
+#### F-CPR-053 [LAAG] audit2-med-low-batch1.test.js:71-72
+Quote: `* 3. BTWReminder Triggers.gs:2447 "Uw boekhoudprogramma" (voice LOW)`
+Probleem: stale regelnummer in comment (werkelijk 2337/2340, geverifieerd); bestand toetst 5 fixes via regex op exacte slice-expressies — broos.
+Fix: comments corrigeren; cap-/historielogica gedragsmatig testen. Owner: Sam (dev)
+
+Patroon CPR-T2: dominant risico = source-string-matching i.p.v. gedragstests (6 van 8 bestanden), met 2 bestanden die geherimplementeerde kopieën testen (F-CPR-050/052). Enige gedrag-seam: F-CPR-042.

@@ -69,3 +69,77 @@ Probleem: legacy-wizard herhaalt volledig (incl. licentie-dialoog) na vroege Can
 Fix: deels-voltooid markeren of licentie-stap overslaan bij geldige licentie. Owner: Sam (dev)
 
 Dominant patroon DOC-A: menupad-drift (F-DOC-001/002/004/005/007/008/009) — docs citeren labels die niet meer bestaan. Sterke fundamenten: altijd-bereikbare data-export, Help-tab, AI-hulp-tab.
+
+## Batch DOC-B — bronnen, demo, faq, functies + 4 gidsen
+Cross-check-basis: Belastingadvies.gs:131 (2026 ZELFSTANDIGENAFTREK 1200), :142 (BOX3 59500), :159-160 (ZVW 0.0485/79409); Menu.gs-labels; Bankboek.gs:156-157.
+
+### website/bronnen — Gelezen: 1-269. Zelfstandigenaftrek €1.200 correct (149). VONDST F-DOC-020.
+### website/demo — Gelezen: 1-1074. Menu-preview matcht Menu.gs goed (746-788). VONDSTEN F-DOC-021, 024, 025.
+### website/faq — Gelezen: 1-587. KOR €20.000 correct (390). VONDSTEN F-DOC-022, 023.
+### website/functies — Gelezen: 1-433. OAuth-uitleg sterke support-deflectie (356-359). VONDST F-DOC-026.
+### gids/afschrijven — Gelezen: 1-265. VONDST F-DOC-027.
+### gids/aftrekbare-kosten — Gelezen: 1-301. VONDST F-DOC-028.
+### gids/auto-leasen — Gelezen: 1-235. VONDSTEN F-DOC-029, 030.
+### gids/bankafschrift — Gelezen: 1-230. Grootboek 1200/2400 matcht code exact. VONDST F-DOC-031.
+
+#### F-DOC-020 [LAAG] website/bronnen/index.html:161
+Quote: `KIA 28% (zone €2.901–€71.683), vast €20.072 (€71.684–€132.746)`
+Probleem: KIA-grenzen verschillen per pagina (bronnen €2.901-€71.683 vs afschrijven-gids €2.800-€63.000/€116.000/€333.000 vs auto-gids ">€2.800") — drie versies, ondermijnt de verifieerbaarheids-belofte.
+Fix: één canonieke KIA-tabel overal. Owner: Sam (dev)
+
+#### F-DOC-021 [HOOG] website/demo/index.html:694 (+533, 528, 587)
+Quote: `<td>Zelfstandigenaftrek (€)</td><td>2.470 <em>(auto · Belastingdienst.nl)</em></td>`
+Probleem: verouderd 2025-bedrag gepresenteerd als actueel ("auto · Belastingdienst.nl"); code 2026 = €1.200 (Belastingadvies.gs:131); intern strijdig met bronnen-pagina; afgeleide totalen (528/587) ook fout ⇒ "demo klopt niet met mijn aangifte"-mails.
+Fix: €1.200 + afgeleiden herberekenen of neutrale voorbeeldtekst. Owner: Sam (dev)
+
+#### F-DOC-022 [MIDDEL] website/faq/index.html:425 (+225)
+Quote: `Ja. Menu &gt; Boekhouding &gt; Export naar accountant.`
+Probleem: menupad bestaat niet (menu heet "Boekhoudbaar"; werkelijk: Controle & Export → Accountantspakket exporteren, Menu.gs:185/194; "Fiscaal"-submenu heet "💡 Fiscaal & besparingstips").
+Fix: paden gelijktrekken met Menu.gs. Owner: Sam (dev)
+
+#### F-DOC-023 [LAAG] website/faq/index.html:245 (+250)
+Quote: `menu <strong>Boekhouding → Factuurlijst</strong>, kies de factuur en klik "Versturen"`
+Probleem: hoofdmenunaam + submenu fout (Facturen & Betalingen → Factuurlijst; Gezondheidscheck onder Controle & Export).
+Fix: corrigeren. Owner: Sam (dev)
+
+#### F-DOC-024 [MIDDEL] website/demo/index.html:703 (+707, 143-vergelijk)
+Quote: `<td>Box 3 heffingsvrij vermogen (€)</td><td>57.684 ... <td>Zvw inkomensafh. bijdrage (%)</td><td>5,32%`
+Probleem: als "auto · Belastingdienst.nl" gepresenteerde waarden wijken af van code-2026 (Box3 59.500; Zvw 4,85%/79.409; forfait 7,78%) ⇒ demo suggereert dat product met verkeerde tarieven rekent.
+Fix: synchroniseren met BELASTING[2026] of label "(voorbeeldwaarde)". Owner: Sam (dev)
+
+#### F-DOC-025 [LAAG] website/demo/index.html:491 (+380, 398, 512)
+Quote: `<tr><td>1a</td>...€ 39.180,00</td><td ...>€ 8.228,00</td></tr>`
+Probleem: BTW-rekensommen kloppen; wel verwarrend toevallig gelijke €6.420 voor "spaarpot" en "verwacht 30d".
+Fix: betekenissen expliciet onderscheiden. Owner: Sam (dev)
+
+#### F-DOC-026 [LAAG] website/functies/index.html:278
+Quote: `rubriek 1a, 1b, 3b en 5b automatisch berekend`
+Probleem: rubriek-sets inconsistent over pagina's (functies: 3b; demo: 3a "ICL"; FAQ: 3b) — klant zoekt verkeerde vakjes. (Raakt F-TAX-001-cluster: de code gebruikt intern r3a voor ICL.)
+Fix: één rubrieken-set die de productoutput volgt. Owner: Sam (dev)
+
+#### F-DOC-027 [MIDDEL] gids/afschrijven:162 (+100)
+Quote: `€2.800 – €63.000 investering: <strong>28%</strong> KIA ... >€116.000: dalende schaal tot nul bij €333.000`
+Probleem: verouderde (pre-2024) KIA-staffel, strijdig met bronnen-pagina ⇒ verkeerde drempels bij claimen.
+Fix: canonieke staffel overnemen. Owner: Sam (dev)
+
+#### F-DOC-028 [LAAG] gids/aftrekbare-kosten:148 (+178, 210, 237)
+Quote: `<td><strong>Eten met klant (representatie)</strong></td><td>73,5% aftrekbaar (2026)</td>`
+Probleem: 73,5% 4× herhaald zonder bronlink (pagina belooft "bron onder elke claim"); drempel-alternatief onvermeld.
+Fix: bronlink + alternatief noemen. Owner: accountant (communicatie)
+
+#### F-DOC-029 [MIDDEL] gids/auto-leasen:153
+Quote: `bijtelling lager (17% in 2026 tot €30.000 catalogusprijs, 22% daarboven)`
+Probleem: jaarlijks wijzigend EV-bijtellingscijfer zonder deeplink; stuurt lease-vs-koop-afweging fout indien onjuist — extern te verifiëren.
+Fix: verifiëren tegen Belastingplan 2026 + deeplink. Owner: accountant
+
+#### F-DOC-030 [LAAG] gids/auto-leasen:86 (+93, 192)
+Quote: `zie onze <a href="/gids/zakelijk-of-prive-auto-zzp/">auto-keuze gids</a>`
+Probleem: kerndoorverwijzing 3×; bestaan doelpagina buiten batch — geverifieerd op schijf aanwezig (glob), dus link OK; genoteerd als gecontroleerd.
+Fix: geen. Owner: Sam (dev)
+
+#### F-DOC-031 [LAAG] gids/bankafschrift:104-109
+Quote: CSV-export-tabel: bunq, Knab, ING, Rabobank, Revolut
+Probleem: ABN AMRO ontbreekt terwijl demo (271) en FAQ (470) "alle Nederlandse banken (ING, Bunq, Rabo, ABN)" claimen — grootbank-klant krijgt geen antwoord.
+Fix: ABN-rij toevoegen. Owner: Sam (dev)
+
+Rode draad DOC-B: gidsen goed onderbouwd, maar geen centrale tarieven-/menupaden-bron ⇒ demo, FAQ en gidsen divergeren op exact de cijfers die klanten natrekken.

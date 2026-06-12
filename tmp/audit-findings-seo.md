@@ -76,3 +76,64 @@ Fix: SoftwareApplication+Offer + FAQPage JSON-LD. Owner: Sam (dev)
 Quote: `<meta name="description" content="Self-employed in the Netherlands? ... €49 one-time, no subscription.">`
 Probleem: ~205 tekens; kern valt buiten snippet.
 Fix: inkorten, €49 vooraan. Owner: Sam (dev)
+
+## Batch SEO-B — faq, functies, 6 gidsen
+
+### website/faq/index.html — Gelezen: 1-586. robots/canonical/sitemap OK (9-10, sitemap:47); H-structuur OK. VONDSTEN F-SEO-020..023.
+### website/functies/index.html — Gelezen: 1-432. OG compleet incl. twitter:description (21-31). VONDSTEN F-SEO-024..026.
+### website/gids/afschrijven-zzp-uitleg — Gelezen: 1-265. Eén H1 met keyword; lazy-images. VONDSTEN F-SEO-027..029.
+### website/gids/aftrekbare-kosten-zzp — Gelezen: 1-301. @graph met dateModified OK. VONDSTEN F-SEO-030, 031.
+### website/gids/auto-leasen-vs-kopen-zzp — Gelezen: 1-234. VONDSTEN F-SEO-032, 033.
+### website/gids/bankafschrift-boeken-zzp — Gelezen: 1-229. VONDST F-SEO-034.
+### website/gids/boekhoudprogramma-zonder-abonnement — Gelezen: 1-325. Article+FAQPage gesynchroniseerd (33-61) — goed. VONDSTEN F-SEO-035..037.
+### website/gids/btw-aangifte-zzp — Gelezen: 1-390. Beste schema-implementatie van batch (27-96). VONDSTEN F-SEO-038, 039.
+
+#### F-SEO-020 [LAAG] website/faq/index.html:8 — description 218 tekens, afgekapt. Fix: ≤160. Owner: Sam.
+#### F-SEO-021 [MIDDEL] website/faq/index.html:38-55
+Quote: `{"@type":"FAQPage","mainEntity":[ ... 17 Question-objecten ...]`
+Probleem: schema dekt 17 van ~46 zichtbare vragen; sommige schema-vragen matchen zichtbare bewoording niet ⇒ gemiste rich snippets + mismatch-risico.
+Fix: synchroniseren met zichtbare details-vragen. Owner: Sam (dev)
+
+#### F-SEO-022 [HOOG] website/faq/index.html:40
+Quote: `"text":"... Geen onbeperkte "geld terug zonder reden" — Boekhoudbaar is een digitaal product`
+Probleem: onge-escapete dubbele quotes binnen JSON-string ⇒ JSON-LD ongeldig vanaf dit punt ⇒ Google kan de hele FAQPage-block afkeuren (alle FAQ-rich-results weg).
+Fix: quotes escapen; valideren met Rich Results Test. Owner: Sam (dev)
+
+#### F-SEO-023 [LAAG] website/faq/index.html:29-30 — twitter:description ontbreekt; og:image:width/height nergens. Fix: toevoegen. Owner: Sam.
+#### F-SEO-024 [LAAG] website/functies/index.html:8 — description 196 tekens. Fix: ≤160. Owner: Sam.
+#### F-SEO-025 [MIDDEL] website/functies/index.html:197
+Quote: `<h1>Alles wat je ZZP-boekhouding nodig heeft: facturen, BTW-aangifte en overzicht. Niets meer.</h1>`
+Probleem: H1 = marketing-volzin ~95 tekens, keyword niet front-loaded.
+Fix: keyword-scherpe H1 + marketingzin als lead. Owner: Sam (dev)
+
+#### F-SEO-026 [MIDDEL] website/functies/index.html:39
+Quote: `"about":{"@id":"https://www.boekhoudbaar.nl/#app"}`
+Probleem: dangling @id (geen #app-node op deze pagina); product-pagina mist eigen SoftwareApplication/Product+Offer-markup (€49).
+Fix: #app-node met Offer hier definiëren. Owner: Sam (dev)
+
+#### F-SEO-027 [LAAG] gids/afschrijven:8 — description 168 tekens. Fix: inkorten. Owner: Sam.
+#### F-SEO-028 [HOOG] gids/afschrijven:191-218
+Quote: `<section class="faq" aria-label="Veelgestelde vragen"> ... <details><summary>Mag ik een laptop in één keer afschrijven ...`
+Probleem: zichtbare FAQ (5 vragen) zonder FAQPage-JSON-LD (btw-aangifte-gids heeft het wél); Article mist dateModified + mainEntityOfPage.
+Fix: FAQPage-node + Article aanvullen. Owner: Sam (dev)
+
+#### F-SEO-029 [MIDDEL] alle 6 gidsen in batch (afschrijven:17-22 e.a.)
+Quote: `<meta property="og:type" content="article"> ... <meta property="og:locale" content="nl_NL">`
+Probleem: twitter:*-meta ontbreekt op alle 6 gidsen ⇒ lagere CTR bij delen op X.
+Fix: template-fix (één keer = alle 35 gidsen). Owner: Sam (dev)
+
+#### F-SEO-030 [LAAG] gids/aftrekbare-kosten:7-8 — title 72 + description 173 tekens. Fix: inkorten. Owner: Sam.
+#### F-SEO-031 [HOOG] gids/aftrekbare-kosten:227-254 — zichtbare FAQ (5 vragen) zonder FAQPage-node in bestaande @graph. Fix: toevoegen. Owner: Sam.
+#### F-SEO-032 [LAAG] gids/auto-leasen:8 — description 116 tekens (te kort; idem bankafschrift 110). Fix: 150-160 + CTA. Owner: Sam.
+#### F-SEO-033 [HOOG] gids/auto-leasen:31 — minimaal Article-schema (geen dateModified/description/mainEntityOfPage/image) + FAQ zonder FAQPage. Fix: aanvullen. Owner: Sam.
+#### F-SEO-034 [HOOG] gids/bankafschrift:31 — idem minimaal Article + FAQ zonder FAQPage; 3-stappen-sectie (115-140) is ideaal HowTo-schema-materiaal, onbenut. Fix: aanvullen + HowTo overwegen. Owner: Sam.
+#### F-SEO-035 [LAAG] gids/boekhoudprogramma:8 — description 198 tekens op high-intent query. Fix: ≤160. Owner: Sam.
+#### F-SEO-036 [LAAG] gids/boekhoudprogramma:38-45 — Article mist image (SVG wordt door Google slecht geaccepteerd — raster gebruiken). Fix: image toevoegen. Owner: Sam.
+#### F-SEO-037 [LAAG] gids/boekhoudprogramma:63-66 — pagina wijkt af van gemeenschappelijk head-template ⇒ wordt bij template-fixes overgeslagen. Fix: onder template brengen. Owner: Sam.
+#### F-SEO-038 [LAAG] gids/btw-aangifte:8 — description 214 tekens op top-keyword. Fix: ≤160 + "eerste keer"-intent. Owner: Sam.
+#### F-SEO-039 [MIDDEL] gids/btw-aangifte:352-358
+Quote: `<div class="cta-onderaan"><h3>BTW automatisch bijhouden?</h3> ... </div></main>`
+Probleem: BTW-hub-gids heeft als enige géén "Verder lezen"-blok ⇒ link-equity blijft hangen; BTW-cluster (suppletie, teruggave, verleggen, maand-vs-kwartaal) niet gelinkt.
+Fix: Verder-lezen-blok met BTW-cluster-links. Owner: Sam (dev)
+
+Patroon SEO-B: geen enkele description in de 150-160-band; schema-kwaliteit varieert sterk — gids-template optrekken naar btw-aangifte-niveau lost F-SEO-028/031/033/034/029 in één keer op.
