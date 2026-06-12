@@ -140,3 +140,98 @@ Quote: `const it2 = backupMap.getFiles(); while (it2.hasNext()) { ... }`
 Probleem: lineaire scan + per-file getDateCreated() over onbegrensd groeiende Backups-map ⇒ latente performance-schuld.
 Fix: oude snapshots snoeien of nieuwste lexicografisch vindbaar maken via bestandsnaam.
 Owner: Sam (dev)
+
+## Batch GAS-C — BankImport, Bankboek, BelastingOptimizer, Belastingadvies, Belastingvoordeel, BoekingEngine, Boekingen, Brand
+
+### src/BankImport.gs — Gelezen: 1-547. guillotineCheck_ 270s + self-reschedule (314-335) + batch-write (399-403) = OK hoofdloop. VONDSTEN F-GAS-040, 041.
+### src/Bankboek.gs — Gelezen: 1-185. Eén lineaire pass (9-22). VONDST F-GAS-042.
+### src/BelastingOptimizer.gs — Gelezen: 1-288. K>18-guard capt brute-force op 2^18 (84-89); binnenste loop O(K) — correcte verdediging. Geen vondsten.
+### src/Belastingadvies.gs — Gelezen: 1-1919. KIA_MISSER-property kwartaal-bucket bounded (1786-1797); advies 10-min cache (716). VONDSTEN F-GAS-043..045.
+### src/Belastingvoordeel.gs — Gelezen: 1-1145. mijlpaal-properties bounded met guard (250-255). VONDST F-GAS-046.
+### src/BoekingEngine.gs — Gelezen: 1-1086. ai-scan rate-limit (588-594); DriveApp één map (482). VONDSTEN F-GAS-047..049.
+### src/Boekingen.gs — Gelezen: 1-1480. herberekeningGrootboekSaldi correct gebatcht (490-573); historie-property gecapt 15 (1404-1405). VONDSTEN F-GAS-050..053.
+### src/Brand.gs — Gelezen: 1-104. Constanten + pure string-builder. Geen vondsten.
+
+#### F-GAS-040 [HOOG] src/BankImport.gs:414-421
+Quote: `vfUpdates.forEach(function(u) { const huidigBetaald = parseFloat(vfSheet.getRange(u.rij, 14).getValue()) || 0; ... vfSheet.getRange(u.rij, 14).setValue(nieuwBetaald);`
+Probleem: factuur-update-staart doet per match 2-4 losse roundtrips BUITEN de guillotine-bewaking (die alleen de hoofdloop dekt, 328-335) ⇒ grote import kan in de niet-resumable staart timen met half-bijgewerkte factuurstatus terwijl banktransacties al weggeschreven zijn.
+Fix: updates verzamelen en per kolom-blok batchen; betaald-kolom vooraf 1× inlezen; staart binnen guillotine trekken.
+Owner: Sam (dev)
+
+#### F-GAS-041 [MIDDEL] src/BankImport.gs:193,213,305
+Quote: `const vfData = vfSheet.getDataRange().getValues();` … `const btData = btSheet.getDataRange().getValues();`
+Probleem: VF+IF+BANKTRANSACTIES volledig gelezen per import, vóór de guillotine-timer; BANKTRANSACTIES groeit het hardst; geen periode-filter.
+Fix: dedup-read beperken tot CSV-datumbereik / 3 kolommen.
+Owner: Sam (dev)
+
+#### F-GAS-042 [LAAG] src/Bankboek.gs:12
+Quote: `const data = sheet.getDataRange().getValues();`
+Probleem: getBanksaldo_ hersommeert alle banktransacties per aanroep zonder cache/projectie.
+Fix: saldo uit GROOTBOEKSCHEMA-rekening 1200 (al incrementeel bijgehouden).
+Owner: Sam (dev)
+
+#### F-GAS-043 [MIDDEL] src/Belastingadvies.gs:1832-1834
+Quote: `if (typeof stuurMailMetDlq_ === 'function') { stuurMailMetDlq_(ontvanger, '💰 KIA-aftrek mogelijk gemist (~€' + Math.round(kiaGeschat) + ')', body);`
+Probleem: dagelijks mail-pad zonder zichtbare EmailQuotaGuard-check (idempotency-property wél correct vóór send, 1797).
+Fix: verifiëren dat stuurMailMetDlq_ de guard toepast; anders expliciete check.
+Owner: Sam (dev)
+
+#### F-GAS-044 [MIDDEL] src/Belastingadvies.gs:1576-1582,1605-1619,1628-1640
+Quote: `advies.aftrekken.forEach(a => { sheet.getRange(rij, 1).setValue(a.naam); ... })`
+Probleem: honderden losse setValue/merge/setBackground-calls per advies-render ⇒ seconden trage menu-actie (bounded, geen cap-risico).
+Fix: 2D-array + setValues per sectie; range-brede opmaak.
+Owner: Sam (dev)
+
+#### F-GAS-045 [MIDDEL] src/Belastingadvies.gs:1025,1754
+Quote: `const jpData = aovInJp.getDataRange().getValues();` (1025) … `const data = ifSheet.getDataRange().getValues();` (1754)
+Probleem: volledige JOURNAALPOSTEN-scan voor AOV-detectie + dagelijkse volledige INKOOPFACTUREN-scan voor KIA-misser (jaar-filter pas ín de loop, 1761); JOURNAALPOSTEN is snelst-groeiende sheet.
+Fix: read filteren op boekjaar/kolommen; AOV-detectie laten meeliften op bestaande pass.
+Owner: Sam (dev)
+
+#### F-GAS-046 [LAAG] src/Belastingvoordeel.gs:469,968-972
+Quote: `const data = jpSheet.getDataRange().getValues();` (reiskosten-tracker)
+Probleem: volledige JOURNAALPOSTEN-read bij elke dialog-open; jaar-filter pas in de loop (473).
+Fix: YTD uit grootboeksaldo 7350 of gefilterde read.
+Owner: Sam (dev)
+
+#### F-GAS-047 [HOOG] src/BoekingEngine.gs:843-857
+Quote: `lock = LockService.getScriptLock(); lockHeld = lock.tryLock(2000); ... props.setProperty('AUDIT_KETEN_HASH', entryHash); ... props.setProperty(LOG_KEY, buffer);`
+Probleem: schrijfAuditLog_ = ScriptLock + SHA-256 + 2× setProperty PER hot-path-aanroep (10+ bestanden); wordt bovendien aangeroepen binnen de al-gelockte updateGrootboekSaldo_-context (Boekingen.gs:375→382/457) ⇒ geneste acquisitie verergert contentie/lock-starvation tussen parallelle invocaties; batches serialiseren volledig.
+Fix: hash-chain batchen/periodiek; geen nieuwe ScriptLock binnen gelockte context (no-lock-vlag in batch).
+Owner: Sam (dev)
+
+#### F-GAS-048 [MIDDEL] src/BoekingEngine.gs:869-882
+Quote: `const bestaand = props.getProperty(LOG_KEY) || ''; const regels = bestaand ? bestaand.split('\n') : []; regels.push(entry); ... props.setProperty(LOG_KEY, buffer);`
+Probleem: read-modify-write van volledige buffer per audit-regel (8000-char-cap zelf correct); honderden herhalingen in batch = duurste handeling per boeking (met F-GAS-047).
+Fix: in-memory bufferen per batch, 1× flushen; of append naar sheet-tab.
+Owner: Sam (dev)
+
+#### F-GAS-049 [MIDDEL] src/BoekingEngine.gs:629-642,782-790
+Quote: `const resp = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/...' + ':generateContent?key=' + apiKey, {...})`
+Probleem: parseSpraakinvoer (782) mist de rate-limit-guard die scanDocumentMetAI wél heeft (588-594); klant kan spraak-invoer herhaald afvuren en gedeelde Gemini-quota uitputten; geen backoff op 429/503.
+Fix: rateLimit_('ai-spraak', ...) vóór de fetch.
+Owner: Sam (dev)
+
+#### F-GAS-050 [HOOG] src/Boekingen.gs:901-913,973-990
+Quote: `open.forEach(function(f) { sheet.appendRow([ f.factuurnummer, ... ]); ... sheet.getRange(rij, 1, 1, 9).setBackground(...)`
+Probleem: debiteuren/crediteuren-render doet appendRow + setBackground PER open factuur (klassiek appendRow-in-loop-antipatroon); wordt ook ná koppelTransactiesAanFacturen aangeroepen (1021-1022) ⇒ lineair richting 6-min-cap.
+Fix: 2D-array + één setValues; aging-kleuren range-breed/conditional formatting.
+Owner: Sam (dev)
+
+#### F-GAS-051 [HOOG] src/Boekingen.gs:1007-1018
+Quote: `for (let i = 1; i < btData.length; i++) { ... koppelBankTransactieAanFactuur_(ss, btData[i][0], ref, bedrag, isOntvangst, datum); }`
+Probleem: loop over álle banktransacties × per-call full-sheet-scan in koppelBankTransactieAanFactuur_ (Triggers.gs, zie F-GAS-002) = N×M; geen guillotine/self-reschedule (anders dan BankImport).
+Fix: open-facturen 1× indexeren (ref→factuur) + guillotineCheck_ toevoegen.
+Owner: Sam (dev)
+
+#### F-GAS-052 [MIDDEL] src/Boekingen.gs:758-795
+Quote: `const lock = LockService.getScriptLock(); if (!lock.tryLock(30000)) throw ...; try { Object.keys(data).forEach(code => { ... maakJournaalpost_(ss, {...}); }); } finally { lock.releaseLock(); }`
+Probleem: verwerkAfschrijvingen houdt één grove lock over alle journaalposten+saldo+audit-writes (reentrant binnen executie, maar >30s vasthouden ⇒ lock-starvation voor andere invocaties).
+Fix: grove lock vervangen door idempotency-guard; fijnmazige locks van downstream volstaan.
+Owner: Sam (dev)
+
+#### F-GAS-053 [MIDDEL] src/Boekingen.gs:301-331
+Quote: `const vfData = vfSheet.getDataRange().getValues(); ... vfSheet.getRange(i + 1, 15).setValue('Gestorneerd'); vfSheet.getRange(i + 1, 12).setValue(0);`
+Probleem: per storno 2-3 volledige reads van de grootste sheets (JOURNAALPOSTEN 214, VF 301, IF 319) om één rij te vinden.
+Fix: kolom-projectie / index-tab boekingId→rij.
+Owner: Sam (dev)

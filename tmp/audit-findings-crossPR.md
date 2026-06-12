@@ -1,0 +1,117 @@
+# Audit-findings — cross-pr-regressie
+Hashes: zie tmp/file-hashes.txt.
+
+## Batch CPR-S1 — Triggers.gs, Dashboard.gs, HerhalendeKosten.gs (interactie-cluster dagelijkseTaken)
+Git-archeologie: Triggers.gs recent intensief bewerkt (#294 dunning, #295 booking-core, #298 cleanup/self-heal); Dashboard.gs en HerhalendeKosten.gs sinds #267 onaangeraakt — het seam zit precies daar.
+
+### src/Triggers.gs — Gelezen: 1-2517. Status-machine: dunning skipt BETAALD/GECREDITEERD (2087-2088), markeerVervallen raakt alleen VERZONDEN/DEELS_BETAALD (2257-2304) = OK; geen GESTORNEERD-status in Config. BTW-deadline binnen dagelijkseTaken (1531-1537) = OK. VONDSTEN F-CPR-020..023.
+### src/Dashboard.gs — Gelezen: 1-1628. verwerkHerhalendeKosten_ in try/catch (189); kleurregels kennen alle 6 statussen (836-843); placeholder-cleanup (769-785). VONDST F-CPR-024.
+### src/HerhalendeKosten.gs — Gelezen: 1-517. Script-lock + idemKey per rij+datum (283-285, 336-376) — dubbel boeken correct afgevangen; null/NaN-datum → FOUT-status (304-321). VONDST F-CPR-025.
+
+#### F-CPR-020 [MIDDEL] src/Triggers.gs:1700-1718 vs 2069-2099
+Quote: `const datum = data[i][2]; ... if (ts >= cutoff) actieveFacturen[fnr] = true;`
+Probleem: cleanupHerinneringsStap wist herinneringsStap_-keys van facturen >2 jaar oud puur op factuurleeftijd; dunning leest daarna gestuurdeStap=0 ⇒ oude onbetaalde factuur krijgt stappen 1/2/3 OPNIEUW — cleanup ondermijnt dunning-idempotentie.
+Fix: alleen keys wissen bij status BETAALD/GECREDITEERD of dagenOver > max dunning-stap.
+Owner: Sam (dev)
+
+#### F-CPR-021 [HOOG] src/Triggers.gs:1666 + 1787-1797 ↔ src/Dashboard.gs:189 ↔ src/HerhalendeKosten.gs:277
+Quote: `_runTaak_('dashboard', function() { vernieuwDashboard(); });`
+Probleem: budget-guard (4 min) skipt elke niet-kritieke step; dashboard-step staat laat én is niet kritiek; maar vernieuwDashboard() is de ENIGE plek waar verwerkHerhalendeKosten_() automatisch draait ⇒ op grote/trage installaties (precies waarvoor de guard bestaat) worden herhalende kosten structureel nooit auto-geboekt ⇒ gemiste huur/abonnement/verzekering-aftrek. Budget-guard-PR veranderde stil de garantie van de niet-mee-gemigreerde HerhalendeKosten-feature.
+Fix: verwerkHerhalendeKosten_() eigen vroege _runTaak_('herhalendeKosten', {kritiek:true}) geven, los van de UI-render.
+Owner: Sam (dev)
+
+#### F-CPR-022 [LAAG] src/Triggers.gs:1531-1532
+Quote: `_runTaak_('markeerVervallen', ...);` / `_runTaak_('herinneringen', ...);`
+Probleem: geen — orde gecontroleerd en order-robuust (dunning kijkt naar vervaldatum, niet status). Bevestiging, geen actie.
+Owner: Sam (dev)
+
+#### F-CPR-023 [LAAG] src/Triggers.gs:1699 vs 1717
+Quote: `// ... 'Laatst bijgewerkt' kolom 15). ... const datum = data[i][2];`
+Probleem: comment zegt kolom 15 (Laatst bijgewerkt), code gebruikt [2] (Factuurdatum) ⇒ key kan te vroeg "inactief" worden (versterkt F-CPR-020).
+Fix: data[i][14] gebruiken of comment + criterium herzien.
+Owner: Sam (dev)
+
+#### F-CPR-024 [MIDDEL] src/Dashboard.gs:189 ↔ src/HerhalendeKosten.gs:283-285
+Quote: `try { herhalendeResult = verwerkHerhalendeKosten_(); } catch (e) { Logger.log('Herhalende kosten: ' + e.message); }`
+Probleem: drie gelijktijdige aanroep-paden (trigger 1666, hoofdformulier 483, verkoopformulier 1387); bij lock-falen stil {geboekt:0, komend:[]} zonder audit ⇒ dashboard toont lege komende-kosten zonder spoor.
+Fix: lock-falen loggen + "tijdelijk niet beschikbaar" i.p.v. lege lijst.
+Owner: Sam (dev)
+
+#### F-CPR-025 [MIDDEL] src/HerhalendeKosten.gs:289 + 412-414 ↔ src/Triggers.gs:1607-1608
+Quote: `const re = /^herhKost_.+_(\d{4})-(\d{2})-(\d{2})$/; ... if (dt.getTime() < drempelMs)` vs `const MAX_INHAAL = 36;`
+Probleem: cleanup-venster (90d) < inhaal-venster wekelijks (36×7=252d): na verloren sheet-datum-write (crash tussen boeking en regel 381) herbezoekt de inhaal-loop datums 90-252d terug waarvan de idem-keys al gewist zijn ⇒ dubbele journaalposten. De twee PRs kennen elkaars venster niet.
+Fix: cleanup-drempel ≥ 270d of MAX_INHAAL frequentie-afhankelijk begrenzen.
+Owner: Sam (dev)
+
+Hot spots: Triggers.gs + het gedeelde ScriptProperties-namespace (herinneringsStap_ geschreven/gewist in 3+ bestanden; herhKost_ geschreven in HerhalendeKosten, gewist in Triggers).
+
+## Batch CPR-T1 — test-infra + zware tests
+
+### tests/__helpers__/gas-runtime.js — Gelezen: 1-195. Verse vm-context per createGasRuntime (182-190) = OK; safeAuditLog_-prelude matcht productie. VONDSTEN F-CPR-001, 002.
+### tests/__helpers__/gs-transform.js — Gelezen: 1-12. Triviale passthrough. Geen vondsten.
+### tests/__helpers__/mocks.js — Gelezen: 1-151. Verse backing per aanroep (31-32, 106-107); setProperty String-coercion matcht GAS (111). VONDST F-CPR-003.
+### tests/integration/invoiceFlow.test.js — Gelezen: 1-309. beforeEach verse ctx+mocks (73-114) = OK; kolomposities kloppen met sheet-schemas. Raakt F-CPR-001 (idempotency-pad nooit uitgevoerd).
+### tests/integration/ultieme-stresstest.test.js — Gelezen: 1-628. VONDSTEN F-CPR-004..007.
+### tests/property/formeel-bewijs-invarianten.test.js — Gelezen: 1-212. Vaste seeds = OK. VONDST F-CPR-008.
+### tests/property/fuzz-factuur-payloads.test.js — Gelezen: 1-207. Generators dekken Invalid Date/Vrijgesteld/Verlegd/leeg (83-98) = OK. VONDST F-CPR-009 (+F-CPR-001; duplicaat-detectie gestubd, regel 57).
+### tests/property/top5-property-tests.test.js — Gelezen: 1-300. Mock-kolommen [2]/[9]/[10]/[11]/[14] in sync met schema (256-265); null/NaN/Infinity-generators OK. VONDST F-CPR-010.
+
+#### F-CPR-001 [HOOG] tests/__helpers__/gas-runtime.js:33-40
+Quote: `const mockGetProperty = jest.fn(() => null); ... setProperty: mockSetProperty, // jest.fn()`
+Probleem: stateless Properties-mock ⇒ e-mail-idempotency-guard (Triggers.gs:782-803) wordt in ELKE test omzeild; invoiceFlow + fuzz groen op een retry-pad dat in productie fundamenteel anders loopt. PR die idempotency-semantiek wijzigt wordt niet gevangen.
+Fix: maakStoreMock (stateful) injecteren + expliciete retry-test.
+Owner: Sam (dev)
+
+#### F-CPR-002 [MIDDEL] tests/__helpers__/gas-runtime.js:99-135
+Quote: `SpreadsheetApp: { ... }, MailApp: { ... }, // geen CacheService`
+Probleem: CacheService ontbreekt terwijl productie het gebruikt (Triggers.gs:73, 944, 986) ⇒ ReferenceError of nooit-bereikt pad; cache-gebaseerde dubbel-detectie ongetest.
+Fix: stateful CacheService-mock toevoegen.
+Owner: Sam (dev)
+
+#### F-CPR-003 [LAAG] tests/__helpers__/mocks.js:81-85
+Quote: `appendRow: (rij) => { data.push(rij.slice()); }, ... getLastRow: () => data.length,`
+Probleem: GAS appendRow schrijft onder laatste rij-met-data; mock pusht onvoorwaardelijk ⇒ rij-index kan 1 afwijken bij trailing-lege-rijen ⇒ vals-groen op exacte indexen.
+Fix: semantiek documenteren of getLastRow = laatste niet-lege rij.
+Owner: Sam (dev)
+
+#### F-CPR-004 [HOOG] tests/integration/ultieme-stresstest.test.js:33-34, 547-548
+Quote: `function registerFinding(category, severity, title, details) { findings.push(...); }` ... `registerFinding('E', '🔴 BROKEN', 'Boeking in afgesloten jaar wordt geaccepteerd', ...)`
+Probleem: findings-collector zonder gate — slechts 3 expect() in ~25 tests; 🔴 BROKEN laat CI groen ⇒ het "stress"-vangnet vangt niets af.
+Fix: afterAll laten falen op BROKEN-findings of kritieke checks naar echte assertions.
+Owner: Sam (dev)
+
+#### F-CPR-005 [MIDDEL] tests/integration/ultieme-stresstest.test.js:605-617
+Quote: `const out = path.join(__dirname, '../../.claude/stresstest-findings-raw.json'); fs.writeFileSync(out, ...)`
+Probleem: test schrijft in repo-tree — niet-idempotent, parallel-gevoelig, kan ongewild gecommit worden.
+Fix: os.tmpdir() of env-flag; .gitignore.
+Owner: Sam (dev)
+
+#### F-CPR-006 [LAAG] tests/integration/ultieme-stresstest.test.js:138, 267, 341, 446, 507
+Quote: `let ctx; beforeAll(() => { ctx = buildCtx(); });`
+Probleem: gedeelde ctx per describe + module-scope caches (_gbRijCache_) ⇒ latente volgorde-afhankelijkheid.
+Fix: beforeEach of cache-reset.
+Owner: Sam (dev)
+
+#### F-CPR-007 [MIDDEL] tests/integration/ultieme-stresstest.test.js:126-131, 481-484
+Quote: `createGasRuntime(['Config.gs','Utils.gs','Invariants.gs','BoekingEngine.gs','Boekingen.gs','Jaarafsluiting.gs','GezondheidCheck.gs'], ...)` ... `if (!ctx.valideerBoeking) { registerFinding(...); return; }`
+Probleem: valideerBoeking zit in HitlValidatie.gs dat niet gebundeld is ⇒ D3 permanent dode test; alle ctx.X?-skip-takken falen stil bij hernoemen.
+Fix: HitlValidatie.gs bundelen of D3 verwijderen.
+Owner: Sam (dev)
+
+#### F-CPR-008 [MIDDEL] tests/property/formeel-bewijs-invarianten.test.js:37-177
+Quote: `const btw = Math.round(excl * tarief * 100) / 100; const incl = excl + btw; ... expect(Math.abs(incl - verwacht)).toBeLessThan(0.011);`
+Probleem: properties verifiëren zelf-herberekende JS-expressies i.p.v. src-functies ⇒ per constructie waar; tarieven-set (69) mist null/lege strings/Invalid Date.
+Fix: echte ctx-functies aanroepen; null/Vrijgesteld/Verlegd toevoegen.
+Owner: Sam (dev)
+
+#### F-CPR-009 [MIDDEL] tests/property/fuzz-factuur-payloads.test.js:147-158, 205
+Quote: `if (/^(TypeError|ReferenceError|...):/.test(err.toString())) return true; ... return false; // klant-vriendelijk patroon`
+Probleem: elke fout met NL-zin als message = "verwachte reject" ⇒ stop-criterium blind voor logische bugs met nette throw.
+Fix: classificeren op expliciete error-code (InvariantSchending.code).
+Owner: Sam (dev)
+
+#### F-CPR-010 [HOOG] tests/property/top5-property-tests.test.js:234-246
+Quote: `ctx._valideerEnSaneerAiOutput_(raw); if (Object.prototype[sleutel] === waarde) { throw new Error('PROTOTYPE POLLUTION: ...'); }`
+Probleem: JSON.parse zet __proto__ als own-property; Object.prototype wordt nooit geraakt ongeacht de functie ⇒ assertie is tautologie — valse zekerheid over pollution-defense.
+Fix: payload via merge-pad dat prototype echt kan raken; of testen dat safe geen erfelijke keys overneemt.
+Owner: Sam (dev)

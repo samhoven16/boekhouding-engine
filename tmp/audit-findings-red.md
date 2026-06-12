@@ -155,3 +155,38 @@ Quote: `const entry = lockHeld ? entryBase + ' | ' + entryHash.slice(0, 16) : en
 Probleem: verifier slaat NOLOCK-entries over zonder prevHash-wijziging ⇒ klant met Editor-rechten kan tampering maskeren door hash-suffix te vervangen door 'NOLOCK'; anchor-sheet (1053-1082) mitigeert eind-hash-reset, niet midden-buffer-maskering. Bekende beperking (862-867).
 Fix: NOLOCK-aandeel rapporteren en bij abnormaal aandeel waarschuwen.
 Owner: Sam (dev)
+
+## Batch RED-C — BTW, BTWReminder, Bankboek, BelastingOptimizer, Belastingvoordeel, Boekingen, BtwExport, Config
+
+### src/BTW.gs — Gelezen: 1-922. Geen UrlFetch/eval; JSON.parse op eigen property in try/catch (725); replay OK (192-197, 269). VONDST F-RED-040.
+### src/BTWReminder.gs — Gelezen: 1-305. Dialog interpoleert alleen statische namen + getallen; dubbele-mail-guard persistent (67-71, 134-135). Geen vondsten.
+### src/Bankboek.gs — Gelezen: 1-185. Dialog statisch; Object.fromEntries op vaste form-velden (124). Deelt F-RED-041 (omschr-pad).
+### src/BelastingOptimizer.gs — Gelezen: 1-288. Statische dialog; textContent (281); geen sheet-writes. Geen vondsten.
+### src/Belastingvoordeel.gs — Gelezen: 1-1146. Dialogs interpoleren alleen getallen; data.omschr via textContent (556). Deelt F-RED-041. Observatie: boekReiskostenWeek geen idempotentie (klant-tegen-zichzelf).
+### src/Boekingen.gs — Gelezen: 1-1481. Storno-dubbeldetectie (217-226), locks (375-384, 1028-1093), compensating rollback OK. VONDSTEN F-RED-041..043.
+### src/BtwExport.gs — Gelezen: 1-326. periodeKey strikt gevalideerd (319); escHtml client-side (120-151); CSV alleen statische rubriek-namen + getallen (304-316) — correct ontworpen. Geen vondsten.
+### src/Config.gs — Gelezen: 1-346. Declaratieve constanten; PROP bevat key-namen, geen secrets. Geen vondsten.
+
+#### F-RED-040 [LAAG] src/BTW.gs:725
+Quote: `try { snaps = JSON.parse(props.getProperty('BTW_SNAPSHOTS') || '{}'); }`
+Probleem: klant met editor-toegang kan BTW_SNAPSHOTS herschrijven om de suppletie-detector te misleiden (threat 5-jaar-retroactieve-fraude). Geen RCE/pollution; inherente eigenschap van klant-eigen properties.
+Fix: AUDIT_LOG-hash-chain als trust-anchor; documenteren dat snapshots niet bewijskrachtig zijn.
+Owner: Sam (dev)
+
+#### F-RED-041 [LAAG] src/Boekingen.gs:102
+Quote: `opt.omschr || '',`
+Probleem: maakJournaalpost_ schrijft vrije-tekst-omschrijving zonder saniteer_ (bestaat in BoekingEngine.gs:52); callers boekReiskosten (Belastingvoordeel.gs:591), boekReiskostenWeek (692), verwerkPriveCorrectie (Bankboek.gs:154) geven user-input door ⇒ =HYPERLINK/IMPORTRANGE als actieve formule in Journaalposten; genereerGrootboekkaart_ (644) kopieert verder. Zelf-toegebracht (single-tenant) maar exfiltratie-risico bij delen met accountant.
+Fix: saniteer_(opt.omschr) (+ref/notities) in maakJournaalpost_ — dekt ~8 callers in één keer.
+Owner: Sam (dev)
+
+#### F-RED-042 [LAAG] src/Boekingen.gs:601
+Quote: `const bladNaam = `GB_${code}`; ... sheet = ss.insertSheet(bladNaam);`
+Probleem: zoekGrootboekNaam_ (1098-1101) retourneert bij onbekende code de code zelf ⇒ guard op 592 vangt niets ⇒ ongebreidelde sheet-creatie GB_<wat-dan-ook>.
+Fix: bestaat-check tegen STANDAARD_GROOTBOEK; zoekGrootboekNaam_ null laten teruggeven.
+Owner: Sam (dev)
+
+#### F-RED-043 [LAAG] src/Boekingen.gs:712-718
+Quote: `${vasteActiva.filter(...).map(r => `... <td>${r[1]}</td> ... name="${r[0]}"`)}`
+Probleem: afschrijvingen-dialog interpoleert grootboek-code/naam zonder escHtml_; vandaag statisch (STANDAARD_GROOTBOEK) ⇒ geen werkende exploit, maar latente reflected-XSS zodra klant eigen rekeningnamen kan zetten.
+Fix: escHtml_ om r[0]/r[1].
+Owner: Sam (dev)
