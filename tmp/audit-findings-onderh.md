@@ -84,3 +84,81 @@ Fix: retentiebeleid (laatste N / 90 dagen) in snapshot-maker.
 Owner: Sam (dev)
 
 Batch-verdict: WERKT DOOR maar BEVRIEST OP SETUP-JAAR (F-OND-006 + F-OND-012); fiscale teksten verouderen stil (F-OND-004/007); property-/Drive-groei (F-OND-008/014).
+
+## Batch OND-B — BankImport, Bankboek, BelastingOptimizer, Belastingadvies, Belastingvoordeel, BoekingEngine, Boekingen, Brand
+
+### src/BankImport.gs — Gelezen: 1-547. CSV-import volledig lokaal (446-471) = abandoned-proof. VONDSTEN F-OND-020..022.
+### src/Bankboek.gs — Gelezen: 1-185. Vaste structurele grootboekcodes; puur lokaal. Geen vondsten.
+### src/BelastingOptimizer.gs — Gelezen: 1-288. Staffel via getBelasting_() (94, 181). VONDST F-OND-023.
+### src/Belastingadvies.gs — Gelezen: 1-1919. BELASTING_META met versie/bron goed gemodelleerd (46-66); fallback + TARIEF_VEROUDERD-flag (251-282, banner 1412-1422). VONDSTEN F-OND-024 (BLOCKER)..027.
+### src/Belastingvoordeel.gs — Gelezen: 1-1145. Kern-boekingen lokaal (576-603, 753-773). VONDSTEN F-OND-028..030.
+### src/BoekingEngine.gs — Gelezen: 1-1086. AI degradeert netjes naar handmatig (582); audit-ringbuffer begrensd (869-882). VONDSTEN F-OND-032..034, 036, 037.
+### src/Boekingen.gs — Gelezen: 1-1480. Kernboekhouding volledig lokaal. VONDSTEN F-OND-037..040.
+### src/Brand.gs — Gelezen: 1-104. Statisch. Geen vondsten.
+
+#### F-OND-020 [LAAG] src/BankImport.gs:506 — 2024-datum in CSV-voorbeeld (cosmetisch). Fix: dynamisch jaar. Owner: Sam.
+#### F-OND-021 [MIDDEL] src/BankImport.gs:307-308, 365-381
+Quote: `const key = dt + '|' + (parseFloat(btData[i][3]) || 0).toFixed(2) + '|' + String(btData[i][2] || '').slice(0, 30);`
+Probleem: dedup-key + 15-koloms rij-layout op vaste indices zonder schema-versie ⇒ kolom-toevoeging schuift dedup stil mis ⇒ dubbele journaalposten of gemiste dedup.
+Fix: schema-versie-cel + kolom-validatie tegen sheet-schemas.md; luid falen bij mismatch.
+Owner: Sam (dev)
+#### F-OND-022 [MIDDEL] src/BankImport.gs:188-227 — volledige VF/IF/BT-scan per import groeit lineair; match-fase buiten guillotine. Fix: open-facturen-index / jaarlijkse archivering. Owner: Sam.
+#### F-OND-023 [LAAG] src/BelastingOptimizer.gs:90-91, 182 — verouderde fallbacks 0.3693/0.28. Fix: getBelasting_-defaults of throw. Owner: Sam.
+
+#### F-OND-024 [BLOCKER] src/Belastingadvies.gs:185-234, 256-263
+Quote: `2027: { ZELFSTANDIGENAFTREK: 900, // INDICATIEF — afbouw zet door ... LIJFRENTE_MAX: 39000, ...`
+Probleem: BELASTING_PER_JAAR loopt t/m 2027 en 2027 is expliciet placeholder/INDICATIEF. Vanaf belastingjaar 2028 valt getBelasting_() terug op die nooit-bevestigde placeholder (TARIEF_VEROUDERD-flag + banner mitigeren zichtbaarheid, niet de fout) ⇒ heel het product (zelfstandigenaftrek, schijven, heffingskortingen, KIA, Box 3, DGA-loon) rekent vanaf 1-1-2028 structureel fout als Sam de Prinsjesdag-update mist. Hét concrete 5-jaar-breekpunt. Tijdlijn: Q3 2026 → 2027 definitief maken; 1-1-2028 → eerste jaar zonder tabel.
+Fix: server-override-pad (haalConfigOp_().belastingTarieven, 245) + Instellingen-overrides (358-389) documenteren als klant/accountant-pad zonder Sam; banner hard/blokkerend maken voor jaren > laatst-bevestigd.
+Owner: Sam (dev) + accountant (communicatie)
+
+#### F-OND-025 [MIDDEL] src/Belastingadvies.gs:7-25, 144-150, 360-388, 1561, 1910
+Quote: `Zelfstandigenaftrek €2.470 (ZZP, ≥1225 uur — stapsgewijs verlaagd)` (11); `Zonnepanelen – ... salderen (t/m 2027)` (1910)
+Probleem: klant-zichtbare teksten met hardcoded jaargebonden bedragen buiten getBelasting_() drijven weg van de config-gestuurde berekening.
+Fix: teksten uit config genereren of als "voorbeeld" markeren.
+Owner: Sam (dev)
+
+#### F-OND-026 [MIDDEL] src/Belastingadvies.gs:238, 714, 720, 1753
+Quote: `const jaar = new Date().getFullYear();`
+Probleem: advies hangt aan kalenderjaar i.p.v. getBoekjaar_() ⇒ verkeerd tarief-cohort bij gebroken boekjaar; jaarwisseling klapt direct naar onbevestigd jaar.
+Fix: boekjaar voor cohort-keuze of expliciet documenteren.
+Owner: Sam (dev)
+
+#### F-OND-027 [LAAG] src/Belastingadvies.gs:1786-1797 — KIA_MISSER_GEMELD_<jaar>_Q<kw>-keys nooit opgeruimd (~40 keys/10jr). Fix: cleanup >2 jaar. Owner: Sam.
+#### F-OND-028 [MIDDEL] src/Belastingvoordeel.gs:103-235
+Quote: `zelfstandigenaftrek (€2.470), startersaftrek (€2.123 eerste 3 jaar)` (146)
+Probleem: 12 maanden seizoens-tips met hardcoded fiscale bedragen buiten getBelasting_() — maart-tip toont al in 2026 verkeerde zelfstandigenaftrek.
+Fix: bedragen injecteren uit config of verwijzen naar Belastingadvies-tab.
+Owner: Sam (dev)
+#### F-OND-029 [LAAG] src/Belastingvoordeel.gs:170-184 — vaste deadline-teksten. Geen actie. Owner: Sam.
+#### F-OND-030 [LAAG] src/Belastingvoordeel.gs:244-265 — mijlpaal-UserProperties nooit opgeruimd (90 keys/10jr). Fix: cleanup. Owner: Sam.
+
+#### F-OND-033 [HOOG] src/BoekingEngine.gs:630, 783
+Quote: `'https://generativelanguage.googleapis.com/v1beta/models/' + _geminiModel_() + ':generateContent?key=' + apiKey,`
+Probleem: Gemini API-versie v1beta hardcoded in twee call-sites; model wél via property overschrijfbaar (GEMINI_MODEL) maar de API-versie niet ⇒ Google-EOL van v1beta legt AI-scan stil tot code-deploy (code-comment 523-527 bewijst zelf het EOL-tempo: gemini-2.0-flash EOL 2026-06-01). Boekhouding zelf blijft werken (handmatig pad) ⇒ HOOG, geen BLOCKER.
+Fix: GEMINI_API_VERSION als ScriptProperty.
+Owner: Sam (dev)
+
+#### F-OND-034 [MIDDEL] src/BoekingEngine.gs:529, 538-544 — model-default gemini-2.5-flash faseert binnen 1-2 jaar uit; verse klant valt op dode default terug (afgevangen 644-647). Fix: fallback-lijst + UI-documentatie. Owner: Sam + klant.
+#### F-OND-032 [LAAG] src/BoekingEngine.gs:494-496 — AI Act-datum in comment; logAiAanroep_ correct. Geen actie.
+#### F-OND-036 [MIDDEL] src/BoekingEngine.gs:475-489
+Quote: `folder = mappen.hasNext() ? mappen.next() : DriveApp.createFolder('Bonnetjes & Ontvangstbewijzen');`
+Probleem: bonnen onbeperkt in één platte Drive-map (duizenden files/10jr; 15GB-quotum owner); bewaarplicht verbiedt auto-delete.
+Fix: jaar/kwartaal-submappen + quota-monitoring documenteren.
+Owner: Sam (dev) + klant (config)
+
+#### F-OND-037 [MIDDEL] src/Boekingen.gs:100-128 (+ BoekingEngine)
+Quote: `opt.preGevalideerd === true ? new Date() : '',` (laatste van 20 kolommen)
+Probleem: 20-koloms journaalpost-rij met magic indices repo-breed; geen schema-versie ⇒ grootste stille-corruptie-bron bij kolom-evolutie (CLAUDE.md waarschuwt zelf).
+Fix: schema-versie + header-validatie; kolom-indices als constanten in Config.gs.
+Owner: Sam (dev)
+
+#### F-OND-038 [MIDDEL] src/Boekingen.gs:1209-1241
+Quote: `const backupKey = 'GESLOTEN_PERIODES_CORRUPT_' + ts; ... props.setProperty(backupKey, bestaand);`
+Probleem: tijdgestempelde corrupt-backups nooit opgeruimd ⇒ onbegrensde groei richting 500KB-totaallimiet ⇒ setProperty-fails breken andere features stil.
+Fix: max 1-2 backups of verborgen sheet-tab.
+Owner: Sam (dev)
+
+#### F-OND-039 [LAAG] src/Boekingen.gs:901-913, 973-990 — appendRow-in-lus (zelfde antipatroon dat BankImport al oploste). Fix: batch setValues. Owner: Sam. (= F-GAS-050)
+#### F-OND-040 [LAAG] src/Boekingen.gs:1028-1093 — padding-overflow na 999.999 boekingen (theoretisch). Geen actie.
+
+Batch-verdict: kern abandoned-proof; risico's in fiscale laag (F-OND-024 BLOCKER) en AI-laag (F-OND-033).
