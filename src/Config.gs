@@ -36,6 +36,10 @@ const SHEETS = {
   AUDIT_LOG:         'Audit Log',
   AUDIT_ANCHOR:      '_Audit_Anchor',
   HELP:              'Help & Compliance',
+  // Audit 2026-06-12 (C1): bewijslast voor het 1.225-uren-criterium
+  // (art. 3.6 Wet IB). Zonder deze sheet kon klant zelfstandigen- en
+  // startersaftrek niet onderbouwen bij Belastingdienst-controle.
+  UREN:              'Urenregistratie',
 };
 
 // ─────────────────────────────────────────────

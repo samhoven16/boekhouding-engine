@@ -246,3 +246,25 @@ Written by `zetBtwAangifteOpSheet_()` in BTW.gs.
 4. **Herhalende kosten [7] contains "CODE naam" format**
    - `.split(' ')[0]` extracts just the code
    - Malformed value → wrong rekening used silently
+
+---
+
+## UREN (Sheet: "Urenregistratie") — audit 2026-06-12, C1
+
+Bewijslast voor het 1.225-uren-criterium (art. 3.6 Wet IB) voor
+zelfstandigenaftrek en startersaftrek. Vereist per-rij datum + activiteit
++ aantal uren. Aggregator: `totaalUrenInBoekjaar_(ss, jaar)` in
+`src/Urenregistratie.gs`.
+
+```
+[0]  Datum                   Date       per-dag log (validatie: requireDate)
+[1]  Uren                    number     0,25 – 24,0 per rij (validatie)
+[2]  Activiteit              string     wat is er gedaan
+[3]  Project/Klant           string     optioneel
+[4]  Notities                string     optioneel
+[5]  Aangemaakt op           Date       audit-trail van invoer
+```
+
+Constants: `UREN_KOL` in `Urenregistratie.gs`. Sheet wordt aangemaakt via
+`setupUrenregistratieSheet_` (Setup.gs:112+) of via menu-actie
+`openUrenregistratie` (Menu.gs:144).

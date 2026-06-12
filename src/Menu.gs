@@ -141,6 +141,7 @@ function onOpen() {
     // ── Dagelijks gebruik ─────────────────────
     .addItem('Dashboard openen', 'openDashboard')
     .addItem('Nieuwe boeking — factuur, kosten of declaratie', 'openNieuweBoeking')
+    .addItem('Urenregistratie (bewijs voor zelfstandigenaftrek)', 'openUrenregistratie')
     .addSeparator()
 
     // ── Facturen ──────────────────────────────

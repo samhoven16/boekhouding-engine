@@ -1215,29 +1215,49 @@ function _berekenBelastingadviesRaw_(ss) {
   }
 
   // ── 8d. Urencriterium voortgang ───────────────────────────────────────
+  // Audit 2026-06-12 (C1): Sheet UREN is nu bron-van-waarheid voor het
+  // 1.225-uren-criterium (art. 3.6 Wet IB). Belastingdienst-controle eist
+  // per-rij datum + activiteit + uren. Fallback naar de oude instelling
+  // "Gewerkte uren dit jaar" voor klanten die de UREN-sheet nog niet
+  // bevolkt hebben — die fallback waarschuwt expliciet over zwakke
+  // onderbouwing.
   if (isZzp) {
-    const urenRaw = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0', 10);
-    const uren = (isFinite(urenRaw) && urenRaw > 0) ? urenRaw : 0;
+    let uren = 0;
+    let bron = 'sheet';
+    if (typeof totaalUrenInBoekjaar_ === 'function') {
+      try { uren = totaalUrenInBoekjaar_(ss, jaar); } catch (_) { uren = 0; }
+    }
+    if (uren <= 0) {
+      const urenRaw = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0', 10);
+      if (isFinite(urenRaw) && urenRaw > 0) { uren = urenRaw; bron = 'instelling'; }
+    }
     if (uren > 0) {
       const pct = Math.min(100, Math.round((uren / BELASTING.URENCRITERIUM) * 100));
       const resterend = Math.max(0, BELASTING.URENCRITERIUM - uren);
+      // Onderbouwingswaarschuwing als de uren NIET uit de sheet komen —
+      // dan ontbreekt per-rij-bewijs voor Belastingdienst-controle.
+      const onderbouwd = (bron === 'sheet');
+      const onderbouwingsTekst = onderbouwd
+        ? ' (bewijslast staat in tabblad Urenregistratie).'
+        : ' ⚠️ Vul het tabblad Urenregistratie per dag/activiteit — een totaal in Instellingen is bij controle onvoldoende onderbouwing.';
       adviezen.push({
         type: uren >= BELASTING.URENCRITERIUM ? 'AFTREKPOST' : 'ACTIE',
         titel: uren >= BELASTING.URENCRITERIUM
           ? `✅ Urencriterium gehaald! (${uren}/1.225 uur)`
           : `⏱️ Urencriterium: ${uren}/1.225 uur (${pct}%)`,
         tekst: uren >= BELASTING.URENCRITERIUM
-          ? `U heeft het urencriterium gehaald. Zelfstandigenaftrek en startersaftrek zijn van toepassing. Bewaar uw urenregistratie als bewijs voor de Belastingdienst.`
-          : `Nog ${resterend} uur nodig voor zelfstandigenaftrek (€2.470) en startersaftrek. ` +
-            `Update "Gewerkte uren dit jaar" in Instellingen. Houd een urenregistratie bij als bewijs.`,
+          ? `U heeft het urencriterium gehaald. Zelfstandigenaftrek en startersaftrek zijn van toepassing.` + onderbouwingsTekst
+          : `Nog ${resterend} uur nodig voor zelfstandigenaftrek en startersaftrek.` + onderbouwingsTekst,
         besparing: null,
       });
     } else {
       adviezen.push({
         type: 'ACTIE',
         titel: '⏱️ Urenregistratie vereist voor zelfstandigenaftrek',
-        tekst: `Vul "Gewerkte uren dit jaar" in via Instellingen. Zonder 1.225 uur geen recht op ` +
-               `zelfstandigenaftrek (€2.470) of startersaftrek (€2.123). Houd een urenadministratie bij.`,
+        tekst: `Open menu Boekhoudbaar → Urenregistratie en log dagelijks uw uren ` +
+               `(datum + activiteit + aantal). Zonder 1.225 uur geen recht op ` +
+               `zelfstandigenaftrek of startersaftrek. Een totaal-veld in Instellingen ` +
+               `is bij Belastingdienst-controle onvoldoende onderbouwing.`,
         besparing: null,
       });
     }
