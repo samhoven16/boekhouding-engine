@@ -235,3 +235,70 @@ Quote: `const vfData = vfSheet.getDataRange().getValues(); ... vfSheet.getRange(
 Probleem: per storno 2-3 volledige reads van de grootste sheets (JOURNAALPOSTEN 214, VF 301, IF 319) om één rij te vinden.
 Fix: kolom-projectie / index-tab boekingId→rij.
 Owner: Sam (dev)
+
+## Batch GAS-D — Branding, BtwExport, Changelog, Config, CustomFunctions, DLQ, Dashboard, DataPortability
+
+### src/Branding.gs — Gelezen: 1-455. Chunking onder 9KB/key + oude chunks verwijderd (90-103). VONDSTEN F-GAS-060, 061.
+### src/BtwExport.gs — Gelezen: 1-326. Eén berekening per preview; geen properties/sheets-writes. Geen vondsten.
+### src/Changelog.gs — Gelezen: 1-199. Gethrottlede onOpen-haak in try/catch. VONDST F-GAS-062 (bewaken).
+### src/Config.gs — Gelezen: 1-346. Pure constanten; top-level-call-verbod nageleefd (6-13). Geen vondsten.
+### src/CustomFunctions.gs — Gelezen: 1-311. Alle @customfunctions puur en service-vrij (geen 30s-risico). Geen vondsten.
+### src/DLQ.gs — Gelezen: 1-282. FIFO-cap 1000 (53-54); één overschreven property (234). VONDSTEN F-GAS-063..065.
+### src/Dashboard.gs — Gelezen: 1-1627. KPI-snapshot bounded (47-48, 1180-1181). VONDSTEN F-GAS-066..069.
+### src/DataPortability.gs — Gelezen: 1-216. Eén XLSX-fetch; folders correct gepagineerd (45-46). VONDST F-GAS-070.
+
+#### F-GAS-060 [LAAG] src/Branding.gs:99-101
+Quote: `for (let i = 0; i < chunks; i++) { props.setProperty('bedrijfsLogo_chunk_' + i, base64Data.slice(...)); }`
+Probleem: ~34 losse setProperty-roundtrips per 200KB-upload; vult ~200KB van het 500KB-budget.
+Fix: setProperties-batch; cap verlagen of logo naar Drive/sheet. Owner: Sam (dev)
+
+#### F-GAS-061 [LAAG] src/Branding.gs:87-103
+Quote: `const oud = parseInt(props.getProperty('bedrijfsLogoChunks') || '0'); for (...) props.deleteProperty(...); ... props.setProperty('bedrijfsLogoChunks', String(chunks));`
+Probleem: read-delete-write zonder lock ⇒ gelijktijdige uploads laten wees-chunks/inconsistent logo achter.
+Fix: tryLock(5000) of risico expliciet accepteren. Owner: Sam (dev)
+
+#### F-GAS-062 [LAAG] src/Changelog.gs:100-121
+Quote: `function checkEnToonChangelog_() { ... scriptProps.getProperty('geinstalleerde_versie') ...`
+Probleem: onOpen-haak (30s-budget) — nu goedkoop; cumulatief risico bewaken bij uitbreidingen.
+Fix: geen; geen sheet-reads toevoegen. Owner: Sam (dev)
+
+#### F-GAS-063 [MIDDEL] src/DLQ.gs:76-118
+Quote: `const data = sheet.getDataRange().getValues(); ... sheet.getRange(i + 1, 6).setValue('SUCCES'); ...`
+Probleem: read-modify-write zonder lock; daily + menu samen ⇒ dubbele retry (= dubbele mail) of overschreven tellers; appendRow tijdens run verschuift indices. (= F-RED-061)
+Fix: script-lock; bij niet verkrijgen overslaan. Owner: Sam (dev)
+
+#### F-GAS-064 [MIDDEL] src/DLQ.gs:130-160
+Quote: `case 'EMAIL_HERINNERING': ... GmailApp.sendEmail(payload.email, ...);`
+Probleem: retry-loop zonder mail-quota-guard; backlog (server-storing) kan in één run de 100/dag-cap opslokken.
+Fix: EmailQuotaGuard vóór elke send; loop stoppen bij bijna-op quota. Owner: Sam (dev)
+
+#### F-GAS-065 [LAAG] src/DLQ.gs:104-115
+Quote: `sheet.getRange(i + 1, 6).setValue('SUCCES'); ... setValue(nieuwRetries); ... setValue(...)`
+Probleem: tot 3 losse writes per item i.p.v. batch.
+Fix: in-memory accumuleren + setValues-batch. Owner: Sam (dev)
+
+#### F-GAS-066 [HOOG] src/Dashboard.gs:9-554
+Quote: `const kpi = berekenKpiData_(ss); ... const btwData = getBtwPerMaand_(ss, btwJaar); ... herhalendeResult = verwerkHerhalendeKosten_(); ... maakDashboardGrafieken_(ss, sheet, btwJaar);`
+Probleem: één render stapelt: KPI-scan, getBtwPerMaand_ 2×, detecteerAfwijkingen_ (eigen VF+IF-scans 969-1015), berekenBtwIndicatie_→berekenBtwAangifte_ (1046, volledige JP-scan), berekenBelastingadvies_ 2× (276, 1092), berekenRoiData_ (711-758), plus verwerkHerhalendeKosten_. Draait als LAATSTE stap in dagelijkseTaken ná ~18 taken ⇒ silent-kill laat dashboard half-geschreven achter (clearContents al uitgevoerd, regel 32).
+Fix: sheets één keer lezen en arrays doorgeven; BTW-uitkomst cachen binnen render; verwerkHerhalendeKosten_ loskoppelen van de render. (Sluit aan op F-CPR-021.)
+Owner: Sam (dev)
+
+#### F-GAS-067 [MIDDEL] src/Dashboard.gs:32-517
+Quote: `sheet.clearContents(); sheet.clearFormats(); ... ss.setActiveSheet(sheet);`
+Probleem: clear+rebuild zonder lock vanaf ≥6 callsites (Triggers 483/1387/1666, Boekingen 797, Bankboek 162, Inkoopfacturen 95, Setup 202, Menu 623) ⇒ gelijktijdige renders = corrupte layout.
+Fix: tryLock(0) aan het begin; bezet ⇒ render overslaan. Owner: Sam (dev)
+
+#### F-GAS-068 [MIDDEL] src/Dashboard.gs:312, 715, 974, 1001, 1191, 1219, 1268, 1296, 1423, 1447
+Quote: `const vfData = _vfS ? _vfS.getDataRange().getValues() : [[]];`
+Probleem: VF 6× en IF 4× volledig gelezen binnen één cyclus zonder rij-/kolomfilter — de concrete N+1-bron achter F-GAS-066.
+Fix: één read per sheet per render; kolom-projectie zoals berekenMaandData_ (661/675). Owner: Sam (dev)
+
+#### F-GAS-069 [LAAG] src/Dashboard.gs:315-328, 417-423
+Quote: `recenteVf.forEach(r => { sheet.getRange(rij, 1, 1, 5).setValues([[...]]); ... });`
+Probleem: per-rij writes in kleine begrensde tabellen — drijft rendertijd op, geen cap-risico.
+Fix: batchen. Owner: Sam (dev)
+
+#### F-GAS-070 [MIDDEL] src/DataPortability.gs:78-204
+Quote: `const data = auditSheet.getDataRange().getValues(); ... const file = DriveApp.getFileById(fileId); verseUrl = file.getUrl();`
+Probleem: één synchrone invocatie: XLSX-fetch + VOLLEDIGE audit-log (tot 50k rijen) + per-factuur DriveApp.getFileById (~200ms elk) ⇒ duizenden facturen = ruim over 6-min-cap met half-gevulde export-map.
+Fix: PDF-resolve chunken/hervatbaar maken; XLSX als primair. Owner: Sam (dev)

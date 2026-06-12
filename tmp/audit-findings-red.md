@@ -190,3 +190,73 @@ Quote: `${vasteActiva.filter(...).map(r => `... <td>${r[1]}</td> ... name="${r[0
 Probleem: afschrijvingen-dialog interpoleert grootboek-code/naam zonder escHtml_; vandaag statisch (STANDAARD_GROOTBOEK) ⇒ geen werkende exploit, maar latente reflected-XSS zodra klant eigen rekeningnamen kan zetten.
 Fix: escHtml_ om r[0]/r[1].
 Owner: Sam (dev)
+
+## Batch RED-D — DLQ, Dashboard, DataPortability, Diagnostiek, DriveStructuur, EUVerkoop, Engagement, ExportAccountant
+
+### src/DLQ.gs — Gelezen: 1-282. JSON.parse in try/catch (91, 280); payload bewust niet in alert-mail (221). VONDSTEN F-RED-060, 061.
+### src/Dashboard.gs — Gelezen: 1-1628. PDF-URL uit eigen ss.getId() (1046-1066); escaping client-side esc() (1601-1602). Geen vondsten.
+### src/DataPortability.gs — Gelezen: 1-216. Instellingen-filter sluit secrets uit (124-127). VONDST F-RED-062.
+### src/Diagnostiek.gs — Gelezen: 1-184. escHtml_ op executions-URL (110). VONDST F-RED-063 (misleidende allowlist-comment).
+### src/DriveStructuur.gs — Gelezen: 1-480. Idempotente jaarafsluit-guard (295-305); archief-fail stopt vóór teller-reset (333-347). VONDST F-RED-064 (voorzorg).
+### src/EUVerkoop.gs — Gelezen: 1-355. VIES-call encodeURIComponent + vaste host + format-check (91, 113) — bevestigd veilig (F-RED-065). VONDST F-RED-066.
+### src/Engagement.gs — Gelezen: 1-409. escHtml_ op persoonlijkBericht/topKlant (208, 311). VONDSTEN F-RED-067, 068.
+### src/ExportAccountant.gs — Gelezen: 1-1076. CSV-formula-guard + quote-escaping correct (818-826); bestandsnaam-sanitatie (48, 333). VONDSTEN F-RED-069..071.
+
+#### F-RED-060 [LAAG] src/DLQ.gs:91
+Quote: `try { payload = JSON.parse(data[i][2] || '{}'); } catch (_) {}`
+Probleem: payload.opties wordt ongefilterd als GmailApp-opties doorgegeven (145) ⇒ gemanipuleerde rij (owner-bewerkbare hidden sheet) kan mail-headers beïnvloeden.
+Fix: whitelist toegestane optie-velden. Owner: Sam (dev)
+
+#### F-RED-061 [MIDDEL] src/DLQ.gs:99-117
+Quote: `success = _dlqHandler_(type, payload);` ... `sheet.getRange(i + 1, 6).setValue('SUCCES');`
+Probleem: dlqVerwerkRetries_ zonder lock; daily-trigger + forceerDlqRetry (195) gelijktijdig ⇒ beide verwerken zelfde PENDING-rij ⇒ dubbele factuur-/herinneringsmail naar klant; status-update pas ná handler.
+Fix: script-lock of compare-and-set 'PROCESSING' vóór handler. Owner: Sam (dev)
+
+#### F-RED-062 [LAAG] src/DataPortability.gs:96-99
+Quote: `const jsonl = lijst.map(function(e) { return JSON.stringify(e); }).join('\n');`
+Probleem: audit-JSONL exporteert alle rijen zonder PII-/secret-filter (vrije-tekst-details, bv. NPS-opmerkingen) — lekt bij doorsturen naar derde tool.
+Fix: documenteren of gevoelige patronen filteren. Owner: Sam (dev)
+
+#### F-RED-063 [LAAG] src/Diagnostiek.gs:39-43
+Quote: `// Lichte HEAD naar een endpoint binnen onze allowlist ...` / `UrlFetchApp.fetch('https://api.kvk.nl/', ...)`
+Probleem: comment claimt allowlist die niet bestaat — valse veiligheidsclaim voor latere ontwikkelaars; call zelf veilig (hardcoded).
+Fix: comment corrigeren of echte allowlist-helper. Owner: Sam (dev)
+
+#### F-RED-064 [LAAG] src/DriveStructuur.gs:159-169
+Quote: `html += '<tr><td>' + m.label + '</td><td>' + link + '</td></tr>';`
+Probleem: string-concat-HTML zonder escHtml_ — vandaag veilig (vaste labels + eigen Drive-URL) maar gevaarlijk patroon zodra label uit instellingen komt.
+Fix: escHtml_ op href als voorzorg. Owner: Sam (dev)
+
+#### F-RED-065 [LAAG] src/EUVerkoop.gs:113-120
+Quote: `const url = VIES_API_BASE + encodeURIComponent(land) + '/vat/' + encodeURIComponent(nummer);`
+Probleem: enige user-input-driven UrlFetch in batch — bevestigd veilig (vaste host, encoding, format-check, 30d-cache). Geen actie; evt. rate-limit op VIES-quota. Owner: Sam (dev)
+
+#### F-RED-066 [MIDDEL] src/EUVerkoop.gs:296
+Quote: `sheet.getRange(r, 1, 1, 5).setValues([[a.btwNr, a.naam, ...]])`
+Probleem: klantnaam/BTW-nr uit factuurrijen onbewerkt in ICP-rapport ⇒ formula-injectie (=HYPERLINK/IMPORTXML) in een rapport dat naar accountant/Belastingdienst gaat; exporteerAlsCsv_ heeft wél een guard, dit pad niet.
+Fix: zelfde formula-guard vóór setValues of klantnaam bij invoer saniteren. Owner: Sam (dev)
+
+#### F-RED-067 [MIDDEL] src/Engagement.gs:229-240
+Quote: `function slaNpsResponseOp(score, opmerking) { ... props.setProperty(NPS_PROP_RESPONSE, JSON.stringify(responses)); }`
+Probleem: publiek via google.script.run; mede-bewerker kan herhaald aanroepen ⇒ NPS-data-injectie + owner-mails (246-248) zonder auth-check.
+Fix: by-design accepteren maar owner-notificaties throttlen. Owner: Sam (dev)
+
+#### F-RED-068 [LAAG] src/Engagement.gs:245-248
+Quote: `meldFataalAanOwner_('NPS_DETRACTOR', 'Score ' + score, { opmerking: String(opmerking || '').slice(0, 200) });`
+Probleem: elke detractor/promoter-submit = directe owner-mail zonder throttle ⇒ quota-uitputting via loop (met F-RED-067).
+Fix: max 1/uur via timestamp-property of batchen in dagelijkseTaken. Owner: Sam (dev)
+
+#### F-RED-069 [MIDDEL] src/ExportAccountant.gs:188-200
+Quote: `function verstuurSamenvattingAccountant(emailAccountant, persoonlijkBericht) { ... GmailApp.sendEmail(emailAccountant, ...) }`
+Probleem: publiek aanroepbaar; mede-bewerker kan financiële samenvatting (omzet/winst/banksaldo/debiteuren, 211-215) naar willekeurig extern adres exfiltreren in één call; server valideert alleen e-mailformaat.
+Fix: rate-limit + audit-log mét ontvanger; beperken tot geconfigureerd accountant-adres. Owner: Sam (dev)
+
+#### F-RED-070 [LAAG] src/ExportAccountant.gs:204
+Quote: `<h2 ...>${bedrijf}</h2>`
+Probleem: bedrijf ongeëscaped in mail-htmlBody terwijl persoonlijkBericht (208) wél escHtml_ krijgt — inconsistent; owner-config dus self-impact.
+Fix: escHtml_(bedrijf). Owner: Sam (dev)
+
+#### F-RED-071 [MIDDEL] src/ExportAccountant.gs:94 (→ XafExport.gs)
+Quote: `const xafXml = _bouwXafXml_(ss);`
+Probleem: cross-ref — XML-escaping van dynamische velden moet in XafExport geverifieerd zijn. (Bevestigd door batch ACC-B: _xafEsc_ aanwezig, XafExport.gs:385-393 — hiermee AFGEDEKT, geen open risico.)
+Fix: geen — afgedekt door ACC-B-verificatie. Owner: Sam (dev)
