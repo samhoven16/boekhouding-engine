@@ -108,3 +108,71 @@ Probleem: u/je-wissel binnen één Bank-menu-sessie.
 Fix: één vorm. Owner: Sam (dev)
 
 Globaal patroon VCE-A: (1) u/je-inconsistentie productbreed én binnen flows; (2) failure-fallbacks tonen rauwe e.message of lege "Er ging iets mis"; (3) sterke voorbeelden die de norm moeten worden: BTW-samenvattingen, BankImport-headerfout, BackupEmail-eerlijkheid, AVG-uitleg.
+
+## Batch VCE-B — BelastingOptimizer, Belastingvoordeel, BoekingEngine, Boekingen, Brand, Branding, BtwExport, Changelog
+
+### src/BelastingOptimizer.gs — Gelezen: 1-288. "je" consistent. VONDSTEN F-VCE-040, 041.
+### src/Belastingvoordeel.gs — Gelezen: 1-1145. Audit-logs leesbaar (600, 769). VONDSTEN F-VCE-042, 043 (u/je gemengd).
+### src/BoekingEngine.gs — Gelezen: 1-1086. "je" consistent; fout-strings sterk met menu-paden (251-257, 582, 593). VONDSTEN F-VCE-044, 045.
+### src/Boekingen.gs — Gelezen: 1-1480. Alerts concreet (568-587, 1276-1296, 1447-1478); goede terug-loops (27-49). VONDSTEN F-VCE-046, 047 (u/je gemengd).
+### src/Brand.gs — Gelezen: 1-104. Geen klant-strings. Geen vondsten.
+### src/Branding.gs — Gelezen: 1-455. "u" consistent binnen bestand (wijkt af van "je" elders); audit-logs leesbaar. VONDSTEN F-VCE-048, 049.
+### src/BtwExport.gs — Gelezen: 1-326. "je" consistent; AWR-verantwoordelijkheids-copy sterk (74-108). VONDST F-VCE-050.
+### src/Changelog.gs — Gelezen: 1-199. Concreet, "je", transparant. Geen vondsten.
+
+#### F-VCE-040 [LAAG] src/BelastingOptimizer.gs:134-143
+Quote: `uitleg += '  → Boek in jaar N (€' + beste.sN.toFixed(0) + ' totaal):\n';`
+Probleem: klant ziet algebra-jargon "jaar N"/"jaar N+1" zonder concreet jaartal.
+Fix: echte jaartallen of "dit jaar"/"volgend jaar". Owner: Sam (dev)
+
+#### F-VCE-041 [LAAG] src/BelastingOptimizer.gs:282
+Quote: `.withFailureHandler(function(e){document.getElementById('uit').textContent='Fout: '+e.message;})`
+Probleem: rauwe e.message zonder vervolgstap.
+Fix: begrijpelijke fallback + actie. Owner: Sam (dev)
+
+#### F-VCE-042 [MIDDEL] src/Belastingvoordeel.gs:172,177
+Quote: `const deadlineMaand = { 5: '30 april (verlopen) → spoed!', 7: '31 juli', 10: '31 oktober' }[maand];`
+Probleem: "verlopen → spoed!" is schrik zonder handvat — geen indiening-route, geen boete-uitleg.
+Fix: concrete actie + verzuimboete-duiding toevoegen. Owner: accountant + Sam
+
+#### F-VCE-043 [MIDDEL] src/Belastingvoordeel.gs:342,834-844,900,1316
+Quote: `<div class="lbl">Huidige situatie (op basis van uw boekhouding YTD)</div>` vs `'...Controleer je invoer.'` (562)
+Probleem: u/je gemengd binnen één bestand (wat-als/aanslag/lijfrente "u"; reiskosten "je").
+Fix: één vorm productbreed (beslissing Sam). Owner: Sam (dev)
+
+#### F-VCE-044 [LAAG] src/BoekingEngine.gs:582
+Quote: `if (!apiKey) return { fout: 'Gemini API-sleutel niet ingesteld (Boekhouding → Instellingen → 🤖 Gemini API-key voor bon-scan).' };`
+Probleem: mist de geruststelling "handmatig invoeren blijft werken" (die regel 569 wél heeft).
+Fix: zin toevoegen. Owner: Sam (dev)
+
+#### F-VCE-045 [LAAG] src/BoekingEngine.gs:309
+Quote: `schrijfAuditLog_('FOUT ' + type, e.message);`
+Probleem: "FOUT factuur" als actie-label in klant-zichtbare AuditLog-tab is verwarrend; detail kan technisch zijn.
+Fix: "Boeking mislukt (factuur)" als label. Owner: Sam (dev)
+
+#### F-VCE-046 [LAAG] src/Boekingen.gs:708
+Quote: `<p>Voer het afschrijvingspercentage per actief in (lineaire methode):</p>`
+Probleem: "per actief"/"lineaire methode" is jargon voor een ZZP'er; ook tabelkoppen compact-jargon (711).
+Fix: korte uitleg in gewone taal. Owner: Sam + accountant
+
+#### F-VCE-047 [MIDDEL] src/Boekingen.gs:29,1288,1316,1449
+Quote: `'U kunt geen boekingen meer maken in een afgesloten periode. '` vs `'Welk boekingId wil je storneren?'`
+Probleem: u/je gemengd binnen één bestand (periode-fouten "u"; storno/periode-beheer "je").
+Fix: gelijktrekken (beslissing Sam). Owner: Sam (dev)
+
+#### F-VCE-048 [MIDDEL] src/Branding.gs:239
+Quote: `<div style="font-size:11px;color:#888;margin-top:4px">PNG, JPG, SVG — max 200 KB</div>`
+Probleem: hint belooft SVG terwijl server- (49-53) én client-validatie (327-333) SVG expliciet weigeren (XSS) ⇒ tekst-vs-gedrag-mismatch, klant krijgt onverwachte weigering.
+Fix: "PNG, JPG, GIF, WebP — max 200 KB". Owner: Sam (dev)
+
+#### F-VCE-049 [LAAG] src/Branding.gs:387,420
+Quote: `... : 'Er ging iets mis. Probeer opnieuw.');`
+Probleem: vage fallback zonder vervolgstap.
+Fix: concretere fallback. Owner: Sam (dev)
+
+#### F-VCE-050 [LAAG] src/BtwExport.gs:228-230,258-260
+Quote: `return { ok: false, fout: e.message };`
+Probleem: server-side catch retourneert rauwe e.message die de nette failure-handler-fallback omzeilt.
+Fix: klant-vriendelijke fout + e.message alleen loggen. Owner: Sam (dev)
+
+Patroon VCE-B: (1) u/je-breuk tussen oudere (Branding, delen Belastingvoordeel/Boekingen) en nieuwere modules ("je"); (2) vage fallbacks als groep stelselmatig (F-VCE-041/049/050).
