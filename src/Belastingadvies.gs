@@ -867,27 +867,17 @@ function _berekenBelastingadviesRaw_(ss) {
     }
   }
 
-  // ── 4. MKB-winstvrijstelling ──────────────────────────────────────────
-  if (isZzp && winst > 0) {
-    const winstNaAftrekken = Math.max(0, winst - totaalAftrek);
-    const mkbAftrek = rondBedrag_(winstNaAftrekken * BELASTING.MKB_WINSTVRIJSTELLING);
-    aftrekken.push({
-      naam: `MKB-winstvrijstelling (${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}%)`,
-      bedrag: mkbAftrek,
-      voorwaarde: 'Automatisch van toepassing voor ondernemers IB',
-      code: '7990',
-    });
-    adviezen.push({
-      type: 'AFTREKPOST',
-      titel: '✅ MKB-winstvrijstelling: ' + formatBedrag_(mkbAftrek),
-      tekst: `${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
-             `Dit wordt automatisch meegenomen in uw aangifte.`,
-      besparing: rondBedrag_(mkbAftrek * marginaalIbTarief_(winst, BELASTING)),
-    });
-    totaalAftrek += mkbAftrek;
-  }
-
-  // ── 5. KIA (Kleinschaligheidsinvesteringsaftrek) ──────────────────────
+  // ── 4. KIA (Kleinschaligheidsinvesteringsaftrek) ──────────────────────
+  // Audit 2026-06-12 (A1): KIA stond hier voorheen NA MKB-vrijstelling.
+  // Dat was fiscaal verkeerd: art. 3.40 Wet IB rekent KIA als
+  // investeringsaftrek die de WINST vermindert, en art. 3.79a baseert
+  // de MKB-vrijstelling op (winst − ondernemersaftrek). KIA hoort dus
+  // VÓÓR de MKB-grondslag te zitten. Voorbeeldcasus (winst €60.000,
+  // KIA-investering €15.000, ZA €1.200, SA €2.123):
+  //   Verkeerd (oud): belastbaar €45.279
+  //   Correct (nu):   belastbaar €45.812
+  // → klant onderbetaalde IB met ~€200/casus → naheffing bij controle.
+  // Tests: tests/unit/mkb-volgorde-na-kia.test.js.
   const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);   // CYCLE-51
   let investeringen = 0;
   gbData.slice(1).forEach(r => {
@@ -943,6 +933,29 @@ function _berekenBelastingadviesRaw_(ss) {
              `€${BELASTING.KIA_MAX.toLocaleString('nl-NL')}. Geen KIA dit jaar. Bekijk MIA/VAMIL voor milieu-investeringen of EIA voor energie-investeringen.`,
       besparing: null,
     });
+  }
+
+  // ── 5. MKB-winstvrijstelling (NA KIA — art. 3.79a Wet IB) ──────────────
+  // totaalAftrek bevat hier ZA + SA + KIA. MKB-grondslag = winst minus
+  // die drie. Voorheen miste KIA in de grondslag → te hoge MKB-claim →
+  // klant onderbetaalde IB. Fix-audit 2026-06-12.
+  if (isZzp && winst > 0) {
+    const winstNaAftrekken = Math.max(0, winst - totaalAftrek);
+    const mkbAftrek = rondBedrag_(winstNaAftrekken * BELASTING.MKB_WINSTVRIJSTELLING);
+    aftrekken.push({
+      naam: `MKB-winstvrijstelling (${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}%)`,
+      bedrag: mkbAftrek,
+      voorwaarde: 'Automatisch van toepassing voor ondernemers IB',
+      code: '7990',
+    });
+    adviezen.push({
+      type: 'AFTREKPOST',
+      titel: '✅ MKB-winstvrijstelling: ' + formatBedrag_(mkbAftrek),
+      tekst: `${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
+             `Dit wordt automatisch meegenomen in uw aangifte.`,
+      besparing: rondBedrag_(mkbAftrek * marginaalIbTarief_(winst, BELASTING)),
+    });
+    totaalAftrek += mkbAftrek;
   }
 
   // ── 5b. EIA — Energie-investeringsaftrek ──────────────────────────────
