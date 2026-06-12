@@ -159,3 +159,58 @@ describe('Throttle-gedrag', () => {
     expect(mogenHealen(Date.now() - 25 * 60 * 60 * 1000, Date.now(), 24)).toBe(true);
   });
 });
+
+describe('SelfHeal.gs — orphan-trigger-detectie (cross-PR-audit juni 2026)', () => {
+  // Klanten die ooit de oude multi-formulier-architectuur draaiden hebben
+  // triggers naar inmiddels-verwijderde handlers (verwerk*Formulier) →
+  // ReferenceError bij elke form-submit, stil in de trigger-log. SelfHeal
+  // heelde alleen MISSENDE triggers; orphans moeten ook een heal triggeren.
+  const { createGasRuntime } = require('../__helpers__/gas-runtime');
+  const hygBron = fs.readFileSync(path.join(SRC, 'Hygiene.gs'), 'utf8');
+  const verwacht = Array.from(hygBron.matchAll(/handler:\s*'([^']+)'/g)).map((m) => m[1]);
+
+  function maakCtx(handlerNamen, opts) {
+    opts = opts || {};
+    const ctx = createGasRuntime(['Config.gs', 'Hygiene.gs', 'SelfHeal.gs'], {
+      ScriptApp: {
+        getProjectTriggers: () => handlerNamen.map((h) => ({ getHandlerFunction: () => h })),
+        deleteTrigger: () => {},
+      },
+      PropertiesService: {
+        getScriptProperties: () => ({ getProperty: (k) => (k === 'setupDone' ? 'true' : null), setProperty: () => {} }),
+        getUserProperties: () => ({ getProperty: () => '0', setProperty: () => {} }),
+      },
+    });
+    ctx.sanitizeTriggers_ = jest.fn(() => ({ verwijderd: 1, geinstalleerd: 6 }));
+    ctx.safeAuditLog_ = () => {};
+    return ctx;
+  }
+
+  test('trigger naar verwijderde handler wordt als orphan gerapporteerd', () => {
+    const ctx2 = maakCtx(verwacht.concat(['verwerkInkoopfactuurFormulier']));
+    const rapport = ctx2.inspecteerTriggerInstallatie_();
+    expect(rapport.volledig).toBe(true); // niets MIST...
+    expect(rapport.orphans).toEqual(['verwerkInkoopfactuurFormulier']); // ...maar wel een wees
+  });
+
+  test('behoud-handler (controleerBtwDeadline_) telt NIET als orphan', () => {
+    const ctx2 = maakCtx(verwacht.concat(['controleerBtwDeadline_']));
+    expect(ctx2.inspecteerTriggerInstallatie_().orphans).toEqual([]);
+  });
+
+  test('orphan triggert een heal via sanitizeTriggers_, ook als niets mist', () => {
+    const ctx2 = maakCtx(verwacht.concat(['verwerkRelatieFormulier']));
+    ctx2.sanitizeTriggers_ = jest.fn(() => ({}));
+    ctx2.safeAuditLog_ = () => {};
+    const r = ctx2.controleerVolledigeTriggerInstallatie_();
+    expect(r.staat).toBe('GEHEALED');
+    expect(ctx2.sanitizeTriggers_).toHaveBeenCalledTimes(1);
+  });
+
+  test('volledige canonical set zonder orphans → OK, geen heal', () => {
+    const ctx2 = maakCtx(verwacht);
+    const r = ctx2.controleerVolledigeTriggerInstallatie_();
+    expect(r.staat).toBe('OK');
+    expect(ctx2.sanitizeTriggers_).not.toHaveBeenCalled();
+  });
+});
