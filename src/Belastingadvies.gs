@@ -165,13 +165,16 @@ const BELASTING_PER_JAAR = {
     // Logies-BTW 2026: VERHOOGD naar 21% per 1-1-2026 (was 9% in 2025)
     LOGIES_BTW_PCT:         0.21,
     IB_SCHIJVEN: [
-      { tot: 38883,    pct: 0.357  },  // schijf 1
-      { tot: 79137,    pct: 0.3756 },  // schijf 2
+      // Bron: belastingdienst.nl + Belastingplan 2026 (geverifieerd 2026-06-12).
+      // Schijf 2 grens 78.426 (NIET 79.137 — kleine drift uit 2025-snapshot).
+      // Schijf 1 % = 8,10 (IB) + 27,65 (volksverz.) = 35,75% (NIET 35,7%).
+      { tot: 38883,    pct: 0.3575 },  // schijf 1 (zonder AOW)
+      { tot: 78426,    pct: 0.3756 },  // schijf 2
       { tot: Infinity, pct: 0.495  },  // schijf 3
     ],
     IB_SCHIJVEN_AOW: [
       { tot: 38883,    pct: 0.1770 },  // schijf 1 voor AOW-gerechtigden
-      { tot: 79137,    pct: 0.3756 },
+      { tot: 78426,    pct: 0.3756 },
       { tot: Infinity, pct: 0.495  },
     ],
     // Box 2 — aanmerkelijk belang (BV-dividend). 2025+: 24,5% / 31%.
@@ -320,6 +323,66 @@ function getBelasting_() {
     BOX3_GROEN_KORTING_PCT: 0.007,
     TARIEFSJAAR:            heeftJaarTarieven ? jaar : 2026,
   }, tarieven, klantOverrides || {});
+}
+
+/**
+ * D3 (audit 2026-06-12) — controleerTariefVerouderdWaarschuwing_.
+ *
+ * Detecteert of de tarieven voor het lopende kalenderjaar verouderd zijn
+ * (fallback of placeholder). Per-jaar éénmalig waarschuwt het:
+ *   - Toast op de spreadsheet (zichtbaar voor klant)
+ *   - schrijfAuditLog_ (forensisch spoor)
+ *   - meldFataalAanOwner_ (push naar Sam)
+ *
+ * Throttle: ScriptProperty TARIEF_VEROUDERD_GEZIEN_<jaar>=1 voorkomt
+ * spam bij elke boeking. Reset bij jaarwisseling.
+ *
+ * Bedoeld voor aanroep vanuit boeking-flows die in trigger-context lopen
+ * (verwerkHoofdformulier). UI-modal in form-trigger is niet mogelijk —
+ * toast + owner-alert is wel zichtbaar en log-baar.
+ *
+ * @param {Spreadsheet} ss
+ * @returns {{verouderd: boolean, getoond: boolean}} status voor tests
+ */
+function controleerTariefVerouderdWaarschuwing_(ss) {
+  const huidigJaar = new Date().getFullYear();
+  let BELASTING;
+  try { BELASTING = getBelasting_(); } catch (_) {
+    return { verouderd: false, getoond: false };
+  }
+  if (!BELASTING || !BELASTING.TARIEF_VEROUDERD) {
+    return { verouderd: false, getoond: false };
+  }
+  const propsKey = 'TARIEF_VEROUDERD_GEZIEN_' + huidigJaar;
+  let props;
+  try { props = PropertiesService.getScriptProperties(); } catch (_) {
+    return { verouderd: true, getoond: false };
+  }
+  if (props.getProperty(propsKey) === '1') {
+    return { verouderd: true, getoond: false };
+  }
+  // Zet de seen-flag VOORAF zodat een crash later niet leidt tot herhaalde mails.
+  try { props.setProperty(propsKey, '1'); } catch (_) {}
+
+  const fallbackJaar = BELASTING.TARIEF_FALLBACK_JAAR || (huidigJaar - 1);
+  const bron = BELASTING.TARIEF_BRON || 'onbekend';
+  const boodschap = 'Belastingtarieven voor ' + huidigJaar +
+    ' zijn nog niet bevestigd — boekingen gebruiken tijdelijk tarieven van ' +
+    fallbackJaar + ' (' + bron + '). Update via Boekhoudbaar of pas Instellingen handmatig aan.';
+
+  try {
+    if (ss && typeof ss.toast === 'function') {
+      ss.toast(boodschap, '⚠️ Verouderde tarieven', 30);
+    }
+  } catch (_) {}
+  safeAuditLog_('Tarieven verouderd', boodschap);
+  try {
+    if (typeof meldFataalAanOwner_ === 'function') {
+      meldFataalAanOwner_('TARIEF_VEROUDERD', boodschap,
+        { jaar: huidigJaar, fallbackJaar: fallbackJaar, bron: bron });
+    }
+  } catch (_) {}
+  return { verouderd: true, getoond: true };
 }
 
 // ─────────────────────────────────────────────

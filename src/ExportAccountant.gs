@@ -91,7 +91,9 @@ function exporteerAccountantsPakket() {
     // het pakket alleen CSV/TXT en moet de accountant zelf de losse
     // XAF-menu-actie vinden — eerste-blik-test faalt dan.
     try {
-      const xafXml = _bouwXafXml_(ss);
+      // Pak het EXPORT-jaar dat de caller wil (variabele `jaar` hierboven),
+      // niet impliciet new Date().getFullYear(). C3-audit 2026-06-12.
+      const xafXml = _bouwXafXml_(ss, jaar);
       folder.createFile(`7_Auditfile_${bedrijfSafe}_${jaar}.xaf`, xafXml, 'application/xml');
       gemaakteFiles.push('📑 XAF-auditfile (importeerbaar)');
     } catch (xafErr) {

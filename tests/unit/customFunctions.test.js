@@ -77,20 +77,22 @@ describe('CustomFunctions.gs', () => {
       expect(ctx.SCHULD_SCHIJF(0)).toBe(0);
     });
 
-    test('inkomen 30k (binnen schijf 1) → 35,82%', () => {
-      expect(ctx.SCHULD_SCHIJF(30000)).toBeCloseTo(30000 * 0.3582, 0);
+    // 2026-tarieven (audit 2026-06-12, belastingdienst.nl): schijf 1 t/m
+    // 38.883 @ 35,75%, schijf 2 t/m 78.426 @ 37,56%, schijf 3 49,50%.
+    test('inkomen 30k (binnen schijf 1) → 35,75%', () => {
+      expect(ctx.SCHULD_SCHIJF(30000)).toBeCloseTo(30000 * 0.3575, 0);
     });
 
-    test('inkomen 50k (schijf 2) → grens 38441 + (50000-38441)*0,3748', () => {
-      const verwacht = 38441 * 0.3582 + (50000 - 38441) * 0.3748;
+    test('inkomen 50k (schijf 2) → grens 38883 + (50000-38883)*0,3756', () => {
+      const verwacht = 38883 * 0.3575 + (50000 - 38883) * 0.3756;
       expect(ctx.SCHULD_SCHIJF(50000)).toBeCloseTo(verwacht, 0);
     });
 
     test('inkomen 100k (schijf 3) bevat alle 3 schijven', () => {
       const verwacht =
-        38441 * 0.3582 +
-        (76817 - 38441) * 0.3748 +
-        (100000 - 76817) * 0.4950;
+        38883 * 0.3575 +
+        (78426 - 38883) * 0.3756 +
+        (100000 - 78426) * 0.4950;
       expect(ctx.SCHULD_SCHIJF(100000)).toBeCloseTo(verwacht, 0);
     });
 
