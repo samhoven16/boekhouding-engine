@@ -181,8 +181,9 @@ function _bewijs_I1_debitCreditBalans_(ss) {
 // ─────────────────────────────────────────────────────────────
 // I₂ — GROOTBOEKSALDO CONSISTENT
 // ─────────────────────────────────────────────────────────────
-function _bewijs_I2_grootboekConsistent_(ss) {
+function _bewijs_I2_grootboekConsistent_(ss, opt) {
   const meta = { code: 'I2', naam: 'Grootboeksaldo consistent', soort: 'Algebra' };
+  opt = opt || {};
   const gb = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
   const jp = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
   if (!gb || !jp) return Object.assign(meta, { geldig: true });
@@ -193,6 +194,12 @@ function _bewijs_I2_grootboekConsistent_(ss) {
   for (let i = 1; i < jpData.length; i++) {
     const status = String(jpData[i][16] || '').toUpperCase();
     if (status === 'CORRUPT' || status === 'GESTORNEERD') continue;
+    // Issue #123 batch 3: opt-in strikte modus telt alléén COMMITTED
+    // rijen mee. Bij default (legacy) werkt het bewijs zoals voorheen —
+    // Concept-boekingen tellen mee omdat ze het grootboek óók al raakten.
+    if (opt.alleenCommitted &&
+        typeof _journaalpostIsCommitted_ === 'function' &&
+        !_journaalpostIsCommitted_(jpData[i])) continue;
     const debet = String(jpData[i][4] || '');
     const credit = String(jpData[i][6] || '');
     const bedrag = parseFloat(jpData[i][8]) || 0;

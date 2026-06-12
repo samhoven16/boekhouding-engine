@@ -450,6 +450,55 @@ function valideerInvariantsVoorJournaalpost_(debet, credit, bedrag) {
 }
 
 // ─────────────────────────────────────────────
+//  ISSUE #123 BATCH 3 — PENDING/COMMITTED-helpers
+// ─────────────────────────────────────────────
+//
+// Wettelijk eisen rapporten en BTW-aangiften alleen "vastgestelde" boekingen.
+// In de huidige architectuur staat dat in kolom Q van JOURNAALPOSTEN:
+//   'Gevalideerd' → COMMITTED (telt mee)
+//   'Concept'     → PENDING   (telt NIET mee — moet handmatig bevestigd)
+//   'CORRUPT'     → uit alle aggregaties (compensating action faalde)
+//   'GESTORNEERD' → uit alle aggregaties (storno-tegenpost)
+//   leeg/null     → COMMITTED (backwards-compat: legacy rijen zonder
+//                              status-kolom worden als wettelijk
+//                              vastgesteld behandeld; ze bestonden vóór
+//                              de Q-R-S-kolommen werden toegevoegd)
+//
+// Helpers hieronder zijn de bron-van-waarheid. Callers moeten via
+// _journaalpostIsCommitted_(rij) checken — geen string-matching elders.
+
+/**
+ * Geeft het wettelijke COMMITTED-state van een journaalpost-rij.
+ *
+ * @param {Array} rij  rij uit JOURNAALPOSTEN getDataRange().getValues()
+ * @returns {boolean}  true als de rij meetelt voor rapporten/aangifte
+ */
+function _journaalpostIsCommitted_(rij) {
+  if (!rij || rij.length < 17) return true; // legacy korte rij → committed
+  const raw = rij[16];
+  if (raw === null || raw === undefined || raw === '') return true; // legacy lege Q
+  const status = String(raw).trim().toUpperCase();
+  return status === 'GEVALIDEERD' || status === 'COMMITTED';
+}
+
+/**
+ * Filtert een 2D-array journaalpost-rijen op COMMITTED (inclusief header
+ * op index 0). Behoud rij-volgorde; ongevoelig voor sheet-aanpassingen
+ * downstream.
+ *
+ * @param {Array<Array>} data
+ * @returns {Array<Array>}
+ */
+function _filterJournaalpostenCommitted_(data) {
+  if (!Array.isArray(data) || data.length === 0) return data || [];
+  const out = [data[0]]; // header
+  for (let i = 1; i < data.length; i++) {
+    if (_journaalpostIsCommitted_(data[i])) out.push(data[i]);
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────
 //  FORMELE TRANSACTIE-VALIDATOR (issue #123, batch 1)
 // ─────────────────────────────────────────────
 

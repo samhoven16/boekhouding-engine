@@ -249,3 +249,32 @@ LET OP: rekening-check wordt overgeslagen als het GROOTBOEKSCHEMA-tabblad
 geheel ontbreekt (test-omgevingen/setup) — in productie bestaat het altijd.
 Tests: tests/unit/formele-transactie-validator.test.js (12 acceptatietests,
 één per criterium uit issue #123).
+
+## PENDING/COMMITTED-LIFECYCLE (issue #123 batch 3, audit 2026-06-12)
+
+JOURNAALPOSTEN-kolom Q (0-based index 16) is de bron-van-waarheid voor
+het wettelijke COMMITTED-state. Helpers in `Invariants.gs`:
+
+```
+_journaalpostIsCommitted_(rij)              → boolean
+_filterJournaalpostenCommitted_(2d-array)   → 2d-array
+```
+
+Mapping:
+
+| Q-waarde            | Behandeling                              |
+|---------------------|------------------------------------------|
+| `'Gevalideerd'`     | COMMITTED (telt mee)                      |
+| `'COMMITTED'`       | COMMITTED (alias)                         |
+| `'Concept'`         | PENDING (telt NIET mee in strikte modus)  |
+| `'CORRUPT'`         | uit alle aggregaties                      |
+| `'GESTORNEERD'`     | uit alle aggregaties                      |
+| leeg/null           | COMMITTED (legacy backwards-compat)       |
+| korte rij <17 col   | COMMITTED (legacy backwards-compat)       |
+
+Eerste opt-in toepassing: `_bewijs_I2_grootboekConsistent_(ss, { alleenCommitted: true })`
+sluit PENDING-rijen uit van het wiskundig bewijs.
+
+Volledige migratie (rapporten / BTW / balans / W&V → alleen COMMITTED)
+volgt in vervolg-PR; deze foundation introduceert de helpers zonder
+breaking changes aan bestaande klant-cijfers.
