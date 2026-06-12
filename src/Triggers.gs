@@ -1737,11 +1737,16 @@ function dagelijkseTaken() {
   // SelfHeal trigger-check: ALLERLAATSTE step in dagelijkseTaken — beperkt
   // blast-radius als sanitize-recreate halverwege faalt op ScriptApp-quota.
   // Alle nuttige work is dan al gedaan. Throttle 24u via SelfHeal.gs.
+  // KRITIEK: zelf-heal mag NIET worden geskipt door budget-overschrijding.
+  // Bij volle administraties was triggerSelfHeal structureel SKIP → een
+  // verweesde of ontbrekende trigger bleef ongezien rotten tot Sam handmatig
+  // ingreep. De inspectie is goedkoop (24u-throttle voor de heal zelf;
+  // alleen ScriptApp.getProjectTriggers + array-filter dagelijks).
   _runTaak_('triggerSelfHeal', function() {
     if (typeof controleerVolledigeTriggerInstallatie_ === 'function') {
       controleerVolledigeTriggerInstallatie_();
     }
-  });
+  }, { kritiek: true });
 
   // Aggregaat: totale duur dagelijkseTaken
   const totaleDuur = Date.now() - dagelijksTotaal0;
@@ -1765,13 +1770,22 @@ function dagelijkseTaken() {
  *  - status-tracking → taakStatus-sheet (laatste run + status)
  *  - audit-log bij fout
  */
-function _runTaak_(naam, fn) {
+function _runTaak_(naam, fn, opt) {
+  // Kritiek-flag (opt.kritiek=true): negeert de budget-cap. Bedoeld voor de
+  // zelf-healende infrastructuur die GEEN dag mag missen (anders silent
+  // degradatie: bv. een verweesde trigger blijft eeuwig ReferenceError
+  // gooien tot een handmatige menu-actie). Self-heal is in zichzelf
+  // goedkoop: inspectie + 24u-throttle, alleen bij echte drift werkt
+  // sanitizeTriggers_. Gebruik kritiek SPAARZAAM — elke kritieke taak
+  // bijt potentieel in de 6-min hard-cap.
+  opt = opt || {};
   // Budget-guard: bij langlopende administraties kan de cumulatieve duur
-  // van vroege taken latere taken (triggerSelfHeal, cleanup-taken) uit de
-  // 6-min GAS-cap drukken. Sla over zodra budget op is — markeert SKIP,
-  // audit-logt één keer per run zodat Sam kan zien welke installaties
-  // budget overschrijden en welke taken erdoor worden geraakt.
-  if (_huidigDagelijksBudgetStart > 0 &&
+  // van vroege taken latere taken (cleanup-taken) uit de 6-min GAS-cap
+  // drukken. Sla over zodra budget op is — markeert SKIP, audit-logt
+  // één keer per run zodat Sam kan zien welke installaties budget
+  // overschrijden en welke taken erdoor worden geraakt.
+  if (!opt.kritiek &&
+      _huidigDagelijksBudgetStart > 0 &&
       Date.now() - _huidigDagelijksBudgetStart > _dagelijksBudget_()) {
     if (!_huidigDagelijksBudgetOverschreden) {
       _huidigDagelijksBudgetOverschreden = true;
