@@ -98,3 +98,67 @@ describe('berekenBtwAangifte_ — case-insensitive labels (regressie)', () => {
     expect(r._onbekendeOmzet || 0).toBe(0);
   });
 });
+
+describe('berekenBtwAangifte_ — r4a reverse-charge inkoop case-insensitive (A2)', () => {
+  // Symmetrie-fix: verkoop-zijde matcht /verlegd/i (regel 239), inkoop-zijde
+  // deed .includes('Verlegd') met hoofdletter. Klant met label "verlegd"
+  // of "VERLEGD" op inkoop kreeg GEEN r4a-buchung → alleen aftrek (r5b),
+  // geen afdracht → BTW-aangifte te laag → naheffing bij controle.
+  // Audit 2026-06-12.
+  const { createGasRuntime } = require('../__helpers__/gas-runtime');
+  const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'BTW.gs']);
+
+  function maakSs(ifRijen) {
+    const HEADER = new Array(20).fill('');
+    return {
+      getSheetByName: (naam) => {
+        if (naam === 'Inkoopfacturen') {
+          return { getDataRange: () => ({ getValues: () => [HEADER, ...ifRijen] }) };
+        }
+        if (naam === 'Verkoopfacturen') {
+          return { getDataRange: () => ({ getValues: () => [HEADER] }) };
+        }
+        return null;
+      },
+    };
+  }
+
+  // Inkoopfactuur-rij: [3]=datum, [8]=excl/grondslag, [9]=btwLabel, [10]=btwBedrag, [12]=status
+  function ifRij(datum, grondslag, label, btw) {
+    const r = new Array(20).fill('');
+    r[3] = datum; r[8] = grondslag; r[9] = label; r[10] = btw;
+    return r;
+  }
+
+  const VAN = new Date('2026-01-01');
+  const TOT = new Date('2026-03-31');
+
+  test('label "Verlegd" (hoofdletter — oude gedrag) → r4a (regressie)', () => {
+    const r = ctx.berekenBtwAangifte_(maakSs([ifRij(new Date('2026-02-01'), 1000, 'Verlegd', 210)]), VAN, TOT);
+    expect(r.r4a_grondslag).toBeCloseTo(1000, 1);
+    expect(r.r4a_btw).toBeCloseTo(210, 1);
+  });
+
+  test('label "verlegd" (kleine letter) → r4a (was VOORHEEN gemist → naheffing)', () => {
+    const r = ctx.berekenBtwAangifte_(maakSs([ifRij(new Date('2026-02-01'), 1000, 'verlegd', 210)]), VAN, TOT);
+    expect(r.r4a_grondslag).toBeCloseTo(1000, 1);
+    expect(r.r4a_btw).toBeCloseTo(210, 1);
+    expect(r.r5b).toBeCloseTo(0, 1); // niet als gewone aftrek
+  });
+
+  test('label "VERLEGD" (caps) → r4a', () => {
+    const r = ctx.berekenBtwAangifte_(maakSs([ifRij(new Date('2026-02-01'), 1000, 'VERLEGD', 210)]), VAN, TOT);
+    expect(r.r4a_grondslag).toBeCloseTo(1000, 1);
+    expect(r.r4a_btw).toBeCloseTo(210, 1);
+  });
+
+  test('label "BTW Verlegd (B2B EU)" → r4a (substring match werkt nog)', () => {
+    const r = ctx.berekenBtwAangifte_(maakSs([ifRij(new Date('2026-02-01'), 1000, 'BTW Verlegd (B2B EU)', 210)]), VAN, TOT);
+    expect(r.r4a_grondslag).toBeCloseTo(1000, 1);
+  });
+
+  test('I₅ axioma blijft sluiten: r5a omvat r4a_btw (geen verschuldigde verloren)', () => {
+    const r = ctx.berekenBtwAangifte_(maakSs([ifRij(new Date('2026-02-01'), 1000, 'verlegd', 210)]), VAN, TOT);
+    expect(r.r5a).toBeCloseTo(r.r4a_btw, 1);
+  });
+});

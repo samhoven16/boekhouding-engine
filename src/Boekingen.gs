@@ -1187,7 +1187,16 @@ function bepaalBtwVoorbelastingRekening_(btwLabel) {
  * CYCLE-53: self-healing parse van GESLOTEN_PERIODES. Corrupt JSON
  * (bv. half-geschreven door quota-fail) zou anders vergrendelPeriode_
  * (tijdens BTW-afsluiten) én beheerGeslotenPeriodes (menu) doen crashen.
- * maakJournaalpost_ had deze guard al inline; nu gedeeld + self-heal.
+ *
+ * Audit 2026-06-12 (A4): de oude self-heal deed deleteProperty bij corrupt
+ * JSON → I₈ (afgesloten-periode-immutability) tijdelijk uit → klant kon
+ * stilletjes in een afgesloten jaar boeken. Nu: BACKUP-VÓÓR-DELETE. De
+ * corrupte waarde wordt naar GESLOTEN_PERIODES_CORRUPT_<ts> geschreven
+ * en gemarkeerd voor forensische trace. Tegelijk meldFataalAanOwner_ +
+ * audit-log zodat Sam weet dat een handmatige reconstructie nodig is.
+ * Self-heal valt nog steeds open (return []) — de business mag niet
+ * volledig stilvallen — maar het gat is nu zichtbaar EN herstelbaar.
+ *
  * @returns {Array<Object>}
  */
 function _leesGeslotenPeriodes_() {
@@ -1198,8 +1207,37 @@ function _leesGeslotenPeriodes_() {
     const parsed = JSON.parse(bestaand);
     return Array.isArray(parsed) ? parsed : [];
   } catch (jsonErr) {
-    Logger.log('GESLOTEN_PERIODES parse fout (self-heal): ' + jsonErr.message);
-    try { props.deleteProperty('GESLOTEN_PERIODES'); } catch (_) {}
+    const ts = Date.now();
+    const backupKey = 'GESLOTEN_PERIODES_CORRUPT_' + ts;
+    Logger.log('GESLOTEN_PERIODES parse fout (self-heal + backup → ' + backupKey + '): ' + jsonErr.message);
+    // Backup ZONDER delete tot backup geslaagd is — anders verlies van de
+    // enige bron-of-truth voor reconstructie.
+    let backupOk = false;
+    try {
+      props.setProperty(backupKey, bestaand);
+      backupOk = true;
+    } catch (backupErr) {
+      Logger.log('Backup van corrupte GESLOTEN_PERIODES MISLUKT: ' + backupErr.message);
+    }
+    if (backupOk) {
+      try { props.deleteProperty('GESLOTEN_PERIODES'); } catch (_) {}
+    }
+    try {
+      if (typeof schrijfAuditLog_ === 'function') {
+        schrijfAuditLog_('GESLOTEN_PERIODES CORRUPT',
+          'Self-heal: JSON-fout "' + jsonErr.message + '"; corrupte waarde bewaard als ' +
+          backupKey + (backupOk ? '' : ' (BACKUP MISLUKTE — handmatige actie vereist)') +
+          '. Handmatige reconstructie aanbevolen vóór nieuwe boekingen in afgesloten jaren.');
+      }
+    } catch (_) {}
+    try {
+      if (typeof meldFataalAanOwner_ === 'function') {
+        meldFataalAanOwner_('GESLOTEN_PERIODES_CORRUPT',
+          'Periode-locks zijn tijdelijk uit door corrupt JSON. ' +
+          'Bekijk ScriptProperties → ' + backupKey + ' voor de originele waarde en reconstrueer via Beheer geslotenperiodes.',
+          { backupKey: backupKey, backupOk: backupOk, fout: jsonErr.message });
+      }
+    } catch (_) {}
     return [];
   }
 }

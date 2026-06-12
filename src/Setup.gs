@@ -110,6 +110,9 @@ function setup() {
         }
       }],
       ['Audit Log aanmaken',        function() { setupAuditLogSheet_(); }],
+      ['Urenregistratie',           function() {
+        if (typeof setupUrenregistratieSheet_ === 'function') setupUrenregistratieSheet_();
+      }],
       ['Help & Compliance tab',     function() {
         if (typeof bouwHelpTab_ === 'function') bouwHelpTab_(ss);
       }],

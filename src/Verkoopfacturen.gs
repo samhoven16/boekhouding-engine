@@ -308,7 +308,8 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   // verwerkInkomstenUitHoofdformulier_ — voorkomt dubbele mail bij retry-after-crash.
   const idemKey = 'emailVerzonden_' + factuurnummer;
   const propsIdem = PropertiesService.getScriptProperties();
-  if (propsIdem.getProperty(idemKey) === 'DONE') {
+  const huidigeMarker = propsIdem.getProperty(idemKey);
+  if (huidigeMarker && huidigeMarker.indexOf('DONE') === 0) {
     Logger.log('stuurFactuurNaarEmailAdres: SKIP — al gemarkeerd DONE voor ' + factuurnummer);
     safeAuditLog_('Email DUBBEL geblokkeerd', factuurnummer + ' (factuurlijst)');
     try { props.deleteProperty(flagKey); } catch (_) {}
@@ -328,7 +329,8 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
 
   // Idempotency: markeer DONE direct na succes (atomair vóór sheet-write)
   if (ok) {
-    try { propsIdem.setProperty(idemKey, 'DONE'); } catch (_) {}
+    // 'DONE:&lt;ts&gt;' zodat cleanupEmailIdem na 180d kan opruimen (audit 2026-06-12).
+    try { propsIdem.setProperty(idemKey, 'DONE:' + Date.now()); } catch (_) {}
   } else {
     try { propsIdem.deleteProperty(idemKey); } catch (_) {}  // retry mag
   }

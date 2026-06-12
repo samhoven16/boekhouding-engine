@@ -781,7 +781,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   if (directMailen && klantEmail && pdfUrl) {
     const propsEmail = PropertiesService.getScriptProperties();
     const reedsVerzonden = propsEmail.getProperty(emailIdemKey);
-    if (reedsVerzonden === 'DONE') {
+    if (reedsVerzonden && reedsVerzonden.indexOf('DONE') === 0) {
       // Klant probeert opnieuw — email is al de deur uit, alleen sheet-status repareren
       schrijfAuditLog_('Email DUBBEL geblokkeerd', factuurNummerOpgemaakt + ' — al verzonden, skip');
       emailVerzonden = true;
@@ -818,7 +818,11 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 
       // Markeer DONE direct na succes — atomair sneller dan sheet-write
       if (emailVerzonden) {
-        try { propsEmail.setProperty(emailIdemKey, 'DONE'); } catch (_) {}
+        // Schrijf 'DONE:&lt;ts&gt;' i.p.v. plain 'DONE' zodat cleanupEmailIdem
+        // (Triggers.gs:1621) de key na 180d kan verwijderen. Plain 'DONE'
+        // gaf new Date('DONE')=NaN → cleanup was no-op → 500KB-cliff bij
+        // high-volume klanten. Audit 2026-06-12.
+        try { propsEmail.setProperty(emailIdemKey, 'DONE:' + Date.now()); } catch (_) {}
         schrijfAuditLog_('Email verstuurd', factuurNummerOpgemaakt + ' → ' + klantEmail);
       } else {
         // Reset PENDING — retry mag opnieuw proberen
@@ -1616,26 +1620,40 @@ function dagelijkseTaken() {
     if (typeof backupEmailIndienNodig_ === 'function') backupEmailIndienNodig_();
   });
   // DR/SRE: emailVerzonden_F* idempotency-keys accumuleren zonder cleanup
-  // → quotum-cliff bij 10.000 facturen. Cleanup-window 180 dagen. Pure
-  // ScriptProperties-iteratie, geen sheet-IO → goedkoop, hoort in cleanup-fase.
+  // → ScriptProperties-cliff (500KB) bij high-volume klanten. Cleanup-
+  // window 180 dagen. Het waarde-formaat is 'DONE:&lt;ts&gt;' of 'PENDING:&lt;ts&gt;'.
+  // Audit 2026-06-12: voorheen new Date(value).getTime() → NaN op beide
+  // formaten → niets werd ooit verwijderd. Nu strikt regex-parsen.
+  // Legacy plain 'DONE' (geen ts) is per definitie > 180d na deze deploy
+  // niet meer actief beschermend → die mogen we direct schrappen.
   _runTaak_('cleanupEmailIdem', function() {
     const props = PropertiesService.getScriptProperties();
     const alle = props.getProperties();
     const cutoffMs = Date.now() - 180 * 24 * 60 * 60 * 1000;
     let verwijderd = 0;
+    let legacy = 0;
     Object.keys(alle).forEach(function(k) {
       if (k.indexOf('emailVerzonden_') !== 0) return;
-      try {
-        const ts = new Date(alle[k]).getTime();
-        if (isFinite(ts) && ts < cutoffMs) {
-          props.deleteProperty(k);
-          verwijderd++;
-        }
-      } catch (_) { /* corrupt timestamp → laat staan, niet riskant */ }
+      const v = String(alle[k] || '');
+      // Plain 'DONE' (legacy vóór de audit-fix) → geen ts, mag weg.
+      if (v === 'DONE') {
+        try { props.deleteProperty(k); legacy++; } catch (_) {}
+        return;
+      }
+      // 'DONE:&lt;ts&gt;' of 'PENDING:&lt;ts&gt;' — extracteer integer-timestamp.
+      const m = /^(?:DONE|PENDING):(\d{10,})$/.exec(v);
+      if (!m) return;
+      const ts = parseInt(m[1], 10);
+      if (isFinite(ts) && ts > 0 && ts < cutoffMs) {
+        try { props.deleteProperty(k); verwijderd++; } catch (_) {}
+      }
     });
-    if (verwijderd > 0) {
-      try { schrijfAuditLog_('cleanupEmailIdem',
-        'Verwijderd ' + verwijderd + ' emailVerzonden_-keys ouder dan 180d'); } catch (_) {}
+    if (verwijderd > 0 || legacy > 0) {
+      try {
+        schrijfAuditLog_('cleanupEmailIdem',
+          'Verwijderd ' + verwijderd + ' keys ouder dan 180d' +
+          (legacy > 0 ? ' + ' + legacy + ' legacy plain-DONE' : ''));
+      } catch (_) {}
     }
   });
 
@@ -1719,11 +1737,16 @@ function dagelijkseTaken() {
   // SelfHeal trigger-check: ALLERLAATSTE step in dagelijkseTaken — beperkt
   // blast-radius als sanitize-recreate halverwege faalt op ScriptApp-quota.
   // Alle nuttige work is dan al gedaan. Throttle 24u via SelfHeal.gs.
+  // KRITIEK: zelf-heal mag NIET worden geskipt door budget-overschrijding.
+  // Bij volle administraties was triggerSelfHeal structureel SKIP → een
+  // verweesde of ontbrekende trigger bleef ongezien rotten tot Sam handmatig
+  // ingreep. De inspectie is goedkoop (24u-throttle voor de heal zelf;
+  // alleen ScriptApp.getProjectTriggers + array-filter dagelijks).
   _runTaak_('triggerSelfHeal', function() {
     if (typeof controleerVolledigeTriggerInstallatie_ === 'function') {
       controleerVolledigeTriggerInstallatie_();
     }
-  });
+  }, { kritiek: true });
 
   // Aggregaat: totale duur dagelijkseTaken
   const totaleDuur = Date.now() - dagelijksTotaal0;
@@ -1747,13 +1770,22 @@ function dagelijkseTaken() {
  *  - status-tracking → taakStatus-sheet (laatste run + status)
  *  - audit-log bij fout
  */
-function _runTaak_(naam, fn) {
+function _runTaak_(naam, fn, opt) {
+  // Kritiek-flag (opt.kritiek=true): negeert de budget-cap. Bedoeld voor de
+  // zelf-healende infrastructuur die GEEN dag mag missen (anders silent
+  // degradatie: bv. een verweesde trigger blijft eeuwig ReferenceError
+  // gooien tot een handmatige menu-actie). Self-heal is in zichzelf
+  // goedkoop: inspectie + 24u-throttle, alleen bij echte drift werkt
+  // sanitizeTriggers_. Gebruik kritiek SPAARZAAM — elke kritieke taak
+  // bijt potentieel in de 6-min hard-cap.
+  opt = opt || {};
   // Budget-guard: bij langlopende administraties kan de cumulatieve duur
-  // van vroege taken latere taken (triggerSelfHeal, cleanup-taken) uit de
-  // 6-min GAS-cap drukken. Sla over zodra budget op is — markeert SKIP,
-  // audit-logt één keer per run zodat Sam kan zien welke installaties
-  // budget overschrijden en welke taken erdoor worden geraakt.
-  if (_huidigDagelijksBudgetStart > 0 &&
+  // van vroege taken latere taken (cleanup-taken) uit de 6-min GAS-cap
+  // drukken. Sla over zodra budget op is — markeert SKIP, audit-logt
+  // één keer per run zodat Sam kan zien welke installaties budget
+  // overschrijden en welke taken erdoor worden geraakt.
+  if (!opt.kritiek &&
+      _huidigDagelijksBudgetStart > 0 &&
       Date.now() - _huidigDagelijksBudgetStart > _dagelijksBudget_()) {
     if (!_huidigDagelijksBudgetOverschreden) {
       _huidigDagelijksBudgetOverschreden = true;

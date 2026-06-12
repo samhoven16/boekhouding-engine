@@ -867,27 +867,17 @@ function _berekenBelastingadviesRaw_(ss) {
     }
   }
 
-  // ── 4. MKB-winstvrijstelling ──────────────────────────────────────────
-  if (isZzp && winst > 0) {
-    const winstNaAftrekken = Math.max(0, winst - totaalAftrek);
-    const mkbAftrek = rondBedrag_(winstNaAftrekken * BELASTING.MKB_WINSTVRIJSTELLING);
-    aftrekken.push({
-      naam: `MKB-winstvrijstelling (${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}%)`,
-      bedrag: mkbAftrek,
-      voorwaarde: 'Automatisch van toepassing voor ondernemers IB',
-      code: '7990',
-    });
-    adviezen.push({
-      type: 'AFTREKPOST',
-      titel: '✅ MKB-winstvrijstelling: ' + formatBedrag_(mkbAftrek),
-      tekst: `${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
-             `Dit wordt automatisch meegenomen in uw aangifte.`,
-      besparing: rondBedrag_(mkbAftrek * marginaalIbTarief_(winst, BELASTING)),
-    });
-    totaalAftrek += mkbAftrek;
-  }
-
-  // ── 5. KIA (Kleinschaligheidsinvesteringsaftrek) ──────────────────────
+  // ── 4. KIA (Kleinschaligheidsinvesteringsaftrek) ──────────────────────
+  // Audit 2026-06-12 (A1): KIA stond hier voorheen NA MKB-vrijstelling.
+  // Dat was fiscaal verkeerd: art. 3.40 Wet IB rekent KIA als
+  // investeringsaftrek die de WINST vermindert, en art. 3.79a baseert
+  // de MKB-vrijstelling op (winst − ondernemersaftrek). KIA hoort dus
+  // VÓÓR de MKB-grondslag te zitten. Voorbeeldcasus (winst €60.000,
+  // KIA-investering €15.000, ZA €1.200, SA €2.123):
+  //   Verkeerd (oud): belastbaar €45.279
+  //   Correct (nu):   belastbaar €45.812
+  // → klant onderbetaalde IB met ~€200/casus → naheffing bij controle.
+  // Tests: tests/unit/mkb-volgorde-na-kia.test.js.
   const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);   // CYCLE-51
   let investeringen = 0;
   gbData.slice(1).forEach(r => {
@@ -943,6 +933,29 @@ function _berekenBelastingadviesRaw_(ss) {
              `€${BELASTING.KIA_MAX.toLocaleString('nl-NL')}. Geen KIA dit jaar. Bekijk MIA/VAMIL voor milieu-investeringen of EIA voor energie-investeringen.`,
       besparing: null,
     });
+  }
+
+  // ── 5. MKB-winstvrijstelling (NA KIA — art. 3.79a Wet IB) ──────────────
+  // totaalAftrek bevat hier ZA + SA + KIA. MKB-grondslag = winst minus
+  // die drie. Voorheen miste KIA in de grondslag → te hoge MKB-claim →
+  // klant onderbetaalde IB. Fix-audit 2026-06-12.
+  if (isZzp && winst > 0) {
+    const winstNaAftrekken = Math.max(0, winst - totaalAftrek);
+    const mkbAftrek = rondBedrag_(winstNaAftrekken * BELASTING.MKB_WINSTVRIJSTELLING);
+    aftrekken.push({
+      naam: `MKB-winstvrijstelling (${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}%)`,
+      bedrag: mkbAftrek,
+      voorwaarde: 'Automatisch van toepassing voor ondernemers IB',
+      code: '7990',
+    });
+    adviezen.push({
+      type: 'AFTREKPOST',
+      titel: '✅ MKB-winstvrijstelling: ' + formatBedrag_(mkbAftrek),
+      tekst: `${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}% van uw winst na aftrekken (${formatBedrag_(winstNaAftrekken)}) is vrijgesteld van inkomstenbelasting. ` +
+             `Dit wordt automatisch meegenomen in uw aangifte.`,
+      besparing: rondBedrag_(mkbAftrek * marginaalIbTarief_(winst, BELASTING)),
+    });
+    totaalAftrek += mkbAftrek;
   }
 
   // ── 5b. EIA — Energie-investeringsaftrek ──────────────────────────────
@@ -1202,29 +1215,49 @@ function _berekenBelastingadviesRaw_(ss) {
   }
 
   // ── 8d. Urencriterium voortgang ───────────────────────────────────────
+  // Audit 2026-06-12 (C1): Sheet UREN is nu bron-van-waarheid voor het
+  // 1.225-uren-criterium (art. 3.6 Wet IB). Belastingdienst-controle eist
+  // per-rij datum + activiteit + uren. Fallback naar de oude instelling
+  // "Gewerkte uren dit jaar" voor klanten die de UREN-sheet nog niet
+  // bevolkt hebben — die fallback waarschuwt expliciet over zwakke
+  // onderbouwing.
   if (isZzp) {
-    const urenRaw = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0', 10);
-    const uren = (isFinite(urenRaw) && urenRaw > 0) ? urenRaw : 0;
+    let uren = 0;
+    let bron = 'sheet';
+    if (typeof totaalUrenInBoekjaar_ === 'function') {
+      try { uren = totaalUrenInBoekjaar_(ss, jaar); } catch (_) { uren = 0; }
+    }
+    if (uren <= 0) {
+      const urenRaw = parseInt(getInstelling_('Gewerkte uren dit jaar') || '0', 10);
+      if (isFinite(urenRaw) && urenRaw > 0) { uren = urenRaw; bron = 'instelling'; }
+    }
     if (uren > 0) {
       const pct = Math.min(100, Math.round((uren / BELASTING.URENCRITERIUM) * 100));
       const resterend = Math.max(0, BELASTING.URENCRITERIUM - uren);
+      // Onderbouwingswaarschuwing als de uren NIET uit de sheet komen —
+      // dan ontbreekt per-rij-bewijs voor Belastingdienst-controle.
+      const onderbouwd = (bron === 'sheet');
+      const onderbouwingsTekst = onderbouwd
+        ? ' (bewijslast staat in tabblad Urenregistratie).'
+        : ' ⚠️ Vul het tabblad Urenregistratie per dag/activiteit — een totaal in Instellingen is bij controle onvoldoende onderbouwing.';
       adviezen.push({
         type: uren >= BELASTING.URENCRITERIUM ? 'AFTREKPOST' : 'ACTIE',
         titel: uren >= BELASTING.URENCRITERIUM
           ? `✅ Urencriterium gehaald! (${uren}/1.225 uur)`
           : `⏱️ Urencriterium: ${uren}/1.225 uur (${pct}%)`,
         tekst: uren >= BELASTING.URENCRITERIUM
-          ? `U heeft het urencriterium gehaald. Zelfstandigenaftrek en startersaftrek zijn van toepassing. Bewaar uw urenregistratie als bewijs voor de Belastingdienst.`
-          : `Nog ${resterend} uur nodig voor zelfstandigenaftrek (€2.470) en startersaftrek. ` +
-            `Update "Gewerkte uren dit jaar" in Instellingen. Houd een urenregistratie bij als bewijs.`,
+          ? `U heeft het urencriterium gehaald. Zelfstandigenaftrek en startersaftrek zijn van toepassing.` + onderbouwingsTekst
+          : `Nog ${resterend} uur nodig voor zelfstandigenaftrek en startersaftrek.` + onderbouwingsTekst,
         besparing: null,
       });
     } else {
       adviezen.push({
         type: 'ACTIE',
         titel: '⏱️ Urenregistratie vereist voor zelfstandigenaftrek',
-        tekst: `Vul "Gewerkte uren dit jaar" in via Instellingen. Zonder 1.225 uur geen recht op ` +
-               `zelfstandigenaftrek (€2.470) of startersaftrek (€2.123). Houd een urenadministratie bij.`,
+        tekst: `Open menu Boekhoudbaar → Urenregistratie en log dagelijks uw uren ` +
+               `(datum + activiteit + aantal). Zonder 1.225 uur geen recht op ` +
+               `zelfstandigenaftrek of startersaftrek. Een totaal-veld in Instellingen ` +
+               `is bij Belastingdienst-controle onvoldoende onderbouwing.`,
         besparing: null,
       });
     }

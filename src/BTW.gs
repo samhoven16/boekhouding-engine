@@ -271,7 +271,12 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     const btwBedrag = parseFloat(ifData[i][10]) || 0;
     const btwLabel  = String(ifData[i][9] || '');
 
-    if (btwLabel.includes('Verlegd')) {
+    // Reverse-charge inkoop (BTW verlegd) → r4a verschuldigd + r5b aftrek.
+    // Case-INSENSITIVE conform de verkoop-zijde (r1e regel 239) zodat één-
+    // letter-typo in een label ("verlegd"/"VERLEGD") niet leidt tot stille
+    // mis-classificatie: zonder r4a-buchung zou alleen aftrek geclaimd worden
+    // zonder afdracht → naheffing bij BTW-controle. Audit 2026-06-12.
+    if (/verlegd/i.test(btwLabel)) {
       const grondslag = parseFloat(ifData[i][8]) || 0;
       aangifte.r4a_grondslag += grondslag;
       aangifte.r4a_btw += btwBedrag;
