@@ -159,6 +159,40 @@ function bouwHelpTab_(ss) {
     sheet.getRange(rij, 2).setValue(s[1]);
     rij++;
   });
+  rij += 2;
+
+  // ── Sectie 8: Wat als de licentie-server niet meer reageert? ──
+  // Audit 2026-06-12 (D4): klanten hadden geen weet van de
+  // LICENTIE_GRACE_DAGEN-override. Bij langdurige server-uitval valt na
+  // dag 91 ELKE klant stil — zonder dat ze weten dat ze zelf kunnen
+  // verlengen. Dit is een bus-factor-risico dat in de Help-tab hoort.
+  rij = _sectieHeader_(sheet, rij, '🆘 Licentie-server onbereikbaar?', accent);
+  const grace = [
+    ['Wat gebeurt er?',
+      'Je administratie blijft normaal werken. Boekhoudbaar checkt 1× per dag of de licentie geldig is; bij ' +
+      'tijdelijke storingen werkt alles door (90 dagen offline-grace standaard).'],
+    ['Wanneer wordt het kritiek?',
+      'Na 90 aaneengesloten dagen zonder geslaagde licentie-check. Daarna ' +
+      'kun je geen nieuwe facturen meer versturen tot de server weer online is.'],
+    ['Wat kun je zelf doen?',
+      'Open de Apps Script editor (Extensies → Apps Script), ga naar ' +
+      'Projectinstellingen → Scripteigenschappen, en voeg een eigenschap toe ' +
+      'met naam LICENTIE_GRACE_DAGEN en waarde 365 (één jaar) of 3650 (tien jaar). ' +
+      'Geldige waarden: 1 t/m 3650.'],
+    ['Wanneer mag je dat doen?',
+      'Alleen als jij weet of het waarschijnlijk is dat de server een ' +
+      'tijd langer offline blijft (bv. een aangekondigde overgang). Het is ' +
+      'geen omzeil-truc voor licentie-controle — die blijft gewoon gelden ' +
+      'zodra de server weer online is.'],
+    ['Email check',
+      'support@boekhoudbaar.nl — als je niet weet of het probleem aan jouw ' +
+      'kant of die van Boekhoudbaar ligt, mail eerst.'],
+  ];
+  grace.forEach(function(g) {
+    sheet.getRange(rij, 1).setValue(g[0]).setFontWeight('bold');
+    sheet.getRange(rij, 2).setValue(g[1]).setWrap(true).setVerticalAlignment('top');
+    rij++;
+  });
 
   // ── Disclaimer aan einde ─────────────────────────
   rij += 2;

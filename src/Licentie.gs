@@ -79,9 +79,27 @@ const OWNER_BYPASS_KEY = 'LICENTIE_OWNER_BYPASS';
 // Voeg hier emails toe van mensen die het master-sjabloon mogen gebruiken
 // (developers, mede-eigenaars). Voor klanten geldt nog steeds de normale
 // licentie-flow zodra zij hun eigen kopie hebben (andere SS-ID).
-const ADMIN_EMAILS = [
-  'samhoven16@gmail.com',
-];
+//
+// BUS-FACTOR (audit 2026-06-12, D4): één admin = single-point-of-failure.
+// Als de hoofdadmin onbereikbaar wordt (gezondheid, account-blok) zonder
+// een tweede admin EN zonder dat klanten LICENTIE_GRACE_DAGEN weten,
+// loopt elke klant na dag 91 stil. Voeg een tweede vertrouwde admin toe
+// (mede-oprichter / accountant / familielid) via ScriptProperty
+// ADMIN_EMAILS_EXTRA (komma-gescheiden), of voeg een tweede regel toe
+// in deze array bij volgende code-push.
+const ADMIN_EMAILS = (function() {
+  const base = ['samhoven16@gmail.com'];
+  try {
+    const extra = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAILS_EXTRA');
+    if (extra) {
+      String(extra).split(',').forEach(function(e) {
+        const m = String(e || '').trim().toLowerCase();
+        if (m && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m) && base.indexOf(m) === -1) base.push(m);
+      });
+    }
+  } catch (_) { /* ScriptProperty niet bereikbaar — gebruik defaults */ }
+  return base;
+})();
 
 /**
  * Detecteert of de licentie-check moet worden overgeslagen.
