@@ -1078,7 +1078,73 @@ function schrijfDagelijksAuditAnchor_() {
 
     sheet.appendRow([vandaag, entryCount, hash, prevHash]);
     props.setProperty('AUDIT_ANCHOR_LAATSTE', vandaag);
+
+    // C4 (audit 2026-06-12): externe anker via mail-naar-self. Gmail/mail-
+    // provider stamps zijn van een derde partij → bewijswaarde dat de
+    // hash op deze datum bestond, zonder dat de klant 'm later kan
+    // herrekenen. Forensisch sterker dan een rij in zijn eigen sheet.
+    try { _verstuurAuditAnchorMail_(vandaag, entryCount, hash, prevHash); } catch (_) {}
   } catch (_) { /* anchor mag nooit dagelijkseTaken breken */ }
+}
+
+/**
+ * C4 — Dagelijkse audit-anker-mail naar de klant zelf. Subject bevat
+ * datum + hash-prefix → zoekbaar in Gmail. Body bevat de volledige
+ * keten-hash, entry-count, en uitleg waarom de mail bewaard moet
+ * blijven. Klant kan via instelling "Audit-anker e-mail" (waarde "Uit")
+ * de mailing uitzetten.
+ *
+ * Geen persoonsgegevens of boekingsdata: alleen de hash + count + datum.
+ * Hash is eenrichtingsfunctie — geen reconstructie mogelijk.
+ *
+ * @param {string} datum     yyyy-MM-dd
+ * @param {number} entryCount  aantal entries in de buffer
+ * @param {string} hash      keten-hash
+ * @param {string} prevHash  vorige keten-hash (uit anker-tab)
+ * @returns {boolean} of er werkelijk gemaild is
+ */
+function _verstuurAuditAnchorMail_(datum, entryCount, hash, prevHash) {
+  // Opt-out via instelling
+  try {
+    if (typeof getInstelling_ === 'function') {
+      const aan = String(getInstelling_('Audit-anker e-mail') || 'Aan').toLowerCase();
+      if (aan === 'uit' || aan === 'nee' || aan === 'off') return false;
+    }
+  } catch (_) {}
+
+  // Bepaal de ontvanger — actieve user. Bij ontbreken: niet mailen.
+  let ontvanger = '';
+  try { ontvanger = String(Session.getActiveUser().getEmail() || '').trim(); } catch (_) {}
+  if (!ontvanger || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ontvanger)) return false;
+
+  // Quota-guard: bij bijna-leeg mail-quota niet versturen (deze mail is
+  // wenselijk maar mag niet de daily quota van klant-facturatie opeten).
+  try {
+    if (MailApp.getRemainingDailyQuota && MailApp.getRemainingDailyQuota() < 5) return false;
+  } catch (_) {}
+
+  const hashKort = String(hash || '').substring(0, 12);
+  const subject = '[Boekhoudbaar] Audit-anker ' + datum + ' (#' + hashKort + ')';
+  const body =
+    'Dit is een automatisch gegenereerd audit-anker voor uw boekhouding.\n\n' +
+    'Bewaar deze mail. De Gmail/mail-tijdstempel bewijst dat de\n' +
+    'onderstaande hash op deze datum bestond — bewijslast voor een\n' +
+    'eventuele Belastingdienst-controle (art. 52 AWR, 7-jaars bewaarplicht).\n\n' +
+    'Datum:          ' + datum + '\n' +
+    'Entry-count:    ' + entryCount + '\n' +
+    'Keten-hash:     ' + hash + '\n' +
+    'Vorige hash:    ' + (prevHash || '(geen)') + '\n\n' +
+    'U kunt de mailing uitzetten via Instellingen → "Audit-anker e-mail" = Uit.\n' +
+    'Dit is een hash (eenrichtingsfunctie): er staan GEEN boekingsdata\n' +
+    'of persoonsgegevens in deze mail.';
+
+  try {
+    MailApp.sendEmail({ to: ontvanger, subject: subject, body: body, noReply: true });
+    return true;
+  } catch (mailErr) {
+    Logger.log('Audit-anker-mail mislukt: ' + mailErr.message);
+    return false;
+  }
 }
 
 function getBusinessType() {
