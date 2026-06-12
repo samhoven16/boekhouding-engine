@@ -95,6 +95,36 @@
 }
 </script>
 
+<!-- SEO-audit 2026-06-12 (Ray, E-E-A-T): aanvullend HowTo-schema voor stappenplan-rich-result. Additief; raakt bestaand Article/FAQPage niet. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "BTW-aangifte ZZP doen in 6 stappen (2026)",
+  "description": "Stappenplan voor de kwartaal-BTW-aangifte voor ZZP'ers in Nederland: omzet aangeven, BTW berekenen, voorbelasting aftrekken, indienen, betalen, archiveren.",
+  "totalTime": "PT30M",
+  "estimatedCost": {"@type": "MonetaryAmount", "currency": "EUR", "value": "0"},
+  "tool": [
+    {"@type": "HowToTool", "name": "Mijn Belastingdienst Zakelijk-account"},
+    {"@type": "HowToTool", "name": "Eigen administratie van facturen en bonnen"}
+  ],
+  "step": [
+    {"@type": "HowToStep", "position": 1, "name": "Verzamel je verkoopfacturen",
+     "text": "Tel de BTW per tarief (21% / 9% / 0% / vrijgesteld) over alle verzonden facturen in het kwartaal."},
+    {"@type": "HowToStep", "position": 2, "name": "Verzamel je inkoopfacturen",
+     "text": "Tel de voorbelasting (BTW op zakelijke kosten met geldige factuur op naam van je onderneming)."},
+    {"@type": "HowToStep", "position": 3, "name": "Bereken het saldo",
+     "text": "Verschuldigde BTW (verkopen) minus voorbelasting (inkopen) = af te dragen of terug te ontvangen."},
+    {"@type": "HowToStep", "position": 4, "name": "Dien in via Mijn Belastingdienst Zakelijk",
+     "text": "Vul de bedragen in bij rubriek 1a (21%), 1b (9%), 1c (overig), 1e (verlegd), 4a (verlegd inkoop) en 5b (voorbelasting). Controleer met de aangifte van vorig kwartaal."},
+    {"@type": "HowToStep", "position": 5, "name": "Betaal vóór de deadline",
+     "text": "Q1 vóór 30 april, Q2 vóór 31 juli, Q3 vóór 31 oktober, Q4 vóór 31 januari. Belasting niet betalen = boete + heffingsrente."},
+    {"@type": "HowToStep", "position": 6, "name": "Bewaar het bewijs 7 jaar",
+     "text": "Aangifteformulier + onderliggende facturen + bonnetjes 7 jaar bewaren (10 jaar voor onroerend goed). Art. 52 AWR."}
+  ]
+}
+</script>
+
 <link rel="stylesheet" href="/gids/gids.css">
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
 <link rel="stylesheet" href="/animations.css">
@@ -354,6 +384,19 @@
     <p>Boekhoudbaar berekent je BTW per factuur, houdt je kwartaaltotalen bij en waarschuwt je voor aankomende deadlines — allemaal in je eigen Google Spreadsheet.</p>
     <a href="/kopen" class="btn">Probeer Boekhoudbaar — €49 eenmalig</a>
   </div>
+
+  <!-- SEO-audit 2026-06-12: gids-silo doorbreken (Indig). Voorheen had deze gids 0 interne gids-links → autoriteit lekte weg. -->
+  <section class="lees-ook" aria-label="Verwante gidsen">
+    <h2>Lees ook</h2>
+    <ul>
+      <li><a href="/gids/btw-berekenen-terugvragen-zzp/">BTW berekenen &amp; terugvragen voor ZZP</a> — formule + voorbeelden</li>
+      <li><a href="/gids/suppletie-aangifte-btw/">Suppletie BTW-aangifte</a> — fout corrigeren binnen 8 weken</li>
+      <li><a href="/gids/maandaangifte-vs-kwartaalaangifte-btw/">Maand- vs. kwartaal-aangifte</a> — wanneer welke kiezen</li>
+      <li><a href="/gids/btw-verleggen-wanneer/">BTW verleggen</a> — EU-diensten + bouw</li>
+      <li><a href="/gids/ib-aangifte-zzp/">IB-aangifte ZZP</a> — wat verandert er in box 1</li>
+      <li><a href="/gids/btw-teruggave-zzp/">BTW-teruggave</a> — wanneer krijg je geld terug</li>
+    </ul>
+  </section>
 
 </main>
 
