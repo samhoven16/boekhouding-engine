@@ -260,3 +260,55 @@ Fix: escHtml_(bedrijf). Owner: Sam (dev)
 Quote: `const xafXml = _bouwXafXml_(ss);`
 Probleem: cross-ref — XML-escaping van dynamische velden moet in XafExport geverifieerd zijn. (Bevestigd door batch ACC-B: _xafEsc_ aanwezig, XafExport.gs:385-393 — hiermee AFGEDEKT, geen open risico.)
 Fix: geen — afgedekt door ACC-B-verificatie. Owner: Sam (dev)
+
+## Batch RED-E — FeedbackLoop, Fiscaal, Fortress, HerhalendeKosten, HitlValidatie, Inkoopfacturen, Menu, Metrics
+
+### src/FeedbackLoop.gs — Gelezen: 1-165. Server-URL owner-property; anoniem licentie-id (SHA-256[0:12]); veld-voor-veld opbouw. VONDST F-RED-080.
+### src/Fiscaal.gs — Gelezen: 1-446. Suppletie-melding idempotent (277-291). VONDSTEN F-RED-081, 082.
+### src/Fortress.gs — Gelezen: 1-292. VONDST F-RED-083.
+### src/HerhalendeKosten.gs — Gelezen: 1-517. Idempotency + lock OK (285, 333-377). VONDST F-RED-084.
+### src/HitlValidatie.gs — Gelezen: 1-240. Dialog escaped alle velden (52-66); withLock_ (165-187). VONDST F-RED-085.
+### src/Inkoopfacturen.gs — Gelezen: 1-165. escHtml_ overal; lock+idempotency+rollback (27-55). Geen vondsten.
+### src/Menu.gs — Gelezen: 1-712. Licentie-gate beperkt menu; export altijd open (anti-lock-in, bewust). VONDSTEN F-RED-086, 087.
+### src/Metrics.gs — Gelezen: 1-179. toonSysteemStatus maskeert secret-keys correct (96-104, dekt alle bekende keys); throttle 1×/u. VONDST F-RED-088.
+
+#### F-RED-080 [LAAG] src/FeedbackLoop.gs:132-145
+Quote: `UrlFetchApp.fetch(serverUrl + '?actie=feedback', { method: 'post', ... payload: JSON.stringify(veilig) });`
+Probleem: fire-and-forget POST zonder rate-limit/idempotency ⇒ spam-vector richting owner-server/Brevo via herhaald google.script.run.
+Fix: client-cooldown + server-side per-licentie-id rate-limit. Owner: Sam (dev)
+
+#### F-RED-081 [LAAG] src/Fiscaal.gs:150
+Quote: `'<div class="sub2">' + r.uitleg + '. Bij IB-tarief ...'`
+Probleem: r.uitleg via innerHTML zonder escape — vandaag statisch opgebouwd, latente DOM-XSS bij bron-wijziging.
+Fix: escapen of textContent. Owner: Sam (dev)
+
+#### F-RED-082 [LAAG] src/Fiscaal.gs:371-378 — v.periode intern gegenereerd, geen actuele injectie; geen guard als vangnet. Fix: geen actie nu. Owner: Sam.
+
+#### F-RED-083 [MIDDEL] src/Fortress.gs:140-171
+Quote: `if (ed.getEmail() !== me.getEmail()) { try { prot.removeEditor(ed); } catch (_) {} }`
+Probleem: Fortress ("Beveiligde modus", filosofie "wiskundig onveranderlijk") beschermt NIET tegen de owner zelf — owner houdt edit-rechten en kan protections/FORTRESS_MODE/trigger verwijderen ⇒ tegen threat #1b (retroactieve eigen-fraude) nul bescherming; label wekt valse tamper-evidence-indruk bij klant/accountant. (Sluit aan op F-ACC-001.)
+Fix: communiceren als foutpreventie; echte tamper-evidence via extern anker.
+Owner: Sam (dev) + accountant (communicatie)
+
+#### F-RED-084 [MIDDEL] src/HerhalendeKosten.gs:247-260
+Quote: `sheet.appendRow([ id, naam, String((data && data.leveranc) || ''), bedrag, ... (data && data.notities) || '', splitPct ]);`
+Probleem: naam/leveranc/notities uit dialog zonder formula-guard naar sheet ⇒ =IMPORTDATA/HYPERLINK live in cel; lekt via accountant-export; naam ook in journaalpost-omschrijving (353).
+Fix: =+-@-prefix-guard vóór appendRow. Owner: Sam (dev)
+
+#### F-RED-085 [MIDDEL] src/HitlValidatie.gs:154-175
+Quote: `function valideerBoekingRijen(rijIndexen) { ... sheet.getRange(rij, HITL_KOL_STATUS).setValue(HITL_STATUS_GEVALIDEERD); ...`
+Probleem: client levert willekeurige rij-indexen; geen bounds-check, geen Concept-status-verificatie ⇒ klant kan via google.script.run willekeurige rijen valselijk "Gevalideerd" stempelen (incl. vervalste Gevalideerd-door) — ondermijnt precies de art. 52-claim van de HITL-feature (threat #1b).
+Fix: server-side rij ∈ [2, lastRow] + huidige status === Concept vereisen. Owner: Sam (dev)
+
+#### F-RED-086 [LAAG] src/Menu.gs:379-381, 585-586 — Google-form-URL ongeescaped in dialog (bron Google ⇒ geen exploit; discipline-gap). Fix: escapen. Owner: Sam.
+#### F-RED-087 [LAAG] src/Menu.gs:519-521, 538
+Quote: `const mimeType = bestandsnaam.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/' + (bestandsnaam.split('.').pop() || 'jpeg');`
+Probleem: mimeType/extensie uit ongesaniteerde client-bestandsnaam; bon.svg ⇒ image/svg in eigen Drive (script-houdend bij direct openen); geen content-validatie.
+Fix: extensie/mimetype-whitelist (jpg/png/pdf); extensie uit geschoonde naam. Owner: Sam (dev)
+
+#### F-RED-088 [MIDDEL] src/Metrics.gs:154, 164
+Quote: `const ctxJson = context ? JSON.stringify(context).slice(0, 1000) : '(geen)';` ... `'Context:\n' + ctxJson`
+Probleem: meldFataalAanOwner_ mailt context/bericht ongemaskeerd (geen masking-laag zoals toonSysteemStatus) ⇒ latent plaintext-secret-lek naar owner-inbox, afhankelijk van discipline van elke caller.
+Fix: zelfde masker-functie op bericht/context vóór mail/audit-log. Owner: Sam (dev)
+
+Prioriteit RED-E: F-RED-085 (vervalsbare HITL-validatie) en F-RED-084 (formula-injectie richting accountant); F-RED-083 is belofte/realiteit-mismatch voor communicatie.
