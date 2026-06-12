@@ -230,3 +230,78 @@ Probleem: pure code-identifiers in klant-zichtbare check-output; klant kan niets
 Fix: klant-tekst + technische oorzaak naar log. Owner: Sam (dev)
 
 Patroon VCE-C: code-identifiers in klant-strings (setup(), Config.gs, BTW_KEUZES); Engels technisch jargon (DLQ, burn rate, stack-trace); DriveStructuur/EUVerkoop zijn de gouden standaard.
+
+## Batch VCE-D — EmailDeliverability, EmailQuotaGuard, Engagement, ExportAccountant, FeedbackLoop, Fiscaal, Fortress, GezondheidCheck
+
+### src/EmailDeliverability.gs — Gelezen: 1-110. "je" consistent; audit-log helder (55). VONDST F-VCE-080.
+### src/EmailQuotaGuard.gs — Gelezen: 1-178. "je" consistent; quota uitgelegd in body. VONDSTEN F-VCE-081, 082.
+### src/Engagement.gs — Gelezen: 1-409. "je" consistent. VONDSTEN F-VCE-083..085.
+### src/ExportAccountant.gs — Gelezen: 1-1076. XAF-fallback-melding voorbeeldig (99); backup-alerts met oorzaken (384). VONDSTEN F-VCE-086..088.
+### src/FeedbackLoop.gs — Gelezen: 1-165. VONDSTEN F-VCE-089, 090.
+### src/Fiscaal.gs — Gelezen: 1-446. Stakingswizard voorbeeldig eerlijk (169-187); DGA-advies concreet (425). VONDST F-VCE-091.
+### src/Fortress.gs — Gelezen: 1-292. Aan-dialog exemplarisch transparant (47-56); "je" consistent. Geen vondsten.
+### src/GezondheidCheck.gs — Gelezen: 1-966. Check-berichten sterk (wettelijke grond + menupad, 682, 705). VONDSTEN F-VCE-092, 093.
+
+#### F-VCE-080 [LAAG] src/EmailDeliverability.gs:92
+Quote: `SpreadsheetApp.getUi().alert('Geen email-status-kolom — er zijn nog geen bounces gedetecteerd.');`
+Probleem: "bounces" Engels jargon; alert zonder titel.
+Fix: "Nog geen onbestelbare e-mails geregistreerd." Owner: Sam (dev)
+
+#### F-VCE-081 [MIDDEL] src/EmailQuotaGuard.gs:157-160
+Quote: `'  • Niveau:              ' + status.niveau + '\n\n' +`
+Probleem: rauwe interne enum ("WAARSCHUWING"/"KRITIEK"/"OP") in klant-mail — alarmerend zonder concreet.
+Fix: vertalen of weglaten (getallen zeggen genoeg). Owner: Sam (dev)
+
+#### F-VCE-082 [LAAG] src/EmailQuotaGuard.gs:162
+Quote: `'  1. Wacht tot morgenochtend — de quota reset om 00:00 PT (~09:00 NL).\n' +`
+Probleem: "00:00 PT" jargon; tijdstip wisselt met zomertijd.
+Fix: "elke nacht rond 09:00 (Nederlandse tijd)". Owner: Sam (dev)
+
+#### F-VCE-083 [LAAG] src/Engagement.gs:288-289
+Quote: `<h1>Wat een jaar.</h1>` ... `Hier is jouw ${vorigJaar} — volledig op cijfers, niets verzonnen.`
+Probleem: kop wordt wrang bij verliesjaar (overzicht toont ongefilterd negatieve winst).
+Fix: neutralere kop of verlies-variant (beslissing Sam). Owner: Sam (dev)
+
+#### F-VCE-084 [LAAG] src/Engagement.gs:215 — "Fout: probeer opnieuw" zonder wat/waarom (NPS, lage impact). Fix: concretere fallback. Owner: Sam.
+#### F-VCE-085 [LAAG] src/Engagement.gs:79
+Quote: `safeAuditLog_('Achievement unlocked', a);`
+Probleem: Engels + rauwe enum-key in klant-zichtbare audit-log.
+Fix: `safeAuditLog_('Mijlpaal behaald', ACHIEVEMENTS[a].titel)`. Owner: Sam (dev)
+
+#### F-VCE-086 [MIDDEL] src/ExportAccountant.gs:179
+Quote: `'⚠️ ' + (err && err.message ? err.message : 'Er ging iets mis. Probeer opnieuw.');`
+Probleem: exact de verboden formulering bij mail-naar-accountant — geen terug-loop (adres? quota?).
+Fix: concretere fallback met actie. Owner: Sam (dev)
+
+#### F-VCE-087 [MIDDEL] src/ExportAccountant.gs:31-37, 116
+Quote: `'Dit maakt een volledig exportpakket aan in uw Google Drive:\n\n' + ... 'U kunt de map nu delen met uw accountant`
+Probleem: "u/uw" in klant-alerts terwijl de e-mail-dialog (148-156) en README (540) "je" gebruiken — wissel binnen één flow.
+Fix: "je" voor ZZP'er-teksten; "u" alleen richting accountant. Owner: Sam (dev)
+
+#### F-VCE-088 [LAAG] src/ExportAccountant.gs:349,353
+Quote: `throw new Error('Google Sheets export gaf HTTP ' + code + ' — heb je voldoende Drive-rechten?');`
+Probleem: "HTTP"/"bytes"/"auth-probleem" lekken via e.message naar klant-alert (382-385 geeft wel goede stappen).
+Fix: technische details vertalen of uit message houden. Owner: Sam (dev)
+
+#### F-VCE-089 [LAAG] src/FeedbackLoop.gs:47-49
+Quote: `We verzamelen géén persoonsgegevens of boekhoud-inhoud`
+Probleem: "we"-personificatie (principe: "Boekhoudbaar [doet]").
+Fix: "Boekhoudbaar verzamelt géén ...". Owner: Sam (dev)
+
+#### F-VCE-090 [LAAG] src/FeedbackLoop.gs:81 — rauwe e.message in failure-handler. Fix: vriendelijke fallback. Owner: Sam.
+#### F-VCE-091 [LAAG] src/Fiscaal.gs:312
+Quote: `'Beste,\n\n' + 'In je boekhouding is een retroactieve wijziging gedetecteerd op een AFGESLOTEN BTW-periode\n'`
+Probleem: "retroactieve wijziging gedetecteerd" formeel-technisch; aanhef "Beste," kaal vs "Hallo," elders. Inhoud verder sterk.
+Fix: eenvoudiger formuleren + aanhef gelijktrekken (beslissing Sam). Owner: Sam (dev)
+
+#### F-VCE-092 [MIDDEL] src/GezondheidCheck.gs:222,320-323,881
+Quote: `'Uw boekhouding ziet er goed uit!...'` ... `'Er zijn fouten gevonden die u aandacht verdienen.'`
+Probleem: "u/uw" dominant + interne mix (208 "je") + grammaticale fout regel 323 ("die u aandacht verdienen").
+Fix: gelijktrekken naar "je" + 323 corrigeren. Owner: Sam (dev)
+
+#### F-VCE-093 [LAAG] src/GezondheidCheck.gs:189,193
+Quote: `melding: 'key "' + grootsteKey + '" is ' + grootsteBytes + ' bytes — nadert 9KB-limiet (silent data-loss-risico)'`
+Probleem: developer-jargon in klant-facing diagnose-alert (deels support-bedoeld ⇒ LAAG).
+Fix: klant-versie + technisch detail tussen haakjes. Owner: Sam (dev)
+
+Patroon VCE-D: u/je-wissel (GezondheidCheck, ExportAccountant) + rauwe e.message/enums (5 vondsten) + losse anglicismen; referentie-voorbeelden: Fortress-dialog, stakingswizard, EmailQuotaGuard-body, XAF-fallback.
