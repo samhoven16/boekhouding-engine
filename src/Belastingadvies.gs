@@ -375,7 +375,7 @@ function controleerTariefVerouderdWaarschuwing_(ss) {
       ss.toast(boodschap, '⚠️ Verouderde tarieven', 30);
     }
   } catch (_) {}
-  try { schrijfAuditLog_('Tarieven verouderd', boodschap); } catch (_) {}
+  safeAuditLog_('Tarieven verouderd', boodschap);
   try {
     if (typeof meldFataalAanOwner_ === 'function') {
       meldFataalAanOwner_('TARIEF_VEROUDERD', boodschap,

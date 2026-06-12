@@ -36,6 +36,7 @@ function maakCtx(opts) {
   });
   ctx.getBelasting_ = () => opts.belasting || {};
   ctx.schrijfAuditLog_ = (a, d) => audit.push([a, d]);
+  ctx.safeAuditLog_ = (a, d) => audit.push([a, d]);
   ctx.meldFataalAanOwner_ = (code, msg, c) => owner.push([code, msg, c]);
 
   const ss = {
