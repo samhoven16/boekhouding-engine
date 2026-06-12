@@ -201,3 +201,71 @@ Fix: comment bij _HYGIENE_LOG_SHEET: nooit fiscale mutaties hier, exclusief Audi
 Owner: Sam (dev)
 
 Zwaartepunt ACC-B: F-ACC-035 + F-ACC-036 (XAF mist dagboekstructuur en BTW-codering) en F-ACC-030/032 (jaar-consistentie pakket).
+
+## Batch ACC-C — BTW, BankImport, Bankboek, Inkoopfacturen, Jaarafsluiting, Rapportages, Urenregistratie, Verkoopfacturen
+
+### src/BTW.gs — Gelezen: 1-922. Audit-trail OK; I₈ via vergrendelPeriode_ (713-714); storno/credit geskipt (192-197, 269); aangifte reproduceerbaar (140-373). VONDSTEN F-ACC-060, 061.
+### src/BankImport.gs — Gelezen: 1-547. Audit-log bij afronding (469); dedup OK (300-346). VONDSTEN F-ACC-064 (HOOG), 065.
+### src/Bankboek.gs — Gelezen: 1-185. Boekingen via maakJournaalpost_ (I₁/I₈ geërfd). VONDSTEN F-ACC-062, 063.
+### src/Inkoopfacturen.gs — Gelezen: 1-165. Betaling met lock + rollback + audit (27-93). Geen vondsten.
+### src/Jaarafsluiting.gs — Gelezen: 1-200. JA-tag idempotent; balansgedrag conform RJ. Geen vondsten (maar zie F-INV-020!).
+### src/Rapportages.gs — Gelezen: 1-510. Balans-sluit-check aanwezig (52-80). VONDSTEN F-ACC-066 (HOOG), 067.
+### src/Urenregistratie.gs — Gelezen: 1-146. Kolomstructuur + validatie OK. VONDST F-ACC-068.
+### src/Verkoopfacturen.gs — Gelezen: 1-1247. PDF+UBL-archief OK (222-228, 786-789); creditnota-boekingen via maakJournaalpost_ (405-430). VONDSTEN F-ACC-069 (HOOG), 070 (HOOG).
+
+#### F-ACC-060 [MIDDEL] src/BTW.gs:133-139
+Quote: `// rijen zonder bijlage kunnen voorbelasting verliezen. Vervolg-PR: berekenBtwAangifte_ moet rijen met lege bijlage-kolom ... OF uitsluiten`
+Probleem: alle inkoop-BTW telt als voorbelasting (283-285) zonder bewijsstuk-check; art. 15 Wet OB eist factuur per claim ⇒ naheffing bij steekproef. TODO erkend, niet geïmplementeerd.
+Fix: rijen zonder bijlage uitsluiten of flaggen vóór indiening. Owner: Sam (dev)
+
+#### F-ACC-061 [MIDDEL] src/BTW.gs:242-258
+Quote: `} else if (grondslag !== 0) { onbekendeLabels[btwLabel || '(leeg)'] = ...; onbekendeOmzet += grondslag; }`
+Probleem: onbekende BTW-labels vallen buiten alle rubrieken; `_onbekendeOmzet` wordt nergens in de UI getoond (validatie-dialoog inspecteert hem niet) ⇒ omzet valt stil uit de aangifte terwijl klant "OK" ziet ⇒ te lage afdracht.
+Fix: harde waarschuwing in valideerAangifteVoorIndiening_ + op aangifte-sheet. Owner: Sam (dev)
+
+#### F-ACC-062 [MIDDEL] src/Bankboek.gs:141-163
+Quote: `function verwerkPriveCorrectie(data) { ... maakJournaalpost_(ss, {...}); vernieuwDashboard(); }`
+Probleem: privé- en DGA-boekingen (141, 168) schrijven geen audit-log — fiscaal gevoelige mutaties zonder wie/wanneer-spoor.
+Fix: safeAuditLog_ na geslaagde boeking. Owner: Sam (dev)
+
+#### F-ACC-063 [MIDDEL] src/Bankboek.gs:9-22
+Quote: `function getBanksaldo_(ss, rekeningCode) { ... saldo += parseFloat(data[i][3]) || 0; }`
+Probleem: banksaldo uit BANKTRANSACTIES i.p.v. grootboek 1200 ⇒ afstemming kan "kloppen" terwijl balans afwijkt (CSV-import zonder journaalpost, F-ACC-064).
+Fix: grootboek-1200-saldo gebruiken of beide tonen. Owner: Sam (dev)
+
+#### F-ACC-064 [HOOG] src/BankImport.gs:286-440
+Quote: `*   - genereer journaalpost voor elke transactie (1200 ↔ 1100/diverse)` (comment 290) — maar maakJournaalpost_ wordt NERGENS aangeroepen; rijen via setValues (399-403).
+Probleem: doc belooft journaalpost per transactie; implementatie schrijft alleen BANKTRANSACTIES + factuurstatus (414-435) ⇒ (a) grootboek 1200/1100 beweegt niet → balans/W&V missen mutaties; (b) I₈-periodelock + jaarafsluit-lock (Boekingen.gs:16-51) volledig omzeild — transactie in afgesloten kwartaal wordt zonder weigering ingeboekt. Breekt art. 52 AWR-immutability.
+Fix: per transactie journaalpost via maakJournaalpost_; afgesloten-periode-rijen weigeren of als "te boeken nu" markeren. Owner: Sam (dev)
+
+#### F-ACC-065 [MIDDEL] src/BankImport.gs:414-421
+Quote: `vfSheet.getRange(u.rij, 14).setValue(nieuwBetaald); vfSheet.getRange(u.rij, 15).setValue(... FACTUUR_STATUS.BETAALD : 'Deels betaald');`
+Probleem: auto-match zet BETAALD zonder ontvangst-journaalpost (1200↔1100) ⇒ debiteuren-grootboek daalt nooit; markeerVerkoopfactuurBetaald (Verkoopfacturen.gs:1022-1035) gaat er juist vanuit dat die journaalpost bestaat ⇒ latere handmatige markering rekent fout.
+Fix: betaal-journaalpost boeken bij vf/ifUpdates of de aanname corrigeren. Owner: Sam (dev)
+
+#### F-ACC-066 [HOOG] src/Rapportages.gs:18-32 + 180-188
+Quote: `saldi[String(gbData[i][0])] = { ... saldo: parseFloat(gbData[i][5]) || 0 };`
+Probleem: balans + W&V lezen het all-time cumulatieve saldoveld zonder periode-/jaarafbakening; W&V "Boekjaar X" toont feitelijk alle jaren (tenzij jaarafsluiting genuld heeft — die faalt bovendien, F-INV-020) ⇒ accountant kan niet aansluiten op een boekjaar.
+Fix: documenteren dat cijfers alleen ná jaarafsluiting kloppen, of periodefiltering op journaalposten bouwen. Owner: Sam + accountant
+
+#### F-ACC-067 [MIDDEL] src/Rapportages.gs:10-21, 167-177
+Quote: `const peildatum = new Date(); ... 'BALANS', bedrijf, `Per ${formatDatum_(peildatum)}`, 4);`
+Probleem: peildatum altijd "vandaag", niet instelbaar; geen saldibalans-per-31/12-variant voor jaarrekening.
+Fix: peildatum koppelen aan boekjaar (31-12) + saldibalans-export. Owner: Sam (dev)
+
+#### F-ACC-068 [LAAG] src/Urenregistratie.gs:80-83, 110-130
+Quote: `sheet.getRange(2, 1, 1, headers.length).setValues([[ new Date(), 2, 'Voorbeeld: ...' ]]);`
+Probleem: urenstaat (bewijs 1.225-criterium) is vrij retroactief bewerkbaar; "Aangemaakt op" alleen bij voorbeeldrij gevuld ⇒ zwak bewijs bij IB-controle.
+Fix: onEdit-trigger vult timestamp; beperking documenteren. Owner: Sam + accountant
+
+#### F-ACC-069 [HOOG] src/Verkoopfacturen.gs:361-393
+Quote: `function maakCreditnota(factuurNummer) { ... setValue(FACTUUR_STATUS.GECREDITEERD); break; } ... const creditNr = volgendFactuurnummer_(); ... sheet.appendRow(creditRij);`
+Probleem: (1) geen lock — dubbelklik = twee creditnota's = dubbele negatieve omzet/BTW; (2) geen idempotency-check op al-GECREDITEERD; (3) geen enkele audit-log-regel terwijl creditnota dé art. 52 AWR-correctie-actie is.
+Fix: lock + idempotency-skip + schrijfAuditLog_('Creditnota aangemaakt', ...). Owner: Sam (dev)
+
+#### F-ACC-070 [HOOG] src/Verkoopfacturen.gs:565-615
+Quote: `sheet.appendRow([ transactieId, datum, omschr, bedrag, ..., '1200', ..., 'Geïmporteerd', '', new Date() ]);`
+Probleem: tweede (oudere) CSV-import-pad schrijft rechtstreeks naar BANKTRANSACTIES zonder maakJournaalpost_ — zelfde gat als F-ACC-064 (balans-drift + I₈-omzeiling) en bovendien zónder dedup ⇒ herhaalde import dupliceert.
+Fix: consolideren met BankImport.gs of journaalpost+dedup per rij; afgesloten-periode-rijen weigeren. Owner: Sam (dev)
+
+Verdict ACC-C: ZAKT BIJ EERSTE CONTROLE op de bankimport- en creditnota-paden. Wet-raakvlakken: art. 52 AWR (F-ACC-064/070), art. 15 Wet OB (F-ACC-060), art. 35 Wet OB (F-ACC-069), art. 3.6 Wet IB (F-ACC-068). Kern-boekingsmotor zelf solide. Confidence controle-overleving: LAAG-tot-MIDDEL.

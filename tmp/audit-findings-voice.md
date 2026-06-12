@@ -176,3 +176,57 @@ Probleem: server-side catch retourneert rauwe e.message die de nette failure-han
 Fix: klant-vriendelijke fout + e.message alleen loggen. Owner: Sam (dev)
 
 Patroon VCE-B: (1) u/je-breuk tussen oudere (Branding, delen Belastingvoordeel/Boekingen) en nieuwere modules ("je"); (2) vage fallbacks als groep stelselmatig (F-VCE-041/049/050).
+
+## Batch VCE-C — Config, DLQ, Dashboard, DataPortability, Diagnostiek, DriveStructuur, EUVerkoop, EersteKlantCheck
+
+### src/Config.gs — Gelezen: 1-346. Grootboeknamen RGS-conform; KOSTEN_CATEGORIEEN consistent NL. VONDST F-VCE-060.
+### src/DLQ.gs — Gelezen: 1-282. VONDSTEN F-VCE-061..063.
+### src/Dashboard.gs — Gelezen: 1-1628. Klant-strings consistent "je"; personificatie correct ("Boekhoudbaar bespaart", geen "wij"). VONDSTEN F-VCE-064..066.
+### src/DataPortability.gs — Gelezen: 1-216. Bevestig-alert transparant; "je" consistent. VONDST F-VCE-067.
+### src/Diagnostiek.gs — Gelezen: 1-184. VONDSTEN F-VCE-068..070.
+### src/DriveStructuur.gs — Gelezen: 1-481. Jaarafsluiting-alerts voorbeeldig (checklist, oorzaken+oplossingen, 339-346); emoji-mapnamen scanbaar. Geen vondsten.
+### src/EUVerkoop.gs — Gelezen: 1-355. ICP-alerts concreet met indientermijn-vervolgstap; fiscaal vakjargon passend voor doelgroep. Geen vondsten.
+### src/EersteKlantCheck.gs — Gelezen: 1-300. Elke FOUT heeft fix-veld met menuroute — sterk patroon. VONDSTEN F-VCE-071, 072.
+
+#### F-VCE-060 [LAAG] src/Config.gs:31 — tabnaam "W&V Rekening" is jargon-afkorting (rest voluit). Fix: "Winst & Verlies" overwegen. Owner: Sam.
+#### F-VCE-061 [MIDDEL] src/DLQ.gs:171
+Quote: `ui.alert('🟢 Geen mislukte taken', 'De Dead Letter Queue is leeg.', ...);`
+Probleem: "Dead Letter Queue" = developer-jargon richting klant.
+Fix: "mislukte achtergrond-taken". Owner: Sam (dev)
+#### F-VCE-062 [MIDDEL] src/DLQ.gs:196
+Quote: `ui.alert('✅ Forced retry voltooid', 'Bekijk DLQ-tab voor resultaten.', ...);`
+Probleem: "Forced retry"/"DLQ-tab" jargon + geen vervolgstap-uitleg; idem 187 "Geen items om te hervaten."
+Fix: begrijpelijk NL + tab-naam die klant kan vinden. Owner: Sam (dev)
+#### F-VCE-063 [LAAG] src/DLQ.gs:34
+Quote: `.setValues([['Tijdstip', 'Type', 'Payload (JSON)', 'Fout', 'Retries', 'Status', 'Volgende retry']])`
+Probleem: tab wordt bij problemen zichtbaar gemaakt (175, 243) met technische kolomkoppen/statussen.
+Fix: "Gegevens"/"Pogingen"/"In wachtrij"/"Mislukt"/"Gelukt". Owner: Sam (dev)
+#### F-VCE-064 [MIDDEL] src/Dashboard.gs:15
+Quote: `ui.alert('Tabblad "Dashboard" ontbreekt. Run setup() via Boekhouding → Instellingen → Herinstalleer.');`
+Probleem: functienaam "setup()" in klant-string; ook menupad-naam "Boekhouding" fout (= "Boekhoudbaar", zie F-DOC-patroon).
+Fix: zonder code-identifier formuleren. Owner: Sam (dev)
+#### F-VCE-065 [MIDDEL] src/Dashboard.gs:1559
+Quote: `...innerHTML='<div class="loading" ...>Laden mislukt: '+esc(e.message)+'</div>';`
+Probleem: rauwe e.message zonder vervolgstap (regel 1557 heeft wél de goede variant).
+Fix: vervolgstap + technische detail naar console. Owner: Sam (dev)
+#### F-VCE-066 [LAAG] src/Dashboard.gs:386 (+404, 410)
+Quote: `naam: 'Current ratio (liquiditeit)',` ... `naam: 'Maandelijkse burn rate',`
+Probleem: Engels jargon in klant-zichtbare kengetallen ("Current ratio", "burn rate", "Cash runway").
+Fix: NL-equivalenten. Owner: Sam (dev)
+#### F-VCE-067 [LAAG] src/DataPortability.gs:213
+Quote: `(fouten.length ? '\n\n⚠️ ' + fouten.length + ' fouten:\n• ' + fouten.join('\n• ') : ''),`
+Probleem: technische foutregels zonder vervolgstap; kop "voltooid" terwijl er fouten waren.
+Fix: vervolgstap + "deels voltooid". Owner: Sam (dev)
+#### F-VCE-068 [LAAG] src/Diagnostiek.gs:171 — "Run setup() opnieuw" (zelfde patroon als F-VCE-064). Fix: herformuleren. Owner: Sam.
+#### F-VCE-069 [LAAG] src/Diagnostiek.gs:77 — autorisatie-advies vol Google-jargon; deels onvermijdelijk, inleiding toevoegen. Owner: Sam.
+#### F-VCE-070 [LAAG] src/Diagnostiek.gs:108 — "script-run/OK/FAILED/TIMED_OUT/stack-trace" in klant-dialog; acceptabel als support-tool, anders verzachten. Owner: Sam.
+#### F-VCE-071 [LAAG] src/EersteKlantCheck.gs:179
+Quote: `fix: 'Wacht tot middernacht (UTC) of upgrade Workspace-account' };`
+Probleem: "UTC"-jargon + upgrade-suggestie zonder kosten-context.
+Fix: begrijpelijk + kosten expliciet of weglaten. Owner: Sam (dev)
+#### F-VCE-072 [LAAG] src/EersteKlantCheck.gs:278 (+147)
+Quote: `bericht: 'BTW_KEUZES ontbreken — dialog kan dropdown niet bouwen.', fix: 'Config.gs check' };`
+Probleem: pure code-identifiers in klant-zichtbare check-output; klant kan niets met "Config.gs check".
+Fix: klant-tekst + technische oorzaak naar log. Owner: Sam (dev)
+
+Patroon VCE-C: code-identifiers in klant-strings (setup(), Config.gs, BTW_KEUZES); Engels technisch jargon (DLQ, burn rate, stack-trace); DriveStructuur/EUVerkoop zijn de gouden standaard.

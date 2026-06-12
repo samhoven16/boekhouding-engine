@@ -241,3 +241,51 @@ Probleem: elke export = nieuwe datum-map met volledige XLSX-kopie, nooit opgerui
 Fix: vaste "laatste export"-map of retentie/waarschuwing. Owner: Sam (dev)
 
 Zwaartepunt OND-C: F-OND-056/059 (stil verouderende fiscale waardes in labels en cel-functies), F-OND-062 (DLQ in abandoned-mode), F-OND-055 (hardcoded domein).
+
+## Batch OND-D — Diagnostiek, DriveStructuur, EUVerkoop, EersteKlantCheck, EmailDeliverability, EmailQuotaGuard, Engagement, ExportAccountant
+
+### src/Diagnostiek.gs — Gelezen: 1-184. Alle services actueel. VONDST F-OND-080.
+### src/DriveStructuur.gs — Gelezen: 1-480. Data in klant-Drive = abandoned-proof. VONDSTEN F-OND-081..085.
+### src/EUVerkoop.gs — Gelezen: 1-355. VIES graceful fail (121-141). VONDSTEN F-OND-086 (HOOG)..089.
+### src/EersteKlantCheck.gs — Gelezen: 1-301. Geen hardcoded jaar. VONDSTEN F-OND-090, 091.
+### src/EmailDeliverability.gs — Gelezen: 1-111. VONDST F-OND-092.
+### src/EmailQuotaGuard.gs — Gelezen: 1-179. Geen externe provider; klant-eigen quota. VONDST F-OND-093.
+### src/Engagement.gs — Gelezen: 1-409. parseJsonVeilig_ tegen corruptie. VONDSTEN F-OND-094, 095.
+### src/ExportAccountant.gs — Gelezen: 1-1076. NoahArk JSONL met _schema + reconstructie-instructie (755-769) = sterkste survival-mechanisme van de batch. VONDSTEN F-OND-096, 097.
+
+#### F-OND-080 [LAAG] src/Diagnostiek.gs:41 — autorisatie-probe hangt aan api.kvk.nl-beschikbaarheid ⇒ vals "FOUT" mogelijk. Fix: neutraal Google-endpoint. Owner: Sam.
+#### F-OND-081 [MIDDEL] src/DriveStructuur.gs:247 — jaar-range 2020-2099 hardcoded; ondergrens blokkeert historische correcties. Fix: relatieve range. Owner: Sam.
+#### F-OND-082 [MIDDEL] src/DriveStructuur.gs:437-438
+Quote: `const maand = new Date().getMonth() + 1; if (maand > 3) return;`
+Probleem: jaarwisseling-herinnering alleen jan-mrt; klant die dan niet opent factureert het hele jaar met fout boekjaar-prefix zonder waarschuwing. (Versterkt F-OND-006.)
+Fix: banner tonen zolang prefixJaar < huidigJaar. Owner: Sam (dev)
+#### F-OND-083 [MIDDEL] src/DriveStructuur.gs:25-61 — 6 DRIVE_*-keys per boekjaar, nooit opgeruimd (= F-OND-057, hier de schrijfzijde). Fix: JSON-blob of opruimstap. Owner: Sam.
+#### F-OND-084 [MIDDEL] src/DriveStructuur.gs:330-332
+Quote: `const archief = ss.copy('Boekhoudbaar ' + huidigJaar + ' — Archief');`
+Probleem: volledige spreadsheet-copy per jaarafsluiting zonder retentie ⇒ Drive-quota; volgende afsluiting faalt op precies deze stap bij volle Drive (333-347).
+Fix: archief-map + retentie of preventieve quota-waarschuwing. Owner: Sam (dev)
+#### F-OND-085 [LAAG] src/DriveStructuur.gs:380-381 — boekjaargrenzen als dd-mm-yyyy-strings zonder format-versie. Fix: ISO of schema-versie. Owner: Sam.
+#### F-OND-086 [HOOG] src/EUVerkoop.gs:19
+Quote: `const OSS_DREMPEL = 10000;`
+Probleem: EU-OSS-drempel (richtlijn 2017/2455) als kale constante op 3 plekken gebruikt (199, 335, 343); bij EU-herziening rekent de engine stil fout of klant OSS-plichtig is ⇒ onjuiste aangifte; in abandoned-mode jarenlang.
+Fix: instelbare Config-waarde met "geldig per jaar X"-label + aanname tonen in meldingen. Owner: Sam (dev)
+#### F-OND-087 [LAAG] src/EUVerkoop.gs:22-29 — EU-lidstatenlijst hardcoded; bij toetreding/uittreding mist ICP/OSS-detectie. Fix: laatst-bijgewerkt-datum + verwijzing. Owner: Sam.
+#### F-OND-088 [MIDDEL] src/EUVerkoop.gs:74
+Quote: `const VIES_API_BASE = 'https://ec.europa.eu/taxation_customs/vies/rest-api/ms/';`
+Probleem: één hardcoded endpoint zonder fallback; bij EC-migratie wordt validatie permanent null (graceful maar stil) ⇒ klant verlegt op ongeverifieerde nummers.
+Fix: URL in Config + health-check die langdurige null-reeksen meldt. Owner: Sam (dev)
+#### F-OND-089 [MIDDEL] src/EUVerkoop.gs:98-150 — VIES_-keys nooit verwijderd (geen enkele deleteProperty in repo, geverifieerd); honderden permanente keys richting 500KB-cap. Fix: cleanup-pas of CacheService. Owner: Sam. (= F-GAS-084)
+#### F-OND-090 [LAAG] src/EersteKlantCheck.gs:121-123 — hardcoded verwachte-triggers-lijst dupliceert installer ⇒ drift. Fix: één centrale definitie. Owner: Sam.
+#### F-OND-091 [MIDDEL] src/EersteKlantCheck.gs:144-148
+Quote: `const ok = isLicentieGeldig_(); ... return { naam: 'Licentie geldig', status: 'FOUT',`
+Probleem: readiness-verdict gekoppeld aan license-server; in abandoned/grace-scenario meldt de werkt-alles-test "niet klaar" terwijl de boekhouding functioneert.
+Fix: "systeem functioneel" splitsen van "licentie actief". Owner: Sam (dev)
+#### F-OND-092 [LAAG] src/EmailDeliverability.gs:36-42 — Email-status-kolom lazy runtime-append ⇒ niet-deterministische index over jaren. Fix: vaste kolom in Setup + sheet-schemas.md. Owner: Sam.
+#### F-OND-093 [LAAG] src/EmailQuotaGuard.gs:35 — dagcap-aannames (100/1500) hardcoded; Google wijzigt deze soms. Fix: documenteren als fallback; absolute drempels. Owner: Sam. (zie ook F-GAS-087: berekening zelf kapot)
+#### F-OND-094 [LAAG] src/Engagement.gs:76-77 — achievements append-only maar domein-begrensd (7) ⇒ acceptabel; volledigheidsnotitie. Geen actie.
+#### F-OND-095 [LAAG] src/Engagement.gs:244-249 — NPS-forward naar Sam-only kanaal; faalt stil in abandoned-mode (geen klant-impact). Fix: runbook-notitie. Owner: Sam.
+#### F-OND-096 [LAAG] src/ExportAccountant.gs:342-343, 1046-1060 — backup/PDF leunen op ongedocumenteerd /export-endpoint (= F-OND-065); NoahArk dekt survival. Fix: documenteren. Owner: Sam.
+#### F-OND-097 [MIDDEL] src/ExportAccountant.gs:51-54
+Quote: `folder = bestaandeMappen.hasNext() ? bestaandeMappen.next() : DriveApp.createFolder(mapNaam);`
+Probleem: accountantspakket-map hergebruikt maar oude files nooit verwijderd ⇒ duplicaat-bestandsnamen stapelen per export; accountant weet niet welke set actueel is.
+Fix: gelijknamige files overschrijven/verwijderen of timestampen. Owner: Sam (dev)

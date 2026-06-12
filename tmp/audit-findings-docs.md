@@ -143,3 +143,46 @@ Probleem: ABN AMRO ontbreekt terwijl demo (271) en FAQ (470) "alle Nederlandse b
 Fix: ABN-rij toevoegen. Owner: Sam (dev)
 
 Rode draad DOC-B: gidsen goed onderbouwd, maar geen centrale tarieven-/menupaden-bron ⇒ demo, FAQ en gidsen divergeren op exact de cijfers die klanten natrekken.
+
+## Batch DOC-C — 8 gidsen (boekhoudprogramma t/m e-boekhouden-vergelijk)
+
+### gids/boekhoudprogramma-zonder-abonnement — Gelezen: 1-325. Productclaims geverifieerd in Menu.gs. VONDSTEN F-DOC-040, 041.
+### gids/btw-aangifte-zzp — Gelezen: 1-390. Tarieven/KOR/boetes OK. VONDST F-DOC-042.
+### gids/btw-berekenen-terugvragen-zzp — Gelezen: 1-289. Rekenwerk klopt. VONDST F-DOC-043.
+### gids/btw-teruggave-zzp — Gelezen: 1-241. Termijnen/rente OK; claims geverifieerd. Geen vondsten.
+### gids/btw-verleggen-wanneer — Gelezen: 1-245. VONDSTEN F-DOC-044, 045.
+### gids/creditnota-maken-zzp — Gelezen: 1-236. VONDSTEN F-DOC-046 (BLOCKER), 047.
+### gids/debiteurenbeheer-zzp — Gelezen: 1-229. Dunning/debiteuren-claims geverifieerd (Utils.gs:614, Menu.gs:151-153). VONDSTEN F-DOC-048, 049.
+### gids/e-boekhouden-vs-moneybird-vs-boekhoudbaar — Gelezen: 1-280. CSV/Drive/XLSX-claims geverifieerd. VONDSTEN F-DOC-050..052.
+
+#### F-DOC-040 [LAAG] gids/boekhoudprogramma:268-271 — Moneybird €30 hier vs €18 op e-boekhouden-pagina ⇒ besparingsclaims inconsistent. Fix: één canonieke prijsbron + datum. Owner: Sam.
+#### F-DOC-041 [LAAG] gids/boekhoudprogramma:180-191 — Davilex als koopbare optie zonder bron/jaartal. Fix: bron+peildatum of "historisch". Owner: Sam.
+#### F-DOC-042 [MIDDEL] gids/btw-aangifte:85 vs 343
+Quote: schema: `"je vult rubriek 3a in op de aangifte."` vs zichtbare FAQ: `"je vult rubriek 1d in"`
+Probleem: zelfde vraag (0% vs vrijgesteld) krijgt in JSON-LD rubriek 3a en zichtbaar 1d ⇒ Google kan de schema-versie tonen; klant krijgt tegenstrijdige instructie.
+Fix: één rubriek (accountant verifieert) en gelijktrekken. Owner: Sam + accountant
+#### F-DOC-043 [MIDDEL] gids/btw-berekenen:191-194
+Quote: `<li><strong>1d:</strong> omzet 0% of vrijgesteld</li> <li><strong>1e:</strong> BTW verlegd (EU-zakelijk)</li>`
+Probleem: strijdig met verleggen-gids (EU-verlegd=3b, binnenland=1e); "vrijgesteld bij 1d" eveneens twijfelachtig.
+Fix: centrale rubriek-mapping in alle gidsen. Owner: Sam + accountant
+#### F-DOC-044 [LAAG] gids/btw-verleggen:134 vs 143 — twee verschillende wetsartikel-formuleringen voor factuurtekst ("art. 12.2.g" vs "art. 12 lid 5") zonder bron. Fix: verifiëren + bronlink. Owner: accountant.
+#### F-DOC-045 [MIDDEL] gids/btw-verleggen:158 vs gids/btw-aangifte:277
+Quote: verleggen: `EU-verlegd (B2B): rubriek 3b` vs aangifte-gids: `1d ... Je exporteert of levert aan EU-bedrijven`
+Probleem: directe tegenspraak over waar EU-B2B-omzet hoort ⇒ onjuiste aangifte mogelijk.
+Fix: cross-gids rubriek-consistentie (één bron-of-truth). Owner: Sam + accountant
+#### F-DOC-046 [BLOCKER] gids/creditnota:155-156, 200-201 (+186-187)
+Quote: `Boekhoudbaar heeft een "Creditnota uit factuur"-knop. Je selecteert de originele factuur, vult bedrag en reden in, en krijgt automatisch een correcte PDF ... 30 seconden werk.`
+Probleem: de app heeft géén creditnota-knop: maakCreditnota (Verkoopfacturen.gs:361) heeft geen enkele menu-/dialoog-caller (grep geverifieerd) én crediteert ALTIJD het volledige bedrag (386-388) — geen bedrag/reden-input. FAQ bevestigt expliciet "deel-creditnota: Ja" wat de UI niet kan. Klant zoekt knop → vindt niets → support; en wie de functie tóch aanroept crediteert per ongeluk de hele factuur.
+Fix: knop met bedrag/reden-input bouwen in de factuurlijst-dialoog, of gids herschrijven naar de werkelijke route en partial-credit-belofte verwijderen.
+Owner: Sam (dev)
+#### F-DOC-047 [LAAG] gids/creditnota:140 — voorbeeld-datums maken kwartaal-toewijzing onlogisch (creditnota 20 apr vóór Q1-afdracht 30 apr). Fix: datums consistent. Owner: Sam.
+#### F-DOC-048 [LAAG] gids/debiteurenbeheer:86 vs 136 — TL;DR "~12%" vs body "~10-12%" handelsrente; hard percentage veroudert (halfjaarlijks vastgesteld). Fix: geen hard % in TL;DR + bronlink. Owner: Sam.
+#### F-DOC-049 [LAAG] gids/debiteurenbeheer:84 — "(sinds 2022)" bij 30-dagen-B2B-termijn onjuist/onbewezen. Fix: verifiëren of weglaten. Owner: accountant.
+#### F-DOC-050 [MIDDEL] gids/e-boekhouden:170
+Quote: `verwerken naar BTW-rubrieken 1a, 1b, 1c, 1d, 1e, 2a, 5a, 5b`
+Probleem: rubriekenset bevat 1c/5a die op de eigen zustergids (275-282) niet voorkomen — site-brede inconsistentie.
+Fix: gelijktrekken met canonieke set. Owner: Sam (dev)
+#### F-DOC-051 [LAAG] gids/e-boekhouden:112, 216-218 — concurrent-jaartotalen zonder peildatum; Moneybird-prijs strijdig met andere gids (F-DOC-040). Fix: peildatum + één prijs site-breed. Owner: Sam.
+#### F-DOC-052 [LAAG] gids/e-boekhouden:113, 143-180 — seconde-precieze gemeten tijden waarbij de maker overal wint; disclaimer mitigeert. Fix: methode-link of marges. Owner: Sam.
+
+Patroon DOC-C: systematische rubriek-inconsistentie over 4 gidsen (F-DOC-042/043/045/050 — centrale mappingtabel ontbreekt); concurrent-prijzen inconsistent; productclaims verder correct geverifieerd behalve de creditnota-knop (BLOCKER).
