@@ -302,3 +302,71 @@ Fix: batchen. Owner: Sam (dev)
 Quote: `const data = auditSheet.getDataRange().getValues(); ... const file = DriveApp.getFileById(fileId); verseUrl = file.getUrl();`
 Probleem: één synchrone invocatie: XLSX-fetch + VOLLEDIGE audit-log (tot 50k rijen) + per-factuur DriveApp.getFileById (~200ms elk) ⇒ duizenden facturen = ruim over 6-min-cap met half-gevulde export-map.
 Fix: PDF-resolve chunken/hervatbaar maken; XLSX als primair. Owner: Sam (dev)
+
+## Batch GAS-E — Diagnostiek, DriveStructuur, EUVerkoop, EersteKlantCheck, EmailDeliverability, EmailQuotaGuard, Engagement, ExportAccountant
+
+### src/Diagnostiek.gs — Gelezen: 1-184. tryLock(50)+release OK (46-49). VONDSTEN F-GAS-080, 081.
+### src/DriveStructuur.gs — Gelezen: 1-480. Folder-iterators correct gepagineerd (71-96). VONDSTEN F-GAS-082, 083.
+### src/EUVerkoop.gs — Gelezen: 1-355. VIES cache-first, één fetch per nr (112-142). VONDSTEN F-GAS-084, 085.
+### src/EersteKlantCheck.gs — Gelezen: 1-300. 12 lichte checks; PDF-check bewust zonder fetch (195). Geen vondsten.
+### src/EmailDeliverability.gs — Gelezen: 1-111. VONDST F-GAS-086.
+### src/EmailQuotaGuard.gs — Gelezen: 1-179. Eén overschreven property (116-173). VONDST F-GAS-087.
+### src/Engagement.gs — Gelezen: 1-409. npsResponses gecapt op 50 (239); achievements-lijst klein (77). VONDST F-GAS-088.
+### src/ExportAccountant.gs — Gelezen: 1-1077. CSV/JSONL-export batched reads. VONDSTEN F-GAS-089..091.
+
+#### F-GAS-080 [LAAG] src/Diagnostiek.gs:133
+Quote: `const data = sheet.getDataRange().getValues();`
+Probleem: watchdog in onOpen leest hele Taakstatus-sheet (klein maar telt op bij andere onOpen-hooks).
+Fix: laatste N rijen of timestamp in property. Owner: Sam (dev)
+
+#### F-GAS-081 [LAAG] src/Diagnostiek.gs:41
+Quote: `const resp = UrlFetchApp.fetch('https://api.kvk.nl/', { muteHttpExceptions: true, method: 'get' });`
+Probleem: echte outbound fetch puur voor scope-validatie; kan 60s hangen en blokkeert de diagnostiek.
+Fix: goedkopere validatie of overslaan. Owner: Sam (dev)
+
+#### F-GAS-082 [MIDDEL] src/DriveStructuur.gs:471
+Quote: `if (resp === ui.Button.YES) { sluitJaarAf(); }`
+Probleem: zware sluitJaarAf() (ss.copy = volledige spreadsheet-archief) triggerbaar vanuit onOpen-flow.
+Fix: onOpen alleen banner; afsluiting alleen via menu-actie. Owner: Sam (dev)
+
+#### F-GAS-083 [MIDDEL] src/DriveStructuur.gs:395
+Quote: `props.setProperty(PROP.VOLGEND_FACTUUR_NR, '1'); props.setProperty(PROP.VOLGEND_INKOOP_NR, '1');`
+Probleem: teller-reset zonder script-lock kan interleaven met volgendFactuurnummer_-increment ⇒ dubbel/overgeslagen factuurnummer (art. 35a Wet OB). Zeldzaam pad, fiscaal significante schade.
+Fix: reset + prefix-update onder dezelfde script-lock. Owner: Sam (dev)
+
+#### F-GAS-084 [MIDDEL] src/EUVerkoop.gs:146
+Quote: `PropertiesService.getScriptProperties().setProperty(key, JSON.stringify({ ts: Date.now(), data: data }));`
+Probleem: VIES_<nr>-keys per uniek BTW-nummer; TTL alleen bij lezen gecheckt, nooit opgeruimd ⇒ groei richting 500KB-cap (entries bevatten naam+adres).
+Fix: periodieke cleanup in dagelijkseTaken of één JSON-prop met cap. Owner: Sam (dev)
+
+#### F-GAS-085 [LAAG] src/EUVerkoop.gs:296 — per-afnemer setValues+opmaak in ICP-render-loop (meestal klein aantal). Fix: 2D-batch. Owner: Sam. (= zelfde regel als F-RED-066)
+
+#### F-GAS-086 [LAAG] src/EmailDeliverability.gs:50
+Quote: `sheet.getRange(i + 1, statusCol + 1).setValue(EMAIL_STATUS_ONGELDIG).setBackground('#FFCDD2')...`
+Probleem: per-match setValue+3 opmaak-calls binnen DataRange-loop.
+Fix: geclusterde range-writes of comment dat matches klein zijn. Owner: Sam (dev)
+
+#### F-GAS-087 [HOOG] src/EmailQuotaGuard.gs:56
+Quote: `const totaal = Math.max(_EMAIL_QUOTA_DAGCAP_DEFAULT, resterend); const gebruikt = totaal - resterend;`
+Probleem: dag-totaal afgeleid uit Math.max(100, resterend) ⇒ totaal beweegt mee naar beneden met resterend; Workspace (cap 1500) na 600 verzonden: resterend=900, totaal=900, gebruikt=0, percent=0 ⇒ WAARSCHUWING/KRITIEK escaleren structureel nooit; alleen het harde resterend===0-pad ('OP') vuurt. De pro-actieve guard faalt stil voor Workspace-klanten.
+Fix: vaste cap-bron (instelling/EMAIL_DAGCAP); percent = (cap - resterend)/cap. Owner: Sam (dev)
+
+#### F-GAS-088 [MIDDEL] src/Engagement.gs:406
+Quote: `Utilities.sleep(2000); toonJaaroverzicht();`
+Probleem: onvoorwaardelijke 2s-sleep + dubbele volledige VF/IF-scan in onOpen-pad (eerste 15 dagen januari); checkAchievements_ leest bovendien hele VF per dashboard-refresh.
+Fix: sleep verwijderen; jaarstats cachen; achievements incrementeel. Owner: Sam (dev)
+
+#### F-GAS-089 [HOOG] src/ExportAccountant.gs:726
+Quote: `function maakNoahArkSnapshot_() { ... Array.prototype.push.apply(regels, _serialiseerSheetNaarJsonl_(sheet)); }`
+Probleem: xlsx-backup (394) én NoahArk-JSONL (726, 9 bronsheets incl. Journaalposten >15k regels bij 5k facturen) sequentieel in dezelfde dagelijkseTaken-invocatie, ná dashboard/advies/dunning ⇒ cumulatief richting 6-min-cap; silent kill = partial write halverwege backup.
+Fix: twee aparte time-triggers of budget-check die snapshot uitstelt. Owner: Sam (dev)
+
+#### F-GAS-090 [MIDDEL] src/ExportAccountant.gs:418 (+342, 1063)
+Quote: `const resp = UrlFetchApp.fetch('https://docs.google.com/spreadsheets/d/' + ssId + '/export?format=xlsx', ...)`
+Probleem: export-fetches zonder timeout/grootte-defense; bij grote sheets richting 60s-cap ⇒ dag-backup faalt stil (klant denkt beschermd te zijn).
+Fix: non-2xx als aparte faalcategorie + owner-alert; export-fetch isoleren in eigen trigger. Owner: Sam (dev)
+
+#### F-GAS-091 [LAAG] src/ExportAccountant.gs:439 (+601-622, 787-794)
+Quote: `const oudIt = backupMap.getFilesByType(MimeType.MICROSOFT_EXCEL); while (oudIt.hasNext()) { ... }`
+Probleem: dagelijkse volledige folder-scan met per-file Drive-roundtrips over een GFS-archief dat oneindig groeit (maand-ankers permanent).
+Fix: behouden-beslissing cachen / anker-ids in property. Owner: Sam (dev)

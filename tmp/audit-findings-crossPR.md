@@ -188,3 +188,71 @@ Probleem: stale regelnummer in comment (werkelijk 2337/2340, geverifieerd); best
 Fix: comments corrigeren; cap-/historielogica gedragsmatig testen. Owner: Sam (dev)
 
 Patroon CPR-T2: dominant risico = source-string-matching i.p.v. gedragstests (6 van 8 bestanden), met 2 bestanden die geherimplementeerde kopieën testen (F-CPR-050/052). Enige gedrag-seam: F-CPR-042.
+
+## Batch CPR-T3 — audit2-med-low-batch2, r3-fixes, ronde2-hoog, runtime-cross-pr, security-high, voice-klantreis, audit2, audit3-rework
+
+### audit2-med-low-batch2 — Gelezen: 1-194. Eenmalige reads, geen state. VONDST F-CPR-060.
+### audit2-r3-fixes — Gelezen: 1-79. VONDST F-CPR-061.
+### audit2-ronde2-hoog — Gelezen: 1-222. Pro-rata-fix correct geborgd qua intentie. VONDST F-CPR-062.
+### audit2-runtime-cross-pr — Gelezen: 1-187. VONDSTEN F-CPR-063, 064.
+### audit2-security-high — Gelezen: 1-166. Constant-time-doel correct verankerd (23-47). VONDST F-CPR-065.
+### audit2-voice-klantreis — Gelezen: 1-133. VONDST F-CPR-066.
+### audit2.test.js — Gelezen: 1-240. Enige echte runtime-suite (createGasRuntime) — goede aanpak. VONDSTEN F-CPR-067..069.
+### audit3-rework — Gelezen: 1-137. NOLOCK/verifier-wiring correct verankerd (81-98). VONDST F-CPR-070.
+
+#### F-CPR-060 [LAAG] audit2-med-low-batch2.test.js:56-60
+Quote: `expected.forEach(function(code) { expect(btw).toMatch(new RegExp("'" + code + "'")); });`
+Probleem: landcode-asserts niet gebonden aan _EU_LANDEN_BTW_PREFIX-array ⇒ toevallige string elders houdt test groen bij incomplete lijst.
+Fix: regex ankeren binnen het array-blok. Owner: Sam (dev)
+
+#### F-CPR-061 [LAAG] audit2-r3-fixes.test.js:74-77
+Quote: `const r3Mentions = (eng.match(/ronde[ -]3/gi) || []).length + ...; expect(r3Mentions).toBeGreaterThanOrEqual(3);`
+Probleem: comment-archeologie i.p.v. regressietest.
+Fix: runtime-test of verwijderen. Owner: Sam (dev)
+
+#### F-CPR-062 [MIDDEL] audit2-ronde2-hoog.test.js:49-58
+Quote: `expect(belasteOmzetBlok).not.toMatch(/r3a_grondslag \|\| 0\)\s*[+;]/);`
+Probleem: legaal-significante pro-rata-dubbeltelling-fix uitsluitend via negatieve regex; rename/hulpfunctie ⇒ vals-groen terwijl dubbeltelling terugkeert.
+Fix: numerieke createGasRuntime-test op exacte euro's. Owner: Sam (dev)
+
+#### F-CPR-063 [MIDDEL] audit2-runtime-cross-pr.test.js:1-187
+Quote: `expect(triggers).toMatch(/UrlFetchApp\.fetchAll\(requests\)/);`
+Probleem: "runtime + cross-PR"-suite voert niets uit; order-sensitieve seams (SelfHeal-positie, quota vóór dunning) bevestigd op tekst-volgorde, niet uitvoeringsvolgorde.
+Fix: dagelijkseTaken draaien met volgorde-registrerende _runTaak_-mock. Owner: Sam (dev)
+
+#### F-CPR-064 [MIDDEL] audit2-runtime-cross-pr.test.js:31-47 (+ src/EmailQuotaGuard.gs:120 vs 131)
+Quote: `expect(quota).toMatch(/setProperty\(_EMAIL_QUOTA_WAARSCHUWING_PROP, sleutel \+ ['"]:SKIP_QUOTA['"]\)/);`
+Probleem: SKIP-pad schrijft `sleutel+':SKIP_QUOTA'` maar idempotency-check vergelijkt `laatste === sleutel` (131) ⇒ na een SKIP-dag wordt de gate niet herkend; test verankert de string-mismatch als verwacht gedrag.
+Fix: runtime-test SKIP→read samen; source: suffix strippen in vergelijking. Owner: Sam (dev)
+
+#### F-CPR-065 [LAAG] audit2-security-high.test.js:158-160
+Quote: `expect(engineBron).toMatch(/\^\[=\+\\-@\\t\\r\]/);`
+Probleem: security-control geverifieerd via aanwezigheid van eigen regex-tekst, niet via gedrag.
+Fix: saniteer_ uitvoeren met =,+,-,@-inputs. Owner: Sam (dev)
+
+#### F-CPR-066 [LAAG] audit2-voice-klantreis.test.js:30-31
+Quote: `expect(quota).toMatch(/kan\\n\s*['"] \+\n?\s*['"]Boekhoudbaar de rest van de dag/);`
+Probleem: regex codeert exacte bron-opmaak over regelgrenzen ⇒ breekt bij elke re-format.
+Fix: bron normaliseren of runtime-string testen. Owner: Sam (dev)
+
+#### F-CPR-067 [MIDDEL] audit2.test.js:26-28
+Quote: `beforeAll(() => { ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'BTW.gs']); });`
+Probleem: gedeelde ctx + muteerbare mocks zonder reset ⇒ latente isolatie-val zodra een test mockImplementation zet (zoals setup-suite 177/211 doet).
+Fix: beforeEach of afterEach clearAllMocks. Owner: Sam (dev)
+
+#### F-CPR-068 [MIDDEL] tests/__helpers__/gas-runtime.js:64-77
+Quote: `computeDigest: jest.fn((_alg, s) => { ... let h = 2166136261; ... }),`
+Probleem: FNV-mock i.p.v. SHA-256 ⇒ audit-hash-keten/HMAC-fixes kunnen nooit realistisch runtime-getest worden (vandaar regex-only suites).
+Fix: echte SHA-256 via Node crypto voor hash-kritische tests; mock-beperking documenteren. Owner: Sam (dev)
+
+#### F-CPR-069 [LAAG] audit2.test.js:91-99
+Quote: `// Post-run overrides: deze worden NIET overschreven door de script-run ctx.getSpreadsheet_ = jest.fn(() => mockSs);`
+Probleem: leunt op hoisting-mechaniek; declaratie→const-wijziging laat mock stil genegeerd worden.
+Fix: overrides-param + sentinel-assert dat de mock effectief is. Owner: Sam (dev)
+
+#### F-CPR-070 [LAAG] audit3-rework.test.js:112-115
+Quote: `expect(bok).not.toMatch(/oudere entries staan in AuditLog\s*\n\s*\/\/ via schrijfAuditLog_/);`
+Probleem: negatieve assert op exacte comment-opmaak bewijst geen gedrag.
+Fix: positieve runtime-assert op logBusinessEventNaarAuditSheet_. Owner: Sam (dev)
+
+Patroon CPR-T3: 7 van 8 bestanden = source-string-matching; hoogste prioriteit F-CPR-064 (echte latente source-mismatch in EmailQuotaGuard verankerd als verwacht).

@@ -137,3 +137,37 @@ Probleem: BTW-hub-gids heeft als enige géén "Verder lezen"-blok ⇒ link-equit
 Fix: Verder-lezen-blok met BTW-cluster-links. Owner: Sam (dev)
 
 Patroon SEO-B: geen enkele description in de 150-160-band; schema-kwaliteit varieert sterk — gids-template optrekken naar btw-aangifte-niveau lost F-SEO-028/031/033/034/029 in één keer op.
+
+## Batch SEO-C — 8 gidsen (btw-berekenen t/m factuur-opstellen)
+Alle 8: canonical/robots/sitemap correct geverifieerd; H1-hiërarchie foutloos; interne link-targets bestaan (incl. anchor #kor).
+
+### gids/btw-berekenen-terugvragen-zzp — Gelezen: 1-289. VONDSTEN F-SEO-040..042.
+### gids/btw-teruggave-zzp — Gelezen: 1-241. VONDSTEN F-SEO-043, 044.
+### gids/btw-verleggen-wanneer — Gelezen: 1-245. VONDST F-SEO-044.
+### gids/creditnota-maken-zzp — Gelezen: 1-235. VONDST F-SEO-044.
+### gids/debiteurenbeheer-zzp — Gelezen: 1-228. VONDST F-SEO-044.
+### gids/e-boekhouden-vs-moneybird-vs-boekhoudbaar — Gelezen: 1-279. Article+FAQPage @graph = referentie-implementatie. VONDSTEN F-SEO-043, 045, 046.
+### gids/exact-online-stoppen-besparing — Gelezen: 1-307. Article+FAQPage OK. VONDSTEN F-SEO-043, 046, 047.
+### gids/factuur-opstellen-zzp — Gelezen: 1-282. VONDSTEN F-SEO-044, 048.
+
+#### F-SEO-040 [LAAG] gids/btw-berekenen:7 — title 73 tekens. Fix: ≤60. Owner: Sam.
+#### F-SEO-041 [MIDDEL] gids/btw-berekenen:215-241
+Quote: `<section class="faq" aria-label="Veelgestelde vragen">` ... 5× details
+Probleem: 5 FAQ-items zonder FAQPage in JSON-LD (32-48) terwijl zusterpagina's het patroon al hebben.
+Fix: FAQPage-blok toevoegen. Owner: Sam (dev)
+#### F-SEO-042 [LAAG] alle 8 pagina's — geen enkele twitter:*-tag (OG wel). Fix: gedeelde include. Owner: Sam.
+#### F-SEO-043 [MIDDEL] gids/btw-teruggave:7 (+e-boekhouden:7 91 tekens, exact-online:7 86 tekens)
+Quote: `<title>BTW-teruggave als ZZP — wanneer krijg je geld terug, wat doe je bij vertraging? | Boekhoudbaar</title>`
+Probleem: titles 86-91 tekens — 25+ tekens afgekapt in SERP.
+Fix: ≤60 met keyword vooraan. Owner: Sam (dev)
+#### F-SEO-044 [MIDDEL] gids/btw-teruggave:31-33 (+btw-verleggen, creditnota, debiteurenbeheer, factuur-opstellen)
+Quote: `{"@type":"Article","headline":"BTW-teruggave als ZZP","datePublished":"2026-04-23",...}`
+Probleem: 5 pagina's met zichtbare FAQ zonder FAQPage-schema + minimaal Article (geen dateModified/mainEntityOfPage/description) — gemiste rich snippets op 5 pagina's tegelijk.
+Fix: FAQPage per pagina + Article op niveau e-boekhouden-pagina. Owner: Sam (dev)
+#### F-SEO-045 [MIDDEL] gids/e-boekhouden:228-243
+Quote: `<li><a href="/transparantie/">Mijn transparantie-pagina</a>` ...
+Probleem: centrale vergelijkpagina linkt niet naar moneybird-alternatief-2026/exact-online-stoppen — topical dead-end in alternatief-cluster (omgekeerde richting bestaat wél). (Sluit aan op F-GAP-007/010.)
+Fix: Verder-lezen-blok. Owner: Sam (dev)
+#### F-SEO-046 [LAAG] gids/e-boekhouden:63-66 (+exact-online:92-95) — geen font-preconnect/fonts-link/CF-beacon (template-drift t.o.v. 6 btw-gidsen). Fix: head harmoniseren. Owner: Sam.
+#### F-SEO-047 [LAAG] gids/exact-online:8 — description ~197 tekens. Fix: ≤160 met cijfer-hook vooraan. Owner: Sam.
+#### F-SEO-048 [LAAG] gids/factuur-opstellen:108-120 — "11 verplichte velden"-ol zonder ItemList/HowTo-schema. Fix: overwegen. Owner: Sam.
