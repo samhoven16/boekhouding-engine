@@ -244,3 +244,28 @@ Patroon DOC-C: systematische rubriek-inconsistentie over 4 gidsen (F-DOC-042/043
 [F-DOC-176] MIDDEL README.md:100 — 2e voorkomen "122 Jest-tests" inline-comment.
 [F-DOC-177] MIDDEL README.md:35 — src-boom toont 9 van 73 modules (<13%); nieuwe dev onderschat omvang.
 [F-DOC-178] LAAG README.md:107 — "deploy op push-naar-main" onvolledig (workflow triggert ook op feature-branch). (package.json-scripts/OAuth-scope/architectuur-flow kloppen = geverifieerd geen drift.)
+
+## Wave E — docs_05/06 (.claude canonieke artefacten) — gelezen volledig; uitgebreid bron-geverifieerd
+### docs_05
+[F-DOC-133] HOOG invariants.md:108 — beschrijft installeelTriggers_ als "Line 772: delete ALL triggers first" = DRIEVOUDIG fout: functie op Setup.gs:1033 (niet 772); quote staat in ándere (reset)functie:1304; code doet juist CREATE-first (Setup.gs:1038). Opvolger draait veilige volgorde terug naar gevaarlijke → herintroduceert lek.
+[F-DOC-134] HOOG invariants.md:99 — "verwerkHerhalendeKosten_ NO LockService" terwijl HerhalendeKosten.gs:283 LockService.tryLock(30000) heeft; doc spreekt zichzelf tegen (r173 zegt resolved). Opvolger bouwt overbodige bescherming of mijdt parallelle aanroep.
+[F-DOC-135] HOOG flow-maps.md:39 — BTW-journaalpost "debet:1300 credit:1400" bestaat niet; werkelijk Triggers.gs:737 debet 1100/credit bepaalBtwVerkoopRekening_. Test/debug zoekt niet-bestaande posten.
+[F-DOC-136] MIDDEL flow-maps.md:191 — zelfde "NO LockService" onjuistheid als F-DOC-134.
+[F-DOC-137] MIDDEL invariants.md:172 — berekenBtw 9%-check regelnr-drift (BoekingEngine 122/128 niet 114); inhoud klopt.
+[F-DOC-140] LAAG flow-maps.md:148 — FLOW-4-trace herhaalt foute "installeelTriggers_ DESTRUCTIVE delete-all-first" misconceptie.
+[F-DOC-138] LAAG jaarafsluiting-design.md:28 — sluitJaarAf DriveStructuur.gs:269 niet 307.
+[F-DOC-139] LAAG jaarafsluiting-design.md:23 — STANDAARD_GROOTBOEK 2500/2600 op Config.gs:155-156 niet 148-149.
+[F-DOC-160] LAAG invariants.md:112 — line-772-drift (ook in CLAUDE.md DANGER-tabel). (go-live-audit/protocol/groei/klant-kopie/meerjaren ACCURAAT=done. BTW null-vs-0 + I₅-som correct geverifieerd.)
+### docs_06
+[F-DOC-153] HOOG wiskundige-fundering.md:35 — I₃-balanswet "R.bw = Activa/Passiva"; bw-kolom[4] bevat alleen 'Balans'/'W&V', 'Actief'/'Passief' in type-kolom[2]. _bewijs_I3_balansWet_ (FormeelBewijs.gs:244) leest [4] vs 'Activa'/'Passiva' → activa/passiva altijd 0 → I₃-check slaagt ALTIJD ongeacht onbalans. Doc bekrachtigt de permanente no-op.
+[F-DOC-154] HOOG sheet-schemas.md:217 — kolom[2] Type "Activa/Passiva/..."; code gebruikt 'Actief'/'Passief' (Config.gs:116, Rapportages.gs:96). Dev die tegen 'Activa' codeert matcht 0 rijen. Voedt I₃-no-op.
+[F-DOC-155] HOOG stresstest-findings-2026-06-05.md:24 — E2/P0 "boeking in afgesloten jaar geaccepteerd" + fix-advies onuitvoerbaar; maakJournaalpost_ heeft AL jaarAlAfgesloten_-guard (Boekingen.gs:36-51); voorgestelde locatie valideerInvariantsVoorJournaalpost_ heeft geen datum-param. Opvolger herbouwt opgeloste fix op onmogelijke plek.
+[F-DOC-156] HOOG ultieme-criticus-rapport-2026-06-05.md:49 — presenteert E2/P0 + C4 als "NOG STEEDS niet gefixed"; werkelijk geblokkeerd (Boekingen.gs:40-50). Hoogste-prio P0 als open terwijl gesloten.
+[F-DOC-157] MIDDEL stresstest-findings:60 — "parseBedrag_ NaN-return = invalid" tegenovergesteld van impl (retourneert 0, nooit NaN). Verkeerde caller-aannames.
+[F-DOC-158] MIDDEL repo-map.md:22 — "STANDAARD_GROOTBOEK 211-entry" werkelijk ~113 (~2× drift).
+[F-DOC-159] MIDDEL stresstest-runbook.md:58 — verwijst naar scripts/gen-stress-csv.js dat niet bestaat → R3-stap onuitvoerbaar.
+[F-DOC-161] LAAG repo-map.md:193 — "Menu.gs 43+ items" werkelijk 120 addItem (~3× onderschat).
+[F-DOC-162] LAAG ultieme-criticus-rapport:33 — "grep addItem=102" nu 120.
+[F-DOC-163] LAAG test-map.md:28 — boekingEngine "47 tests" werkelijk 48 (±1 drift).
+[F-DOC-164] LAAG ultieme-criticus-methode.md:13 — "5 persona's" terwijl rapport+critic-outputs 6 hanteren.
+NB: I₅/r1e_btw GEEN tegenstrijdigheid (wiskundige-fundering+invariants+BTW.gs consistent, r1e_btw telt mee). sheet-schemas 0-based INDICES correct; alleen Type/bw-WAARDEN fout.
