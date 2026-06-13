@@ -305,3 +305,48 @@ Probleem: developer-jargon in klant-facing diagnose-alert (deels support-bedoeld
 Fix: klant-versie + technisch detail tussen haakjes. Owner: Sam (dev)
 
 Patroon VCE-D: u/je-wissel (GezondheidCheck, ExportAccountant) + rauwe e.message/enums (5 vondsten) + losse anglicismen; referentie-voorbeelden: Fortress-dialog, stakingswizard, EmailQuotaGuard-body, XAF-fallback.
+
+## Batch VCE-E — HelpTab, HerhalendeKosten, HitlValidatie, Hygiene, Inkoopfacturen, Invariants, KvKCache, Licentie
+
+### Gelezen: HelpTab 1-194, HerhalendeKosten 1-517, HitlValidatie 1-240, Hygiene 1-243, Inkoopfacturen 1-165, Invariants 1-760, KvKCache 1-146, Licentie 1-967. Modelvoorbeeld zonder vondsten: KvKCache.gs (kosten vooraf transparant "€0,03 / eerste 100 gratis", foutpaden met oorzaak + geruststelling).
+
+#### F-VCE-100 [LAAG] src/HelpTab.gs:30 — "via een update van Boekhoudbaar" zonder concrete actie (vernieuwHelpTab-menu bestaat). Fix: menupad noemen. Owner: accountant.
+#### F-VCE-101 [MIDDEL] src/HerhalendeKosten.gs:491-494
+Quote: `'U heeft nog geen herhalende kosten geregistreerd.\n\nVoeg er toe via: Bank → Herhalende kosten beheren.'`
+Probleem: enige "U" in verder volledig "je"-bestand + grammaticaal krom ("Voeg er toe").
+Fix: "je" + "Voeg er een toe". Owner: accountant
+#### F-VCE-102 [MIDDEL] src/HerhalendeKosten.gs:316
+Quote: `sheet.getRange(i + 1, 9).setValue('FOUT — datum ongeldig, corrigeer kolom G');`
+Probleem: "kolom G" = spreadsheet-jargon; toast (319) zegt niet wát/waar te corrigeren.
+Fix: kolomnaam "Volgende datum" gebruiken. Owner: accountant
+#### F-VCE-103 [LAAG] src/HitlValidatie.gs:133 — "Sluit dit venster om bij te werken" terwijl venster zelf sluit (134); vaag. Fix: instructie weglaten. Owner: accountant.
+#### F-VCE-104 [MIDDEL] src/HitlValidatie.gs:137
+Quote: `alert('Fout: ' + e.message);`
+Probleem: rauwe e.message zonder vervolgstap (vgl. nette rollback-melding Inkoopfacturen:89).
+Fix: klant-actie toevoegen. Owner: Sam/accountant
+#### F-VCE-105 [LAAG] src/Hygiene.gs:188 — "(zie _SYSTEM_LOG)" verwijst naar verborgen sheet die klant niet kan vinden. Fix: support-kanaal of n.v.t. indien Sam-only menu. Owner: accountant.
+#### F-VCE-106 [MIDDEL] src/Inkoopfacturen.gs:35
+Quote: `ui.alert('Tabblad Inkoopfacturen niet gevonden — run setup() eerst.');`
+Probleem: "run setup()" developer-taal (patroon F-VCE-064/068).
+Fix: menupad-formulering (bestaat al in Invariants:562). Owner: accountant
+#### F-VCE-107 [MIDDEL] src/Invariants.gs:111-114
+Quote: `'... Dit is een interne fout — neem contact op met support.'`
+Probleem: klantBoodschap zonder kanaal (elders staat support@boekhoudbaar.nl wél, Invariants:890).
+Fix: adres toevoegen. Owner: accountant
+#### F-VCE-108 [LAAG] src/Invariants.gs:470-477 — bedrag-meldingen concreet maar zonder expliciete correctie-actie. Fix: "— corrigeer het bedrag." Owner: accountant.
+#### F-VCE-109 [MIDDEL] src/Licentie.gs:324-328 / 385
+Quote: `<div ...>👤 Bent u de eigenaar?</div>` vs `'Vul het e-mailadres in waarmee je hebt betaald'`
+Probleem: u/je gemengd binnen de activatiedialoog (eerste klantcontact); owner-blok "u", hoofdpad "je".
+Fix: gelijktrekken. Owner: accountant
+#### F-VCE-110 [MIDDEL] src/Licentie.gs:508/512 — "Eigenaar-bypass"/"Bypass-fout" dev-jargon, maar owner-only blok ⇒ klant-impact nihil. Fix: optioneel. Owner: Sam.
+#### F-VCE-111 [LAAG] src/Licentie.gs:447/495
+Quote: `toonFout('fout1', '⚠️ ' + (err && err.message ? err.message : 'Er ging iets mis. Probeer opnieuw.'));`
+Probleem: rauwe err.message of verboden vage fallback in het eerste klantcontact (server-fouten ernaast wél netjes).
+Fix: terug-loop + support-mail in fallback. Owner: accountant
+#### F-VCE-112 [LAAG] src/Licentie.gs:919-923
+Quote: `'We kunnen je licentie even niet verifiëren. Nog 1 dag offline-toegang ...'`
+Probleem: "We"-personificatie (principe #7); inhoudelijk verder sterk (eerlijk + "Je kunt gewoon doorwerken").
+Fix: "Je licentie kan even niet geverifieerd worden ...". Owner: accountant
+#### F-VCE-113 [LAAG] src/Licentie.gs:943 — volledige sleutel + Spreadsheet-ID in info-dialoog = ruis/complexiteit voor leek. Fix: maskeren (laatste 4) overwegen. Owner: Sam/accountant.
+
+Patroon VCE-E: u/je-wissel (101, 109); jargon-foutpaden zonder terug-loop (102, 105, 106, 107); generieke withFailureHandler-fallbacks (104, 111); één wij-schending (112). KvKCache = referentie.
