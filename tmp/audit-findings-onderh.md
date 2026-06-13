@@ -289,3 +289,67 @@ Fix: "systeem functioneel" splitsen van "licentie actief". Owner: Sam (dev)
 Quote: `folder = bestaandeMappen.hasNext() ? bestaandeMappen.next() : DriveApp.createFolder(mapNaam);`
 Probleem: accountantspakket-map hergebruikt maar oude files nooit verwijderd ⇒ duplicaat-bestandsnamen stapelen per export; accountant weet niet welke set actueel is.
 Fix: gelijknamige files overschrijven/verwijderen of timestampen. Owner: Sam (dev)
+
+## Batch OND-E — FeedbackLoop, Fiscaal, FormeelBewijs, Fortress, GezondheidCheck, HelpTab, HerhalendeKosten, HitlValidatie
+
+### Per-bestand: FeedbackLoop (1-165), Fiscaal (1-446), FormeelBewijs (1-539), Fortress (1-292), GezondheidCheck (1-966), HelpTab (1-194), HerhalendeKosten (1-517), HitlValidatie (1-240) — alle volledig gelezen. Positief: HerhalendeKosten-cleanup correct doorberekend en dagelijks aangesloten; FormeelBewijs draait volledig offline; Fiscaal consequent via getBelasting_().
+
+#### F-OND-100 [LAAG] src/FeedbackLoop.gs:25 — comment belooft "auto-flush" die niet bestaat. Fix: comment of implementatie. Owner: Sam.
+#### F-OND-101 [MIDDEL] src/FeedbackLoop.gs:133-145
+Quote: `const serverUrl = getLicentieServerUrl_();` ... `UrlFetchApp.fetch(serverUrl + '?actie=feedback', {`
+Probleem: na abandonment zegt de dialog "Bedankt! Jouw feedback is verzonden" (78) terwijl niets aankomt — loze belofte.
+Fix: eerlijke melding bij onbereikbare server of item verbergen. Owner: Sam (dev)
+#### F-OND-102 [HOOG] src/Fiscaal.gs:17
+Quote: `const DGA_MIN_SALARIS_FALLBACK = 56000;`
+Probleem: gebruikelijk loon wijzigt vrijwel jaarlijks; fallback bevriest bij abandonment ⇒ DGA-monitor adviseert te laag minimum ⇒ correctierisico. (= F-TAX-070, hier het 5-10-jaar-perspectief.)
+Fix: "geldig voor tariefjaar X"-melding bij fallback-gebruik + koppeling aan TARIEFSJAAR. Owner: Sam + accountant
+#### F-OND-103 [MIDDEL] src/Fiscaal.gs:72,80 — MIA-default 36% zonder config-laag (EIA heeft die wél). Fix: MIA naar BELASTING_PER_JAAR. Owner: Sam. (= F-TAX-067)
+#### F-OND-104 [LAAG] src/Fiscaal.gs:168 — stakingsaftrek-fallback €3.630 hardcoded. Fix: tariefjaar vermelden. Owner: Sam.
+#### F-OND-105 [MIDDEL] src/Fiscaal.gs:277-291 — SUPPLETIE_GEMELD_-keys zonder cleanup (geen deleteProperty in repo). Fix: cutoff-cleanup in dagelijkseTaken. Owner: Sam.
+#### F-OND-106 [HOOG] src/FormeelBewijs.gs:162-168, 197-209, 262, 421
+Quote: `// Kolommen: [4] debet rek, [6] credit rek, [8] bedrag, [16] status` ... `const saldoGB = parseFloat(gbData[i][5]) || 0;`
+Probleem: alle 10 invariant-checkers lezen op magic kolom-indexen zonder header-validatie of schema-versie ⇒ bij kolom-toevoeging produceren juist de integriteits-checks zelf vals "OK"/valse schendingen (vgl. F-INV-004 dat al zo'n off-by-one is!).
+Fix: gedeelde kolom-constanten + header-naam-guard aan begin van bewijsAlleInvarianten_. Owner: Sam (dev)
+#### F-OND-107 [LAAG] src/FormeelBewijs.gs:243 — survival-positief; vaste I₃-tolerantie €0,05 evt. relatief maken. Geen actie.
+#### F-OND-108 [LAAG] src/Fortress.gs:239-240 — FORTRESS_HASHES groeit met tab-aantal (nu ~2KB). Geen actie nodig; monitoring dekt. Owner: Sam.
+#### F-OND-109 [HOOG] src/Fortress.gs:36-71, 211-244
+Quote: `prot = sheet.protect().setDescription('Fortress lockdown — bewerken via menu');`
+Probleem: protecties hangen aan Session.getEffectiveUser(); bij eigendomswissel/OAuth-rotatie kan niemand meer in de sheets en draait fortressModeUit zelf zonder rechten ⇒ abandoned + Fortress-aan + eigendomswissel = permanent gelockte boekhouding zonder UI-ontsnapping.
+Fix: handmatig noodpad documenteren in Help-tab (Data → Beschermde bladen); fortressModeUit falen-met-instructie. Owner: Sam + klant
+#### F-OND-110 [LAAG] src/Fortress.gs:216-219 — shadow-sheet dood concept (docstring belooft cel-opslag die er niet is). Fix: docstring. Owner: Sam.
+#### F-OND-111 [MIDDEL] src/Fortress.gs:131-138
+Quote: `function _fortressSkipSheet_(naam) { if (naam.indexOf('_Fortress') === 0) return true; return naam === SHEETS.AUDIT_ANCHOR || naam === SHEETS.AUDIT_LOG; }`
+Probleem: statische skip-lijst schaalt niet mee met nieuwe dynamische tabs (Suppletie, Gezondheidscheck) ⇒ vergrendelde her-schrijf faalt stil of dagelijks vals drift-alarm.
+Fix: structureel skip-criterium (marker/kleur) i.p.v. naam-enumeratie. Owner: Sam (dev)
+#### F-OND-112 [HOOG] src/GezondheidCheck.gs:156-165 (+full-file kolom-indexen)
+Quote: `const kandidaten = [boekjaar, new Date().getFullYear(), new Date().getFullYear() - 1];`
+Probleem: Drive-map-check kijkt alleen naar 3 jaren rond nu ⇒ dormante klant (paar jaar gat) krijgt vals "run setup opnieuw"; plus zelfde magic-kolom-risico als F-OND-106.
+Fix: alle DRIVE_HOOFDMAP_*-keys scannen; kolomindexen centraliseren. Owner: Sam (dev)
+#### F-OND-113 [MIDDEL] src/GezondheidCheck.gs:90-95 — trigger-diagnose checkt alleen length===0, niet nadering 20-cap. Fix: waarschuwing bij >=18. Owner: Sam.
+#### F-OND-114 [LAAG] src/GezondheidCheck.gs:65-72 — drie property-namen via OR-keten = informeel migratiepad zonder versienummer. Fix: CONFIG_SCHEMA_VERSIE + migratiefunctie. Owner: Sam.
+#### F-OND-115 [MIDDEL] src/GezondheidCheck.gs:121-138 — licentie-diagnose correct fail-open maar survival hangt aan Licentie.gs-gedrag; regressietest-vereiste vastleggen. Owner: Sam.
+#### F-OND-116 [HOOG] src/HelpTab.gs:103
+Quote: `['☐ 9. KOR-omzet onder €20.000?', 'Anders afmelden bij Belastingdienst'],`
+Probleem: KOR-grens hardcoded in checklist die expliciet alleen via product-updates wijzigt ⇒ bevriest bij abandonment ⇒ onjuist KOR-advies met BTW-consequenties. (= F-OND-007-klasse, hier de Help-tab.)
+Fix: bedrag uit getBelasting_() of verwijzing zonder hard getal. Owner: Sam + accountant
+#### F-OND-117 [MIDDEL] src/HelpTab.gs:99,106,117-121 — deadlines hardcoded zonder "geldig per"-stempel ⇒ klant in 2030 ziet niet hoe oud info is. Fix: laatst-bijgewerkt-regel. Owner: Sam.
+#### F-OND-118 [MIDDEL] src/HelpTab.gs:38-44
+Quote: `['BTW-aangifte indienen', 'https://www.belastingdienst.nl/wps/wcm/connect/nl/btw/btw'],`
+Probleem: 7 wps/wcm/connect-CMS-deeplinks (verouderd WebSphere-patroon) 404'en vrijwel zeker binnen jaren ⇒ Help-tab stuurt klant naar dode pagina's precies bij deadline-paniek.
+Fix: stabiele top-level-URL's of zoekterm. Owner: Sam (dev)
+#### F-OND-119 [MIDDEL] src/HelpTab.gs:151-153
+Quote: `['Documentatie', 'https://www.boekhoudbaar.nl/gids/'], ['FAQ', '...'], ['Email support', 'support@boekhoudbaar.nl'],`
+Probleem: alle drie support-kanalen delen één faalpunt (het domein — ook de mail bounct bij verlopen domein); geen domein-onafhankelijk noodkanaal — dé survival-kernvraag van de USP.
+Fix: minstens één domein-onafhankelijk kanaal + geruststelling "werkt door zonder support". Owner: Sam + accountant
+#### F-OND-120 [LAAG] src/HerhalendeKosten.gs:98-107 — hardcoded rekening-/BTW-dropdowns out-of-sync-risico met Config (en nu al FOUT: 5xxx bestaat niet — zie F-INV-023). Fix: dynamisch uit Config genereren. Owner: Sam.
+#### F-OND-121 [MIDDEL] src/HerhalendeKosten.gs:182, 304-328
+Quote: `const headers = ['ID', 'Naam', ..., 'Zakelijk %'];`
+Probleem: 12-koloms tab zonder schema-versie; verwerking leest harde indexen ([6], [11]) ⇒ kolom-invoeging laat systeem stil op verkeerde velden boeken (notitie als bedrag).
+Fix: header-check vóór index-lezen + kolom-op-naam-migratie. Owner: Sam (dev)
+#### F-OND-122 [HOOG] src/HitlValidatie.gs:25-27, 205-217
+Quote: `const HITL_KOL_STATUS = 17; const HITL_KOL_GEVALIDEERD_DOOR = 18; const HITL_KOL_GEVALIDEERD_OP = 19;`
+Probleem: HITL-kolommen + journaalpost-leesposities niet gedeeld met andere lezers (FormeelBewijs/GezondheidCheck) — toeval-consistentie; kolom-invoeging vóór 17 ⇒ validatie-stempel in bv. bedrag-kolom = corruptie van financiële data.
+Fix: gedeelde Config-kolomconstanten + header-validatie (impact-analyse vereist). Owner: Sam (dev)
+#### F-OND-123 [LAAG] src/HitlValidatie.gs:160, 173 — Session.getActiveUser() kan leeg worden (Google-privacy-trend) ⇒ "Gevalideerd door: onbekend" holt bewijswaarde uit. Fix: fallback effectiveUser/licentie-email. Owner: Sam.
+
+Thema OND-E: (1) magic kolom-indexen zonder schema-guard in juist de integriteits-modules (106/112/121/122); (2) fiscale fallbacks bevriezen (102/116); (3) support-domein = single point of failure (119); (4) Fortress-lock-out-scenario (109).

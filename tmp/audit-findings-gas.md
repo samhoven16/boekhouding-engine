@@ -370,3 +370,45 @@ Fix: non-2xx als aparte faalcategorie + owner-alert; export-fetch isoleren in ei
 Quote: `const oudIt = backupMap.getFilesByType(MimeType.MICROSOFT_EXCEL); while (oudIt.hasNext()) { ... }`
 Probleem: dagelijkse volledige folder-scan met per-file Drive-roundtrips over een GFS-archief dat oneindig groeit (maand-ankers permanent).
 Fix: behouden-beslissing cachen / anker-ids in property. Owner: Sam (dev)
+
+## Batch GAS-F — FeedbackLoop, Fiscaal, FormeelBewijs, Fortress, GezondheidCheck, HelpTab, HerhalendeKosten, HitlValidatie
+
+### Alle 8 volledig gelezen. Kernobservatie: de CUMULATIEVE dagelijkse keten — GezondheidCheck (~8 full scans) + FormeelBewijs (~9 scans + 6× berekenBtwAangifte_ = 12 factuur-scans) + suppletie (8× = 16 scans) + Fortress-hash (opt-in, alle sheets) — scant de twee grootste sheets tientallen keren per dag; budget-guard voorkomt timeout maar skipt dan structureel de late taken (waaronder de property-cleanup van F-GAS-104).
+
+#### F-GAS-100 [LAAG] src/FeedbackLoop.gs:136-141 — "fire-and-forget"-fetch blokkeert wél (GAS kent geen async); tot 60s UI-blokkade. Fix: documenteren of queue-flush. Owner: Sam.
+#### F-GAS-101 [MIDDEL] src/Fiscaal.gs:215-229
+Quote: `[huidigJaar - 1, huidigJaar].forEach(function(jaar) { for (let q = 1; q <= 4; q++) { ... nieuw = berekenBtwAangifte_(ss, van, tot);`
+Probleem: suppletie-detector herrekent tot 8 kwartalen = 16 full factuur-scans per dag bovenop de rest van de keten.
+Fix: per-(van,tot)-cache binnen invocation; alleen kwartalen met nieuwe facturen herberekenen. Owner: Sam (dev)
+#### F-GAS-102 [MIDDEL] src/Fiscaal.gs:289-291 — SUPPLETIE_GEMELD_-keys zonder cleanup (= F-OND-105). Fix: cutoff-cleanup. Owner: Sam.
+#### F-GAS-103 [HOOG] src/FormeelBewijs.gs:497-516 (+160-458)
+Quote: `for (let k = 4; k >= 0; k--) { ... const a = berekenBtwAangifte_(ss, van, tot); ... }`
+Probleem: I₁₀ 5× + I₅ 1× berekenBtwAangifte_ (elk 2 factuur-scans) + I1/I2/I4/I6/I7/I8/I9 elk eigen full getDataRange ⇒ ~9 directe scans + 12 factuur-scans per dagelijkse run; bij 10k boekingen serieus tegen de 6-min-cap, of budget-guard slaat de wiskundige verificatie stil over.
+Fix: sheets één keer inlezen in bewijsAlleInvarianten_ en arrays doorgeven; aangifte-resultaat delen tussen I5/I10/suppletie. Owner: Sam (dev)
+#### F-GAS-104 [MIDDEL] src/HerhalendeKosten.gs:336-376
+Quote: `const idemKey = 'herhKost_' + rijId + '_' + Utilities.formatDate(volgende, ...);`
+Probleem: docstring rekent zelf de cliff door (18.250 keys ≈ 900KB > 500KB); cleanup bestaat maar staat laat in de keten ⇒ als budget-guard hem structureel skipt (F-GAS-103/105) groeit de set alsnog naar de cap.
+Fix: idempotency per rij in één JSON-key of als sheet-kolom (laatst-geboekt). Owner: Sam (dev)
+#### F-GAS-105 [HOOG] src/GezondheidCheck.gs:906-934
+Quote: `try { tel(controleerBalans_(ss)); } ... controleerJournaalposten_(ss).forEach(tel); ...`
+Probleem: dagelijkse stille check doet ~8 volledige getDataRange-reads op de grootste sheets, bovenop F-GAS-103/101 in dezelfde invocation.
+Fix: gedeelde in-memory reads per run; zware verificaties wekelijks i.p.v. dagelijks overwegen. Owner: Sam (dev)
+#### F-GAS-106 [LAAG] src/Fortress.gs:239-240 — FORTRESS_HASHES-blob klein/begrensd. Geen actie. Owner: Sam.
+#### F-GAS-107 [MIDDEL] src/Fortress.gs:228-238
+Quote: `ss.getSheets().forEach(function(sheet) { ... const data = sheet.getDataRange().getValues(); const json = JSON.stringify(data); const hash = Utilities.computeDigest(...)`
+Probleem: snapshot + dagelijkse integriteitscheck JSON-stringify-en en hashen ELKE sheet volledig (opt-in tempert).
+Fix: goedkopere fingerprint (rowcount + laatste N rijen) of alleen kritische sheets. Owner: Sam (dev)
+#### F-GAS-108 [LAAG] src/HelpTab.gs:46-161 — per-cel setValue×2 + format per rij in 7 secties (vast ~50 rijen, geen cap-risico). Fix: bij gelegenheid batchen. Owner: Sam.
+#### F-GAS-109 [MIDDEL] src/HerhalendeKosten.gs:283-285 + 351-369
+Quote: `const lock = LockService.getScriptLock(); if (!lock.tryLock(30000)) return {...}; ... maakJournaalpost_(ss, {...})`
+Probleem: script-lock gehouden over tot 36 iteraties × (2 journaalposten + flush) ⇒ lock-starvation voor andere invocations; geneste acquisitie met volgendBoekingNr-lock (reentrant binnen executie maar verlengt houdtijd).
+Fix: flush uit de loop; fijnmaziger lock of reeds-gelockt-pad. Owner: Sam (dev)
+#### F-GAS-110 [MIDDEL] src/HerhalendeKosten.gs:381-382
+Quote: `sheet.getRange(i + 1, 7).setValue(volgende); SpreadsheetApp.flush();`
+Probleem: per-rij setValue + per-rij flush() binnen de gehouden lock — structureel verkeerd patroon (sheet klein ⇒ MIDDEL).
+Fix: batch setValues op kolom 7 + één flush vóór releaseLock. Owner: Sam (dev)
+#### F-GAS-111 [MIDDEL] src/HitlValidatie.gs:226-239 + 196-220
+Quote: `const aantal = _haalConceptBoekingen_(ss).length;` — met `const data = sheet.getDataRange().getValues();`
+Probleem: voor-onOpen-bedoelde waarschuwing materialiseert de hele JOURNAALPOSTEN-sheet puur voor een count (30s-limiet onOpen).
+Fix: count cachen in DocumentProperty of TextFinder. Owner: Sam (dev)
+#### F-GAS-112 [LAAG] src/HitlValidatie.gs:172-174 — 4 cel-operaties per gevalideerde rij binnen withLock_; kolommen 17-19 aaneengesloten. Fix: één setValues(rij,17,1,3) + batch-read vooraf. Owner: Sam.

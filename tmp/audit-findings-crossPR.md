@@ -256,3 +256,94 @@ Probleem: negatieve assert op exacte comment-opmaak bewijst geen gedrag.
 Fix: positieve runtime-assert op logBusinessEventNaarAuditSheet_. Owner: Sam (dev)
 
 Patroon CPR-T3: 7 van 8 bestanden = source-string-matching; hoogste prioriteit F-CPR-064 (echte latente source-mismatch in EmailQuotaGuard verankerd als verwacht).
+
+## Batch CPR-T4 — auto-defaults, avg-licentiesleutel, backup-email, bankImport, belasting-optimizer, belasting-overrides, belastingadvies-helpers, belastingadvies-zvw
+Alle 8 volledig gelezen; cross-refs geverifieerd tegen AutoDefaults/BackupEmail/BankImport/BelastingOptimizer/Belastingadvies/licence-server.
+
+#### F-CPR-080 [LAAG] auto-defaults.test.js:102 — getUuid-mock geeft 2× zelfde UUID ⇒ dubbele-trekking-entropie ongetest. Fix: teller-mock + helften-verschillen-assert. Owner: Sam.
+#### F-CPR-081 [LAAG] auto-defaults.test.js:80
+Quote: `expect(rond).toMatch(/\[/);  // is een array-tuple`
+Probleem: wiring via positionele bron-char-zoek ⇒ vals-rood/-groen bij herformat.
+Fix: stappen-array functioneel uitvoeren. Owner: Sam (dev)
+#### F-CPR-082 [LAAG] avg-licentiesleutel-opt-in.test.js:133 — client-kant alleen via losse regex (/sleutel.*encodeURIComponent/). Fix: URL functioneel bouwen+asserten. Owner: Sam.
+#### F-CPR-083 [MIDDEL] backup-email.test.js:53
+Quote: `getFiles: () => { let returned = false; return { hasNext: () => !returned && ..., next: () => { returned = true; ... } }; }`
+Probleem: één-shot-iterator wijkt af van echte herbruikbare FileIterator ⇒ tweede scan in bron geeft vals-rood of maskeert dubbel-scan-bug.
+Fix: verse iterator per getFiles()-aanroep. Owner: Sam (dev)
+#### F-CPR-084 [LAAG] backup-email.test.js:180 — "wint over alles" test zonder Session-concurrent ⇒ positie-2-prioriteit ongetest. Fix: Session+instelling-combinatietest. Owner: Sam.
+#### F-CPR-085 [LAAG] belasting-optimizer.test.js:57 — beforeAll-gedeelde ctx+B (nu veilig, latent order-gevoelig). Fix: beforeEach of mutatie-verbod documenteren. Owner: Sam.
+#### F-CPR-086 [LAAG] belasting-optimizer.test.js:176
+Quote: `const r = ctx.optimaliseerInvesteringsTimingLP_(inv);`
+Probleem: LinearOptimizationService ontbreekt in runtime ⇒ LP-pad valt altijd terug op brute-force ⇒ volledige LP-code nooit uitgevoerd door tests.
+Fix: gemockte LP-service-test. Owner: Sam (dev)
+#### F-CPR-087 [LAAG] belasting-optimizer.test.js:48 — negatieve bron-regex op één constante-naam; drift onder andere naam passeert. Fix: single-source-of-truth-gedragstest (optimizer === Belastingadvies-KIA). Owner: Sam.
+#### F-CPR-088 [MIDDEL] belasting-overrides.test.js:120
+Quote: `ctx.getInstelling_ = (sleutel) => { ... return null; };`
+Probleem: gedeelde ctx + per-test herschreven getInstelling_ zonder restore; werkt alleen dankzij per-test _wisBelastingOverridesCache_() — één vergeten aanroep = stil vervuilde cache (vals-groen).
+Fix: reset in after/beforeEach; cache-wis centraal. Owner: Sam (dev)
+#### F-CPR-089 [MIDDEL] src/Belastingadvies.gs:396 (via tests)
+Quote: `let _belastingOverridesCache = null;`
+Probleem: module-globale cache; geen test verifieert dat productie-schrijfacties de cache busten (alleen handmatige _wis...).
+Fix: integratietest cache-invalidatie via productie-flow. Owner: Sam (dev)
+#### F-CPR-090 [LAAG] belastingadvies-helpers.test.js:29 — absolute 2026-pinning op impliciet huidig jaar ⇒ vals-rood-tijdbom bij jaarwisseling. Fix: getBelasting_(2026)-parameter. Owner: Sam.
+#### F-CPR-091 [MIDDEL] belastingadvies-zvw-heffingskorting.test.js:128
+Quote: `ctx.getInstelling_ = () => 'corrupt-datum';` (zonder restore)
+Probleem: AOW-tests laten laatste mock staan op gedeelde ctx ⇒ elke toekomstige test ná regel 142 erft stilletjes de datum-mock.
+Fix: afterEach-restore of verse ctx. Owner: Sam (dev)
+#### F-CPR-092 [MIDDEL] belastingadvies-zvw-heffingskorting.test.js:123
+Quote: `// getInstelling_ is jest mock, returns null by default`
+Probleem: comment onjuist — runtime definieert getInstelling_ niet; isAowGerechtigd_ slaagt door opgeslokte ReferenceError, niet via het bedoelde null-pad ⇒ try/catch-verwijdering in bron zou crashen zonder dat deze test het voorspelt.
+Fix: ctx.getInstelling_ = () => null expliciet; comment corrigeren. Owner: Sam (dev)
+
+## Batch CPR-T5 — betaling-integriteit, boekingEngine, btw-classificatie-robust, btw-export, bundle-create, byok-gemini-ui, chaos-engineering, contract-based-tests
+Plus gas-runtime.js (1-196) en jest.config.js (1-24) herlezen: jest.config zet GEEN clearMocks/resetMocks ⇒ mocks resetten nergens automatisch.
+
+#### F-CPR-100 [LAAG] tests/__helpers__/gas-runtime.js:33-40 (+jest.config.js)
+Quote: `const mockGetProperty  = jest.fn(() => null);`
+Probleem: geen clearMocks in jest.config ⇒ call-records accumuleren over tests binnen beforeAll-blokken; latent voor de eerste toHaveBeenCalledTimes-assert.
+Fix: clearMocks: true of beforeEach-runtimes. Owner: Sam (dev)
+#### F-CPR-101 [LAAG] tests/__helpers__/gas-runtime.js:107-121
+Quote: `MailApp: { sendEmail: jest.fn(), getRemainingDailyQuota: jest.fn(() => 100) },` ... `MailApp:  { sendEmail: jest.fn() }`
+Probleem: dubbele MailApp-key — tweede wint ⇒ getRemainingDailyQuota-mock is DOOD; elke test die mail-quota-pad raakt crasht of wordt nooit geschreven.
+Fix: tweede definitie verwijderen/aanvullen. Owner: Sam (dev)
+#### F-CPR-102 [LAAG] tests/__helpers__/gas-runtime.js:64-77 — FNV-pseudohash i.p.v. SHA-256 (= F-CPR-068, hier de T5-context). Fix: documenteren/override afdwingen. Owner: Sam.
+#### F-CPR-103 [LAAG] boekingEngine.test.js:312-313
+Quote: `// 1.555 rondt correct af naar 1.56 (geen IEEE 754 kantgeval)` / `expect(ctx.rondBedrag_(1.555)).toBeCloseTo(1.56, 2);`
+Probleem: 1.555 is IEEE-754 1.55499...; toBeCloseTo(.,2) accepteert óók 1.55 ⇒ test bewijst de comment-claim niet; afrondingsstrategie-regressie blijft groen.
+Fix: exacte .toBe(1.56). Owner: Sam (dev)
+#### F-CPR-104 [MIDDEL] btw-classificatie-robust.test.js:108-109
+Quote: `const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'BTW.gs']);` (top-level describe)
+Probleem: ctx gebouwd tijdens collectie-fase i.p.v. beforeAll — load-throw sloopt hele file; geen per-test-verversing; inconsistent met blok 1.
+Fix: naar beforeAll verplaatsen. Owner: Sam (dev)
+#### F-CPR-105 [MIDDEL] btw-export.test.js:67
+Quote: `berekenBtwAangifte_: jest.fn(() => aangifte),`
+Probleem: producer volledig gestubd ⇒ veld-rename in BTW.gs breekt export in productie terwijl test groen blijft — producer/consumer-contract ongetest.
+Fix: één integratietest met echte berekenBtwAangifte_ door _toCanonicalExport_. Owner: Sam (dev)
+#### F-CPR-106 [LAAG] btw-export.test.js:217-234 — source-string-match op functienaam + menu-string; bewijst registratie niet. Fix: functionele menu-structuur-check. Owner: Sam.
+#### F-CPR-107 [LAAG] bundle-create.test.js:138-140 — .gitignore-regex-match; functioneel-equivalente regel faalt. Fix: git check-ignore. Owner: Sam.
+#### F-CPR-108 [LAAG] bundle-create.test.js:93-97 — bundle-count vs live src-listing: alleen aantallen, fouten heffen elkaar op. Fix: exacte namen-set vergelijken. Owner: Sam.
+#### F-CPR-109 [MIDDEL] bundle-create.test.js:49, 108
+Quote: `const versie = '99.0.0';`
+Probleem: vaste bundle-paden in repo-root ⇒ parallel/afgebroken runs botsen of laten residu achter dat volgende run beïnvloedt.
+Fix: mkdtempSync of pid/timestamp in pad. Owner: Sam (dev)
+#### F-CPR-110 [MIDDEL] byok-gemini-ui.test.js:57-104
+Quote: `const matches = dialogBron.match(/Stap 1 — Upload uw bon of factuur/g)` (assert length 1)
+Probleem: hele suite is brittle source-regex; dubbel-dropzone-check via letterlijke tekst-telling omzeilbaar met minieme tekstvariatie — precies het dubbel-render-scenario dat hij claimt te bewaken.
+Fix: dialoog echt renderen (aiActief true/false) en op HTML-structuur asserten. Owner: Sam (dev)
+#### F-CPR-111 [MIDDEL] byok-gemini-ui.test.js:122-138
+Quote: `function rendersCTA(aiActief) { return aiActief ? 'dropzone' : 'byok-cta'; }`
+Probleem: "functionele simulatie" assert op in-test gedefinieerde functie — test raakt productie-code nergens; vals vertrouwen.
+Fix: blok verwijderen of echte render-logica laden. Owner: Sam (dev)
+#### F-CPR-112 [MIDDEL] chaos-engineering.test.js:186-242
+Quote: `ctx.PropertiesService = { getScriptProperties: () => ({ ... }) };` (zonder restore)
+Probleem: CHAOS 4/5 muteren ctx-globals per test zonder teardown ⇒ elke nieuwe test in die blokken erft stilletjes de laatste mock — isolatie hangt aan toevallige describe-grenzen.
+Fix: beforeEach-override + afterEach-restore of verse ctx. Owner: Sam (dev)
+#### F-CPR-113 [LAAG] chaos-engineering.test.js:84-122
+Quote: `const d = new Date(2024, 2, 31, 2, 30);` / `expect(isNaN(d.getTime())).toBe(false);`
+Probleem: "DST-tests" asserten alleen geldige Date (triviaal waar), timezone-afhankelijk, raken geen productiecode — pseudo-dekking.
+Fix: echte datum-helpers met expliciete offset testen of verwijderen. Owner: Sam (dev)
+#### F-CPR-114 [MIDDEL] contract-based-tests.test.js:165-172
+Quote: `try { ctx.valideerBtwAansluiting_([...], 999, 100, 1099); } catch (e) { expect(e.code).toBeDefined(); ... }`
+Probleem: geen expect.assertions/fail ná de try ⇒ "geen throw" slaagt stil — een PR die de invariant-throw verzwakt blijft groen.
+Fix: expect.assertions(2) of fail() in de try. Owner: Sam (dev)
+Positief T5: rondBedrag_-idempotentie en parseBedrag_↔formatBedrag_-roundtrip zijn sterke echte contracten; bundle-hash via echte crypto.
