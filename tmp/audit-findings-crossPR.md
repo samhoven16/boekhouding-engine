@@ -443,3 +443,23 @@ Fix: ICP-functie-body extraheren en dáárin asserten. Owner: Sam (dev)
 Quote: `expect(count).toBe(2);`
 Probleem: exacte counts (zelfde klasse als F-CPR-182); regel 32 gebruikt al het robuustere >=2.
 Fix: >=2 of per-loop isNaN-koppeling asserten. Owner: Sam (dev)
+
+## Batch CPR-T8 — cycle26/27/28/29/3/30/31/32
+Hot file licence-server/Code.gs: startsWith('actief')-migratie consistent over alle endpoints (geverifieerd: 466/777/861/1104/1243/1587/1983/2986/3301; grep bevestigt 0 residu). cycle28 = sterke borging zonder vondsten (herinneringsStap_-key identiek aan 3 write-paden).
+
+#### F-CPR-160 [LAAG] cycle26:29 — mock negeert sheet-naam-argument terwijl productie sinds CYCLE-51 via leesSheetVeilig_(ss, SHEETS.VERKOOPFACTUREN) leest ⇒ verkeerde-sheet-regressie ongedekt. Fix: getSheetByName valideren. Owner: Sam.
+#### F-CPR-161 [LAAG] cycle27-markeer-betaald-lock-strict.test.js:22
+Quote: `const body = src.slice(startIdx, src.indexOf('\n}\n', startIdx) + 2);`
+Probleem: body-extractie tot eerste niet-ingesprongen } ⇒ nested closure/object-literal vóór de echte sluiter kapt body voortijdig af ⇒ assertie #4 (release-guard) valt silent weg.
+Fix: brace-balancing of anker op volgende function. Owner: Sam (dev)
+#### F-CPR-162 [LAAG] cycle29:53 — stale comment ("Brevo-bounce regel ~2145 nog strict") — werkelijk regel 3232 én in cycle 32 al gemigreerd. Fix: comment updaten. Owner: Sam.
+#### F-CPR-163 [LAAG] cycle3-leaf-accounts.test.js:18 — beforeAll-gedeelde ctx; "Ambigue parents"-blok overschrijft ctx.schrijfAuditLog_ zonder restore ⇒ lekt naar regressie-blok (nu onschadelijk). Fix: afterEach-reset. Owner: Sam.
+#### F-CPR-164 [LAAG] cycle30:25 — body-slice `startIdx + 50` magische marge; cleanup-contract-deling met cycle31 _verwijderDripKeys_ ongedekt. Fix: anker op eerste {; deling asserten. Owner: Sam.
+#### F-CPR-165 [MIDDEL] cycle31-drip-cleanup-revoke-rotate.test.js:64
+Quote: `'drip_ABCDE1_d3': 'sent', ... ctx._verwijderDripKeys_('ABCDE1');`
+Probleem: test stubt alleen UPPERCASE-keys; writer (Code.gs:2996) schrijft de RUWE sheet-sleutel; helper dekt 3 casings maar test bewaakt alleen het upper-pad ⇒ verwijdering van de raw-tak blijft groen terwijl mixed-case keys niet meer opgeruimd worden (quota-accumulatie keert terug).
+Fix: mixed-case-key-testcase toevoegen. Owner: Sam (dev)
+#### F-CPR-166 [MIDDEL] cycle32-brevo-bounce-status-startswith.test.js:47
+Quote: `// De resterende === 'actief' in cycles 29 + 30 zijn parallel — niet in main.`
+Probleem: stale merge-comment (29/30 zijn wél gemerged); de eigenlijke ketenwerking (hard-bounce → status 'Bounce' → drips/OTP slaan rij over) wordt door geen test end-to-end geborgd, alleen losse string-aanwezigheid.
+Fix: comment updaten + integratietest bounce→Bounce→drip-skip. Owner: Sam (dev)
