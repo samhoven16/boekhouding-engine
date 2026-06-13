@@ -1,0 +1,8 @@
+website/starters/index.html
+website/status/index.html
+website/tools/besparing/index.html
+website/transparantie/index.html
+website/update/index.html
+website/vergelijking/index.html
+website/voorwaarden/index.html
+website/animations.css

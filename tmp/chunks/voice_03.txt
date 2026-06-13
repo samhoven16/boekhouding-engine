@@ -1,0 +1,8 @@
+website/continuiteit/index.html
+website/demo/index.html
+website/dpa/index.html
+website/en/index.html
+website/faq/index.html
+website/functies/index.html
+website/gids/afschrijven-zzp-uitleg/index.html
+website/gids/aftrekbare-kosten-zzp/index.html

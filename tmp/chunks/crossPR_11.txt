@@ -1,0 +1,8 @@
+scripts/strip-inline-nav-css.js
+scripts/strip-inline-nav-js.js
+scripts/symbol-index.js
+scripts/sync-nav.js
+scripts/truth-check.js
+scripts/update-changelog.js
+scripts/update-version.js
+tests/unit/cycle41-admin-rate-limit.test.js

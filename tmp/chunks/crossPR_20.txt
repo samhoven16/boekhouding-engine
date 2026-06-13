@@ -1,0 +1,8 @@
+tests/unit/fortress-resilient.test.js
+tests/unit/gemini-model-eol-fix.test.js
+tests/unit/gesloten-periodes-corrupt-backup.test.js
+tests/unit/go-live-customer-voice-blockers.test.js
+tests/unit/golive-audit-blockers.test.js
+tests/unit/google-script-run-naar-publieke-functie.test.js
+tests/unit/grootboek-saldo-cache.test.js
+tests/unit/healthcheck-hardening.test.js

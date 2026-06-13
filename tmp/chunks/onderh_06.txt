@@ -1,0 +1,8 @@
+docs/LICENCE-SERVER-AUDIT.md
+docs/agent-progress.md
+docs/archive/DEPLOY_VANDAAG.md
+docs/archive/STATUS_NACHT.md
+docs/archive/handmatige-acties-na-sessie-4-juni.md
+.github/workflows/auto-update-version.yml
+.github/workflows/deploy.yml
+.github/workflows/health-monitor.yml

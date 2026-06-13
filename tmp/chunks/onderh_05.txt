@@ -1,0 +1,8 @@
+scripts/update-changelog.js
+scripts/update-version.js
+website/animations.css
+website/changelog.json
+website/gids/gids.css
+website/nav.css
+website/version.json
+docs/BOOKHOUDBAAR_FORMAL_FINANCE_OS_SPEC.md

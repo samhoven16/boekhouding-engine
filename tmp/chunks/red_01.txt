@@ -1,0 +1,8 @@
+scripts/add-breadcrumbs.js
+scripts/clasp-push.js
+scripts/deploy-check.js
+scripts/release-instructions.js
+scripts/update-changelog.js
+scripts/update-version.js
+.github/workflows/auto-update-version.yml
+.github/workflows/deploy.yml

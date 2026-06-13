@@ -1,0 +1,8 @@
+website/gids/zzp-uurtarief-berekenen/index.html
+website/gratis/index.html
+website/herroepingsrecht/index.html
+website/index.html
+website/kopen/index.html
+website/landing.html
+website/mijn/index.html
+website/over/index.html

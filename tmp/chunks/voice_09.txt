@@ -1,0 +1,8 @@
+website/partners/index.html
+website/privacy/index.html
+website/roadmap/index.html
+website/start/index.html
+website/starters/index.html
+website/status/index.html
+website/tools/besparing/index.html
+website/transparantie/index.html

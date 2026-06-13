@@ -1,0 +1,8 @@
+tests/unit/cycle72-template-guard.test.js
+tests/unit/cycle73-trigger-zelfherstel.test.js
+tests/unit/cycle74-iban-preflight.test.js
+tests/unit/cycle75-instellingen-merge.test.js
+tests/unit/cycle76-iban-mod97.test.js
+tests/unit/cycle77-mollie-mode-amount.test.js
+tests/unit/cycle78-safe-audit-log.test.js
+tests/unit/cycle79-refund-grace.test.js

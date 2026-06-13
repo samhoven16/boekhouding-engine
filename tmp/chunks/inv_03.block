@@ -1,0 +1,4 @@
+  - tests/unit/cycle78-safe-audit-log.test.js   [sha12:cdd17f7b31c6]
+  - tests/unit/cycle9-storno-menu.test.js   [sha12:d1839f5b8162]
+  - tests/unit/golive-audit-blockers.test.js   [sha12:9c6901f5ccef]
+  - tests/unit/meerjaren-audit-fixes.test.js   [sha12:993c3b720268]

@@ -1,0 +1,8 @@
+tests/unit/audit2-runtime-cross-pr.test.js
+tests/unit/audit2-security-high.test.js
+tests/unit/audit2-voice-klantreis.test.js
+tests/unit/audit2.test.js
+tests/unit/audit3-rework.test.js
+tests/unit/boekingEngine.test.js
+tests/unit/cycle17-grootboek-preserve-klant-rijen.test.js
+tests/unit/cycle69-audit-hashketen.test.js

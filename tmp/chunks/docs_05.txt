@@ -1,0 +1,8 @@
+.claude/flow-maps.md
+.claude/go-live-audit-2026-06-10.md
+.claude/go-live-protocol.md
+.claude/groei-trojaans-paard.md
+.claude/invariants.md
+.claude/jaarafsluiting-design.md
+.claude/klant-kopie-flow-ideeen.md
+.claude/meerjaren-audit-2026-06-10.md

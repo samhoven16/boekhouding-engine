@@ -1,0 +1,8 @@
+tests/unit/edge-cases-1m-users.test.js
+tests/unit/eerste-klant-check.test.js
+tests/unit/email-quota-guard.test.js
+tests/unit/email-verzonden-cleanup.test.js
+tests/unit/factuurDialog-init-pattern.test.js
+tests/unit/factuurPdf-verleggingen.test.js
+tests/unit/factuurlijst.test.js
+tests/unit/formele-transactie-validator.test.js

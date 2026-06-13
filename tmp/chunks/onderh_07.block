@@ -1,0 +1,7 @@
+  - .github/workflows/keep-codespaces-alive.yml   [sha12:2655390760d7]
+  - package.json   [sha12:4f4e806d295f]
+  - eslint.config.js   [sha12:8228c09ac59f]
+  - jest.config.js   [sha12:1e019af509be]
+  - .clasp.json   [sha12:a2aed0a757af]
+  - README.md   [sha12:1ca4cb8002e9]
+  - CLAUDE.md   [sha12:462c4ac65117]

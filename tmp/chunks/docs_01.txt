@@ -1,0 +1,8 @@
+website/gids/exact-online-stoppen-besparing/index.html
+website/gids/factuur-opstellen-zzp/index.html
+website/gids/gratis-boekhouding-excel-zzp/index.html
+website/gids/ib-aangifte-zzp/index.html
+website/gids/index.html
+website/gids/jaarafsluiting-zzp-checklist/index.html
+website/gids/maandaangifte-vs-kwartaalaangifte-btw/index.html
+website/gids/moneybird-alternatief-2026/index.html

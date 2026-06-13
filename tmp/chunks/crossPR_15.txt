@@ -1,0 +1,8 @@
+tests/unit/cycle64-tariefsjaar.test.js
+tests/unit/cycle65-gemini-key-reachable.test.js
+tests/unit/cycle67-referral-korting.test.js
+tests/unit/cycle68-belastingadvies-auto-refresh.test.js
+tests/unit/cycle69-audit-hashketen.test.js
+tests/unit/cycle7-storno-journaalpost.test.js
+tests/unit/cycle70-noah-ark-export.test.js
+tests/unit/cycle71-truth-check.test.js

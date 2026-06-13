@@ -1,0 +1,8 @@
+src/XafExport.gs
+licence-server/AdminDashboard.gs
+licence-server/Code.gs
+scripts/add-breadcrumbs.js
+scripts/bundle-create.js
+scripts/clasp-push.js
+scripts/deploy-check.js
+scripts/deploy-licence-release.js

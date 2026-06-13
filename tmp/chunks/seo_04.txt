@@ -1,0 +1,8 @@
+website/kopen/index.html
+website/landing.html
+website/mijn/index.html
+website/over/index.html
+website/partners/index.html
+website/privacy/index.html
+website/roadmap/index.html
+website/start/index.html

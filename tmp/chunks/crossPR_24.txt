@@ -1,0 +1,8 @@
+tests/unit/release-instructions.test.js
+tests/unit/run-taak-kritiek.test.js
+tests/unit/self-heal.test.js
+tests/unit/seo-fixes-batch1.test.js
+tests/unit/snapshot.test.js
+tests/unit/specialist-agents-fase2.test.js
+tests/unit/specialist-agents-fase3.test.js
+tests/unit/specialist-agents.test.js

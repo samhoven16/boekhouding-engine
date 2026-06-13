@@ -1,0 +1,7 @@
+tests/unit/zero-failure.test.js
+.claude/flow-maps.md
+.claude/repo-map.md
+.claude/sheet-schemas.md
+.claude/test-map.md
+package.json
+eslint.config.js

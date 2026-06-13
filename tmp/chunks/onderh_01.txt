@@ -1,0 +1,8 @@
+src/Referral.gs
+src/ResilientExecutor.gs
+src/RgsMapping.gs
+src/SelfHeal.gs
+src/Setup.gs
+src/SmartCategorisatie.gs
+src/Suggesties.gs
+src/TaxRegistry.gs

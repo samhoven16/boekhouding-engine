@@ -1,0 +1,4 @@
+website/changelog.json
+website/gids/gids.css
+website/nav.css
+website/version.json

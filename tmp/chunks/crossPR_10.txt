@@ -1,0 +1,8 @@
+scripts/add-breadcrumbs.js
+scripts/bundle-create.js
+scripts/clasp-push.js
+scripts/deploy-check.js
+scripts/deploy-licence-release.js
+scripts/impact.js
+scripts/mutation-meting.js
+scripts/release-instructions.js

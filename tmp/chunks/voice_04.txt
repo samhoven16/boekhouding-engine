@@ -1,0 +1,8 @@
+website/gids/auto-leasen-vs-kopen-zzp/index.html
+website/gids/bankafschrift-boeken-zzp/index.html
+website/gids/boekhoudprogramma-zonder-abonnement/index.html
+website/gids/btw-aangifte-zzp/index.html
+website/gids/btw-berekenen-terugvragen-zzp/index.html
+website/gids/btw-teruggave-zzp/index.html
+website/gids/btw-verleggen-wanneer/index.html
+website/gids/creditnota-maken-zzp/index.html

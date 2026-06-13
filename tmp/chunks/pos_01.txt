@@ -1,0 +1,2 @@
+website/demo/index.html
+website/faq/index.html

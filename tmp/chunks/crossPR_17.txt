@@ -1,0 +1,8 @@
+tests/unit/cycle8-buyflow-edge.test.js
+tests/unit/cycle80-btw-validator-art17.test.js
+tests/unit/cycle82-stale-while-revalidate.test.js
+tests/unit/cycle83-homepage-copy.test.js
+tests/unit/cycle85-leefsignaal.test.js
+tests/unit/cycle86-subpages-consistentie.test.js
+tests/unit/cycle87-responsive-cleanup.test.js
+tests/unit/cycle88-changelog-schema.test.js

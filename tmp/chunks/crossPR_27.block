@@ -1,0 +1,7 @@
+  - tests/unit/zero-failure.test.js   [sha12:f034d96a8e1b]
+  - .claude/flow-maps.md   [sha12:2e4f8cb57340]
+  - .claude/repo-map.md   [sha12:156286bd3bd0]
+  - .claude/sheet-schemas.md   [sha12:dc5250cc9304]
+  - .claude/test-map.md   [sha12:1524fd8d729e]
+  - package.json   [sha12:4f4e806d295f]
+  - eslint.config.js   [sha12:8228c09ac59f]

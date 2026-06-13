@@ -1,0 +1,8 @@
+website/gids/maandaangifte-vs-kwartaalaangifte-btw/index.html
+website/gids/moneybird-alternatief-2026/index.html
+website/gids/offerte-maken-zzp/index.html
+website/gids/pensioen-opbouwen-zzp/index.html
+website/gids/suppletie-aangifte-btw/index.html
+website/gids/thuiswerkvergoeding-zzp/index.html
+website/gids/urencriterium-bijhouden-zzp/index.html
+website/gids/wet-dba-zzp/index.html

@@ -1,0 +1,8 @@
+.claude/repo-map.md
+.claude/sheet-schemas.md
+.claude/stresstest-findings-2026-06-05.md
+.claude/stresstest-runbook.md
+.claude/test-map.md
+.claude/ultieme-criticus-methode.md
+.claude/ultieme-criticus-rapport-2026-06-05.md
+.claude/wiskundige-fundering.md

@@ -1,0 +1,8 @@
+website/gids/zelfstandigenaftrek-2026/index.html
+website/gids/zzp-administratie-apps/index.html
+website/gids/zzp-starten-checklist-2026/index.html
+website/gids/zzp-tool-stack/index.html
+website/gids/zzp-uurtarief-berekenen/index.html
+website/gratis/index.html
+website/herroepingsrecht/index.html
+website/index.html

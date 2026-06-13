@@ -1,0 +1,8 @@
+website/gids/btw-teruggave-zzp/index.html
+website/gids/btw-verleggen-wanneer/index.html
+website/gids/creditnota-maken-zzp/index.html
+website/gids/debiteurenbeheer-zzp/index.html
+website/gids/e-boekhouden-vs-moneybird-vs-boekhoudbaar/index.html
+website/gids/exact-online-stoppen-besparing/index.html
+website/gids/factuur-opstellen-zzp/index.html
+website/gids/gratis-boekhouding-excel-zzp/index.html

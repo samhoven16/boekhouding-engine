@@ -1,0 +1,8 @@
+tests/unit/herhalendeKosten.test.js
+tests/unit/hygiene.test.js
+tests/unit/incident-bank-import-10k.test.js
+tests/unit/instellingen-email-key-drift.test.js
+tests/unit/invariants.test.js
+tests/unit/jaarafsluiting.test.js
+tests/unit/kritieke-update-notificatie.test.js
+tests/unit/kvk-cache-permanent.test.js

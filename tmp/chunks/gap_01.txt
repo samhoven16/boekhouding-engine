@@ -1,0 +1,8 @@
+website/demo/index.html
+website/gids/afschrijven-zzp-uitleg/index.html
+website/gids/aftrekbare-kosten-zzp/index.html
+website/gids/auto-leasen-vs-kopen-zzp/index.html
+website/gids/bankafschrift-boeken-zzp/index.html
+website/gids/boekhoudprogramma-zonder-abonnement/index.html
+website/gids/btw-aangifte-zzp/index.html
+website/gids/btw-berekenen-terugvragen-zzp/index.html

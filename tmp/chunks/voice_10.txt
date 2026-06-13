@@ -1,0 +1,8 @@
+website/update/index.html
+website/vergelijking/index.html
+website/voorwaarden/index.html
+docs/BOOKHOUDBAAR_FORMAL_FINANCE_OS_SPEC.md
+docs/LICENCE-SERVER-AUDIT.md
+docs/agent-progress.md
+docs/archive/DEPLOY_VANDAAG.md
+docs/archive/STATUS_NACHT.md

@@ -1,0 +1,8 @@
+tests/property/formeel-bewijs-invarianten.test.js
+tests/unit/audit-fixes-nacht-pr-2.test.js
+tests/unit/audit2-continuiteit.test.js
+tests/unit/audit2-fiscaal-high.test.js
+tests/unit/audit2-med-low-batch1.test.js
+tests/unit/audit2-med-low-batch2.test.js
+tests/unit/audit2-r3-fixes.test.js
+tests/unit/audit2-ronde2-hoog.test.js

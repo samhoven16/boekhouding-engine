@@ -1,0 +1,8 @@
+tests/unit/cycle5-immutable-journaal.test.js
+tests/unit/cycle50-dashboard-boekjaar-label.test.js
+tests/unit/cycle51-sheet-access-helper.test.js
+tests/unit/cycle52-deletetrigger-trycatch.test.js
+tests/unit/cycle53-gesloten-periodes-parse.test.js
+tests/unit/cycle54-parsejson-veilig.test.js
+tests/unit/cycle55-kor-verlegd-mutual-exclusive.test.js
+tests/unit/cycle56-isja-consistent.test.js

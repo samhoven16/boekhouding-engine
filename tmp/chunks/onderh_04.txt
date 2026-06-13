@@ -1,0 +1,8 @@
+scripts/impact.js
+scripts/mutation-meting.js
+scripts/release-instructions.js
+scripts/strip-inline-nav-css.js
+scripts/strip-inline-nav-js.js
+scripts/symbol-index.js
+scripts/sync-nav.js
+scripts/truth-check.js
