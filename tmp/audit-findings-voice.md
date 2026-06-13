@@ -475,3 +475,39 @@ Patroon VCE-F: u/je-mix concentreert in oudere dialog-files (NieuweBoeking, Priv
 [F-VCE-188] LAAG faq:280 — dubbele haakjes achter elkaar (knip-plak-indruk).
 [F-VCE-189] LAAG faq:230 — mail-onderwerp "🚀" hype-emoji.
 [F-VCE-190] LAAG faq:435 — "whatever" Engels + soft-hyphen in woord. (functies/afschrijven/aftrekbare done = referentie-toon.)
+
+## Wave E — voice_05/06/07 (gidsen) — gelezen volledig
+KERN cross-page: zelfstandigenaftrek 2026 €1.200 (canoniek/correct) vs €2.470 (stale 2025) — F-VCE-212/213/252/253/254 (4 pagina's). Vertrouwens-killer; één bron-waarde site-breed.
+[F-VCE-212] HOOG jaarafsluiting:166 — "€2.470 in 2026" botst met ib-aangifte €1.200.
+[F-VCE-213] HOOG gids/index.html:364 — hub-kaart "€2.470 aftrek 2026".
+[F-VCE-214] MIDDEL jaarafsluiting:269/121/137 — KOR-afmeld-deadline intern inconsistent (1 dec vs 1 jan).
+[F-VCE-215] MIDDEL ib-aangifte:269 — "Belastingadvies-module berekent automatisch" + woord "advies" wringt met disclaimers; verifieer.
+[F-VCE-216] MIDDEL e-boekhouden-vs...:261 — "Light-versie gratis" zonder grens (vs eigen waarschuwing tegen "gratis").
+[F-VCE-217] MIDDEL factuur-opstellen:196 — "sequential" Engels (vs "doorlopend") + "Fouten: weg" absolute belofte.
+[F-VCE-218] MIDDEL debiteurenbeheer:148 — "3 escalatie-emails automatisch" zonder quota-voorbehoud.
+[F-VCE-219/223] LAAG ib-aangifte — rode disclosure-stapeling angst-toon; TLDR-schijven te dicht/jargon.
+[F-VCE-221/227] LAAG — Moneybird-prijs €12 vs €18/mnd cross-gids; tijdsclaim 15min vs 30min vs 2-5u inconsistent.
+[F-VCE-222/234] MIDDEL — sticky "Slimmer dan zelf bijhouden" op ALLE gidsen botst met gidsen die zelf-doen respecteren.
+[F-VCE-224/226/230] LAAG — "geen marketing dat is rekenen" stellig; "free tier"/"Freemium" jargon; EN-factuurvoorbeeld.
+[F-VCE-232] MIDDEL maandaangifte:209 — "invulhulp klaar voor Mijn Belastingdienst" suggereert auto-indiening (tool is kwartaal-only, zie F-DOC-053).
+[F-VCE-233/235] LAAG maandaangifte — "5 min" vs sticky "15 min"; "legt op" hard.
+[F-VCE-236] LAAG offerte:211 — "offerte naar factuur in één klik" (feature bestaat niet, zie F-DOC-073).
+[F-VCE-237/238] LAAG offerte — €500-vuistregel als regel; "AV" onuitgelegd in template.
+[F-VCE-239] MIDDEL pensioen:216 — "percentage van omzet" herhalende kost (bestaat niet, zie F-DOC-074).
+[F-VCE-240/241/242] LAAG pensioen — "rijke pensioenopbouw" subjectief; angst-stapeling; merknamen zonder neutraliteit (BinckBank bestaat niet meer).
+[F-VCE-243] MIDDEL suppletie:197 — "signaleert ontbrekende facturen/BTW-inconsistenties/onvolledig bankboek" 3 claims te verifiëren.
+[F-VCE-244/245] LAAG suppletie — "Voorkom suppleties" overbelofte; boete 25-50% vs 25-100% inconsistent.
+[F-VCE-246/247/248] LAAG urencriterium — totaal-claim plausibel; angst-stapeling 25-100%.
+[F-VCE-249] MIDDEL wet-dba:212 — "precies wat bij controle telt" overclaimt; spreekt eigen kernboodschap tegen (feitelijke relatie beslist, niet papier).
+[F-VCE-250/251] LAAG wet-dba — angst-stapeling; "Vrij vervanging" grammaticaal krom.
+[F-VCE-252/253/254] HOOG zelfstandigenaftrek/zelf-boekhouding — €2.470 als 2026 (3×) vs canoniek €1.200.
+[F-VCE-255] MIDDEL zakelijke-rekening:142 — "onze beoordeling" product-personificatie (enige in set).
+[F-VCE-256] MIDDEL zakelijke-rekening:451 — kale "Bekijk Boekhoudbaar"-CTA zonder €49 in knop (vs andere gidsen).
+[F-VCE-257] MIDDEL zelfstandigenaftrek:121 — "2027 ~€900" voorspelling als semi-feit zonder bron.
+[F-VCE-258] MIDDEL zakelijk-of-prive-auto:206 — "km-registratie ingebouwd + zakelijk/privé-split per herhalende kost" verifieer (zie F-DOC-076).
+[F-VCE-259] MIDDEL zelfstandigenaftrek:245 — "belastingadvies-module" wekt verwachting buiten wat sheet mag.
+[F-VCE-261] LAAG zakelijke-verzekering:96 — "(BAV/BAV)" dubbel-afkorting typo.
+[F-VCE-263/269] LAAG zzp-starten — BV-moment €50-70K vs €100K cross-gids; KVK online vs afspraak inconsistent.
+[F-VCE-264/268] LAAG zelf-boekhouding — "90% rekenwerk" ongefundeerd; "einddata kloppen" cryptisch.
+[F-VCE-270] LAAG zakelijke-verzekering:173 — "meer dan 4 dagen ZZP" dubbelzinnig (per week?).
+[F-VCE-271] LAAG zzp-tool-stack:172 — Zapier-menupad te verifiëren (klopt niet, zie F-DOC-093). (exact-online/moneybird/thuiswerk/administratie-apps done; 228/229/265/266 positief.)

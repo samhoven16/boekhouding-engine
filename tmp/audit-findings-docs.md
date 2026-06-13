@@ -236,3 +236,11 @@ Patroon DOC-C: systematische rubriek-inconsistentie over 4 gidsen (F-DOC-042/043
 [F-DOC-128] LAAG .claude/CLOUDFLARE-403:88 — "P1-2, K3, beginbalans" onbenoemde werkitems, niet herleidbaar.
 [F-DOC-131] LAAG SPEC.md:326 — normatieve flow houdt "installer/copy"-tak in leven die niet bestaat (voedt fantoom-Installer-verwarring).
 [F-DOC-132] LAAG agent-progress.md:60 — "373 symbols" momentopname (append-only log, informatief).
+
+## Wave E — docs_07 (README + CLAUDE.md) — gelezen volledig; bron-geverifieerd
+[F-DOC-173] HOOG CLAUDE.md:111 — DANGER-ZONE "installeelTriggers_() line 772"; werkelijk Setup.gs:1033 (~261 regels drift). Opvolger landt in verkeerde code vóór riskante wijziging.
+[F-DOC-174] HOOG CLAUDE.md:91 — IMPACT-tabel "getSpreadsheet_() All 30 files"; werkelijk 73 .gs-files, 48 callers. Onderschat blast-radius van CRITICAL-functie.
+[F-DOC-175] HOOG README.md:46 — "122 tests"; werkelijk 198 testfiles/~2432 cases (orde van grootte hoger).
+[F-DOC-176] MIDDEL README.md:100 — 2e voorkomen "122 Jest-tests" inline-comment.
+[F-DOC-177] MIDDEL README.md:35 — src-boom toont 9 van 73 modules (<13%); nieuwe dev onderschat omvang.
+[F-DOC-178] LAAG README.md:107 — "deploy op push-naar-main" onvolledig (workflow triggert ook op feature-branch). (package.json-scripts/OAuth-scope/architectuur-flow kloppen = geverifieerd geen drift.)

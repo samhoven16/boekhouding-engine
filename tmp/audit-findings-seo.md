@@ -227,3 +227,48 @@ Fix: Verder-lezen-blok. Owner: Sam (dev)
 [F-SEO-106] LAAG index.html:1516 — homepage-nav 9 links vs subpagina-nav 6; /starters//continuiteit/ krijgen alleen homepage-nav-link.
 [F-SEO-107] LAAG zzp-tool-stack:160 — /go/-302-redirect-URLs indexeerbaar; voeg robots-disallow/noindex toe.
 [F-SEO-108] n.v.t. herroepingsrecht — SEO-technisch in orde (juridische pagina, geen koop-schema nodig).
+
+## Wave E — seo_04 (website pagina's) — gelezen volledig
+[F-SEO-109] HOOG landing.html:12 — landing.html bijna identiek aan homepage / (zelfde hero/tabel/FAQ) maar eigen canonical → keyword-kannibalisatie op koper-queries. Kies één canonieke buyer-page.
+[F-SEO-110] HOOG landing.html:11 — hoge-intent keywords ("goedkoop"/"excel boekhouden") in genegeerde meta-keywords i.p.v. zichtbare H2/body.
+[F-SEO-112] HOOG landing.html:50 — FAQPage-schema dupliceert vrijwel zeker homepage/faq → duplicate structured data verdunt rich-snippet-toekenning.
+[F-SEO-111] HOOG partners:7 — title bevat rauwe `&` (niet &amp;) → invalide markup; +68 tekens afgekapt.
+[F-SEO-114] MIDDEL landing.html:7 — title puur slogan, geen transactioneel keyword (zwaarst wegend signaal verspild).
+[F-SEO-113] MIDDEL landing.html:23 — og:image SVG (ook partners/roadmap) → geen social-preview. PNG 1200×630.
+[F-SEO-115] MIDDEL landing.html:436 — geen contextuele deep-links naar specifieke gidsen (alleen hub).
+[F-SEO-119] MIDDEL landing.html:357 — 3 testimonials zichtbaar zonder Review/AggregateRating-schema (alleen indien echt).
+[F-SEO-116] MIDDEL partners:180 — FAQ-sectie zonder FAQPage-schema.
+[F-SEO-117] MIDDEL partners:7 — geen enkele JSON-LD (geen BreadcrumbList/Organization).
+[F-SEO-118] MIDDEL kopen:7 — noindex correct, MAAR Offer.url in landing/Product-schema wijst naar deze redirect-shim (geen prijs/product-content) → zwak Merchant-signaal.
+[F-SEO-125] LAAG partners:215 — orphan-pagina: niet in nav/footer van andere pagina's → lage crawl-prioriteit.
+[F-SEO-126] LAAG roadmap:351 — inconsistente footer-link-sets tussen pagina's (/bronnen/ vs /gids/) versnipperen interne-link-graph.
+[F-SEO-128] LAAG privacy:216 — dubbele sectienummer "7a" (2×) → verwart documentstructuur op trust-pagina.
+[F-SEO-127] LAAG over:34 — Person-schema goed maar geen los Organization-object met logo/sameAs/founder (E-E-A-T/Knowledge-Panel).
+[F-SEO-124] LAAG over:240 — leeg <script>-blok (ook privacy) dode markup. (mijn/start noindex correct=done; 120/121/122/123 cosmetic.)
+
+## Wave E — seo_06 (json + css assets) — gelezen volledig
+[F-SEO-149] MIDDEL changelog.json:2 — "entries":[] volledig leeg → indien homepage dit fetcht: leeg/dun "recente updates"-blok + nul freshness-signaal. Vul of niet-renderen.
+[F-SEO-150] LAAG version.json — verse datum (correct, geen stale); n.v.t. tenzij nergens aan dateModified/sitemap gekoppeld.
+[F-SEO-151/152] LAAG gids.css — pointer-findings naar HTML: verifieer FAQPage-schema bij <details> + rel="sponsored" op .btn-affiliate. nav.css POSITIEF (nav-links altijd in DOM, mobiel-crawlbaar). CSS zelf done.
+
+## Wave E — seo_05 (website koop-pagina's) — gelezen volledig
+[F-SEO-129] HOOG vergelijking:33 — commercieel belangrijkste koop-pagina mist Product/SoftwareApplication+Offer-schema; about→#app cross-page-@id resolved niet.
+[F-SEO-130] HOOG vergelijking:402 — 4 Q&A-blokken zonder FAQPage-schema (vergelijk-queries triggeren PAA).
+[F-SEO-131] MIDDEL starters:7 — title 64 tekens + exacte keyword "boekhouding starter" (enkelvoud) ontbreekt in title.
+[F-SEO-132] MIDDEL starters:141 — H1 benefit-driven, mist target-term "boekhouding starter".
+[F-SEO-133] MIDDEL vergelijking:196 — H1 mist "alternatief"; kannibaliseert met /gids/moneybird-alternatief.
+[F-SEO-134] MIDDEL tools/besparing:7 — title mist merknaam "Boekhoudbaar" + "goedkoop/zonder abonnement".
+[F-SEO-135] MIDDEL status:7 — index,follow op zero-content health-pagina → thin-content, crawl-budget. noindex.
+[F-SEO-136] MIDDEL update:8 — index,follow op post-purchase support-pagina (thin) + nav-inconsistentie.
+[F-SEO-137] MIDDEL transparantie:10 — canonical zonder trailing-slash vs footer /transparantie/ → signaal-splitsing/redirect-keten.
+[F-SEO-138] MIDDEL voorwaarden:10 — zelfde trailing-slash canonical-mismatch.
+[F-SEO-139] MIDDEL vergelijking:439 — vergelijkt met Exact maar geen Exact-kolom in hoofdtabel; "exact online alternatief"-intent mist.
+[F-SEO-140] LAAG starters:144 — geen link naar /vergelijking of KOR-gids (silo-cluster).
+[F-SEO-141] LAAG tools/besparing:126 — geen site-brede nav → interne-link-dead-end.
+[F-SEO-142] LAAG status:177 — footer-link-set inconsistent (/bronnen//roadmap).
+[F-SEO-143] LAAG update:16 — 5-stappen-procedure zonder HowTo-schema.
+[F-SEO-144] LAAG transparantie:230 — "Sam Hoven" prominent maar geen Person/Organization-founder-schema (E-E-A-T).
+[F-SEO-145] LAAG vergelijking:439 — ervaringsverhalen zonder Review/Article/author-schema.
+[F-SEO-146] LAAG status:164 — placeholder "komt binnenkort" externe link zonder nofollow.
+[F-SEO-147] LAAG tools/besparing:178 — calculator zonder natural-language body → thin-content op informationele intent.
+[F-SEO-148] LAAG starters:33 — WebPage-schema mist Product/Offer ondanks koop-intent. (animations.css n.v.t.)
