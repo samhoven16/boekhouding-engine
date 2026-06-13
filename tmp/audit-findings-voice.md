@@ -433,3 +433,45 @@ Patroon VCE-F: u/je-mix concentreert in oudere dialog-files (NieuweBoeking, Priv
 [F-VCE-195] LAAG btw-berekenen-terugvragen-zzp:177 — "1-op-1 past op Mijn Belastingdienst" toetsbare claim (verifieer).
 [F-VCE-205/206] LAAG btw-verleggen — "haar/zij" voor klant consistent (n.v.t.); EN-factuurvoorbeeld functioneel correct (n.v.t.).
 [F-VCE-207/208] LAAG positief — btw-teruggave:78 + creditnota:143 = toon-ankers (geruststellend, concrete actie). Beide done.
+
+## Wave D — voice_02 (src + website post-aankoop) — gelezen volledig
+[F-VCE-152] HOOG bedankt:116 — "€49,00" hardcoded, JS overschrijft ná load; bij test-modus/referral flitst fout bedrag of blijft staan als JS faalt. Post-aankoop-vertrouwen.
+[F-VCE-153] HOOG bedankt:290 — hardcoded /exec-deployment-URL in "welkomstmail opnieuw"-knop; CORS-catch toont ALTIJD "Verzoek verstuurd" ook bij fail. Self-service breekt stil.
+[F-VCE-154] MIDDEL bedankt:136 — mail-onderwerp "🚀" decoratief (vs functionele emoji-conventie); MailApp-fallback heeft geen 🚀 → wisselend onderwerp.
+[F-VCE-155] MIDDEL bedankt:172 — citeert exacte Google-knoptekst "(onveilig)"; houdbaarheidsrisico als Google herschrijft.
+[F-VCE-156] LAAG bedankt:196 — "alles wordt ingevuld" absolute spraak-belofte (browser-afhankelijk).
+[F-VCE-157] MIDDEL Verkoopfacturen.gs:282 — "upgrade naar Workspace" jargon + kosten zonder context.
+[F-VCE-158] MIDDEL Verkoopfacturen.gs:1053 — "KRITIEK: inconsistente staat ... journaalpost=/rollback=" rauwe developer-tekst aan klant; geen support-adres.
+[F-VCE-159] LAAG Verkoopfacturen.gs:980 — "Systeem is bezig" personificatie.
+[F-VCE-160] LAAG Verkoopfacturen.gs:1219 — "controleer Gmail-toegang" vaag.
+[F-VCE-161] LAAG Verkoopfacturen.gs:657 — factuur-mail "u" (correct register klant-van-klant; bevestig bewuste keuze).
+[F-VCE-162] MIDDEL Code.gs:537 — "Betalingsprovider niet geconfigureerd. Neem contact op." op betaalpagina zonder adres → doodloop.
+[F-VCE-163] LAAG Code.gs:584 — "Betalingsprovider gaf onverwachte respons" jargon + geen adres.
+[F-VCE-164] LAAG Code.gs:1030 — "Interne fout" generiek (security-verdedigbaar tegen sheet-id-lek).
+[F-VCE-165] MIDDEL adverteren:288 — "We zien ze. We negeren ze." vijandige toon + heel pagina "wij/we".
+[F-VCE-167] LAAG adverteren:175 — "geen freeriders" denigrerend leenwoord over eigen lezers.
+[F-VCE-169] LAAG Code.gs:1320 — "niet geverifieerd"-uitleg eerlijk (positief) maar bewoording varieert over 3 plekken.
+[F-VCE-170] LAAG Code.gs:2777 — "gepseudonymiseerd"/"grace-period" jargon bij account-verwijdering.
+[F-VCE-171] LAAG XafExport.gs:137 — "data-soevereiniteit" abstract (concrete uitleg eronder doet 't werk). (404/bronnen/AdminDashboard done; 166/168 positief/n.v.t.)
+
+## Wave D — voice_03 (website pagina's) — gelezen volledig
+[F-VCE-172] HOOG continuiteit:62 — "Als wij stoppen"/"We hebben buffer"/"Ons antwoord" personifieert solo-product als team; ondermijnt eerlijkheid die pagina claimt.
+[F-VCE-173] HOOG continuiteit:74 — "license-server"/"configuratie-wijziging" developer-taal + EN/NL-inconsistentie (license vs licentie).
+[F-VCE-174] MIDDEL continuiteit:118 — "inversie-engineering" geen NL/geen begrip; redenering onvolgbaar.
+[F-VCE-175] MIDDEL continuiteit:101 — "Sommige menu-items wachten op contact met support" vaag; klant weet niet wat wegvalt na dag 91.
+[F-VCE-176] HOOG demo:1052 — "Geld terug, geen vragen" tegenspreekt FAQ/en "geen no-questions-refund". Klant leest beide → misleid. Blokker-kandidaat.
+[F-VCE-177] MIDDEL demo:1054 — "Geen creditcard nodig voor de demo" misleidend (demo is statische mock zonder login).
+[F-VCE-178] MIDDEL demo:1039 — "Stoppen=data weg? Moneybird na 30 dagen ja" harde concurrent-claim, juridisch riskant.
+[F-VCE-179] LAAG demo:749 — "geen AI-bullshit" grof voor zakelijke vertrouwens-pagina.
+[F-VCE-180] LAAG demo:691 — "Webhook API-sleutel" jargon in jargon-vrije demo.
+[F-VCE-181] MIDDEL demo:319 — "1.500 scans/dag gratis" hard getal op 4+ plekken; Gemini-limieten wijzigen → valse belofte.
+[F-VCE-191] LAAG demo:766 — "€5 referral" zonder voorwaarde-link.
+[F-VCE-182] MIDDEL dpa:182 — XAF "3.2" vs continuiteit "RGS 3.5" versie-inconsistentie in juridische tekst.
+[F-VCE-183] MIDDEL dpa:130 — Sam (verwerker) "verwerkingsverantwoordelijke" genoemd — AVG-rolverwarring in DPA.
+[F-VCE-184] LAAG dpa:88 — geen volledig vestigingsadres in art.28-DPA.
+[F-VCE-185] MIDDEL en:223 — "use Google Translate for the spreadsheet" zwakke belofte (breekt formules/knoppen).
+[F-VCE-186] (positief) en:215 — "I'll fix it or refund" = correcte refund-formulering (demo moet hierheen).
+[F-VCE-187] MIDDEL faq:40 — niet-geëscapete quotes in JSON-LD text → FAQ-rich-result kan stuk renderen.
+[F-VCE-188] LAAG faq:280 — dubbele haakjes achter elkaar (knip-plak-indruk).
+[F-VCE-189] LAAG faq:230 — mail-onderwerp "🚀" hype-emoji.
+[F-VCE-190] LAAG faq:435 — "whatever" Engels + soft-hyphen in woord. (functies/afschrijven/aftrekbare done = referentie-toon.)

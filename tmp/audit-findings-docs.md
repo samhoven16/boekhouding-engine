@@ -186,3 +186,53 @@ Fix: gelijktrekken met canonieke set. Owner: Sam (dev)
 #### F-DOC-052 [LAAG] gids/e-boekhouden:113, 143-180 — seconde-precieze gemeten tijden waarbij de maker overal wint; disclaimer mitigeert. Fix: methode-link of marges. Owner: Sam.
 
 Patroon DOC-C: systematische rubriek-inconsistentie over 4 gidsen (F-DOC-042/043/045/050 — centrale mappingtabel ontbreekt); concurrent-prijzen inconsistent; productclaims verder correct geverifieerd behalve de creditnota-knop (BLOCKER).
+
+## Wave D — docs_01 (gidsen, tool-claim-verificatie) — gelezen volledig; bron-cross-check src/
+[F-DOC-053] HOOG maandaangifte-vs-kwartaalaangifte-btw:208 — CTA belooft maandaangifte-support; tool is hard kwartaal-only (BTW.gs:10 Q1-Q4, BtwExport regex /^\d{4}-Q[1-4]$/). Maandaangifte-klant kan taak NIET afronden → refund-risico.
+[F-DOC-054] MIDDEL ib-aangifte-zzp:269 — CTA "direct klaar voor Mijn Belastingdienst" suggereert IB-export op BTW-niveau; tool heeft alleen "IB-schatting Box1/2/3", geen invul-walkthrough.
+[F-DOC-055] MIDDEL factuur-opstellen-zzp:226 — noemt PEPPOL/UBL-eis maar zegt niet of tool het kan (doet 't niet); klant zoekt UBL-export, mailt.
+[F-DOC-056] MIDDEL gids/index.html:364 + ib-aangifte:99 — hub-kaart+jaarafsluiting "€2.470 in 2026" vs ib-aangifte "€1.200" → 3 pagina's, 2 bedragen zelfde jaar.
+[F-DOC-057] LAAG gids/index.html:47 — ItemList-schema (34) bevat gidsen die niet als kaart in grid staan (suppletie/verleggen/wet-dba e.a.) → niet bladerbaar.
+[F-DOC-058] LAAG maandaangifte:154 — 3 licht afwijkende formuleringen van Belastingdienst-menupad (externe UI).
+[F-DOC-059] LAAG exact-online-stoppen-besparing:284 — verwijst naar gratis "Light-versie" op /gratis; verifieer of die echt bestaat. (gratis-boekhouding/jaarafsluiting/moneybird done.)
+
+## Wave D — docs_02 (gidsen) — gelezen volledig; bron-cross-check src/
+[F-DOC-073] HOOG offerte-maken-zzp:211 — claimt "offerte-template + offerte-naar-factuur automatisering"; GEEN offerte-functie in product (grep "offerte" in src = 0). Feature-claim onwaarmaakbaar → refund-risico.
+[F-DOC-074] HOOG pensioen-opbouwen-zzp:215 — "herhalende kost (percentage van omzet)"; opslaanHerhalendeKost accepteert alleen vast bedrag, geen omzet-%. Klant vindt veld niet.
+[F-DOC-075] MIDDEL zakelijke-rekening-zzp-2026:430 — "plak CSV in Bankboek-tabblad"; werkelijke flow = import-dialoog (openBankImportDialoog). Klant zoekt plak-veld in Bankboek, vindt niets.
+[F-DOC-076] MIDDEL zakelijk-of-prive-auto-zzp:154 — gids eist gestructureerde rittenadmin (begin/eindadres); km-tool legt alleen vrije-tekst "vanwaar naar waar" vast → bij controle mogelijk onvoldoende.
+[F-DOC-077] LAAG urencriterium-bijhouden-zzp:142 — "exact deze structuur" maar kolom heet "Activiteit" niet "Categorie".
+[F-DOC-078] LAAG offerte-maken-zzp:204 — 4 interne gids-links te verifiëren op 200. (suppletie/thuiswerk/wet-dba done; F-DOC-079 positief.)
+
+## Wave D — docs_03 (gidsen + start) — gelezen volledig; bron-cross-check src/Menu.gs
+[F-DOC-093] HOOG zzp-tool-stack:172 — "Extensies → Boekhoudbaar → Zapier-instructies" bestaat NIET; werkelijk = Boekhoudbaar → Instellingen → Website/webshop koppelen (Menu.gs:296). Klant zoekt vergeefs, mailt.
+[F-DOC-094] HOOG zzp-starten-checklist-2026:111 — KVK-inschrijfproces feitelijk onjuist (eerst afspraak + formulier meenemen i.p.v. online inschrijven dán identificatie-afspraak) → klant maakt foute afspraak. Kerntaak van de gids.
+[F-DOC-095] HOOG zelfstandigenaftrek-2026:226 — eigen FAQ "€2.470 in 2026" terwijl rest pagina €1.200 → interne tegenspraak, "welk bedrag?"-mail.
+[F-DOC-098] MIDDEL zelf-boekhouding-doen-zzp:185/233 — "2026: €2.470" 2× terwijl dedicated gids €1.200; gidsen linken naar elkaar → tegenstrijdig.
+[F-DOC-096] MIDDEL start:247 — beschrijft alleen NL "Geavanceerd/(onveilig)"-OAuth-variant; EN-account ziet "Advanced/(unsafe)" en loopt vast op dé hoogste-support-stap. Enige fallback = mailen.
+[F-DOC-097] MIDDEL start:203 — "We hebben zelf geen toegang tot je data" naast scope "e-mails namens jou versturen" → achterdochtige klant vraagt "hoezo geen toegang als 't mijn mail mag?"; nuance niet uitgelegd.
+[F-DOC-099] LAAG zelfstandigenaftrek-2026:189 — "automatisch €1.200 bij voldoende winst"; aftrekbeperking bij lage winst niet genoemd.
+[F-DOC-100] LAAG zzp-starten-checklist-2026:220 — 3 interne links (#kor/btw-berekenen/jaarafsluiting) te verifiëren op 200.
+[F-DOC-101] LAAG start:272 — "/mijn/ toon me de drie wegen terug" — verifieer of die pagina echt 3 routes toont. (verzekering/administratie-apps/uurtarief done.)
+
+## Wave D — docs_04 (interne docs/.claude) — gelezen volledig; bron-cross-check src/
+[F-DOC-113] HOOG LICENCE-SERVER-AUDIT.md:4 — "samengesteld na lezing van src/Installer.gs (fantoom, Glob 0) + Code.gs 858 regels (werkelijk 3415)". Hele audit op fantoom-basis.
+[F-DOC-114] HOOG LICENCE-SERVER-AUDIT.md:92 — sectie 1.7 beschrijft niet-bestaand src/Installer.gs als "400+ regels dode code"; §3+PR-volgorde instrueren 'm te schrappen.
+[F-DOC-115] MIDDEL LICENCE-SERVER-AUDIT.md:109 — controleerOnboarding_/setup() locatie-attributie onjuist (Onboarding.gs/Setup.gs niet Menu.gs).
+[F-DOC-116] MIDDEL LICENCE-SERVER-AUDIT.md:131 — fix "schrap Installer.gs + INSTALLER_URL" half-uitvoerbaar (URL bestaat als property, bestand niet).
+[F-DOC-117] HOOG audit-2026-06-04.md:38 — claimt sluitJaarAf() doet GEEN sluit/openings-journaalposten; werkelijk roept voerJaarafsluitingResultaatUit_ (Jaarafsluiting.gs:145) aan. Headline-"Zorg 1" al opgelost → opvolger herbouwt opgelost probleem.
+[F-DOC-118] HOOG audit-2026-06-04.md:88 — volgorde-fix (prefix vóór teller-reset) al geïmplementeerd (DriveStructuur.gs:369-396); gepresenteerd als open "30 min werk".
+[F-DOC-119] MIDDEL audit-2026-06-04.md:94 — "dode const jaar op Dashboard.gs:44" — regel 44 is nu "const nu = new Date()" (gebruikt). Stale.
+[F-DOC-120] MIDDEL audit-2026-06-04.md:231 — sluitBtwPeriode/detecteerSuppletieMogelijk_ regelnrs verschoven (617/203 niet 641/241); systematische regel-drift.
+[F-DOC-121] LAAG audit-2026-06-04.md:20 — "55 .gs/31.701 regels" verouderd (nu 73 files/~34.660).
+[F-DOC-122] MIDDEL handmatige-acties:106 — "trekLicentieIn_ op Code.gs:1966" — werkelijk 2792.
+[F-DOC-123] MIDDEL handmatige-acties:66 — BREVO_API_KEY in Cloudflare-Pages-env vs LICENCE-AUDIT/DEPLOY zeggen Apps-Script-property → 2 locaties zonder kruisverwijzing.
+[F-DOC-124] LAAG handmatige-acties:8 — PR #217-222 momentopname leest als levende to-do.
+[F-DOC-125] MIDDEL DEPLOY_VANDAAG.md:108 — "372/372 verwacht" verouderd (nu 100+ testfiles); go/no-go-check faalt onterecht.
+[F-DOC-126] LAAG DEPLOY_VANDAAG.md:103 — ephemeral feature-branch-PR-URL midden in genummerde "doe nu"-procedure.
+[F-DOC-129] LAAG STATUS_NACHT.md:18 — PR #117/118 "ready voor merge" leest als open actie (waarschijnlijk gemerged).
+[F-DOC-130] MIDDEL STATUS_NACHT.md:37 — V2 bovenaan "✅ OPGELOST" maar conclusie r101 "adresseer V2 in volgende sprint" → tegenstrijdig.
+[F-DOC-127] MIDDEL .claude/CLOUDFLARE-403-TROUBLESHOOT.md:2 — presenteert ACTIEF "PRODUCTIE DOWN 403 alle URLs" (8-jun) in LEVENDE .claude/-map zonder resolutie; opvolger denkt site ligt nu plat. Archiveer/markeer opgelost.
+[F-DOC-128] LAAG .claude/CLOUDFLARE-403:88 — "P1-2, K3, beginbalans" onbenoemde werkitems, niet herleidbaar.
+[F-DOC-131] LAAG SPEC.md:326 — normatieve flow houdt "installer/copy"-tak in leven die niet bestaat (voedt fantoom-Installer-verwarring).
+[F-DOC-132] LAAG agent-progress.md:60 — "373 symbols" momentopname (append-only log, informatief).
