@@ -184,3 +184,82 @@ Probleem: legacy-formulier-pad mist `|| 30`-fallback ná parseInt (NaN ⇒ Inval
 Fix: zelfde validatie als hoofdpad of pad deprecaten. Owner: Sam (dev)
 
 Status-tabel batch B: I₁ creatie OK/verifier vacuüm; I₂ tegenvoorbeelden F-INV-023/024/025/027/028; I₃ houdt; I₅ brondata-gaten F-INV-024/026/032/033 + F-TAX-153 open; I₈ guard veroorzaakt zelf F-INV-020; I₉ verifier false positives F-INV-022; I₁₀ vals alarm F-INV-034/035. Zwaartepunt: F-INV-020 + cluster F-INV-022/023/024.
+
+## Batch INV-C — Utils.gs + invariants.test, cycle2/5/7/22, betaling-integriteit, grootboek-saldo-cache
+Positief: withLock_/withRetry_/withCheckpoint_ degelijk (1505-1619); KPI-snapshot met schema-versie-guard (700-727); noodLog_ met PII-masking; MOD-97 via lange-deling correct; cycle7-storno en grootboek-saldo-cache verankeren I₁/I₂ correct met het juiste assertiepatroon. grootboek-saldo-cache.test.js: geen vondsten.
+
+#### F-INV-040 [HOOG] src/Utils.gs:215
+Quote: `const d = parseDatum_(ruw);` gevolgd door `if (!d || isNaN(d.getTime())) { throw ... }`
+Probleem: parseDatumStrict_ belooft throw-bij-invalid maar delegeert naar parseDatum_, dat bij élke ongeldige string vandaag teruggeeft ⇒ de guard is dood; parseDatumStrict_('31-02-2026') → vandaag, geen throw ⇒ boeking in verkeerd kwartaal — precies het BTW-mismatch-scenario dat de P22-fix moest voorkomen. (Verdiept F-INV-001/F-TAX-152.)
+Fix: interne gevalideerde parser of null-mode + throw. Owner: Sam (dev)
+
+#### F-INV-041 [MIDDEL] src/Utils.gs:516-517
+Quote: `van: parseDatum_(startStr) || new Date(new Date().getFullYear(), 0, 1),`
+Probleem: parseDatum_ is nooit falsy ⇒ kalenderjaar-fallback is dode code; ontbrekende Boekjaar-instellingen ⇒ degenererende één-dags-periode ⇒ periode-gefilterde rapportages tonen vrijwel niets, zonder fout.
+Fix: expliciete !startStr-check vóór parse. Owner: Sam (dev)
+
+#### F-INV-042 [MIDDEL] src/Utils.gs:124-127
+Quote: `* Rondt een bedrag af op 2 decimalen (bankiersmethode)` / `return Math.round((parseFloat(bedrag) || 0) * 100) / 100;`
+Probleem: (a) claim "bankiersmethode" onjuist (Math.round = half-up); (b) teken-asymmetrie op halve centen: rondBedrag_(0.125)=0.13 maar rondBedrag_(-0.125)=-0.12 ⇒ rondBedrag_(x) ≠ -rondBedrag_(-x) ⇒ €0,01-drift tussen bedrag en creditnota-tegenhanger (I₁/I₃-relevant).
+Fix: doc corrigeren + teken-symmetrisch afronden. Owner: Sam (dev)
+
+#### F-INV-043 [MIDDEL] src/Utils.gs:796-799, 814
+Quote: `if (resp.getResponseCode() !== 200) { ... return 1.0; }`
+Probleem: ECB-storing/onbekende valuta ⇒ silently koers 1.0 ⇒ $10.000 geboekt als €10.000; alleen Logger.log — onbegrensde silent drift tegen de eigen doctrine.
+Fix: throw/null + caller weigert/markeert; audit + UI-waarschuwing. Owner: Sam (dev)
+
+#### F-INV-044 [LAAG] src/Utils.gs:158
+Quote: `.replace(/\.(?=\d{3})/g, '')  // Verwijder duizendtalpunten`
+Probleem: Engelse decimaalpunt vóór 3 cijfers wordt als duizendtal gestript: parseBedrag_('0.005')→5 (×1000); ook in Strict-variant.
+Fix: alleen strippen bij aanwezige komma of bevestigend patroon. Owner: Sam (dev)
+
+#### F-INV-045 [LAAG] src/Utils.gs:300
+Quote: `const json = JSON.stringify(input, Object.keys(input).sort());`
+Probleem: array-replacer dropt geneste keys ⇒ verschillende inputs kunnen zelfde "audit-bestendige" hash krijgen.
+Fix: recursieve canonieke serialisatie. Owner: Sam (dev)
+
+#### F-INV-046 [HOOG] tests/unit/invariants.test.js:94-100 (13× herhaald)
+Quote: `try { ctx.valideerJournaalpostBalans_('', '8000', 100); } catch (e) { expect(e.code).toBe('JOURNAALPOST_REK_LEEG'); }`
+Probleem: 13 van 14 negatieve invariant-tests zonder fail-guard/expect.assertions ⇒ als de validator stopt met gooien blijven ze groen — ze verankeren "ALS gegooid dan deze code" i.p.v. "er MOET gegooid worden". (Regel 64-72 toont dat het juiste patroon bekend was.)
+Fix: expect(() => ...).toThrow + code-check, of guard-throw in elk try-blok. Owner: Sam (dev)
+
+#### F-INV-047 [LAAG] tests/unit/invariants.test.js:259-264 — KOR-grensgeval accepteert 'naderend' ÉN 'ok' (disjunctief = verankert niets). Fix: één status pinnen. Owner: Sam.
+#### F-INV-048 [LAAG] src/Invariants.gs:218 (verankerd door invariants.test.js:215-223)
+Quote: `const tolerantie = Math.max(0.01 * regels.length, 0.02);`
+Probleem: I₄-axioma staat ±0,01 toe; implementatie-vloer 0,02 voor 1-regel-factuur is 2× ruimer en het axioma-grensgeval is ongetest.
+Fix: vloer 0,01 of axioma bijwerken + grensgevaltest. Owner: Sam (dev)
+
+#### F-INV-049 [HOOG] src/Boekingen.gs:155-181 (verankerd door cycle2-atomic:111-120)
+Quote: `} catch (saldoErr) { if (debetGedaan) { ... } throw saldoErr; }` — CORRUPT alleen in de geneste rollback-fail-branch.
+Probleem: appendRow is al geslaagd; bij debet-fail-eerst en bij credit-fail-met-geslaagde-rollback blijft de journaalpost-rij ONGEMARKEERD staan terwijl het grootboek de boeking niet bevat ⇒ zwevende rij die rapportages meetellen (I₂-schending); header/comment beloven CORRUPT-markering; test asserteert het gat als correct.
+Fix: rij CORRUPT markeren (of verwijderen) in álle saldo-faalpaden; test uitbreiden. Owner: Sam (dev)
+
+#### F-INV-050 [HOOG] src/Triggers.gs:153-155, 177-179 (verankerd door cycle5-immutable:101-107)
+Quote: `const oud = e.oldValue !== undefined ? e.oldValue : ''; ... if (String(oud) === String(nieuw)) return;`
+Probleem: multi-cel-edits (paste/delete/drag/sort) leveren geen e.value/oldValue ⇒ ''==='' ⇒ return: niets geaudit; A1 'I2:K40' matcht de kolomlijst sowieso niet ⇒ de immutability-detectie is blind voor precies de realistische bulk-manipulatiepaden; test dekt alleen single-cell.
+Fix: range>1 cel als wijziging behandelen + kolom-matching via getColumn()-bereik. Owner: Sam (dev)
+
+#### F-INV-051 [LAAG] src/Boekingen.gs:217-226 — storno-van-storno mogelijk; origineel daarna netto actief maar permanent "alGestorneerd" ⇒ deadlock. Fix: storno-ketens detecteren/weigeren. Owner: Sam. (Verdiept F-ACC-005.)
+
+#### F-INV-052 [BLOCKER] src/GezondheidCheck.gs:407-408
+Quote: `if (bw === 'Activa')  totaalActiva  += saldo; if (bw === 'Passiva') totaalPassiva += saldo;`
+Probleem: kolom [4] bevat uitsluitend 'Balans'/'W&V' (Setup.gs:555, Config.gs; type-kolom [2] = 'Actief'/'Passief') ⇒ beide vergelijkingen matchen NOOIT ⇒ totalen 0 ⇒ verschil 0 < 0.005 ⇒ controleerBalansStrikt_ retourneert ALTIJD OK, op elke administratie. I₃-strikt (jaarrekening ε=0,005 — wiskundige-fundering.md:39; aangeroepen als poort vóór accountant-export, DriveStructuur.gs:311-312; FormeelBewijs.gs:243 verwijst ernaar) is een permanente no-op. Geen enkele test dekt deze functie (cycle22 test alleen de soepele variant) — dát maskeerde de fout.
+Fix: filter bw === 'Balans' en splits op type-kolom [2] (zoals controleerBalans_ 347-353); regressietest met €0,01-scheve balans.
+Owner: Sam (dev)
+
+#### F-INV-053 [MIDDEL] .claude/sheet-schemas.md:216
+Quote: `[2]  Type                    string     Activa/Passiva/Opbrengsten/Kosten/Eigen vermogen`
+Probleem: werkelijke enum is 'Actief'/'Passief'/'Kosten'/'Opbrengst'; dit verplichte waarheidsdocument is de plausibele BRON van F-INV-052 — elke toekomstige wijziging op basis hiervan reproduceert dezelfde fout-klasse.
+Fix: regel 216 corrigeren + expliciet maken dat [4] de balans-selector is. Owner: Sam (dev)
+
+#### F-INV-054 [LAAG] src/GezondheidCheck.gs:342-367 — leeg/ontbrekend Grootboekschema ⇒ vacuous 'OK (€0,00)'. Fix: lengte-guard met FOUT-status. Owner: Sam.
+
+#### F-INV-055 [HOOG] src/GezondheidCheck.gs:527 (gemaskeerd door betaling-integriteit.test.js:35-42)
+Quote: `const ref = String(jpData[i][9] || '').trim();` (mock: `r[9] = ref;`)
+Probleem: index [9] = 'BTW %' ('21%'/'Geen'); Referentie staat op [11] (sheet-schemas.md:109-111 + maakJournaalpost_) ⇒ bankRefs bevat in productie nooit factuurnummers ⇒ ELKE betaalde factuur wordt gerapporteerd als "zonder journaalpost" (permanente false-positive) en het advies "maak journaalpost aan" creëert bij opvolging dubbele posten (échte I₂-schending). Testmock codeert exact dezelfde verkeerde index — implementatie i.p.v. sheet-contract verankerd (cycle7-helper heeft de index wél goed: r[11]).
+Fix: jpData[i][11]; testmock op gedocumenteerd schema bouwen. Owner: Sam (dev)
+
+#### F-INV-056 [MIDDEL] cycle2:4, cycle5:3, cycle7:4, Boekingen.gs:139/144, Invariants.gs:134
+Quote: `* Axiom 9 (atomair)...` / `// CYCLE-5 (axiom 5 — immutable na commit)` / `// (axiom 13)`
+Probleem: minstens twee afwijkende axioma-nummeringen die niet in de canonieke wiskundige-fundering.md bestaan ("axiom 13" bestaat niet) ⇒ traceerbaarheid invariant↔afdwinging↔test gebroken.
+Fix: hernummeren naar I₁-I₁₀ of mapping-tabel toevoegen. Owner: Sam (dev)

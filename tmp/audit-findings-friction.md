@@ -58,3 +58,34 @@ Fix: copy gelijktrekken; zelf kopiëren ontmoedigen. Owner: accountant (communic
 Quote: `Banner: "licentie kon niet geverifieerd worden". Boekingen + factureren werken nog. Sommige menu-items wachten op contact met support.`
 Probleem: na dag 91 valt onOpen terug op het minimale menu (alleen export/verwijderen) — "factureren werkt nog" klopt niet ná de grace. (90-dagen-buffer zelf klopt wél met code.)
 Fix: dag-91-rij eerlijk herschrijven of grace voor kern-boekfuncties verlengen. Owner: accountant (communicatie)
+
+## Batch FRI-B — website/index.html, start, update
+
+### website/index.html — Gelezen: 1-2332. FAQ-uitleg over het scherm inhoudelijk correct (1843-1848). VONDSTEN F-FRI-020, 021.
+### website/start/index.html — Gelezen: 1-315. Visuele replica + recovery-pad sterk (220-277). VONDSTEN F-FRI-022, 023.
+### website/update/index.html — Gelezen: 1-130. VONDST F-FRI-024.
+
+#### F-FRI-020 [HOOG] website/index.html:1685 (+1542, 1957, 1890)
+Quote: `<a href="/kopen" class="btn-koop">  Koop nu →</a>`
+Probleem: de volledige homepage-koopflow noemt het "niet geverifieerd"-scherm nergens en linkt niet naar /start; de enige uitleg zit in een dichtgeklapte FAQ-details ⇒ klant koopt onvoorbereid op dé afhaak-drempel.
+Fix: één regel in de pricing-kaart ("Na aankoop: 3 schermen, 5 minuten — bekijk vooraf hoe het werkt" → /start). Owner: Sam (dev)
+
+#### F-FRI-021 [MIDDEL] website/index.html:1845
+Quote: `de officiële Google OAuth-app-verification (€5.000-€15.000 + 3-8 weken audit) niet doorlopen`
+Probleem: /start zegt "€75/jaar en 4-6 weken" (start:262) — factor ~100 verschil ondermijnt geloofwaardigheid precies waar vertrouwen telt.
+Fix: één verifieerbare formulering op beide plekken (incl. JSON-LD 227). Owner: Sam (communicatie)
+
+#### F-FRI-022 [HOOG] website/start/index.html:167-177
+Quote: `<h2>Daarna: toestemming geven</h2> ... <div class="sub">Pas zichtbaar wanneer je in je nieuwe Boekhoudbaar-bestand iets klikt</div>`
+Probleem: de 3-schermen-walkthrough laat de OTP-activatiedialoog (de feitelijke eerste interactie bij onOpen, Licentie.gs:209/228) volledig weg ⇒ klant verwacht Google-toestemming maar krijgt eerst een OTP-popup die nergens is aangekondigd.
+Fix: stap "Activeren met de code uit je mail (OTP)" toevoegen tussen stap 1 en 2. Owner: Sam (dev)
+
+#### F-FRI-023 [MIDDEL] website/start/index.html:208-218
+Quote: `<p>Na "Toestaan" laat Google een waarschuwingsscherm zien.`
+Probleem: volgorde omgedraaid — Googles niet-geverifieerd-scherm komt vóór het scopes/Toestaan-scherm ⇒ klant verwacht het lastige scherm op het verkeerde moment.
+Fix: stap 2 en 3 wisselen of live-volgorde verifiëren en zin aanpassen. Owner: Sam (communicatie)
+
+#### F-FRI-024 [MIDDEL] website/update/index.html:96 (+108-110)
+Quote: `meestal: Apps Script editor openen, een aantal bestanden vervangen, één keer setup() uitvoeren. Sam blijft beschikbaar`
+Probleem: update-procedure waarschuwt nergens dat nieuwe scopes/her-autorisatie opnieuw het niet-geverifieerd-scherm kunnen tonen ⇒ klant denkt dat de update kapot is.
+Fix: één regel "mogelijk vraagt Google opnieuw toestemming — volg dezelfde stappen als bij de eerste keer (/start)". Owner: Sam (communicatie)
