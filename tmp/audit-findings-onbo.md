@@ -65,3 +65,21 @@ Fix: tijdsbelofte afstemmen of direct naar /start verwijzen. Owner: accountant
 #### F-ONB-016 [LAAG] website/demo/index.html:371-382 — rijk gevuld demo-dashboard "1-op-1" vs leeg dashboard na verse setup; geen "vult zich na eerste boeking"-label bij KPI's. Fix: label toevoegen. Owner: accountant
 
 Top-3 onboarding-blockers: F-ONB-011 (setup "gelukt" met dode triggers), F-ONB-001 (verplichte stap verstopt als optie), F-ONB-004 (popup-stortvloed).
+
+## Wave B — onbo_01 (website/faq/index.html, 587 regels) — gelezen volledig
+[F-ONB-017] BLOCKER faq:429-472 — GEEN FAQ-vraag over Google "app niet geverifieerd"-OAuth-scherm = dé killer-stap bij eerste opening; Techniek-rubriek gaat alleen over problemen ná setup. Grootste onboarding-gat.
+[F-ONB-018] BLOCKER faq:228-231 — nergens uitgelegd wat ná mail-knop gebeurt (Google "Bestand kopiëren?" + OAuth + OTP-activatiedialoog); onbekend codescherm voelt als phishing voor nieuwe klant.
+[F-ONB-019] HOOG faq:243-246 — verwijst naar "Boekhouding → Factuurlijst" maar legt nergens uit HOE eerste factuur gemaakt wordt (kern-onboarding-actie ontbreekt). [verificatie src/Menu.gs nodig]
+[F-ONB-020] HOOG faq:388-391 — "vul in instellingen aan dat KOR actief is" vaag (geen pad/veldnaam) vs goede r305. Maak concreet.
+[F-ONB-021] MIDDEL faq:368-371 — "Via het declaratie-formulier" zonder vindplaats. [verificatie nodig]
+[F-ONB-022] MIDDEL faq:284-285 — bonnen-scan zonder startpunt (welke knop/menu); jargon "Gemini Vision" zonder uitleg.
+[F-ONB-023] MIDDEL faq:218-220 — fiscale/technische vragen fysiek onder zichtbare H2 "Prijs & abonnement"; desoriënterend voor lineaire lezer; geen "Aan de slag"-groep.
+[F-ONB-024] MIDDEL faq:183-186 — hero noemt geen setup/activatie/eerste-factuur; signaleert verkoop-FAQ i.p.v. onboarding-FAQ; geen "Eerste stappen"-filterknop.
+[F-ONB-025] MIDDEL faq:192-200 — filterbalk mist categorie "features" terwijl 6 blokken data-cat=features → "Nieuwe functies" onbereikbaar via filter, verdwijnt na elke andere klik.
+[F-ONB-026] MIDDEL faq:438-441 — "activeren" wordt gebruikt als bekend begrip (r215/440) maar de OTP-stap is nergens beschreven. Meest gebruikte setup-werkwoord zonder uitleg.
+[F-ONB-027] LAAG faq:355/435 — Google-knoptekst inconsistent NL "Gebruik mijn huidige e-mailadres" vs EN "Use my existing email".
+[F-ONB-028] LAAG faq:423-425 — menu-pijl-notatie inconsistent (>, →); [verificatie of topmenu echt "Boekhouding" heet].
+[F-ONB-029] LAAG faq:393-395 — jargon OSS/IOSS/FOR/KIA/RGS/SAF-T/XAF zonder uitleg.
+[F-ONB-030] LAAG faq:184-215 — twee support-adressen door elkaar (info@ vs support@) zonder uitleg; verwarrend op "ik kom er niet in"-moment.
+[F-ONB-031] LAAG faq:475-479 — prominentste knop = "Stel je vraag" (mailto) i.p.v. koop-CTA voor pre-aankoop-bezoeker.
+[F-ONB-032] LAAG faq:425 — SAF-T/XAF-afkortingen bevestigen FAQ geschreven voor lezers die boekhoud-IT-taal al kennen, niet oma-van-67.

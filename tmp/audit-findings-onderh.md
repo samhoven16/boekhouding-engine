@@ -434,3 +434,135 @@ Fix: waarschuwing bij ontbrekende config i.p.v. stille fallback, of weigeren zon
 #### F-OND-172 [MIDDEL] src/Rapportages.gs:24-32,312-323 — cashflow/balans/W&V lezen hele sheets per rapport; genereerJaarrekening doet 3× volledige reads in één executie ⇒ richting 6-min bij tienduizenden rijen over jaren. Fix: jaar-filtering/gecachte saldi. Owner: Sam. (= F-GAS-147/148)
 
 Top-3 OND-G: F-OND-165/168/167 (resterende hardcoded fiscale getallen naar getBelasting_), F-OND-164 (XAF-versie-melding), F-OND-170/162 (update/redirect los van persoonlijk domein).
+
+## Wave B — onderh_01 (src core) — gelezen volledig
+[F-OND-173] HOOG Referral.gs:32 — referral hangt aan boekhoudbaar.nl + handmatige maand-mailcheck; domein-weg → dode link, cashback-belofte zonder afdwingbaar mechanisme bij abandonment.
+[F-OND-174] LAAG Referral.gs:48 — support@boekhoudbaar.nl enige kanaal codebreed; domein-gebonden single point of failure.
+[F-OND-175] MIDDEL ResilientExecutor.gs:61 — cumulatief 15s backoff zonder totaal-tijdbudget; rond trage externe call → 6-min-overschrijding, breekt dagelijkseTaken halverwege.
+[F-OND-176] MIDDEL ResilientExecutor.gs:119 — CIRCUIT_<naam> property per service zonder schema-versie en zonder GC voor obsolete namen.
+[F-OND-177] HOOG RgsMapping.gs:6 — RGS hardcoded 3.5 zonder _versie/_geldigVanaf in datastructuur; XAF-lezer weet niet tegen welke RGS-versie gemapt is; hernoemde codes → stille foutmapping.
+[F-OND-178] HOOG RgsMapping.gs:84 — "21%" alleen in commentaar/naam, geen tarief-data; tariefwijziging laat hardcoded "21%"-tekst overal staan zonder bron.
+[F-OND-179] MIDDEL RgsMapping.gs:126 — niet-gemapte rekeningen → stil ''; 9000 (Vpb) ontbreekt volledig terwijl SmartCategorisatie het met 95% toekent → permanente lege RGS-code in XAF.
+[F-OND-180] HOOG SelfHeal.gs:122 — twee trigger-installers (sanitizeTriggers_ vs installeelTriggers_), elk eigen "canoniek"; nieuwe trigger niet in _HYGIENE_VERWACHTE_TRIGGERS → SelfHeal sloopt 'm periodiek als orphan. Geen sync-test.
+[F-OND-181] MIDDEL SelfHeal.gs:36 — heal degradeert stil naar no-op (volledig:true) als _HYGIENE_VERWACHTE_TRIGGERS undefined; gezondheidscheck rapporteert "OK" terwijl healing dood is.
+[F-OND-182] HOOG Setup.gs:681 — startfactuurnr "<jaar>001" via getFullYear() bij setup; geen jaar-rollover zichtbaar; 2026-klant telt in 2031 nog 2026xxx tenzij elders reset. [verifieer volgendFactuurnummer_]
+[F-OND-183] MIDDEL Setup.gs:734 — hardcoded "2026" in API-wachtwoord-placeholder; verouderingssignaal.
+[F-OND-184] LAAG Setup.gs:868/940 — hardcoded "januari 2026"/"feb 2026" in Form-helptekst (1× aangemaakt, nooit hertekend).
+[F-OND-185] MIDDEL Setup.gs:189/54-70 — verse setup met geconfigureerde licentie-URL maar dode server → setup() geblokkeerd; offline-eerste-setup-pad ontbreekt (abandonment).
+[F-OND-186] HOOG SmartCategorisatie.gs:84 — 9000 met 95% toegekend maar ontbreekt in RGS-map en mogelijk in STANDAARD_GROOTBOEK → boekt naar niet-bestaande rekening, balans loopt stil scheef.
+[F-OND-187] MIDDEL SmartCategorisatie.gs:430 — CATEGORIE_LEERREGELS groeit onbegrensd, geen pruning/LRU ondanks 'aangeleerd'-datum; 9KB/key-limiet → leren faalt stil.
+[F-OND-188] LAAG SmartCategorisatie.gs:155 — merknamen (netflix/odido/bunq) als anker; merken fuseren/hernoemen → herkenning veroudert zonder code-deploy.
+[F-OND-189] MIDDEL Suggesties.gs:44 — alle CTA's via boekhoudbaar.nl/go/<slug>; domein-weg → alle affiliate-links 404, product-verval-signaal.
+[F-OND-190] LAAG Suggesties.gs:28 — disclosure-norm ACM/RCC 2025 hardcoded zonder verloop/bron-versie.
+[F-OND-191] MIDDEL TaxRegistry.gs:48 — 7-jaar confirmed:true verloopt nooit; geen her-verificatie-mechanisme; zonder Sam functioneel = hardcoded.
+[F-OND-192] MIDDEL TaxRegistry.gs:18 — register dekt maar 2 signalen; volatiele jaarwaardes (zelfstandigenaftrek/MKB/KOR €20k/km-vergoeding) NIET in versioneerbaar register → kernrisico over 5 jaar.
+
+## Wave B — onderh_02 (src Triggers/Update/Utils/Verkoop) — gelezen volledig
+[F-OND-193] HOOG Utils.gs:1388 — KvK API /api/v2/ hardcoded; v2-EOL → KvK-autofill stil dood (EOL niet web-verifieerbaar, 403).
+[F-OND-194] HOOG UpdateApply.gs:152 — update-pad volledig licentieserver-afhankelijk (script.googleapis.com/v1 + bundle van server); server weg → ook handmatig-plak-pad dood (UpdateBundle haalt bundle óók bij server). Geen offline bundle.
+[F-OND-195] MIDDEL UpdateApply.gs:43 — auto-update achter fail-closed kill-switch die server-config eist; server weg → auto-update voor altijd dicht; geen cached config.
+[F-OND-196] HOOG Utils.gs:1426 — Sam-only Healthchecks-UUID hardcoded als fallback; dood account → tot 60s budget verbrand op dood endpoint in dagelijkseTaken.
+[F-OND-197] MIDDEL Triggers.gs:1426 — zelfde Healthchecks-UUID OOK hier hardcoded (duplicaat); rotatie op 2 plekken.
+[F-OND-198] HOOG Triggers.gs:206 — AUDIT_LOG hard-cap 5000 rijen wint van 7-jaar-retentie → schendt art.52 AWR bewaarplicht die code zelf claimt; 5000 binnen 1-2 jaar bereikt.
+[F-OND-204] MIDDEL Triggers.gs:2329 — BTW-deadline-tabel dynamisch jaar (goed) maar geen "geldig vanaf belastingjaar"-versionering; regime-wijziging → stil verkeerde reminders → €68 boete.
+[F-OND-205] HOOG Triggers.gs:1643 — emailVerzonden_-cleanup budget-gevoelig, skipt juist bij volle klanten → self-reinforcing groei richting 500KB-cliff.
+[F-OND-207] MIDDEL Triggers.gs:2520 — inkoop-idempotency-sig zonder schema-versie-prefix (inconsistent met geversioneerde KPI-snapshot); formaatwijziging reset stil alle bescherming.
+[F-OND-210] LAAG Triggers.gs:2153 — dunning haalt PDF live uit Drive; klant ruimt map op → herinnering zonder bijlage, geen waarschuwing.
+[F-OND-211] MIDDEL Triggers.gs:1756 — trigger-self-heal hangt aan OAuth; Google trekt autorisatie in → ALLE triggers incl. self-heal dood, geen klant-herautorisatie-melding → stille bevriezing (waarschijnlijkste 5-10j breekpunt).
+[F-OND-199] MIDDEL Verkoopfacturen.gs:854 — alle PDF+UBL in één platte map "Boekhoud Facturen" zonder jaar-submap/opruim → 100k+ objecten over 10j, Drive-UI onbruikbaar.
+[F-OND-200] MIDDEL Verkoopfacturen.gs:830 — SEPA-QR live van quickchart.io/qrserver.com (gratis-tier, geen SLA, niet in allowlist via veiligFetch_).
+[F-OND-206] MIDDEL Verkoopfacturen.gs:262 — verstuurBezig_-key zonder TTL/cleanup; crash tussen set/delete → wees-key voor altijd, monotone groei.
+[F-OND-208] LAAG Verkoopfacturen.gs:720 — UBL 2.1 + country NL hardcoded; geen UBL-versie-const (gunstig voor abandoned, maar onderhoud bij ViDA/Peppol).
+[F-OND-212] LAAG Urenregistratie.gs:66 — datum/uren-validatie op vaste 999 rijen; na ~4j valt invoer buiten gevalideerd bereik, bewijslast-kwaliteit degradeert stil. (Validaties/Verfraaien: done.)
+
+## Wave B — onderh_03 (XAF/licence/deploy-scripts) — gelezen volledig
+[F-OND-213] MIDDEL XafExport.gs:24 — XAF_VERSIE '3.2' + namespace hardcoded; Belastingdienst-bump → geadverteerde exit-route degradeert stil. Maak config.
+[F-OND-214] LAAG XafExport.gs:194 — softwareVersion-fallback '?' ondermijnt traceerbaarheid in controle.
+[F-OND-215] LAAG Code.gs:553/625 — Mollie /v2/ hardcoded 2× (geen v3 bekend; centraliseer in const).
+[F-OND-216] LAAG Code.gs:919/1888/2049/3073 — Brevo /v3/ hardcoded 4×; EOL → stille deliverability-degradatie (MailApp-fallback).
+[F-OND-217] HOOG Code.gs:800 — OTP-ScriptProperties zonder sweeper (drip-cleanup raakt alleen drip_*); onvoltooide logins → groei richting 500KB die server zelf als provisioning-blokker benoemt.
+[F-OND-218] MIDDEL Code.gs:1059 — PRODUCT_VERSIE-fallback hardcoded '2.1.0'; property gewist → misleidende downgrade/geforceerde kritieke-update-modal. Maak null.
+[F-OND-219] MIDDEL Code.gs:~2223 — licentie-DB zonder schema-versie-marker; ensureOnboardedKolom_ leunt op magisch kolomgetal 11 i.p.v. naam → off-by-one bij herordening.
+[F-OND-225] LAAG Code.gs:2049 — Brevo /contacts zonder MailApp-fallback; EOL → stil falen (niet klant-kritiek).
+[F-OND-224] LAAG AdminDashboard.gs:683 — serverFout_1..5 ring + Telemetry 5000-cap = correct begrensd (POSITIEF).
+[F-OND-220] HOOG deploy-check.js:31 — admin-bypass vereist hardcoded samhoven16@gmail.com in Licentie.gs → single-person-of-failure voor overdracht.
+[F-OND-221] LAAG deploy-licence-release.js:28 — VERSIE_HARD_CAP 200 hardcoded; toISOString UTC vs rest Europe/Amsterdam. (add-breadcrumbs/bundle-create/clasp-push: done.)
+
+## Wave B — onderh_04 (build/tooling scripts) — gelezen volledig
+[F-OND-233] MIDDEL symbol-index.js:55 — nooit auto-aangeroepen (pre-commit=lint-staged, CI=lint+jest); symbol-index.json + hele impact.js-workflow drijft stil weg. Geen staleness-detectie.
+[F-OND-251] INFO symbol-index.js:28 — extractie pakt alleen top-level function/const op kol 0; class-methods/shorthand niet geïndexeerd → dekking erodeert stil.
+[F-OND-234] MIDDEL truth-check.js:34 — filtert alleen .gs terwijl symbol-index/impact .gs||.js doen → 3 tools oneens over "source"; ghost-handler in .js glipt langs CI-poort.
+[F-OND-235] MIDDEL truth-check.js:73 — addItem-ghost-detectie per regel; multiline addItem('L',\n'handler') nooit gematcht → meldt stil "geen ghosts".
+[F-OND-236] MIDDEL mutation-meting.js:108 — niet-deterministische sampling (geen seed) → flaky pass/fail, niet-reproduceerbaar artefact.
+[F-OND-237] HOOG mutation-meting.js:126 — schrijft gemuteerde src/*.gs naar schijf, herstelt pas ná test; crash/timeout zonder try/finally → gecorrumpeerd bronbestand blijft achter.
+[F-OND-238] LAAG mutation-meting.js:178 — 80%-drempel + slice(0,5)+random → poort flaky/manipuleerbaar via bestandsgrootte; 100% bij totaal===0.
+[F-OND-248] LAAG mutation-meting.js:85 — npx jest ongepind → fresh clone kan andere jest-major trekken.
+[F-OND-239] LAAG impact.js:53 — .gs||.js filter dood (geen src/*.js) maar latente val: src/*.test.js telt als caller → valse change-risk.
+[F-OND-240] LAAG impact.js:48 — "live grep"-fallback misleidend; faalt niet hard bij stale/ontbrekende index → maskeert drift.
+[F-OND-241] LAAG impact.js:96 — caller-detectie substring (line.includes) → matcht comments/strings/berekenBtwAangifte_; overrapporteert → alarm-moeheid.
+[F-OND-242] MIDDEL release-instructions.js:50 — default update-URL https://boekhoudbaar.nl/update/ hardcoded; dood domein → klant naar dode link bij kritieke update.
+[F-OND-243] LAAG release-instructions.js:36 — HUIDIGE_VERSIE-regex afhankelijk van exacte declaratievorm; let/template → throw, release-flow geblokkeerd.
+[F-OND-252] LAAG release-instructions.js:18 — volledig Sam-centrisch handmatig plak-pad → bus-factor-1 in release-keten.
+[F-OND-245] LAAG strip-inline-nav-css.js:16 — NAV_SEL allowlist codeert huidige class-namen; markup-evolutie → laat nieuwe inline-CSS staan (verroest stil mee).
+[F-OND-250] LAAG strip-css:130/strip-js/sync-nav — 'en'-skip inconsistent over 3 scripts; i18n-uitbreiding (/de//fr/) → overschreven/gesloopt.
+[F-OND-244] INFO sync-nav.js + strip-scripts — eenmalige migratie-scripts blijven in scripts/ zonder DEPRECATED-marker; herdraai met verouderd NAV_TEMPLATE herschrijft 48 HTML. Verplaats naar archive/.
+
+## Wave B — onderh_05 (scripts/css/json/spec) — gelezen volledig
+[F-OND-253] HOOG version.json:2 — lastUpdate-momentopname; abandoned → footer toont steeds oudere datum = dood-signaal i.p.v. leefsignaal. Geen fallback.
+[F-OND-254] MIDDEL update-version.js:29 — short=7 SHA hardcoded; bij repo-groei ambigu/colliderend.
+[F-OND-255] HOOG update-changelog.js:32 — vraagt -200 commits maar CI checkout fetch-depth:50 → bij laag tempo lege/incomplete changelog.
+[F-OND-256] HOOG update-changelog.js:40 — changelog hangt aan handmatige "Cycle N:"-conventie zonder afdwinging; changelog.json nu al LEEG → homepage toont al niets.
+[F-OND-257] MIDDEL changelog.json:1 — ingecheckt leeg auto-artefact; "leeg" niet te onderscheiden van "kapot"/"verlaten".
+[F-OND-258] HOOG nav.css:2 — "alle 48 pagina's" hardcoded comment; nu 64 HTML → doc-drift-tijdbom, elke agent leest 48 als feit.
+[F-OND-259] MIDDEL nav.css:6 — 1100px-breakpoint hard gekoppeld aan "8 links"-aanname; 9e link → Kopen-knop weer buiten beeld.
+[F-OND-260] MIDDEL animations.css:16 — "Safari 26+"-versieclaim in comment (niet web-verifieerbaar 403); @supports-guard maakt code veilig, comment kan misleiden.
+[F-OND-261] INFO animations.css:19 — @supports + prefers-reduced-motion = forward-compatible (POSITIEF).
+[F-OND-262] LAAG animations.css:1 — Cycle 89/90-label bevriest stil.
+[F-OND-263] LAAG gids.css:1 — :root-vars gedupliceerd uit index.html (niet geïmporteerd) → 35 gidsen drijven uit sync bij redesign.
+[F-OND-264] LAAG gids.css:357 — comment "40% scroll" beschrijft JS-gedrag dat elders leeft → drift.
+[F-OND-266] HOOG SPEC.md:5 — normatief "bron van waarheid" zonder versie/datum/laatst-herzien → klassieke doc-drift, opvolgers nemen verouderde axioma's als bindend.
+[F-OND-267] MIDDEL SPEC.md:325 — buy-flow met harde Mollie/server-afhankelijkheid maar geen abandoned-mode/degradatie-pad gespecificeerd terwijl USP continuïteit is.
+[F-OND-268] LAAG SPEC.md:211 — geen jaartal-discipline voor fiscale FEIT-content; -2026-gidsen verouderen zonder onderhoudsregel.
+[F-OND-269] MIDDEL SPEC.md:438 — eindigt met "volgende autonome run"-instructie; geen "afgerond/onderhoudsvrij"-eindtoestand voor abandoned-mode.
+[F-OND-270] HOOG version.json+changelog.json+workflow — beide leefsignalen 100% afhankelijk van push-naar-main + Actions; één stopt → bevriest → leefsignaal wordt doodsbewijs. Fallback bij oude lastUpdate aanbevolen.
+[F-OND-271] LAAG update-changelog/version.js headers — claimen "pre-commit hook" maar draaien nu via workflow (.husky zegt expliciet NIET) → comment-drift na refactor.
+[F-OND-272] INFO update-changelog.js:11 — hardcoded voorbeeld-datum in header-comment.
+
+## Wave B — onderh_06 (docs/archive/workflows) — gelezen volledig
+[F-OND-273] HOOG LICENCE-SERVER-AUDIT.md:92 — beschrijft src/Installer.gs dat NIET bestaat (Glob 0); opvolger zoekt fantoom-bestand.
+[F-OND-274] HOOG LICENCE-SERVER-AUDIT.md:130 — claimt "400+ regels dode code" in niet-bestaand bestand; §4.3 stuurt naar delete-actie op weg-bestand.
+[F-OND-275] MIDDEL LICENCE-SERVER-AUDIT.md:5 — "858 regels" hardcoded; Code.gs nu >3600 → audit oogt actueel maar is 4× verouderd, geen datum.
+[F-OND-276] LAAG LICENCE-SERVER-AUDIT.md:133 — verwijst naar "ChatGPT's patroon" als dode externe context; design-rationale onnavolgbaar.
+[F-OND-277] MIDDEL agent-progress.md:9 — nieuwste entry 2026-04-15 terwijl ander werk t/m 06-04; handoff-log 2 maanden achter.
+[F-OND-278] LAAG agent-progress.md:60 — hardcoded symbol-count 373/testcount 122 als momentopname; repo lijkt gekrompen.
+[F-OND-279] HOOG DEPLOY_VANDAAG.md:107 — "372/372 verwacht" terwijl later 742 tests; archief leest als permanente checklist → opvolger denkt tests stuk.
+[F-OND-280] HOOG DEPLOY_VANDAAG.md:103 — ephemeral feature-branch-PR-URL als deploy-stap → 404 in jaar 1+.
+[F-OND-281] MIDDEL DEPLOY_VANDAAG.md:155 — "✓ secrets gezet" momentopname → valse zekerheid over Mollie/Brevo/Template-config.
+[F-OND-282] LAAG DEPLOY_VANDAAG.md:283 — hardcoded EARLYBIRD-kortingscode in als-permanent-leesbaar doc.
+[F-OND-283] MIDDEL DEPLOY_VANDAAG.md:1 — in docs/archive/ maar geschreven als live "Vandaag verkopen"-runbook; geen historisch-banner.
+[F-OND-284] LAAG STATUS_NACHT.md:18 — PR #117 als open DRAFT; latere doc mist #117 → statusdrift zonder resolutie.
+[F-OND-285] LAAG STATUS_NACHT.md:33 — clasp-CVE-uitstel datumloos in archief → verdampt, niemand kent het bij clasp-bump.
+[F-OND-286] HOOG handmatige-acties.md:106 — "Code.gs:1966" hardcoded regelnr als bewijs; verjaart per edit; tegenstrijdig met "858 regels".
+[F-OND-287] MIDDEL handmatige-acties.md:1 — eenmalig post-sessie-takenlijstje leest als permanente setup → dubbel-draaien/overschrijven-risico.
+[F-OND-288] LAAG handmatige-acties.md:72 — "Mollie.gs:158-170" hardcoded regelbereik → drift.
+[F-OND-289] HOOG deploy.yml:7 — push-trigger permanent gepind op ephemeral agent-branch claude/google-forms-...-0N1Mx → dode config + branchnaam-leak.
+[F-OND-291] LAAG deploy.yml:108 — 200-versie-cap reactief gewaarschuwd (>180) niet preventief; abandoned → volgende fix-deploy breekt stil.
+[F-OND-292] LAAG deploy.yml:25 — FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 transitievlag wordt dode ruis; checkout@v4/setup-node@v4 twee majors achter (v6).
+[F-OND-290] MIDDEL health-monitor.yml:14 — cron '0 7' comment "09:00 NL" maar UTC zonder DST → wintertijd 08:00 NL, half jaar fout. (auto-update-version.yml: done/SCHOON.)
+
+## Wave B — onderh_07 (configs/docs) — gelezen volledig; clasp v3.3.0 + Node22-EOL 2027-04-30 web-geverifieerd
+[F-OND-293] HOOG .clasp.json:2 — productie-scriptId aan Sam's privé-account; account-verlies → niemand kan pushen, master-template onherstelbaar. #1 abandoned-risico.
+[F-OND-294] HOOG package.json:39 — @google/clasp ^2.4.2 één major achter (v3.3.0); v2 leunt op legacy-OAuth die Google uitzet → clasp push breekt; caret bumpt nooit over major.
+[F-OND-295] HOOG keep-codespaces-alive.yml:9 — keep-alive aan één persoonlijke PAT "no expiration" (GitHub staat dat niet meer toe) → verloopt binnen 5j, stil stop, geen alerting.
+[F-OND-302] HOOG keep-codespaces-alive.yml:14 — CODESPACE_KEEPALIVE_PAT Sam-only secret zonder rotatie; 293+295+302 = geen bus-factor-mitigatie, alle touwtjes naar één account.
+[F-OND-296] MIDDEL keep-codespaces-alive.yml:22 — cron '0 9 */21 * *' reset elke maand → variabele interval; GitHub deactiveert scheduled workflows bij inactiviteit → keep-alive zelf door inactiviteit uitgezet.
+[F-OND-297] MIDDEL package.json/README:97 — Node 22 EOL 2027-04-30 (geverifieerd); aanname leeft alleen in README-proza.
+[F-OND-298] MIDDEL package.json:36 — geen engines-veld; clasp v3 eist Node≥22; fresh install op nieuwe Node kan stil falen.
+[F-OND-299] MIDDEL package.json:18 — prepare draait husky onvoorwaardelijk; husky v10+ wijzigt invocatie → fresh npm ci breekt op tooling-hook; merge.ours.driver ongedocumenteerd.
+[F-OND-300] LAAG package.json:20 — NODE_TLS_REJECT_UNAUTHORIZED=0 + ongepind npx clasp (v3?) vs gepind ^2.4.2 → latent breekpunt.
+[F-OND-301] LAAG package.json:9 — lint:changed bash/GNU-only (grep/xargs -r) → Windows/macOS-opvolger kan verplichte stap niet draaien.
+[F-OND-293..302 synthese] bus-factor-1 cluster.
+[F-OND-303] MIDDEL README.md:107 — claimt auto-deploy via deploy.yml maar package.json heeft alleen handmatige scripts → opvolger pusht code die nooit live komt.
+[F-OND-306] LAAG CLAUDE.md:111 — harde regelnummers ("line 772")/tellingen ("30 files","122 tests") verouderen stil; installeelTriggers_ typo.
+[F-OND-304] LAAG jest.config.js:16 — zelfgebouwde gas-transform-shim; Jest 30 wijzigt transform-API → groen-CI dat niets garandeert.
+[F-OND-305] INFO eslint.config.js:26 — ESLint 9 flat-config modern, gezond (GAS_GLOBALS dood-maar-gedocumenteerd). (eslint/CLAUDE.md OK.)

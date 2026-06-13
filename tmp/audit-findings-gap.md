@@ -53,3 +53,19 @@ Fix: link + migratie-sectie. Owner: Sam (dev)
 #### F-GAP-011 [LAAG] website/bronnen/index.html:144-178 — bron-blokken linken uitsluitend extern; eigen gidsen (zelfstandigenaftrek, urencriterium, afschrijven) nergens gelinkt vanaf deze autoritaire pagina. Fix: "Lees onze gids"-links. Owner: Sam.
 
 Patroon GAP-A: grootste gat is verloren discoverability (niet ontbrekende content): 34 gidsen op schijf maar hub/starters/vergelijking/bronnen linken inconsistent; echte ontbrekers: KOR-eigen-pagina, BTW-nummer aanvragen, KvK-kosten; UX-defecten verbergen bestaande antwoorden (F-GAP-005, 003). Geen dode links gevonden.
+
+## Wave B — gap_01 (demo + 7 gidsen) — gelezen volledig
+[F-GAP-012] MIDDEL btw-aangifte-zzp:300-313 — ICP-opgaaf bij EU-levering nergens uitgelegd (alleen rubriek 1d); EU-klant → naheffing.
+[F-GAP-013] MIDDEL btw-aangifte-zzp:199-294 — "BTW nihilaangifte/lege aangifte" onbeantwoord; €0-omzet zonder KOR → verzuimboete.
+[F-GAP-014] LAAG btw-aangifte-zzp:311 — rubriek 5g vs zustergids 5b inconsistent; 5a-5g-keten nergens volledig.
+[F-GAP-015] HOOG btw-berekenen-terugvragen-zzp:112-167 — mist omgekeerd rekenen (incl→excl, /1,21); precies de "BTW eruit rekenen"-zoekintentie waarvoor men googelt.
+[F-GAP-016] MIDDEL btw-berekenen-terugvragen-zzp:187 — plaatst 0% én vrijgesteld onder 1d; zustergids splitst 1d/1e → twee antwoorden op zelfde rubriekvraag.
+[F-GAP-017] LAAG btw-berekenen-terugvragen-zzp:228 — foutcorrectie aangestipt maar geen interne link naar bestaande suppletie-gids.
+[F-GAP-018] HOOG aftrekbare-kosten-zzp:168-175 — zegt thuiswerkvergoeding €2,40 geldt NIET voor ZZP, maar eigen demo+gids claimen "ja" → tegenstrijdig antwoord, geen link.
+[F-GAP-019] MIDDEL aftrekbare-kosten-zzp:146 — werkruimte-aftrek afgeserveerd als "meestal niet" zonder kwalificerend/evenredig onderscheid; geen verdiepingsgids.
+[F-GAP-020] LAAG afschrijven-zzp-uitleg:96 — €450-grens niet met bron-jaartal 2026 bevestigd terwijl demo €2.901 KIA voert.
+[F-GAP-021] MIDDEL auto-leasen-vs-kopen-zzp:113-155 — geen concreet 2026-bijtellingspercentage gewone auto (22%) noch 500-km-grens privégebruik eenmanszaak.
+[F-GAP-022] HOOG bankafschrift-boeken-zzp:100-111 — ABN AMRO + SNS/ASN/Triodos ontbreken in export-tabel; ABN-klant vindt eigen bank niet.
+[F-GAP-023] MIDDEL bankafschrift-boeken-zzp — MT940 vs CSV-verschil onbeantwoord terwijl termen wel genoemd.
+[F-GAP-024] MIDDEL boekhoudprogramma-zonder-abonnement:128-244 — mist Jortt/Acumulus/Informer die concurrent-listicles wél noemen → "complete vergelijking" oogt selectief.
+[F-GAP-025] MIDDEL demo:484-514 — rubriek 1d/1e-indeling wijkt af van eigen gids; Bank/Relaties-tabs grijs terwijl bankimport dé USP is.
