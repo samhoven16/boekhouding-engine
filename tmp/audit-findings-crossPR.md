@@ -463,3 +463,40 @@ Fix: mixed-case-key-testcase toevoegen. Owner: Sam (dev)
 Quote: `// De resterende === 'actief' in cycles 29 + 30 zijn parallel — niet in main.`
 Probleem: stale merge-comment (29/30 zijn wél gemerged); de eigenlijke ketenwerking (hard-bounce → status 'Bounce' → drips/OTP slaan rij over) wordt door geen test end-to-end geborgd, alleen losse string-aanwezigheid.
 Fix: comment updaten + integratietest bounce→Bounce→drip-skip. Owner: Sam (dev)
+
+## Wave F — crossPR_01 (src A-B) — gelezen volledig; git-log cross-ref
+[F-CPR-186] HOOG BTWReminder.gs:58 + Triggers.gs:2317 — TWEE deadline-reminderpaden: controleerBtwDeadline_ (menu-trigger, dedup 1×/periode) vs controleerBtwDeadlines_ (dagelijkseTaken, GEEN dedup, 14 dagen elke dag). Klant die menu-reminder aanzet → dubbele mail; SelfHeal-BEHOUD houdt collision permanent.
+[F-CPR-187] HOOG BTWReminder.gs:78 + Triggers.gs:2333 — paden lezen verschillende keys ('Email' vs 'Email rapporten naar'); klant die één wijzigt → 2 reminders naar 2 adressen.
+[F-CPR-188] MIDDEL AutoDefaults.gs:73 + API.gs:51/148 — AutoDefaults genereert autonoom 'Webhook API sleutel'; API gebruikt 'm als auth-gate. Na 1e setup wordt eerder-open webhook/status-GET ineens auth-required → bestaande Zapier-koppeling breekt stil, geen migratiepad.
+[F-CPR-189] MIDDEL BackupEmail.gs:30 + Triggers.gs:1630 — backupEmail-stap (20MB attachment) deelt mail-quota met dunning+BTW-reminders; positie na hen → backup sneuvelt structureel op zware admin (klant denkt wekelijkse kopie te krijgen).
+[F-CPR-190] MIDDEL AccountVerwijderen.gs:279 — AVG-verwijdering invalideert alleen LICENTIE_CACHE_KEY; LICENTIE_PROP_KEY/KLANT_KEY blijven; controleerLicentie_ herschrijft cache → "vergetelheid" effectief no-op zolang server sleutel accepteert.
+[F-CPR-191] LAAG BTW.gs:230 — r1d_nul + r3a_grondslag delen nultarief-omzet; pro-rata gebruikt bewust r1d_nul (correct afgevangen). Latente koppeling: PR die r3a in pro-rata optelt herintroduceert te-hoge aftrek. (AIConfig/Assistent/BTW done.)
+
+## Wave F — crossPR_02 (src B) — gelezen volledig
+[F-CPR-206] HOOG BankImport.gs:294 — verwerkBankImport_ schrijft ALLEEN BANKTRANSACTIES, GEEN maakJournaalpost_ (docstring belooft journaalpost; grep=0). Grootboek-1200 ongemoeid → balans structureel scheef = som geïmporteerde mutaties. Bekend grootboek-drift-risico bevestigd.
+[F-CPR-207] HOOG Bankboek.gs:61 — bankAfstemming vergelijkt getBanksaldo_ (BANKTRANSACTIES kol5) met werkelijk afschrift, maar dialog-boekingen updaten alleen GROOTBOEKSCHEMA-1200. Appels vs peren → vals "verschil"-alarm of gemist echt verschil. Order-gevoelig.
+[F-CPR-208] HOOG BankImport.gs:565 + Verkoopfacturen.gs:565 — TWEE parallelle CSV-bankimport-implementaties (verwerkBankImport_ met dedup vs verwerkBankCsvImport zonder); zelfde BANKTRANSACTIES-tab → import via beide paden = dubbele rijen.
+[F-CPR-209] MIDDEL BankImport.gs:348 — volgendTransactieId_ doet LockService.waitLock per rij in loop; 12k CSV = 12k lock-acquires; gelijktijdige dagelijkseTaken serialiseert → richting 270s-guillotine, partiële import.
+[F-CPR-210] MIDDEL BankImport.gs:414 — factuur-betaald read-modify-write zonder lock; slaansFuzzyKoppel + koppelTransacties schrijven zelfde kolommen → dubbel afgeboekt / status springt.
+[F-CPR-211] MIDDEL BankImport.gs:416 — 1-based write (kol 13/14/15) vs 0-based read elders (index 12/13/14) op zelfde VERKOOPFACTUREN-tab; klopt nu maar off-by-one bij elke schema-wijziging.
+[F-CPR-212] MIDDEL Belastingvoordeel.gs:753 — reserveerBtwOpSpaarpot_ boekt 1200→1205 in grootboek zonder BANKTRANSACTIES-mutatie + geen idempotency-key → versterkt bank-drift (F-CPR-206); retry boekt nogmaals.
+[F-CPR-213] MIDDEL Boekingen.gs:343 — module-scope _gbRijCache_; updateGrootboekSaldo_ (cached rij) vs herberekeningGrootboekSaldi (vers, batch-write kol6) binnen één executie → laatste setValue wint, order-afhankelijk.
+[F-CPR-214] LAAG Belastingvoordeel.gs:1112 — wat-als-simulator leest 'Huidige investeringen YTD' die niemand schrijft → KIA-delta altijd vanaf 0, overschat.
+[F-CPR-215] LAAG BankImport.gs:356 — auto-categorisatie bij import boekt op 02xx; KIA-misser-detector scant alleen INKOOPFACTUREN → coverage-gat (gemiste-aftrek-blinde-vlek). (BelastingOptimizer/Belastingadvies/BoekingEngine/Brand done.)
+
+## Wave F — crossPR_03 (src B-D) — gelezen volledig
+[F-CPR-226] MIDDEL Changelog.gs:19 — bovenste CHANGELOG_ENTRIES = 2.6.0 terwijl HUIDIGE_VERSIE=2.7.0 (#296-299 bumpte versie, geen 2.7.0-entry) → klant ziet 2.6.0 nogmaals als "nieuw" via slice(0,1)-fallback.
+[F-CPR-227] MIDDEL Changelog.gs:116 — dubbele-modal-seam: controleerOnboarding_ toont updatemelding + zet geinstalleerde_versie; checkEnToonChangelog_ wil OOK modal (GAS doet 1/onOpen betrouwbaar) → changelog gedropt maar laatstGezien tóch op 2.7.0 → klant ziet 't nooit.
+[F-CPR-228] MIDDEL CustomFunctions.gs:14 — docstring "2025" terwijl #299 fallback naar 2026 zette; regel-132-tak heeft nog hardcoded 2025-schijven (38441/76817) niet meegenomen → asymmetrische fallback, ssot-test dekt 't niet.
+[F-CPR-229] MIDDEL DLQ.gs:1699 — dlqRetry NA mail-stappen in dagelijkseTaken; quota-uitputting → DLQ-retries falen op quota niet op item → escaleert naar FAILED+fataal terwijl mail prima was. A-dan-B≠B-dan-A.
+[F-CPR-230] LAAG DataPortability.gs:41 — GDPR-export zoekt DRIVE_HOOFDMAP_<huidigJaar> (zelfde current-year-aanname die #299 in XAF net uitroeide) → valt terug op rootFolder. Export-consistentie-seam.
+[F-CPR-231] LAAG BtwExport.gs:88 — periode-dropdown alleen huidig+vorig jaar terwijl bewaarplicht 7 jaar; inconsistente jaar-horizon met XAF (nu expliciete jaar-param). (Branding/Config/Diagnostiek done; BtwExport berekenBtwAangifte_ erft #298-fix correct.)
+
+## Wave F — crossPR_04 (src D-F) — gelezen volledig
+[F-CPR-246] HOOG ExportAccountant.gs:744 — 3 backup-folder-conventies ('Boekhouding Backups' / '🔒...(NIET WIJZIGEN)' auto-xlsx / 'Backups' NoahArk); autoBackup en noahArk back-to-back in dagelijkseTaken schrijven naar verschillende mappen; GFS-retentie raakt maar één → klant ziet halve backups.
+[F-CPR-247] HOOG Engagement.gs:62 — leest 'setupTimestamp' die NERGENS geschreven wordt (grep=0) → 1-jaar-achievement + volledige NPS-survey (dag 30/90/365) STIL dood, geen log. Setup-PR/Engagement-PR-seam.
+[F-CPR-248] MIDDEL EmailQuotaGuard.gs:112 — comment-aanname "herinneringen+btwDeadline draaien hierna" is FOUT (draaien op 1543/1547 VÓÓR emailQuotaWaarschuwing:1607) → slot-reservering beschermt al-gedraaide stappen, nutteloos.
+[F-CPR-249] MIDDEL EmailDeliverability.gs:99 — leest data[i][1] als relatie-NAAM maar [1]=Type in live-sheet ([2]=Naam); header-comment documenteert verouderde kolomvolgorde → overzicht toont "Klant — mail@x" i.p.v. naam.
+[F-CPR-250] MIDDEL EmailQuotaGuard.gs:85 — mogelijkVerzenden_/getEmailQuotaStatus_ hebben GEEN callers; dunning gebruikt eigen <=5, guard <=2, OP → 3 quota-bodems i.p.v. één bron. Module pretendeert centrale governance, niemand belt 'm.
+[F-CPR-251] LAAG ExportAccountant.gs:53 — her-export hergebruikt map maar stapelt gelijknamige bestanden als duplicaten (geen datum-suffix) → accountant krijgt 2 versies zonder onderscheid.
+[F-CPR-252] LAAG DriveStructuur.gs:295 — jaarafsluiting-teller-reset beschermd door jaarAlAfgesloten_ (JA-{jaar}-detectie); als voerJaarafsluitingResultaatUit_ referentie niet exact zo schrijft → 2e afsluiting reset tellers nogmaals → duplicaat-factuurnummers (OB art.35a). Cross-check exacte string-match. (EUVerkoop/EersteKlantCheck/FeedbackLoop done.)
