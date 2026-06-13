@@ -384,3 +384,34 @@ Probleem: return;-telling + naam-string-checks: refactor halveert telling (vals-
 Fix: runtime-test met gemockte ui.prompt-responses + aparte parseBedragStrict_-gedragstest. Owner: Sam (dev)
 
 Prioriteit T7: F-CPR-147/149 (pure regex op aggregator-/volgorde-seams), daarna 141/143/146 (gestubde gedeelde helpers maskeren rename-regressies).
+
+## Batch CPR-T6 — customFunctions, cycle12-18
+Alle 8 volledig gelezen; bronnen cross-geverifieerd (Code.gs routing/endpoints, Verkoopfacturen-parsers, Setup vulGrootboekschema_, HerhalendeKosten-cleanup).
+
+#### F-CPR-120 [LAAG] customFunctions.test.js:50-52
+Quote: `expect(ctx.BEREKEN_BTW(33.33, '21%')).toBe(7);`
+Probleem: testnaam claimt 2-decimalen-afronding maar 6.9993→7.00 onderscheidt hele-euro-afronding niet.
+Fix: input die echt op x.xy uitkomt (10.05→2.11). Owner: Sam (dev)
+#### F-CPR-121 [LAAG] cycle12-google-warning-preframe.test.js:48-50
+Quote: `const jsonEnd = html.indexOf('}\n    }\n  ]\n}', jsonStart);`
+Probleem: JSON-LD-grens op exacte indentatie; fallback-5000-venster verbergt mislukte match ⇒ vals-groen mogelijk na herformat.
+Fix: structurele marker (</script>) of geen vensterlimiet. Owner: Sam (dev)
+#### F-CPR-122 [MIDDEL] cycle13-herstuur-licentie-endpoint.test.js:145
+Quote: `expect(src).toMatch(/rateLimit_\(e,\s*\{[^}]*actie:\s*['"]herstuur-licentie['"][^}]*perEmail:\s*3/);`
+Probleem: rate-limit alleen via source-regex; endpoint-gedragstests passeren rateLimit_ nooit ⇒ verwijderde wrap alleen door tekst-match gedekt.
+Fix: doGet-gedragstest 4× ⇒ 4e geblokkeerd. Owner: Sam (dev)
+#### F-CPR-123 [MIDDEL] cycle14-roteer-revoke-hardening.test.js:63-68
+Quote: `const HEADER = ['Sleutel', 'Naam', 'Email', 'Type', 'Status'];`
+Probleem: mock-header mist 'Aangemaakt op'/'Mollie betaling ID' ⇒ rotatie-cap-blok (Code.gs:2590-2607) wordt overgeslagen; "succesvolle rotatie" test ander codepad dan productie; cap volledig ongedekt.
+Fix: volledige 11-koloms header + cap-test met ≥3 ROTATIE-VAN-rijen. Owner: Sam (dev)
+#### F-CPR-124 [LAAG] cycle14:158 — [\s\S]{0,200}-regex kan rateLimit van naastgelegen actie matchen ⇒ vals-groen bij herordening. Fix: zelfde-regel-venster of gedragstest. Owner: Sam.
+#### F-CPR-125 [LAAG] cycle15:159-162 — dubbele-routing-check telt letterlijke strings (comments tellen mee). Fix: ^\s*if-anker. Owner: Sam.
+#### F-CPR-126 [LAAG] cycle16:33-34 — twee describe-blokken delen ctx op module-load (pure parsers ⇒ nu onschadelijk; inconsistent patroon). Fix: uniformeren. Owner: Sam.
+#### F-CPR-127 [MIDDEL] cycle17-grootboek-preserve-klant-rijen.test.js:22-23
+Quote: `clearContents: () => { data.length = 1; /* header blijft */ },`
+Probleem: mock truncéért array terwijl echt clearContents het grid intact laat ⇒ post-clear getLastRow/leeg-cel-reads gedragen zich in productie anders dan in test.
+Fix: cellen op '' met behoud rij-lengte. Owner: Sam (dev)
+#### F-CPR-128 [LAAG] cycle18:99-105
+Quote: `expect(ctx.cleanupHerhalendeKostenIdempotency_(-5).verwijderd).toBe(0); // al gewist`
+Probleem: tweede assert leunt op state van eerste call ⇒ bewijst idempotentie, niet de geclaimde default-90-fallback.
+Fix: twee tests met verse store. Owner: Sam (dev)
