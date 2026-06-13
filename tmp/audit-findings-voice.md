@@ -350,3 +350,46 @@ Fix: "Je licentie kan even niet geverifieerd worden ...". Owner: accountant
 #### F-VCE-113 [LAAG] src/Licentie.gs:943 — volledige sleutel + Spreadsheet-ID in info-dialoog = ruis/complexiteit voor leek. Fix: maskeren (laatste 4) overwegen. Owner: Sam/accountant.
 
 Patroon VCE-E: u/je-wissel (101, 109); jargon-foutpaden zonder terug-loop (102, 105, 106, 107); generieke withFailureHandler-fallbacks (104, 111); één wij-schending (112). KvKCache = referentie.
+
+## Batch VCE-F — Menu, Metrics, Mollie, MoneybirdImport, NieuweBoeking, Onboarding, Prive, Referral
+
+### Gelezen: alle 8 volledig. Mollie.gs = modelvoorbeeld (fail-toast 173-180 is exact principe #10+#6: eerlijk over degraded mode + terug-loop; kosten-transparantie in prompt). Referral consistent "je" met transparante bedragen.
+
+#### F-VCE-120 [LAAG] src/Menu.gs:204-216
+Quote: `.addItem('📨 Mislukte taken (DLQ) tonen', 'toonDlqOverzicht')`
+Probleem: "DLQ" developer-jargon in klant-zichtbaar (support-)menu.
+Fix: afkorting weglaten. Owner: Sam (dev)
+#### F-VCE-121 [MIDDEL] src/Menu.gs:340-341
+Quote: `.addItem('⚡ Update automatisch installeren (beta)', ...)` / `'📦 Download laatste versie (beta — technisch)'`
+Probleem: "(beta — technisch)" vage waarschuwing zonder risico-uitleg of vangnet-instructie.
+Fix: concreet maken ("experimenteel — maak eerst een backup") of achter geavanceerd-submenu. Owner: Sam (dev)
+#### F-VCE-122 [LAAG] src/Menu.gs:706-707
+Quote: `... Gebruik "Periode ontgrendelen" voor correctie.'`
+Probleem: toast verwijst naar knop-naam die niet bestaat (menu-item heet "Gesloten periodes beheren", regel 201) — terug-loop breekt. (Menupad-drift-patroon.)
+Fix: exact menupad noemen. Owner: Sam (dev)
+#### F-VCE-123 [LAAG] src/Metrics.gs:140 — "Status-fout" + vertaalde melding zonder vervolgstap. Fix: terug-loop toevoegen. Owner: Sam.
+#### F-VCE-124 [LAAG] src/MoneybirdImport.gs:78 — generieke failure-handler toont rauwe err.message (gerichte fouten 99-102 zijn wél goed). Fix: support-terug-loop in generieke handler. Owner: Sam.
+#### F-VCE-125 [MIDDEL] src/NieuweBoeking.gs:26,29,36,387,391,413,431,447,451,468,947,1037,1149
+Quote: `Stap 1 — Upload uw bon of factuur` vs `Boekhoudbaar betaalt nooit voor jouw scans` (44)
+Probleem: u/je-mix binnen de dagelijkse kern-dialog, zelfs binnen één scherm (AI-tak "uw", BYOK-tak "je") — grootste zichtbare voice-breuk.
+Fix: sweep naar "je" (codebase-meerderheid). Owner: Sam (dev)
+#### F-VCE-126 [LAAG] src/NieuweBoeking.gs:296,524
+Quote: `⚙️ Wachten op JS…` / `'✓ Live (recalc #' + __recalcTeller + ')'`
+Probleem: developer-debug-strings ("JS", "recalc #42") klant-zichtbaar in de factuurdialog.
+Fix: klant-taal + teller verbergen. Owner: Sam (dev)
+#### F-VCE-127 [LAAG] src/NieuweBoeking.gs:501-502 — globale error-handler toont rauwe (vaak Engelse) JS-message; "in chat support" onduidelijk. Fix: herformuleren + meld-route. Owner: Sam.
+#### F-VCE-128 [LAAG] src/Onboarding.gs:769-771
+Quote: `instellingen: 'Naviger naar Instellingen…',`
+Probleem: spelfout "Naviger" + half-jargon "Boekingsdialog" in de allereerste post-setup-toasts.
+Fix: "Instellingen openen…" etc. Owner: Sam (dev)
+#### F-VCE-129 [MIDDEL] src/Prive.gs:165-173
+Quote: `google.script.run .withSuccessHandler(function(){ … }) .opslaanPriveTransactie(d);`
+Probleem: GEEN withFailureHandler terwijl de server expliciet throwt bij ongeldig bedrag/datum ⇒ knop blijft disabled, klant ziet niets — dialog lijkt kapot (echte terug-loop-breuk).
+Fix: failure-handler met melding + knop her-enablen (patroon NieuweBoeking:941-951). Owner: Sam (dev)
+#### F-VCE-130 [MIDDEL] src/Prive.gs:496-497,516
+Quote: `'Vul uw vermogen in op peildatum 1 januari. Dit is nodig voor uw Box 3 berekening.'`
+Probleem: u/je-mix binnen de privé-module.
+Fix: gelijktrekken naar "je". Owner: Sam (dev)
+#### F-VCE-131 [LAAG] src/Referral.gs:38 vs 52-56 — WhatsApp/mail noemen €5-korting, LinkedIn/X-variant niet (zelfde ref-link) — gemiste CTA-consistentie. Fix: korting overal of bewust kort. Owner: Sam.
+
+Patroon VCE-F: u/je-mix concentreert in oudere dialog-files (NieuweBoeking, Prive); failure-handlers ongelijk verdeeld (Mollie/NieuweBoeking voorbeeldig vs Prive ontbrekend); debug-strings lekken (DLQ, recalc).

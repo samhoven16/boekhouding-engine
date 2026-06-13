@@ -415,3 +415,31 @@ Fix: cellen op '' met behoud rij-lengte. Owner: Sam (dev)
 Quote: `expect(ctx.cleanupHerhalendeKostenIdempotency_(-5).verwijderd).toBe(0); // al gewist`
 Probleem: tweede assert leunt op state van eerste call ⇒ bewijst idempotentie, niet de geclaimde default-90-fallback.
 Fix: twee tests met verse store. Owner: Sam (dev)
+
+## Batch CPR-T9 — cycle33/34/35/36/37/38/39/4
+Alle 8 volledig gelezen + alle 8 suites gedraaid (67 tests groen); bron-fixes geverifieerd aanwezig. cycle37 en cycle4: geen vondsten (specifieke regexen, gedocumenteerde source-only-keuze).
+
+#### F-CPR-180 [LAAG] cycle33-prive-input-validate.test.js:22-24
+Quote: `appendRow: (rij) => appended.push(rij),` / `getLastRow: () => appended.length + 1,`
+Probleem: lokale mock met afwijkende getLastRow-semantiek (toevallig correct voor 1 append; fout bij 2) terwijl cycle34/35 de gedeelde maakSheetMock gebruiken — inconsistente mock-semantiek tussen buurtests.
+Fix: migreren naar tests/__helpers__/mocks.js. Owner: Sam (dev)
+#### F-CPR-181 [LAAG] cycle34-test-helpers.test.js:89 (via mocks.js:89)
+Quote: `clearContents: () => { data.length = 0; },`
+Probleem: snapshot-ontkoppeling (getDataRange kopieert) wordt nergens expliciet verankerd ⇒ toekomstige test die op verkeerde semantiek leunt breekt silent.
+Fix: één assertie dat een pre-clear-snapshot ongewijzigd blijft. Owner: Sam (dev)
+#### F-CPR-182 [MIDDEL] cycle35-legacy-formhandlers-datum.test.js:128-129
+Quote: `expect(callSites.length).toBe(2);   // hoofdformulier-inkomsten + -uitgaven`
+Probleem: exacte count = cross-PR-tijdbom (derde legitieme call-site ⇒ vals alarm; 1 weg + 1 erbij ⇒ telling 2 maar semantiek gewijzigd, gemist).
+Fix: invariant i.p.v. magisch getal (geen `parseDatum_(data[...]) || new Date()`-patronen + elke datum-lees via strikt-parser). Owner: Sam (dev)
+#### F-CPR-183 [MIDDEL] cycle36-hreflang-symmetric.test.js:38-44
+Quote: `expect(nlUrls.map(extractUrl).sort()).toEqual(enUrls.map(extractUrl).sort());`
+Probleem: vergelijkt alleen URL-sets, niet [hreflang,href]-paren ⇒ verwisselde hreflang-codes (precies de schadelijke asymmetrie) passeren.
+Fix: paren vergelijken. Owner: Sam (dev)
+#### F-CPR-184 [MIDDEL] cycle38-euverkoop-datum-string.test.js:31-41
+Quote: `const startIdx = src.indexOf('function genereerIcpRapport_('); if (startIdx === -1) { ... }`
+Probleem: testnaam claimt ICP-functie-dekking maar valt bij ontbreken terug op globale bestands-telling ⇒ legaal verplichte ICP-loop kan ongefixt blijven zonder dat de test het merkt.
+Fix: ICP-functie-body extraheren en dáárin asserten. Owner: Sam (dev)
+#### F-CPR-185 [LAAG] cycle39-engagement-datum-string.test.js:26-28 (+44-45)
+Quote: `expect(count).toBe(2);`
+Probleem: exacte counts (zelfde klasse als F-CPR-182); regel 32 gebruikt al het robuustere >=2.
+Fix: >=2 of per-loop isNaN-koppeling asserten. Owner: Sam (dev)
