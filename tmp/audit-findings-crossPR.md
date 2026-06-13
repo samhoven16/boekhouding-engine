@@ -347,3 +347,40 @@ Quote: `try { ctx.valideerBtwAansluiting_([...], 999, 100, 1099); } catch (e) { 
 Probleem: geen expect.assertions/fail ná de try ⇒ "geen throw" slaagt stil — een PR die de invariant-throw verzwakt blijft groen.
 Fix: expect.assertions(2) of fail() in de try. Owner: Sam (dev)
 Positief T5: rondBedrag_-idempotentie en parseBedrag_↔formatBedrag_-roundtrip zijn sterke echte contracten; bundle-hash via echte crypto.
+
+## Batch CPR-T7 — cycle19, cycle2, cycle20, cycle21, cycle22, cycle23, cycle24, cycle25
+Alle 8 volledig gelezen; alle source-matches geverifieerd tegen werkelijke bron (kolom-indices cycle21 kloppen; return-telling cycle25 = exact 4). cycle21 = echte gedragstest zonder vondsten.
+
+#### F-CPR-140 [LAAG] cycle19-iban-validate-sepa-qr.test.js:20-28
+Quote: `fetch: (url) => { fetched.push(url); return { getResponseCode: () => 200, getBlob: ..., getContent: ... }; }`
+Probleem: fetch-mock zonder getContentText (default-mock heeft juist geen getBlob) ⇒ PR die error-body leest breekt test met onduidelijke TypeError terwijl productie werkt.
+Fix: volledige HTTPResponse-interface mocken. Owner: Sam (dev)
+#### F-CPR-141 [MIDDEL] cycle19:99-106
+Quote: `ctx.valideerIban_ = undefined; ... expect(r).toMatch(/^data:image\//);`
+Probleem: test verankert fail-open (validator weg ⇒ tóch fetchen) — hernoemde/verplaatste valideerIban_ levert in productie stil ongevalideerde IBANs en de test bevestigt dat als OK.
+Fix: validator als harde dependency of ontbreken als regressie-signaal. Owner: Sam (dev)
+#### F-CPR-142 [LAAG] cycle2-atomic-journaalpost.test.js:44-57
+Quote: `ctx.valideerInvariantsVoorJournaalpost_ = () => {};`
+Probleem: pre-write-validatielaag volledig gestubd ⇒ nieuwe pre-write-throw verschuift het faalmoment in productie zonder dat de rollback-coverage het merkt.
+Fix: één test mét echte validatie-laag. Owner: Sam (dev)
+#### F-CPR-143 [MIDDEL] cycle20-betaalstap-cleanup.test.js:17-30
+Quote: `expect(src).toMatch(/deleteProperty\('herinneringsStap_'\s*\+\s*fnr\)/);`
+Probleem: cleanup geborgd via variabelenaam-regex; DERDE cleanup-pad (SmartCategorisatie.gs:381) ongedekt; rename breekt test zonder gedragsfout.
+Fix: runtime-gedragstests voor alle drie paden. Owner: Sam (dev)
+#### F-CPR-144 [LAAG] cycle20:46-48 vs 81-83 — inconsistente mock-rijbreedtes tussen tests voor dezelfde sheet. Fix: gedeelde schema-correcte rij-factory. Owner: Sam.
+#### F-CPR-145 [LAAG] cycle22-balans-threshold.test.js:57-73 — €0,05-boundary alleen voor deze functie geborgd; geen consistentie-check over alle balans-tolerantie-paden. Fix: gedeelde constante + cross-check-test. Owner: Sam.
+#### F-CPR-146 [MIDDEL] cycle23-instellingen-format-valid.test.js:17-21
+Quote: `ctx.getInstelling_ = (sleutel) => instellingen[sleutel] || '';`
+Probleem: HIGH-risk getInstelling_ gestubd met letterlijke sleutel-strings ⇒ sleutel-rename/normalisatie in productie laat validatie stil overslaan terwijl test groen blijft — sleutel-contract-seam ontkoppeld.
+Fix: echte getInstelling_ met gemockte Instellingen-sheet. Owner: Sam (dev)
+#### F-CPR-147 [HOOG] cycle24-silent-check-completeness.test.js:28-55
+Quote: `expect(stilleBody).toMatch(/controleerReferentiele_\(ss\)\.forEach\(tel\)/);` + try-catch-telling >= 9
+Probleem: volledige verificatie via bron-regex op de aggregator — exact de cross-PR-seam die het vaakst breekt; refactor breekt test zonder fout, en check-verwijdering kan via telling tóch groen blijven; niets draait de functie.
+Fix: runtime-test met gestubde controleerX_ + assert dat beide checks in score/properties meetellen. Owner: Sam (dev)
+#### F-CPR-148 [LAAG] cycle24:25-26 — body-slice eindigt op eerste '}\n\n/**' ⇒ layout-afhankelijk (te vroeg eindigen of rest opslokken). Fix: accolade-balancering of runtime. Owner: Sam.
+#### F-CPR-149 [HOOG] cycle25-bankafstemming-input-valid.test.js:46-49
+Quote: `const returns = (body.match(/return;/g) || []).length; expect(returns).toBeGreaterThanOrEqual(4);`
+Probleem: return;-telling + naam-string-checks: refactor halveert telling (vals-rood), of 4 returns blijven terwijl de silent-0-bug terugkeert (vals-groen); parseBedragStrict_-bestaan wordt nergens functioneel geverifieerd (shared-scope-breuk onzichtbaar).
+Fix: runtime-test met gemockte ui.prompt-responses + aparte parseBedragStrict_-gedragstest. Owner: Sam (dev)
+
+Prioriteit T7: F-CPR-147/149 (pure regex op aggregator-/volgorde-seams), daarna 141/143/146 (gestubde gedeelde helpers maskeren rename-regressies).

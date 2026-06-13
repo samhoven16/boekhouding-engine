@@ -353,3 +353,47 @@ Fix: gedeelde Config-kolomconstanten + header-validatie (impact-analyse vereist)
 #### F-OND-123 [LAAG] src/HitlValidatie.gs:160, 173 — Session.getActiveUser() kan leeg worden (Google-privacy-trend) ⇒ "Gevalideerd door: onbekend" holt bewijswaarde uit. Fix: fallback effectiveUser/licentie-email. Owner: Sam.
 
 Thema OND-E: (1) magic kolom-indexen zonder schema-guard in juist de integriteits-modules (106/112/121/122); (2) fiscale fallbacks bevriezen (102/116); (3) support-domein = single point of failure (119); (4) Fortress-lock-out-scenario (109).
+
+## Batch OND-F — Hygiene, Inkoopfacturen, Invariants, Jaarafsluiting, KvKCache, Licentie, Menu, Metrics
+
+### Gelezen: alle 8 volledig. Survival-oordeel: grotendeels ROBUUST — data-export buiten licentie-gate (Menu:18-34), 90-dagen-grace, jaarafsluiting/invarianten lokaal, FIFO-caps op logs. Jaarafsluiting.gs en (vrijwel) KvKCache.gs zonder vondsten; Jaarafsluiting heeft voorbeeldige pre-2025-migratie-pre-flight (158-171).
+
+#### F-OND-140 [MIDDEL] src/Hygiene.gs:80-97
+Quote: `const _HYGIENE_VERWACHTE_TRIGGERS = [ ... ]` + `const _HYGIENE_BEHOUD_HANDLERS = ['controleerBtwDeadline_'];`
+Probleem: DRIE bronnen-van-waarheid voor trigger-state (deze lijst, Menu-zelfheal-set, Setup installeelTriggers_) ⇒ 7e trigger in één lijst wordt door sanitize stil weggeveegd of dubbel aangemaakt.
+Fix: één canonieke definitie + vergelijkingstest. Owner: Sam (dev)
+
+#### F-OND-141 [MIDDEL] src/Inkoopfacturen.gs:39-63 — magic kolomindices (lezen 0,1,6,11,12; schrijven 13-15) zonder header-guard; kolom-toevoeging ⇒ BETAALD op verkeerde cel. Fix: centrale schema-indices of header-assert. Owner: Sam. (patroon F-OND-106/122)
+
+#### F-OND-142 [MIDDEL] src/Invariants.gs:276
+Quote: `let grens = 20000;`
+Probleem: KOR-fallback hardcoded (docstring zegt zelf "(2026)"); bij ontbrekende config waarschuwt monitor op verouderd bedrag — voor altijd bij abandonment.
+Fix: fallback null + check overslaan i.p.v. mogelijk fout bedrag. Owner: Sam (dev)
+
+#### F-OND-143 [LAAG] src/Invariants.gs:607-615 — BTW-keyword-heuristiek bevroren op Belastingplan-2025-aannames (logies 21% per 2026); veroudert stil. Fix: ijk-datum + naar config. Owner: accountant/Sam.
+#### F-OND-144 [LAAG] src/Invariants.gs:382-385 — BEWAARPLICHT_GEMELD_<jaar> 1 key/jaar zonder cleanup (verwaarloosbaar tempo). Fix: optioneel. Owner: Sam. (= F-GAS-123)
+
+#### F-OND-145 [LAAG] src/KvKCache.gs:98-104 — API-versie zit in Utils.gs:haalDataKvK_ (KvK-docs gaven 403; EOL niet vaststelbaar); mislukt-dialoog onderscheidt outage niet van permanente deprecation. Fix: versie/HTTP-status tonen; Utils-versie verifiëren. Owner: Sam. NB: géén property-explosie — cache = Instellingen-sheet (bewust ontwerp 27-31).
+
+#### F-OND-146 [MIDDEL] src/Licentie.gs:563-589, 832-838
+Quote: `const url = serverUrl + '?actie=aanvraag-otp&email=' + encodeURIComponent(email);`
+Probleem: ongeversioneerd GET-protocol (User-Agent-marker alleen op sommige calls); server-evolutie breekt oude sheets; respons ongesigneerd ⇒ domein-hijacker kan geldig:false sturen en klanten uitsluiten (240-245 wissen dan de licentie).
+Fix: protocolversie in request + signatuur-check vóór geldig:false honoreren. Owner: Sam (dev)
+
+#### F-OND-147 [HOOG] src/Licentie.gs:868-870
+Quote: `*   - <7 dagen sinds laatste geldig-OK   → licentie blijft geldig, offline:true` / `*   - >=7 dagen ... → licentie ongeldig`
+Probleem: docstring documenteert 7-dagen-grace terwijl implementatie (886) _licentieGraceDagen_() = 90 gebruikt — directe interne tegenspraak in hetzelfde bestand (35-44 zegt 90). Toekomstige "fix" naar 7 dagen zou precies de survival-garantie breken.
+Fix: docstring naar "_licentieGraceDagen_() (default 90)"; literal 7's weg. Owner: Sam (dev)
+
+#### F-OND-148 [MIDDEL] src/Licentie.gs:826-829
+Quote: `if (!serverUrl) { ... return { geldig: true, naam: 'Demo', versie: 'Demo' }; }`
+Probleem: inconsistent survival-gedrag: lege URL = eeuwig geldig, maar dode-server-met-gezette-URL = uitsluiting ná 90 dagen — klant kent die property niet ⇒ klant die 91 dagen na Sams verdwijnen opent wordt uitgesloten. (Verdiept F-RED-007 vanuit survival-hoek.)
+Fix: na verstreken grace terugvallen op geen-server-pad, óf abandoned-instructie "wis LICENTIE_SERVER_URL" documenteren. Owner: Sam + accountant
+
+#### F-OND-149 [LAAG] src/Menu.gs:526-541 — bon-uploads in één platte naam-opgezochte map zonder rotatie (= F-OND-036; plus naamcollisie-risico via getFoldersByName). Fix: jaar-submappen onder ID-gepinde map. Owner: Sam.
+#### F-OND-150 [LAAG] src/Menu.gs:680-694 — GESLOTEN_PERIODES-blob zonder schemaVersie; ~120 entries/10jr; formaatwijziging zonder migratie-anker. Fix: schemaVersie + compressie oude periodes. Owner: Sam.
+
+#### F-OND-151 [MIDDEL] src/Metrics.gs:168-174
+Quote: `if (!owner) owner = 'samhoven16@gmail.com';` ... `GmailApp.sendEmail(owner, onderwerp, body);`
+Probleem: FATAAL-meldingen gaan uitsluitend naar Sams hardcoded privé-Gmail; klant ziet zelf niets ⇒ bij Sam-onbeschikbaarheid verdwijnen kritieke fouten in dode inbox. Plus verweesde docstring boven regel 90.
+Fix: subsidiair naar klant-instellingen-adres; fallback als property; docstring repareren. Owner: Sam (dev)
