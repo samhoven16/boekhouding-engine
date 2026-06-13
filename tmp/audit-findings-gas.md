@@ -454,3 +454,34 @@ Owner: Sam (dev)
 
 #### F-GAS-128 [LAAG] src/Metrics.gs:174 — FATAAL-mail-throttle-key = eerste 80 tekens bericht; variabele data (factuurnr) ⇒ elk bericht uniek ⇒ throttle grijpt niet ⇒ loop-fout kan Gmail-quota opvreten. Fix: categorie als key of bericht normaliseren. Owner: Sam.
 #### F-GAS-129 [MIDDEL] src/Metrics.gs:42 — metricsLog_ appendRow+getLastRow per call; metMetrics_-wrapper nodigt per-record-gebruik uit ⇒ observer-effect richting 6-min-cap. Fix: alleen coarse-grained; per-record in-memory aggregeren. Owner: Sam.
+
+## Batch GAS-H — Mollie, MoneybirdImport, NieuweBoeking(+Submit), Notificaties, Onboarding, Prive, Rapportages
+
+### Gelezen: alle 8 volledig. Zonder vondsten: NieuweBoeking.gs (vrijwel volledig client-side HTML; zware I/O zit in handlers elders) en NieuweBoeking_Submit.gs (dunne wrapper mét rate-limit). Mollie idempotency-markers hebben 90d-cleanup (417-453) = OK.
+
+#### F-GAS-140 [MIDDEL] src/Mollie.gs:330
+Quote: `const _data = _vf.getDataRange().getValues();` / `for (let i = 1; i < _data.length; i++) {`
+Probleem: elke betaalde webhook full-scant VERKOOPFACTUREN (alle kolommen) voor bedrag/nummer-verificatie; Mollie-retries stapelen.
+Fix: kolom-projectie of factuurnummer→bedrag-index in CacheService / TextFinder. Owner: Sam (dev)
+
+#### F-GAS-141 [HOOG] src/MoneybirdImport.gs:137/191
+Quote: `relatiesSheet.appendRow([ ... ]);` / `vfSheet.appendRow([ ... ]);`
+Probleem: header belooft "50+ klanten + 200+ facturen" maar import doet appendRow per record in geneste XAF-loops (XAF tot 20MB toegestaan) ⇒ honderden losse writes richting 6-min-cap; silent kill = partial, niet-idempotente import.
+Fix: rijen verzamelen + één setValues-batch per sheet. Owner: Sam (dev)
+
+#### F-GAS-142 [LAAG] src/Notificaties.gs:27 — genereerNotificaties_ triggert 4 aggregator-scans (KPI/belastingadvies/OSS/DGA) ongecached in open-pad. Fix: CacheService-TTL 10-30 min. Owner: Sam.
+#### F-GAS-143 [MIDDEL] src/Notificaties.gs:304
+Quote: `sheet.getRange(rij, 1).setValue(icon)...` (+307 setValue die door 310 setRichTextValue wordt overschreven)
+Probleem: ~6 round-trips per notificatie incl. één pure dubbele write (307 vs 310); begrensd aantal ⇒ geen cap-risico, wel verspilling.
+Fix: 307 verwijderen; values batchen. Owner: Sam (dev)
+#### F-GAS-144 [MIDDEL] src/Onboarding.gs:47/79
+Quote: `Utilities.sleep(1000);` / `Utilities.sleep(500);`
+Probleem: sleeps in het onboarding-open-pad vertragen de eerste open; 1500ms-navigatie-sleeps (788/797) zijn wél gerechtvaardigd (modal-constraint).
+Fix: 1000ms weg; 500ms → event/poll of ≤200ms. Owner: Sam (dev)
+#### F-GAS-145 [LAAG] src/Onboarding.gs:940 — pre-migratie ss.copy per upgrade (eenmalig; backups bewust niet opgeruimd). Optioneel: grootte-drempel. Owner: Sam.
+#### F-GAS-146 [LAAG] src/Prive.gs:219 — appendRow + per-cel format in single-record flow (acceptabel). Optioneel: kolom-format eenmalig. Owner: Sam.
+#### F-GAS-147 [MIDDEL] src/Rapportages.gs:129 (+278-283, 224-235)
+Quote: `sheet.getRange(rij, startKol + 1).setValue(r.naam);` / `...setValue(r.saldo).setNumberFormat('€#,##0.00');`
+Probleem: Balans/W&V schrijven 2-3 losse setValues per rekening in loops (bounded ⇒ geen kill, wel ~100 round-trips per rapport; jaarrekening telt 3 rapporten op).
+Fix: 2D-array per sectie + format-pass. Owner: Sam (dev)
+#### F-GAS-148 [LAAG] src/Rapportages.gs:407-409 — jaarrekening leest GROOTBOEKSCHEMA 3× en berekent balans dubbel. Fix: saldi-map één keer doorgeven. Owner: Sam.
