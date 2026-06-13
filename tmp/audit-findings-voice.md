@@ -511,3 +511,46 @@ KERN cross-page: zelfstandigenaftrek 2026 €1.200 (canoniek/correct) vs €2.47
 [F-VCE-264/268] LAAG zelf-boekhouding — "90% rekenwerk" ongefundeerd; "einddata kloppen" cryptisch.
 [F-VCE-270] LAAG zakelijke-verzekering:173 — "meer dan 4 dagen ZZP" dubbelzinnig (per week?).
 [F-VCE-271] LAAG zzp-tool-stack:172 — Zapier-menupad te verifiëren (klopt niet, zie F-DOC-093). (exact-online/moneybird/thuiswerk/administratie-apps done; 228/229/265/266 positief.)
+
+## Wave F — voice_08/09/10/11 (homepage/marketing/legal/docs) — gelezen volledig
+[F-VCE-272] HOOG landing.html:357 — 3 testimonials met volledige naam/stad/cijfers terwijl homepage testimonials bewust mijdt; indien fictief → trust-breuk. Verifieer echtheid.
+[F-VCE-273] HOOG landing.html:227 — "200+ ZZP'ers gebruiken Boekhoudbaar" gebruikersaantal nergens anders; onderbouw of verwijder.
+[F-VCE-274] MIDDEL landing.html:337 — vergelijktabel "Werkt zonder internet ✓" terwijl automatisering internet vereist.
+[F-VCE-276] MIDDEL landing.html:350 — "MacBook Air/vier weken vakantie" lifestyle-marketing (€1.031 dekt geen MacBook).
+[F-VCE-277] MIDDEL landing.html:55/380 — "veiliger dan de meeste SaaS-tools" onbewijsbaar (homepage zegt voorzichtiger "zelfde infrastructuur als Gmail").
+[F-VCE-280] MIDDEL landing.html:392 — "100% standalone, geen server-afhankelijkheid" te absoluut (mail/Mollie/KvK/AI via Apps Script).
+[F-VCE-282] LAAG landing.html:222 — referentie-toon correct.
+[F-VCE-275] MIDDEL index.html:1582 — Moneybird €39/mnd hier vs €30 elders → besparingsclaim inconsistent.
+[F-VCE-278] MIDDEL index.html:1745 — "35+ gidsen"/"30+ vragen" vage +-getallen vs exacte "12 functies".
+[F-VCE-281] LAAG index.html:1539 — "5 minuten setup" optimistisch (OAuth-flow langer voor leek).
+[F-VCE-286] (positief) index.html:1679 — AI-scan kosten-transparant = referentie-standaard.
+[F-VCE-285] LAAG zzp-uurtarief:225 — "Slimmer dan zelf bijhouden"+"15 min/maand" uniek getal.
+[F-VCE-284] LAAG kopen:44 — "Volkomen veilig" absolute claim (uitleg eronder draagt het).
+[F-VCE-279] MIDDEL mijn:100 — "Vind welkomstmail" opent native alert() met Gmail-only-tip terwijl site zegt geen Gmail nodig.
+[F-VCE-289] LAAG mijn:120 — "roadmap Q3-2026" datum-belofte veroudert. (gratis/over/herroepingsrecht done/positief.)
+[F-VCE-292] MIDDEL partners:121 — "abonnementscharcuterie" verzonnen woord, flauw op B2B-pagina.
+[F-VCE-293] MIDDEL partners:204 — "Boekhoudbaar staat klaar voor jezelf" grammaticaal krom.
+[F-VCE-294] LAAG partners:147 — "~30% van €49" vs roadmap "30% commissie" framing.
+[F-VCE-295/296] MIDDEL partners — "brand-bidding"/"self-referrals" Engels jargon (NL-uitleg staat er al).
+[F-VCE-308/309/310] LAAG privacy — Gemini optioneel correct (positief); "privacy-first"/"beacon.min.js" jargon.
+[F-VCE-297] MIDDEL roadmap:229 — "pricing TBD" Engels op klant-roadmap.
+[F-VCE-298] MIDDEL roadmap:152 — AI-bonscan "Klaar/In productie" zonder key-vereiste vermelding (privacy zegt optioneel).
+[F-VCE-299/300] LAAG roadmap — "we/wij werken" inconsistent met transparantie "ik" (positief anker r336).
+[F-VCE-301] MIDDEL status:164 — "publiek uptime-dashboard via UptimeRobot (komt binnenkort)" dode link als bestaand gepresenteerd.
+[F-VCE-302/303] LAAG status — licentieserver toont altijd groen "ok" (best-effort, niet live); "waarschijnlijk normaal" vaag.
+[F-VCE-304] HOOG tools/besparing:168 — rood "verlies"-framing = competitor-bashing via angst, wijkt af van geruststellende toon.
+[F-VCE-305/306] MIDDEL tools/besparing — "SaaS-abonnement" jargon; concurrent-prijzen hardcoded (disclaimer vangt deels).
+[F-VCE-307] (positief) tools/besparing:209 — "Eenmalig €49 voor altijd van jou" op-toon. (start/starters/transparantie done.)
+[F-VCE-312/313] MIDDEL update:90/110 — "we zetten tier 2 aan" personificatie (Sam=solo); jargon "licence-server-handtekening/rollback-pad".
+[F-VCE-314/315/316] LAAG update — "Apps Script API/SHA-256/minor-major" jargon; "matched" Engels; r1a/r1b/r1e schraal.
+[F-VCE-317] HOOG vergelijking:301 — tabel ✓ "AI-bonnen-scan Gemini Vision" verzwijgt eigen-key-vereiste → koper denkt "zit erbij".
+[F-VCE-318] MIDDEL vergelijking:340 — "Tesla-week/tweede huwelijksreis" gimmick die spec zelf verbiedt.
+[F-VCE-319] MIDDEL vergelijking:296 — ✓ "iDEAL Mollie geïntegreerd" verzwijgt eigen Mollie-account+transactiekosten (concurrent krijgt "vaak extra kosten") → asymmetrische eerlijkheid.
+[F-VCE-320/321/322] LAAG vergelijking — "live" fiscaal vs disclaimer; Moneybird-tier te rooskleurig; "read-only/auto-revoke/dgn" jargon.
+[F-VCE-331] MIDDEL vergelijking:204 — "data zit vast op hun servers" overstijgt eigen tabel "beperkt exporteerbaar".
+[F-VCE-330] (positief) vergelijking:429 — support-terugloop+€49-terug correct.
+[F-VCE-323/324/325] voorwaarden — "wij" in juridische context verdedigbaar; herroepingsrecht-box transparant (positief).
+[F-VCE-326] HOOG DEPLOY_VANDAAG.md:197 — KLANT-ZICHTBAAR mail-onderwerp "🚀" hype-emoji (botst met "geen emoji-storm").
+[F-VCE-327] MIDDEL DEPLOY_VANDAAG.md:283 — KLANT-ZICHTBAAR "Eerste 10 klanten 30% korting EARLYBIRD" schaarste-claim niet op transparante prijspagina.
+[F-VCE-328/329] LAAG DEPLOY_VANDAAG.md — "Eerlijk feedback" grammatica; "Use my existing email" = Google-UI-tekst (ok).
+[F-VCE-332/333] LAAG README.md — "van ons/wij" personificatie (developer-doc, consistentie-signaal; mag niet naar klant-copy).
