@@ -412,3 +412,45 @@ Quote: `const aantal = _haalConceptBoekingen_(ss).length;` — met `const data =
 Probleem: voor-onOpen-bedoelde waarschuwing materialiseert de hele JOURNAALPOSTEN-sheet puur voor een count (30s-limiet onOpen).
 Fix: count cachen in DocumentProperty of TextFinder. Owner: Sam (dev)
 #### F-GAS-112 [LAAG] src/HitlValidatie.gs:172-174 — 4 cel-operaties per gevalideerde rij binnen withLock_; kolommen 17-19 aaneengesloten. Fix: één setValues(rij,17,1,3) + batch-read vooraf. Owner: Sam.
+
+## Batch GAS-G — Hygiene, Inkoopfacturen, Invariants, Jaarafsluiting, KvKCache, Licentie, Menu, Metrics
+
+### Gelezen: alle 8 volledig. KvKCache.gs zonder vondsten — fetch bewust buiten onOpen + rate-limit <24u + schrijft naar Instellingen-sheet i.p.v. properties (conform "1×, max €0,03"-belofte). Zwaarste cluster: het onOpen-pad (F-GAS-125/126/127) bedreigt de 30s-limiet ⇒ menu verschijnt mogelijk niet.
+
+#### F-GAS-120 [MIDDEL] src/Hygiene.gs:232
+Quote: `sheet.appendRow([new Date(), level, String(fn || ''), String(msg || ''), ctxStr, user]);`
+Probleem: structuredLog_ = appendRow + getLastRow + Session-call per aanroep, terwijl header (19-23) aanraadt Logger.log ermee te vervangen ⇒ in hot-paths 3 sheet-ops/record; modulo-trim-gate (lastRow % 100 === 0) faalt stil bij overslaande nummering ⇒ ongelimiteerde groei.
+Fix: nooit per-record; buffer + 1× setValues; trim-conditie >= MAX. Owner: Sam (dev)
+
+#### F-GAS-121 [LAAG] src/Inkoopfacturen.gs:37 — getDataRange + 6 losse setValues onder 30s-lock (single-shot actie). Fix: batch setValues(rij,13,1,3) + kolom-gerichte read. Owner: Sam.
+
+#### F-GAS-122 [HOOG] src/Invariants.gs:78 (+553-556, 695-741)
+Quote: `const data = sheet.getDataRange().getValues();`
+Probleem: valideerFactuurnummerUniek_ full-scant VERKOOPFACTUREN bij ELKE factuur-write ⇒ bulk-import 5.000 facturen = O(n²); valideerTransactieFormeel_ heeft getDataRange-fallback per regel; detecteerOngekoppeldeBankuitgaven_ leest 3 sheets + geneste forEach.
+Fix: nummer-Set vooraf bij bulk; _gbVindRij_-cache prefereren; diagnostiek niet in write-path. Owner: Sam (dev)
+
+#### F-GAS-123 [LAAG] src/Invariants.gs:385 — BEWAARPLICHT_GEMELD_<jaar>-key per jaar zonder cleanup (patroon). Fix: JSON-blob of cleanup. Owner: Sam. (Positief: datum-scan zelf gecapt op 1000 rijen, 366-367.)
+
+#### F-GAS-124 [MIDDEL] src/Jaarafsluiting.gs:130
+Quote: `const data = sheet.getDataRange().getValues();`
+Probleem: jaarAlAfgesloten_ full-scant JOURNAALPOSTEN — en wordt óók per boekings-write aangeroepen via valideerTransactieFormeel_ (Invariants:572) ⇒ duur bij 10k+ rijen.
+Fix: resultaat cachen per invocation/property; alleen Referentie-kolom scannen. Owner: Sam (dev)
+
+#### F-GAS-125 [HOOG] src/Licentie.gs:237
+Quote: `const res = valideerLicentieOpServer_(sleutel);`
+Probleem: server-UrlFetch op het onOpen-pad (Menu.gs:15), gegate 1×/24u — maar wanneer de gate triggert hangt sheet-opening synchroon aan een externe call met tot 60s timeout ⇒ 30s-simple-trigger-budget overschreden ⇒ menu verschijnt niet/laat; offline-fallback grijpt pas ná de timeout.
+Fix: server-validatie naar dagelijkseTaken; onOpen alleen gecachte property lezen. Owner: Sam (dev)
+
+#### F-GAS-126 [MIDDEL] src/Licentie.gs:260
+Quote: `ss.getSheets().forEach(function(sheet) { try { const prot = sheet.protect();`
+Probleem: vergrendelKopie_ doet 4+ protectie-API-calls per tabblad (×20-30 tabs = 80-120 ops) synchroon in het onOpen-pad bij een kopie.
+Fix: minimaal vergrendelen (één tab/range) of lui/incrementeel. Owner: Sam (dev)
+
+#### F-GAS-127 [HOOG] src/Menu.gs:39-137
+Quote: `try { controleerOnboarding_(); } ... try { controleerTriggerWatchdog_(); } ... try { herstelKritiekeTriggersIndienNodig_(); } ...`
+Probleem: onOpen voert ~15 sequentiële checks uit vóór menu-opbouw, incl. 3× ScriptApp.getProjectTriggers(), sheet-reads (_waarschuwOnvalidered_ full-scan! = F-GAS-111), JSON-parses, modals — plus de licentie-fetch (F-GAS-125) ⇒ cumulatieve looptijd kan 30s overschrijden ⇒ createMenu (139) wordt nooit bereikt: klant zonder menu. Error-isolatie per check is wél correct.
+Fix: niet-UI-kritische checks naar dagelijkseTaken of lazy eerste-klik; getProjectTriggers consolideren tot 1; onOpen = licentie-gate (cache) + menu.
+Owner: Sam (dev)
+
+#### F-GAS-128 [LAAG] src/Metrics.gs:174 — FATAAL-mail-throttle-key = eerste 80 tekens bericht; variabele data (factuurnr) ⇒ elk bericht uniek ⇒ throttle grijpt niet ⇒ loop-fout kan Gmail-quota opvreten. Fix: categorie als key of bericht normaliseren. Owner: Sam.
+#### F-GAS-129 [MIDDEL] src/Metrics.gs:42 — metricsLog_ appendRow+getLastRow per call; metMetrics_-wrapper nodigt per-record-gebruik uit ⇒ observer-effect richting 6-min-cap. Fix: alleen coarse-grained; per-record in-memory aggregeren. Owner: Sam.
