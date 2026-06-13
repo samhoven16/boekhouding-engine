@@ -397,3 +397,40 @@ Fix: na verstreken grace terugvallen op geen-server-pad, óf abandoned-instructi
 Quote: `if (!owner) owner = 'samhoven16@gmail.com';` ... `GmailApp.sendEmail(owner, onderwerp, body);`
 Probleem: FATAAL-meldingen gaan uitsluitend naar Sams hardcoded privé-Gmail; klant ziet zelf niets ⇒ bij Sam-onbeschikbaarheid verdwijnen kritieke fouten in dode inbox. Plus verweesde docstring boven regel 90.
 Fix: subsidiair naar klant-instellingen-adres; fallback als property; docstring repareren. Owner: Sam (dev)
+
+## Batch OND-G — Mollie, MoneybirdImport, NieuweBoeking(+Submit), Notificaties, Onboarding, Prive, Rapportages
+NieuweBoeking_Submit.gs zonder vondsten (rate-limit + dubbele validatie, robuust). Onboarding heeft degelijk migratie-framework (HUIDIGE_VERSIE + MIGRATIES_REGISTER + idempotente voerMigratiesUit_).
+
+#### F-OND-160 [MIDDEL] src/Mollie.gs:18 — `const MOLLIE_API_BASE = 'https://api.mollie.com/v2';` hardcoded op 4 plekken, niet klant-overschrijfbaar, geen fallback; EOL niet te verifiëren (docs 403). Fix: instelling + best-effort-doc. Owner: Sam.
+#### F-OND-161 [LAAG] src/Mollie.gs:431-441 — mollie_completed_*-cleanup hangt aan dagelijkseTaken; bij trigger-verlies groei richting 500KB. Fix: harde cap onafhankelijk van tijd. Owner: Sam.
+#### F-OND-162 [MIDDEL] src/Mollie.gs:212-249 (+82) — hardcoded redirectUrl boekhoudbaar.nl/factuur-betaald ⇒ in abandoned-mode landt betalende klant op 404 ná iDEAL. Fix: redirectUrl klant-overschrijfbaar. Owner: Sam.
+#### F-OND-163 [MIDDEL] src/MoneybirdImport.gs:199 — `btwBedrag > 0 ? '21% (hoog)' : '0% / vrijgesteld'` ⇒ 9%/verlegd nooit herkend; foute BTW-classificaties accumuleren. Fix: percentage uit btwBedrag/grondslag afleiden. Owner: Sam.
+#### F-OND-164 [HOOG] src/MoneybirdImport.gs:14,232
+Quote: `* XML namespace-aware om XAF 3.2 elementen correct te vinden.`
+Probleem: hard tegen XAF 3.2 geschreven, namespace blind gelezen, geen auditfileVersion-check ⇒ XAF 3.3/4.0 = stille 0-import ("0 relaties, 0 facturen") zonder uitleg — breekt precies het switch-onboarding (USP).
+Fix: versie lezen + "niet ondersteund"-melding i.p.v. stille 0-import. Owner: Sam (dev)
+#### F-OND-165 [HOOG] src/NieuweBoeking.gs:735-736 (+1182-1184)
+Quote: `if (v.indexOf('21%') !== -1 || v.indexOf('hoog') !== -1) return 0.21;`
+Probleem: BTW-percentages hard in client-JS van de dagelijkse factuur-dialog; v2.7-belasting-overrides raken dit pad niet (anders dan Prive dat server-injecteert) ⇒ tariefwijziging = verkeerd factuurtotaal over 5 jaar.
+Fix: percentages server-side injecteren uit dezelfde bron als btwKeuzes. Owner: Sam (dev)
+#### F-OND-166 [LAAG] src/NieuweBoeking.gs:1053 — webkitSpeechRecognition prefixed API; nette fallback aanwezig. Geen actie. Owner: Sam.
+#### F-OND-167 [MIDDEL] src/Notificaties.gs:80,92,109,151 — urencriterium/KIA hebben getBelasting_-fallback (goed), maar KOR-grens €20.000 + €18.000-drempel zijn kale literals zonder override-pad. Fix: naar getBelasting_/Instellingen. Owner: Sam.
+#### F-OND-168 [MIDDEL] src/Onboarding.gs:185,191,197,208,218,225
+Quote: `Voor startersaftrek (€2.123 in eerste 3 jaar) en starterbonus WBSO (€7.996 eerste 5 jaar).`
+Probleem: reeks hardcoded fiscale euro-bedragen (startersaftrek/WBSO/AOW-tarief/stakingsaftrek) in fiscaal-profiel-wizard, niet via getBelasting_ ⇒ verouderen jaarlijks op het vertrouwensgevoelige onboarding-moment. (= F-TAX-110..114-cluster, hier 5-10-jaar-hoek.)
+Fix: server-injecteren of kwalitatieve tekst. Owner: Sam + accountant
+#### F-OND-169 [MIDDEL] src/Onboarding.gs:928-954
+Quote: `* Backups ouder dan 90 dagen worden NIET automatisch verwijderd;` / `ss.copy(naam)` + fallback getRootFolder()
+Probleem: volledige spreadsheet-copy per versie-bump zonder retentie (~50 releases = 50 kopieën); root-fallback bij ontbrekende jaarmap ⇒ Drive-quota-risico, vol = nieuwe backup faalt stil.
+Fix: retentie (90d / laatste N); nooit root als fallback. Owner: Sam (dev)
+#### F-OND-170 [HOOG] src/Onboarding.gs:478,365,354-369
+Quote: `const fallback = 'https://boekhoudbaar.nl/update/';`
+Probleem: update-mechanisme + alle hulp-/instructie-knoppen wijzen naar boekhoudbaar.nl + github.com/samhoven16 (allowlist 477-492 = beide Sam-accounts); boekhouding blijft werken maar in Scenario C zijn alle update-/hulp-links dood — raakt direct de "wat als Boekhoudbaar stopt"-USP.
+Fix: offline-bestendige fallbacktekst + overdraagbaar (community-)kanaal. Owner: Sam + accountant
+#### F-OND-171 [HOOG] src/Prive.gs:304-317,431-434,512
+Quote: `const heffingsvrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 57684;` (+ IB-schijven 38441/76817/0.3582/0.3748/0.495)
+Probleem: elke IB/Box3-waarde heeft een hard 2025-fallback achter `||`; bij falende/null getBelasting_ rekent de dialog stil met 2025-cijfers (Box 3 forfait/tarief zijn juist het meest volatiel) zonder waarschuwing.
+Fix: waarschuwing bij ontbrekende config i.p.v. stille fallback, of weigeren zonder geldige TARIEFSJAAR. Owner: Sam (dev)
+#### F-OND-172 [MIDDEL] src/Rapportages.gs:24-32,312-323 — cashflow/balans/W&V lezen hele sheets per rapport; genereerJaarrekening doet 3× volledige reads in één executie ⇒ richting 6-min bij tienduizenden rijen over jaren. Fix: jaar-filtering/gecachte saldi. Owner: Sam. (= F-GAS-147/148)
+
+Top-3 OND-G: F-OND-165/168/167 (resterende hardcoded fiscale getallen naar getBelasting_), F-OND-164 (XAF-versie-melding), F-OND-170/162 (update/redirect los van persoonlijk domein).

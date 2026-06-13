@@ -349,3 +349,43 @@ Probleem: form-item-TITELS als object-keys zonder Object.create(null)/allowlist;
 Fix: Object.create(null) + titel-allowlist + zelfde saniteerObject_. Owner: Sam (dev)
 
 Prioritaire lijn RED-F: centrale sanitisatie op Form/Import-pad (dekt 100+105), setInstelling_-saniteer (102), Onboarding-escapes (101).
+
+## Batch RED-G — UpdateApply, UpdateBundle, Utils, Verkoopfacturen, XafExport, scripts(bundle-create/deploy-licence-release/mutation-meting)
+KERNBEVINDING: de auto-update-keten is een RCE-primitief zonder echt trust-anchor. Verkoopfacturen veilig bevonden (escHtml_/UBL-esc_/hex-kleur/numerieke garanties + mutex+idempotency); XafExport _xafEsc_ correct (& eerst).
+
+#### F-RED-120 [HOOG] src/UpdateApply.gs:104 (+176, 227-237)
+Quote: `const nieuw = bundle.files.map(function(f){ return { name: f.naam, type: 'SERVER_JS', source: f.source }; });`
+Probleem: voerAutomatischeUpdateUit_ herschrijft de VOLLEDIGE klant-broncode met bundle.files zonder onafhankelijke authenticiteitscontrole (enige "verificatie" = interne hash, F-RED-122). Wie de bundle beïnvloedt (gekaapte server/Drive/MITM via F-RED-121/124) krijgt RCE bij elke klant met auto-update: arbitraire .gs draait met klant-OAuth-scopes (Drive/Gmail/Sheets) ⇒ administratie leegtrekken, mail-exfiltratie, brick.
+Fix: asymmetrische handtekening (Sams private key) over de canonical files-array; public key in niet-overschreven Config; weigeren bij invalide signature. Owner: Sam (dev)
+#### F-RED-121 [HOOG] src/UpdateBundle.gs:231
+Quote: `const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });`
+Probleem: bundle-fetch via rauwe UrlFetchApp naar klant-instelbare LICENTIE_SERVER_URL, NIET via veiligFetch_/allowlist, followRedirects:true ⇒ wie die property zet (of open-redirect misbruikt) levert een kwaadaardige bundle die via F-RED-122 de hash-check passeert en via F-RED-120 draait.
+Fix: via veiligFetch_ met followRedirects:false; endpoint pinnen op vaste niet-klant-host (*.boekhoudbaar.nl-suffix). Owner: Sam (dev)
+#### F-RED-122 [HOOG] src/UpdateBundle.gs:240 (+bundle-create.js:61-72)
+Quote: `const lokaal = _berekenBundleHash_(res.files); if (lokaal !== res.hash) {`
+Probleem: hash berekend over res.files en vergeleken met res.hash — beide uit hetzelfde antwoord ⇒ detecteert alleen corruptie, geen manipulatie; aanvaller levert kwaadaardige files + bijbehorende hash. Het ontbrekende trust-anchor van de hele keten.
+Fix: signature-verificatie tegen ingebakken public key. Owner: Sam (dev)
+#### F-RED-123 [LAAG] src/UpdateBundle.gs:77,161 — klantnaam via template-literal in dialog-HTML (res.versie/hash gaan wél via textContent). Fix: escHtml_(klantnaam). Owner: Sam.
+#### F-RED-124 [HOOG] src/Utils.gs:1276
+Quote: `const lijst = extraHost ? _UITGAAND_ALLOWLIST.concat([extraHost]) : _UITGAAND_ALLOWLIST;`
+Probleem: _isToegestaneUrl_ voegt de host uit klant-instelbare LICENTIE_SERVER_URL toe aan de allowlist — terwijl de JSDoc (1248-1251) juist "bescherming tegen klant-geknoeide LICENTIE_SERVER_URL" als doel noemt. LICENTIE_SERVER_URL=https://evil ⇒ evil op allowlist ⇒ veiligFetch_ exfiltreert licentiesleutel/email; SSRF-grens omzeild.
+Fix: licentieserver-host niet uit klant-input; pinnen op vaste constante/suffix. Owner: Sam (dev)
+#### F-RED-125 [MIDDEL] src/Utils.gs:1314
+Quote: `out.push(tekst.charCodeAt(i) ^ salt.charCodeAt(i % salt.length));`
+Probleem: API-keys "versleuteld" met repeating-XOR tegen salt in dezelfde ScriptProperties ⇒ wie properties leest heeft ciphertext + sleutel ⇒ trivially te ontsleutelen; bekende plaintext-prefix (live_/test_) lekt salt-bytes. zetKvkApiKey belooft "niet zichtbaar" (1465) — misleidend.
+Fix: eerlijk als obfuscatie benoemen; geen secret-belofte; geen salt naast data. Owner: Sam (dev)
+#### F-RED-126 [LAAG] src/XafExport.gs:126 — fallback-textarea escape-volgorde fout (< eerst, & daarna) ⇒ &amp;amp;lt; corruptie van het kopieer-XAF (geen XSS, wel kapotte exit-route). Fix: & eerst escapen. Owner: Sam.
+#### F-RED-127 [MIDDEL] scripts/bundle-create.js:93
+Quote: `log('     Rechtermuisknop → "Share" → "Anyone with the link can VIEW".');`
+Probleem: release-procedure adviseert bundle-Drive-file publiek; met ontbrekende signing (F-RED-122) rust integriteit van klant-code op fileId-geheimhouding + Drive-ACL ⇒ uitgelekte fileId / Drive-compromittering = RCE-keten naar alle klanten.
+Fix: signing + bundle-file Sam-only. Owner: Sam (dev)
+#### F-RED-128 [HOOG] scripts/deploy-licence-release.js:37
+Quote: `env: { ...process.env, NODE_TLS_REJECT_UNAUTHORIZED: '0' },`
+Probleem: TLS-certificaatvalidatie uit voor alle child-processen (clasp push/deploy) ⇒ MITM op de release-pipeline = kwaadaardige code naar de live licence-server /exec die álle klanten raakt (validatie + bundle-endpoint). Geen comment waarom.
+Fix: regel verwijderen; NODE_EXTRA_CA_CERTS voor een specifieke interne CA indien nodig. Owner: Sam (dev)
+#### F-RED-129 [LAAG] scripts/mutation-meting.js:126
+Quote: `fs.writeFileSync(fullPath, muteSrc, 'utf8'); const result = runTests();`
+Probleem: muteert echte src/*.gs en herstelt pas in finally ⇒ crash/Ctrl-C laat gemuteerde bron achter die per ongeluk gebundeld/gedeployd kan worden (subtiel foute financiële/validatie-logica bij klanten).
+Fix: muteren op kopie/temp of in-memory; SIGINT-handler die altijd herstelt. Owner: Sam (dev)
+
+Prioriteit RED-G: 1) signature over bundle (120/122); 2) host niet uit klant-property + veiligFetch_ (124/121); 3) NODE_TLS_REJECT_UNAUTHORIZED weg (128); 4) bundle niet publiek (127).
