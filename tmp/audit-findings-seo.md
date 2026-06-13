@@ -171,3 +171,15 @@ Fix: Verder-lezen-blok. Owner: Sam (dev)
 #### F-SEO-046 [LAAG] gids/e-boekhouden:63-66 (+exact-online:92-95) — geen font-preconnect/fonts-link/CF-beacon (template-drift t.o.v. 6 btw-gidsen). Fix: head harmoniseren. Owner: Sam.
 #### F-SEO-047 [LAAG] gids/exact-online:8 — description ~197 tekens. Fix: ≤160 met cijfer-hook vooraan. Owner: Sam.
 #### F-SEO-048 [LAAG] gids/factuur-opstellen:108-120 — "11 verplichte velden"-ol zonder ItemList/HowTo-schema. Fix: overwegen. Owner: Sam.
+
+## Wave C — seo_02 (8 gidsen) — gelezen volledig
+[F-SEO-069..076] HOOG — STRUCTURELE TEMPLATE-FOUT: 6+ gidsen tonen zichtbare 4-5-vraag FAQ-sectie zonder FAQPage JSON-LD (alleen BreadcrumbList+Article). Blokkeert FAQ-rich-results. (069 suppletie, 070 thuiswerk, 072 urencriterium, 073 wet-dba, 074 auto, 075 verzekering, 076 zelf-boekhouding=koper-klaar-pagina, zwaarst).
+[F-SEO-077..081] MIDDEL — Article-schema mager: mist dateModified/description/mainEntityOfPage/image; author zonder url/sameAs; headline≠H1 (078). Versheidssignaal ontbreekt.
+[F-SEO-088] LAAG (structureel alle 8) zelf-boekhouding:21 — og:image = .svg; social (FB/LinkedIn/X/WhatsApp) + Google Discover renderen geen SVG → geen thumbnail, CTR-verlies. Moet PNG/JPG 1200×630.
+[F-SEO-071] MIDDEL thuiswerk:7 — title ~63 tekens, brand afgekapt.
+[F-SEO-082] MIDDEL auto:7 — title ~88 tekens, 4 keywords gestuffed, "km-vergoeding 2026"+brand afgekapt.
+[F-SEO-084] LAAG wet-dba:202 — "Verder lezen" gesloten fiscale silo; geen body-link naar /functies of /vergelijking → geld-pagina's krijgen geen interne-link-equity (structureel alle 8).
+[F-SEO-085] LAAG thuiswerk:91 — geen H2/H3 met hoofdzoekwoord "thuiswerkvergoeding".
+[F-SEO-086] LAAG suppletie:189 — "Verder lezen" niet terug naar pijler zelf-boekhouding-doen-zzp → zwakkere cluster.
+[F-SEO-083] LAAG verzekering:96 — "(BAV/BAV)" dubbel-afkorting verwart entiteit-extractie.
+[F-SEO-087] LAAG rekening:31 — schema breadcrumb "Boekhoudbaar" vs zichtbaar "Home" mismatch → rich-result onderdrukt.

@@ -34,3 +34,22 @@ Fix: één canonieke besparingsbron + peildatum site-breed. Owner: Sam (dev) / a
 #### F-POS-013 [LAAG] website/gratis/index.html:169 — "rubrieken 1a, 1b, 1c, 5a, 5b" kaal in feature-bullet schrikt A af (gratis-pagina is ook A-instappunt). Fix: duiden of weglaten. Owner: accountant
 
 Patroon POS-A: A onderbediend in elke hero van de primaire koop-pagina's (001/004/007) + jargon dat A afschrikt (003/008/013); besparingsgetallen inconsistent (012). Geen BLOCKER/HOOG; propositie zelf consistent.
+
+## Wave C — pos_01 (demo + faq) — gelezen volledig; persona-scores demo A2/B5/C4, faq A2/B5/C4
+[F-POS-030] HOOG demo+faq (structureel) — nergens spreekt copy de STARTENDE ZZP'er bij haar startsituatie aan ("net begonnen/eerste factuur/eerste BTW-aangifte"); alleen prijsbewuste-overstapper (B) + data-technicus (C). Doelgroep-bij-uitstek slechtst bediend.
+[F-POS-014] HOOG demo:248 — hero "klaar zijn met €30/maand die data gijzelt" veronderstelt SaaS-verleden dat starter niet heeft; "engine" = techniek-taal die afschrikt.
+[F-POS-016] HOOG demo:249 — €49 zonder referentiekader voor starter (FAQ doet 't wel, hero niet).
+[F-POS-022] HOOG faq:7 — woord "starters" nergens in FAQ-hero/body terwijl Sam zich daarop richt.
+[F-POS-015] MIDDEL demo:248 — "engine in jouw Drive" sterk voor C maar geen vroege bron/transparantie/GitHub-anchor binnen blikveld.
+[F-POS-017] MIDDEL demo:480/837/973 — "Gemini API-key zelf instellen" jargon-drempel voor A (3× herhaald); plus voor C.
+[F-POS-019] MIDDEL demo:1024 — anti-lock-in-strook bullseye B/C maar irrelevante ruis voor A; pagina kantelt zwaar naar B/C.
+[F-POS-023] MIDDEL faq:389 — KOR-antwoord springt naar "vul in instellingen aan" zonder "wat is KOR/moet ik kiezen"; afkorting niet uitgeschreven.
+[F-POS-020] MIDDEL demo:1031 — XAF/RGS sterk voor C maar zonder bewijs-link.
+[F-POS-026] MIDDEL faq:419 — RGS/SAF-T sterk B/C, jargon voor A (maar in boekhouder-context, lage hinder).
+[F-POS-027] MIDDEL faq:259 — overstap/prijs-FAQ sterk voor B; geen enkel antwoord op starter-beginvraag.
+[F-POS-028] MIDDEL demo:261/749 — "geen AI-bullshit" sterk B/C; "wat normaal 20 min kost" veronderstelt boekhoud-ervaring die A mist.
+[F-POS-018] LAAG demo:533 — MIA/VAMIL/KIA/FOR-afkortingdichtheid overrompelt A (mock-note, beperkt).
+[F-POS-021] LAAG demo:330 — demo-persona "Studio Veld" €42k = jaar-2-profiel (B), geen starter-herkenning (lege staat/eerste factuur/KOR).
+[F-POS-024] LAAG faq:40 — "geen geld terug zonder reden" defensief → zaait twijfel bij A; C waardeert precisie.
+[F-POS-025] LAAG faq:320 — transparantie-pagina-verwijzing sterk voor C (positief).
+[F-POS-029] LAAG demo+faq — consequent "je/jij" (geen u-wissel) past alle persona's (positief).
