@@ -393,3 +393,43 @@ Fix: gelijktrekken naar "je". Owner: Sam (dev)
 #### F-VCE-131 [LAAG] src/Referral.gs:38 vs 52-56 — WhatsApp/mail noemen €5-korting, LinkedIn/X-variant niet (zelfde ref-link) — gemiste CTA-consistentie. Fix: korting overal of bewust kort. Owner: Sam.
 
 Patroon VCE-F: u/je-mix concentreert in oudere dialog-files (NieuweBoeking, Prive); failure-handlers ongelijk verdeeld (Mollie/NieuweBoeking voorbeeldig vs Prive ontbrekend); debug-strings lekken (DLQ, recalc).
+
+## Wave D — voice_01 (src core strings) — gelezen volledig
+[F-VCE-132] HOOG Suggesties.gs:62 — bunq-affiliate-toast op dashboard; "(samenwerking)" als enige disclosure cryptisch; product wordt advertentiekanaal.
+[F-VCE-133] HOOG Suggesties.gs:98 — "Lees onze gratis gids. (intern)" — "onze" personifieert product; "(intern)" lekt interne marker naar klant.
+[F-VCE-134] MIDDEL Suggesties.gs:108 — "ons netwerk" + ">€10k" developer-notatie.
+[F-VCE-151] HOOG/PRODUCTBESLISSING Suggesties.gs:20 — heel suggestie-systeem injecteert conversie-getrackte affiliate-toasts in financiële werkomgeving; haaks op trust-fundament. Geen tekst-fix, productbeslissing.
+[F-VCE-135] MIDDEL Setup.gs:60 — "U heeft/uw sleutel" terwijl nieuwere strings "je"; Setup.gs vol u/uw.
+[F-VCE-136] HOOG Setup.gs:18 — binnen setup() eerst "je" (r19) dan "U" (r61) → inconsistent in één flow.
+[F-VCE-137] MIDDEL Setup.gs:206 — rauwe e.message aan klant (mogelijk Engelse stacktrace) + "ons"; route via bestaande vertaalFout_.
+[F-VCE-138] LAAG Setup.gs:38 — "Fix:" Engels jargon (vs UpdateApply "Zo los je dit op").
+[F-VCE-140] MIDDEL UpdateBundle.gs:99 — "open de file in editor, selecteer alles, plak over" = developer-flow, intimiderend voor niet-technische klant.
+[F-VCE-141] LAAG UpdateBundle.gs:81 — "SHA-256 hash-check"/"code-bundle" jargon.
+[F-VCE-142] MIDDEL Utils.gs:271 — "upgrade naar Google Workspace" suggereert kosten zonder context.
+[F-VCE-143] LAAG Utils.gs:267 — "Er ging iets mis" generiek (gered door ref-ID).
+[F-VCE-144] LAAG Utils.gs:1509 — "Lock-timeout ...ms" + rauwe functienaam lekt jargon.
+[F-VCE-145] LAAG Validaties.gs:75 — "(rest=N, verwacht 1)" wiskundige ruis in foutmelding.
+[F-VCE-146] MIDDEL Validaties.gs — intern inconsistent je (r34/119) vs u (r60/76/99) in één validatie-rapport.
+[F-VCE-147] LAAG Triggers.gs:212 — "Kritieke journaalpost-wijziging" + wetsartikel = angst-versterkend op typo-correctie; storno/inverse jargon.
+[F-VCE-148] LAAG Triggers.gs:1110 — owner-mails consequent "u/uw" vs in-app "je" (mogelijk bewust; Sam-beslissing).
+[F-VCE-149] LAAG Triggers.gs:2454 — "0 herinneringen verstuurd" zonder uitleg waarom.
+[F-VCE-139/150] LAAG positief — Setup.gs:1291 + UpdateApply.gs:48 = toon-ankers (je/jouw, concrete route). TaxRegistry/UpdateApply done.
+
+## Wave D — voice_04 (8 gidsen) — gelezen volledig
+[F-VCE-192] MIDDEL boekhoudprogramma-zonder-abonnement:252 — "Wij raden aan" = product als "wij" (enige harde voice-schending; elders "ik"/"Boekhoudbaar").
+[F-VCE-193] MIDDEL boekhoudprogramma-zonder-abonnement:284 — "Optimaal voor jouw schaal" leeg superlatief (rest is concreet).
+[F-VCE-194] LAAG boekhoudprogramma-zonder-abonnement:116 — "wint" in "eerlijke vergelijking" (transparantie-link vangt af).
+[F-VCE-200] MIDDEL auto-leasen-vs-kopen-zzp:85 — "(wel via KVK-leasegids)" cryptische parenthese zonder link.
+[F-VCE-202] LAAG auto-leasen-vs-kopen-zzp:117 — "KIA-geschikt" in tabel vóór uitleg op r128.
+[F-VCE-201] LAAG auto-leasen-vs-kopen-zzp:8 — operational/financial lease = geaccepteerde NL-vakterm (n.v.t.).
+[F-VCE-203] LAAG bankafschrift-boeken-zzp:135 — "2400 Privéonttrekkingen" grootboeknummer-jargon (functioneel in doe-gids).
+[F-VCE-204] LAAG bankafschrift-boeken-zzp:176 — "auto-match" productclaim (verifieer met code).
+[F-VCE-196] LAAG btw-aangifte-zzp:328 — crypto-boeking-claim (verifieer).
+[F-VCE-197] LAAG btw-aangifte-zzp:188 — "voelt een beetje crimineel" riskante hook (direct geruststeld).
+[F-VCE-198] LAAG btw-aangifte-zzp:256 — "Ze hebben dat niet." licht confronterend (bruikbare waarschuwing).
+[F-VCE-199] MIDDEL btw-aangifte-zzp:373 — rubriek 1d/1e-nummering niet strak consistent over pagina's (vertrouwen; tax-compliance uitlijnen).
+[F-VCE-209] LAAG btw-aangifte-zzp:190 — typo "system" i.p.v. "systeem" op vertrouwens-gids.
+[F-VCE-211] LAAG btw-aangifte-zzp:405 — fiscale disclaimer goed (positief) maar ontbreekt op 7 andere gidsen (consistentie-aanbeveling).
+[F-VCE-195] LAAG btw-berekenen-terugvragen-zzp:177 — "1-op-1 past op Mijn Belastingdienst" toetsbare claim (verifieer).
+[F-VCE-205/206] LAAG btw-verleggen — "haar/zij" voor klant consistent (n.v.t.); EN-factuurvoorbeeld functioneel correct (n.v.t.).
+[F-VCE-207/208] LAAG positief — btw-teruggave:78 + creditnota:143 = toon-ankers (geruststellend, concrete actie). Beide done.
