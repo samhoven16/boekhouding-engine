@@ -18,10 +18,11 @@ const BASE_DELAY_MS = 3000;
 
 function push(attempt) {
   try {
-    execSync('npx clasp push --force', {
-      stdio: 'inherit',
-      env: { ...process.env, NODE_TLS_REJECT_UNAUTHORIZED: '0' },
-    });
+    // FIX F-RED-501: NODE_TLS_REJECT_UNAUTHORIZED=0 verwijderd — het schakelde
+    // TLS-certificaatverificatie uit en stelde de clasp-OAuth-token (toegang tot
+    // ALLE klant-code) bloot aan MITM. Heb je een corporate proxy met self-signed
+    // root? Zet dan NODE_EXTRA_CA_CERTS=/pad/naar/root.pem i.p.v. verificatie uit.
+    execSync('npx clasp push --force', { stdio: 'inherit' });
     console.log('\n✓ clasp push geslaagd.');
     process.exit(0);
   } catch (err) {

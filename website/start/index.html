@@ -292,6 +292,12 @@ footer a{color:rgba(255,255,255,.7);}
     var link = document.getElementById('naar-copy');
     if (tplId && /^[A-Za-z0-9_-]{20,}$/.test(tplId)) {
       link.href = 'https://docs.google.com/spreadsheets/d/' + tplId + '/copy';
+    } else if (link) {
+      // FIX F-ONB-007: zonder geldige ?tpl-parameter (bookmark, gestripte
+      // mail-link of handmatig getypte URL) bleef de hoofd-CTA een dode href="#".
+      // Stuur de bezoeker nu naar /mijn/ om hun boekhouding terug te vinden of
+      // een nieuwe activatielink op te vragen, i.p.v. een knop die niets doet.
+      link.href = '/mijn/';
     }
   })();
 

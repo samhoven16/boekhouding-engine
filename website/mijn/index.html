@@ -95,10 +95,15 @@ footer a{color:rgba(255,255,255,.7);}
   <div class="kaart">
     <span class="kaart-num">2</span>
     <div class="kaart-inh">
-      <h2>Via je bookmark — direct openen</h2>
-      <p>In de welkomstmail die je na aankoop kreeg staat een directe link naar jouw Boekhoudbaar-Sheet. Sla die op als bladwijzer (Ctrl+D / Cmd+D) en open hem voortaan met één klik.</p>
-      <a href="#" class="alt" onclick="alert('Tip: zoek in Gmail op \\'Welkom bij Boekhoudbaar\\' — de directe link staat onderaan die mail.');return false;">
-        💌 Vind de welkomstmail
+      <h2>Via je eigen bladwijzer</h2>
+      <!-- FIX F-ONB-012: de welkomstmail-knop MAAKT een kopie (eerste activatie),
+           hij is GEEN directe link naar een bestaand bestand. Een terugkerende
+           klant die 'm volgt maakt anders een lege tweede kopie. -->
+      <p>Sloeg je je Boekhoudbaar-Sheet de eerste keer op als bladwijzer (Ctrl+D / Cmd+D)? Dan open je hem voortaan met één klik. Geen bladwijzer? Gebruik optie 1 (Google Drive) of 3 (Recent) — dat is de directe weg naar je <strong>bestaande</strong> bestand. De welkomstmail is alleen voor de allereerste activatie.</p>
+      <!-- FIX F-ONB-011: echte Gmail-zoeklink i.p.v. alert(); zoekterm matcht het
+           werkelijke onderwerp "Je Boekhoudbaar is klaar — activeer nu". -->
+      <a href="https://mail.google.com/mail/u/0/#search/Boekhoudbaar+activeer" target="_blank" rel="noopener" class="alt">
+        💌 Zoek de welkomstmail in Gmail
       </a>
     </div>
   </div>

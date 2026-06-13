@@ -241,10 +241,16 @@ function _bewijs_I3_balansWet_(ss) {
   const data = gb.getDataRange().getValues();
   let activa = 0, passiva = 0;
   for (let i = 1; i < data.length; i++) {
+    // FIX F-ACC-001: balans-side zit in kolom [2] (type = Actief/Passief),
+    // NIET in kolom [4] (bw = Balans/W&V). De oude code vergeleek [4] met
+    // 'Activa'/'Passiva' — waarden die nergens bestaan — waardoor I₃ ALTIJD
+    // slaagde (vals-groen). Spiegelt nu controleerBalans_ (GezondheidCheck.gs).
+    const type = String(data[i][2] || '');
     const bw = String(data[i][4] || '');
     const saldo = parseFloat(data[i][5]) || 0;
-    if (bw === 'Activa') activa += saldo;
-    if (bw === 'Passiva') passiva += saldo;
+    if (bw !== 'Balans') continue;            // alleen balansrekeningen
+    if (type === 'Actief') activa += saldo;
+    if (type === 'Passief') passiva += saldo; // Eigen vermogen heeft ook type 'Passief'
   }
   const verschil = Math.abs(activa - passiva);
   if (verschil > 0.05) {  // soepele drempel: I₃-strikt zit in controleerBalansStrikt_

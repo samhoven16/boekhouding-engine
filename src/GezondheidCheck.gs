@@ -402,10 +402,15 @@ function controleerBalansStrikt_() {
     let totaalActiva = 0;
     let totaalPassiva = 0;
     for (let i = 1; i < data.length; i++) {
+      // FIX F-ACC-001: balans-side zit in kolom [2] (type = Actief/Passief),
+      // niet in [4] (bw = Balans/W&V). Oude code maakte deze strikte check
+      // een no-op (altijd €0=€0). Spiegelt controleerBalans_.
+      const type = String(data[i][2] || '');
       const bw = String(data[i][4] || '');
       const saldo = parseFloat(data[i][5]) || 0;
-      if (bw === 'Activa')  totaalActiva  += saldo;
-      if (bw === 'Passiva') totaalPassiva += saldo;
+      if (bw !== 'Balans') continue;
+      if (type === 'Actief')  totaalActiva  += saldo;
+      if (type === 'Passief') totaalPassiva += saldo;
     }
     const verschil = Math.abs(totaalActiva - totaalPassiva);
 

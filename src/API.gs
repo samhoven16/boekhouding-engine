@@ -99,6 +99,19 @@ function doPost(e) {
     payload = saniteerObject_(payload);
 
     const actie = String(payload.actie || '').toLowerCase();
+
+    // FIX F-RED-001: fail-CLOSED als géén auth is geconfigureerd. Voorheen werd
+    // bij lege HMAC-secret én lege API-sleutel (default na verse install) ELKE
+    // POST verwerkt → een externe partij die de /exec-URL kent kon facturen
+    // aanmaken of omzet+BTW uitlezen. Uitzondering: 'mollie_webhook' heeft een
+    // eigen herverificatie (Mollie.gs: status=paid + bron + factuurnr + bedrag)
+    // en kan geen API-sleutel meedragen (Mollie kent die niet).
+    const authGeconfigureerd = (hmacModus && hmacSecret) || !!apiSleutel;
+    if (!authGeconfigureerd && actie !== 'mollie_webhook') {
+      safeAuditLog_('API geweigerd', 'geen auth geconfigureerd (actie=' + actie + ')');
+      return jsonResponse_({ succes: false, fout: 'Webhook niet geconfigureerd. Stel eerst een Webhook API-sleutel in via Instellingen voordat de Web App publiek gebruikt wordt.' });
+    }
+
     const ss = getSpreadsheet_();
 
     switch (actie) {
