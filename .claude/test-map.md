@@ -75,6 +75,18 @@
 
 ---
 
+### `tests/unit/creditnota-uit-factuur.test.js` (3 tests)
+**Loads:** Config.gs, BoekingEngine.gs, Verkoopfacturen.gs (helpers in niet-geladen files ge-override)
+**Tests:**
+
+| Suite | Tests | Scenario |
+|-------|-------|---------|
+| maakCreditnota F-DOC-046 | 3 | Onbekende factuur → null, geen mutatie; bekende → origineel GECREDITEERD + negatieve credit-rij + reden in omschrijving + 2 storno-posten + creditnr terug; zonder reden geen "undefined" |
+
+**Run:** `npx jest creditnota-uit-factuur`
+
+---
+
 ## COVERAGE GAPS (no tests yet)
 
 | Function | Risk | Notes |
