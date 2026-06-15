@@ -128,7 +128,33 @@ Mollie webhook: `?actie=webhook` POST. Bij betaling → klant in licentie-sheet 
 
 ---
 
-## 9. Contact-paden bij crisis
+## 9. Jaarlijkse belastingtarieven bijwerken (tarief-cliff — F-OND-024)
+
+Elk kalenderjaar dat nog geen bevestigde tarieven heeft (vóór Prinsjesdag, of
+als onderhoud stilvalt) toont het Belastingadvies-tabblad een **rode banner**
+("⚠️ Tarieven gebruikt voor &lt;jaar&gt; zijn fallback/placeholder"), krijgt de
+klant een toast bij de eerste boeking van het jaar, en de owner een
+`meldFataalAanOwner_`-alert. De tool blíjft rekenen met de laatst-bekende
+tarieven (bewust géén harde blokkade), maar de klant ziet expliciet dat het
+niet gevalideerd is — zo ontstaat geen stille drift.
+
+**Twee update-routes (kies de eerste — geen redeploy nodig):**
+
+1. **Server-config (aanbevolen, geen klant-sheet-kopie):** zet de nieuwe
+   tarieven in de centrale config die `haalConfigOp_()` ophaalt, onder
+   `belastingTarieven[<jaar>]`. `getBelasting_()` pakt dit automatisch op en de
+   banner verdwijnt — voor álle bestaande klanten tegelijk.
+2. **Lokale tabel (vereist deploy):** voeg een `<jaar>:`-blok toe aan
+   `BELASTING_PER_JAAR` in `src/Belastingadvies.gs` en haal `placeholder: true`
+   weg zodra de cijfers definitief zijn (Miljoenennota / Belastingplan).
+
+Klanten kunnen tussentijds zelf bijwerken via de Instellingen-tab (override
+wint; drie-laags-merge in `getBelasting_`). Borging:
+`tests/unit/getbelasting-tarief-cliff.test.js`.
+
+---
+
+## 10. Contact-paden bij crisis
 
 | Wie | Hoe | Waarvoor |
 |---|---|---|
