@@ -54,6 +54,8 @@ jobs:
           HUSKY: '0'
       - name: Jest
         run: npm test
+      - name: Truth-check (ghost-handlers — claims zonder backing)
+        run: npm run truth-check
 
   # ── JOB 3: DEPLOY (alleen op production branches) ────────────
   deploy:
