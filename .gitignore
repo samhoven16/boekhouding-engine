@@ -142,3 +142,6 @@ bundle-*.json
 # Test-output: door tests/integration/ultieme-stresstest.test.js geschreven,
 # door niemand gelezen. Stond getracked → veroorzaakte merge-conflicten.
 .claude/stresstest-findings-raw.json
+
+# Scratch- en audit-werkbestanden (lokale analyse-output, bewust niet gecommit)
+tmp/
