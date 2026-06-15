@@ -50,6 +50,11 @@ describe('LAAG 1 — 2026-tarieven gepind op Belastingdienst (oracle-anker)', ()
       { tot: 78426, pct: 0.3756 },
       { tot: Infinity, pct: 0.495 },
     ]);
+    // F-TAX-101: de legacy scalar IB_SCHIJF_1_MAX (gebruikt voor het marginale
+    // tarief in Belastingvoordeel.gs) moet gelijk zijn aan de schijf-2-grens
+    // uit de array. Stond op 79137 (drift) → zou een verkeerde tarief-knik geven.
+    expect(B.IB_SCHIJF_1_MAX).toBe(78426);
+    expect(B.IB_SCHIJF_1_MAX).toBe(B.IB_SCHIJVEN[1].tot);
   });
   test('Zvw-bijdrage ZZP', () => {
     expect(B.ZVW_PCT).toBe(0.0485);
@@ -140,5 +145,30 @@ describe('LAAG 2 — golden-master berekeningen (hand-afgeleid uit de tarieven)'
   test('referentie-rondingen consistent', () => {
     expect(ct(3851.3365)).toBe(3851.34);
     expect(ct(4747.1043)).toBe(4747.10);
+  });
+});
+
+describe('LAAG 3 — rate-source consistentie: CustomFunctions-fallback == 2026', () => {
+  // De hardcoded fallback in _cf_tarievenVoorJaar_ wordt alleen gebruikt als
+  // BELASTING_PER_JAAR + getBelasting_ beide ontbreken (zwaar-degraded modus).
+  // Door CustomFunctions.gs ZONDER Belastingadvies.gs te laden is BELASTING_PER_JAAR
+  // afwezig → de fallback is actief en toetsbaar. Dit had F-TAX-102 gevangen:
+  // de fallback mengde 2025-kortingen onder een "2026"-label.
+  const cf = createGasRuntime(['Config.gs', 'Utils.gs', 'CustomFunctions.gs']);
+  const fb = cf._cf_tarievenVoorJaar_(2026);
+
+  test('F-TAX-102: fallback-kortingen zijn 2026, niet 2025', () => {
+    expect(fb.HEFFINGSKORTING_MAX).toBe(3115);
+    expect(fb.HEFFINGSKORTING_AFBOUW_VAN).toBe(29739);
+    expect(fb.HEFFINGSKORTING_AFBOUW_PCT).toBe(0.0640);
+    expect(fb.ARBEIDSKORTING_MAX).toBe(5685);
+    expect(fb.ARBEIDSKORTING_TOP_TOT).toBe(45592);
+    expect(fb.ARBEIDSKORTING_AFBOUW_VAN).toBe(45593);
+  });
+  test('fallback-schijven/Zvw/aftrek consistent met centrale 2026-tabel', () => {
+    expect(fb.IB_SCHIJVEN).toEqual(B.IB_SCHIJVEN);
+    expect(fb.ZVW_PCT).toBe(B.ZVW_PCT);
+    expect(fb.ZVW_MAX_INKOMEN).toBe(B.ZVW_MAX_INKOMEN);
+    expect(fb.ZELFSTANDIGENAFTREK).toBe(B.ZELFSTANDIGENAFTREK);
   });
 });
