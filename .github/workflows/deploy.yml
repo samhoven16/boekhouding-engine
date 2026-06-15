@@ -188,8 +188,7 @@ jobs:
           PYTHON
 
       - name: clasp push (klant-kopie)
-        env:
-          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+        # FIX F-RED-506: NODE_TLS_REJECT_UNAUTHORIZED verwijderd (stelde clasp-OAuth-token bloot aan MITM)
         run: |
           echo "clasp versie: $(clasp --version)"
           echo "Script ID:    $(python3 -c "import json; print(json.load(open('.clasp.json'))['scriptId'])")"
@@ -214,8 +213,7 @@ jobs:
           echo "    Bestaande klanten houden hun eigen snapshot (by design)."
 
       - name: clasp push (licentieserver)
-        env:
-          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+        # FIX F-RED-506: NODE_TLS_REJECT_UNAUTHORIZED verwijderd (TLS-verificatie hoort aan te staan)
         run: |
           cd licence-server
           echo "Script ID:    $(python3 -c "import json; print(json.load(open('.clasp.json'))['scriptId'])")"
@@ -243,8 +241,7 @@ jobs:
         # gewijzigd zijn in deze commit. Voorheen draaide deploy bij ELKE
         # commit op main → 200-versie-limiet binnen 6 maanden gehaald.
         if: ${{ env.LICENCE_DEPLOYMENT_ID != '' && steps.licence-diff.outputs.changed != '0' }}
-        env:
-          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+        # FIX F-RED-506: NODE_TLS_REJECT_UNAUTHORIZED verwijderd
         run: |
           cd licence-server
 

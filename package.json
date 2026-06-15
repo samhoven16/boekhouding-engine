@@ -17,7 +17,7 @@
     "truth-check": "node scripts/truth-check.js",
     "prepare": "husky && git config merge.ours.driver true || true",
     "push:gas": "node scripts/clasp-push.js",
-    "push:licence": "cd licence-server && NODE_TLS_REJECT_UNAUTHORIZED=0 npx clasp push --force",
+    "push:licence": "cd licence-server && npx clasp push --force",
     "deploy:licence:release": "node scripts/deploy-licence-release.js",
     "update": "git pull && npm install --silent && npm run push:gas",
     "deploy": "npm test && npm run push:gas",

@@ -134,17 +134,20 @@ function verwerkXafBestand(xafTekst) {
         if (!naam) { overgeslagenRelaties++; return; }
         if (bestaandeNamen[naam.toLowerCase()]) { overgeslagenRelaties++; return; }
         const id = 'REL' + Utilities.formatString('%04d', Math.floor(Math.random() * 10000));
+        // FIX F-RED-304: XAF-velden zijn aanvaller-bestuurbaar; saniteer_ blokkeert
+        // formule-injectie (leading =+-@) vóór ze als live cel in de sheet belanden
+        // en later via XLSX/CSV-export bij de accountant worden geopend.
         relatiesSheet.appendRow([
-          id, naam,
-          _xafTekst_(klant, 'streetAddress', ns) || '',
-          _xafTekst_(klant, 'postalCode', ns) || '',
-          _xafTekst_(klant, 'city', ns) || '',
-          _xafTekst_(klant, 'country', ns) || 'NL',
-          _xafTekst_(klant, 'taxRegistrationCountry', ns) || '',
-          _xafTekst_(klant, 'taxRegIdent', ns) || '',  // BTW-nummer
+          id, saniteer_(naam),
+          saniteer_(_xafTekst_(klant, 'streetAddress', ns) || ''),
+          saniteer_(_xafTekst_(klant, 'postalCode', ns) || ''),
+          saniteer_(_xafTekst_(klant, 'city', ns) || ''),
+          saniteer_(_xafTekst_(klant, 'country', ns) || 'NL'),
+          saniteer_(_xafTekst_(klant, 'taxRegistrationCountry', ns) || ''),
+          saniteer_(_xafTekst_(klant, 'taxRegIdent', ns) || ''),  // BTW-nummer
           '', // KvK — XAF heeft geen veld, klant vult later in
-          _xafTekst_(klant, 'email', ns) || '',
-          _xafTekst_(klant, 'telephone', ns) || '',
+          saniteer_(_xafTekst_(klant, 'email', ns) || ''),
+          saniteer_(_xafTekst_(klant, 'telephone', ns) || ''),
           'Klant',  // type
           new Date(),
         ]);
@@ -190,11 +193,11 @@ function verwerkXafBestand(xafTekst) {
           if (bedragExcl <= 0) { overgeslagenFacturen++; return; }
           vfSheet.appendRow([
             '', // ID auto
-            String(invNr).trim(),
+            saniteer_(String(invNr).trim()),  // FIX F-RED-304: formule-injectie-guard op XAF-velden
             new Date(datum),
             new Date(new Date(datum).getTime() + 30 * 86400000),  // vervaldatum +30d default
             '', '', '', '',  // klant ID/naam/KvK/BTW — niet gekoppeld
-            desc || ('Import vanuit Moneybird ' + invNr),
+            saniteer_(desc || ('Import vanuit Moneybird ' + invNr)),
             rondBedrag_(bedragExcl),
             btwBedrag > 0 ? '21% (hoog)' : '0% / vrijgesteld',
             rondBedrag_(btwBedrag),

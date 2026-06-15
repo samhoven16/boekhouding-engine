@@ -142,9 +142,14 @@ function getSeizoensTip_() {
       titel: '📋 Maart: IB-aangifte voorbereiden ' + (jaar - 1),
       tekst:
         `Nog ~6 weken tot de IB-deadline. Controleer of alle aftrekposten zijn benut: ` +
-        `zelfstandigenaftrek (€2.470), startersaftrek (€2.123 eerste 3 jaar), ` +
-        `MKB-winstvrijstelling (12,7%), KIA, MIA/VAMIL, EIA, AOV-premie, lijfrente. ` +
-        `Open Boekhouding → Belastingadvies voor een volledig overzicht.`,
+        // FIX F-TAX-206: hardcoded bedragen (€2.470/€2.123/12,7%) verwijderd — ze
+        // verouderen en gaven een ander getal dan de canonieke config; deze tip
+        // gaat bovendien over de aangifte van het VORIGE jaar (jaar-1), dus de
+        // exacte bedragen verschillen per jaar. Belastingadvies toont de
+        // jaar-correcte bedragen via getBelasting_().
+        `zelfstandigenaftrek, startersaftrek (eerste 3 jaar), ` +
+        `MKB-winstvrijstelling, KIA, MIA/VAMIL, EIA, AOV-premie, lijfrente. ` +
+        `Open Boekhouding → Belastingadvies voor de exacte bedragen van dat jaar.`,
       deadline: '1 mei',
       urgent: false,
     };
