@@ -358,7 +358,7 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
 // ─────────────────────────────────────────────
 //  CREDITNOTA AANMAKEN
 // ─────────────────────────────────────────────
-function maakCreditnota(factuurNummer) {
+function maakCreditnota(factuurNummer, reden) {
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
   const data = sheet.getDataRange().getValues();
@@ -372,7 +372,7 @@ function maakCreditnota(factuurNummer) {
     }
   }
 
-  if (!origineel) return;
+  if (!origineel) return null;
 
   const creditNr = volgendFactuurnummer_();
   const creditPrefix = getInstelling_('Factuurprefix') || 'F';
@@ -387,7 +387,7 @@ function maakCreditnota(factuurNummer) {
   creditRij[11] = -Math.abs(origineel[11]); // BTW negatief
   creditRij[12] = -Math.abs(origineel[12]); // Incl. negatief
   creditRij[14] = FACTUUR_STATUS.BETAALD;
-  creditRij[18] = `Creditnota voor ${factuurNummer}`;
+  creditRij[18] = saniteer_(`Creditnota voor ${factuurNummer}${reden ? ' — ' + reden : ''}`);
 
   sheet.appendRow(creditRij);
 
@@ -428,6 +428,42 @@ function maakCreditnota(factuurNummer) {
       type: BOEKING_TYPE.MEMORIAAL,
     });
   }
+  return creditRij[1];
+}
+
+/**
+ * UI-wrapper: vraagt om een factuurnummer + reden en maakt de creditnota.
+ * Aangeroepen vanuit menu "Facturen & Betalingen → Creditnota maken van factuur".
+ */
+function openCreditnotaDialog() {
+  const ui = SpreadsheetApp.getUi();
+  const vraag = ui.prompt(
+    'Creditnota maken',
+    'Welk factuurnummer wil je crediteren? Neem het exact over uit de Factuurlijst (kolom Factuurnr):',
+    ui.ButtonSet.OK_CANCEL);
+  if (vraag.getSelectedButton() !== ui.Button.OK) return;
+  const factuurNummer = vraag.getResponseText().trim();
+  if (!factuurNummer) { ui.alert('Geen factuurnummer ingevuld — geannuleerd.'); return; }
+
+  const vraagReden = ui.prompt(
+    'Reden (aanbevolen)',
+    'Waarom crediteer je deze factuur? De reden komt in de omschrijving van de creditnota:',
+    ui.ButtonSet.OK_CANCEL);
+  const reden = (vraagReden.getSelectedButton() === ui.Button.OK)
+    ? vraagReden.getResponseText().trim() : '';
+
+  const creditNummer = maakCreditnota(factuurNummer, reden);
+  if (!creditNummer) {
+    ui.alert('Factuur niet gevonden',
+      `Geen verkoopfactuur met nummer "${factuurNummer}" gevonden. Controleer het nummer in de Factuurlijst.`,
+      ui.ButtonSet.OK);
+    return;
+  }
+  ui.alert('Creditnota aangemaakt',
+    `Creditnota ${creditNummer} is aangemaakt voor het volledige bedrag van factuur ${factuurNummer}: `
+    + `negatieve BTW, verwijzing naar het origineel en de storno-journaalposten staan in je grootboek. `
+    + `De originele factuur staat nu op "Gecrediteerd".`,
+    ui.ButtonSet.OK);
 }
 
 // ─────────────────────────────────────────────

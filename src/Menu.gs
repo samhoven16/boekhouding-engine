@@ -147,6 +147,7 @@ function onOpen() {
     // ── Facturen ──────────────────────────────
     .addSubMenu(ui.createMenu('Facturen & Betalingen')
       .addItem('Factuurlijst — openen, versturen, markeren', 'openFactuurlijst')
+      .addItem('Creditnota maken van factuur', 'openCreditnotaDialog')
       .addSeparator()
       .addItem('Betalingsherinneringen versturen', 'stuurBetalingsherinneringen')
       .addSeparator()
