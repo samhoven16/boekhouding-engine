@@ -784,7 +784,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   // factuur-mail krijgen.
   //
   // Strategie: registreer "EMAIL_PENDING" status in ScriptProperty + sheet
-  // VÓÓR GmailApp.sendEmail. Als email succeeds maar status-write crasht,
+  // VÓÓR MailApp.sendEmail. Als email succeeds maar status-write crasht,
   // ziet volgende run 'PENDING' en weet: NIET opnieuw versturen, alleen
   // status repareren.
   let emailVerzonden = false;
@@ -1124,7 +1124,7 @@ function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
     return;
   }
   try {
-    GmailApp.sendEmail(ontvanger, onderwerp, body);
+    MailApp.sendEmail(ontvanger, onderwerp, body);
     schrijfAuditLog_('Hoge uitgave alert', `${leverancier} ${formatBedrag_(bedrag)} → ${ontvanger}`);
   } catch (e) {
     Logger.log('Hoge-uitgave alert niet verzonden: ' + e.message);
@@ -1986,7 +1986,7 @@ function stuurWeeklySamenvatting_() {
       safeAuditLog_('Weekly summary OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger);
       return;
     }
-    GmailApp.sendEmail(ontvanger, onderwerp, body);
+    MailApp.sendEmail(ontvanger, onderwerp, body);
     schrijfAuditLog_('Weekly summary verzonden', `naar ${ontvanger} – omzet ${formatBedrag_(omzetWeek)}`);
   } catch (e) {
     Logger.log('stuurWeeklySamenvatting_ fout: ' + e.message);
@@ -2029,7 +2029,7 @@ function controleerSheetGrootte_(ss) {
   safeAuditLog_('Sheet-grootte waarschuwing', bericht);
   if (eigenEmail && isGeldigEmail_(eigenEmail)) {
     try {
-      GmailApp.sendEmail(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
+      MailApp.sendEmail(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
         bericht + '\n\n— Boekhoudbaar' + (bedrijf ? ' (' + bedrijf + ')' : ''));
     } catch (_) {}
   }
@@ -2153,7 +2153,7 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
           opties.attachments = [DriveApp.getFileById(extractFileId_(pdfUrl)).getAs('application/pdf')];
         } catch (e) { /* PDF optioneel */ }
       }
-      GmailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
+      MailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
       props.setProperty(stapKey, String(volgendeStap));
       verwerkt++;  // tel alleen werkelijk verstuurde mails — voorkomt batch-skip bij scrolling
       Logger.log(`Herinnering stap ${volgendeStap}/3 verstuurd voor ${factuurnummer} naar ${klantEmail}`);
@@ -2344,7 +2344,7 @@ function controleerBtwDeadlines_() {
     if (dagenTot > 0 && dagenTot <= 14) {
       const kwLabel = 'Q' + d.kw + (d.suffix || '');
       try {
-        GmailApp.sendEmail(email,
+        MailApp.sendEmail(email,
           `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
           `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
           `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
@@ -2362,7 +2362,7 @@ function stuurFoutEmail_(context, err) {
   try {
     const email = getInstelling_('Email rapporten naar');
     if (email && isGeldigEmail_(email)) {
-      GmailApp.sendEmail(email,
+      MailApp.sendEmail(email,
         `Fout in boekhoudprogramma: ${context}`,
         `Er is een fout opgetreden bij het verwerken van: ${context}\n\nFoutmelding: ${err.message}\n\nStack: ${err.stack}`
       );
@@ -2439,7 +2439,7 @@ function stuurBetalingsherinneringen() {
       continue;
     }
     try {
-      GmailApp.sendEmail(klantEmail,
+      MailApp.sendEmail(klantEmail,
         `Herinnering factuur ${fnr} · ${bedragStr}`,
         tekst,
         { htmlBody: htmlBody, name: bedrijf }

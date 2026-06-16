@@ -34,7 +34,6 @@ function controleerAutorisaties() {
     ss.getName();
   });
   probeer('DriveApp',   function() { DriveApp.getRootFolder().getId(); });
-  probeer('GmailApp',   function() { GmailApp.getAliases(); /* read-alleen */ });
   probeer('MailApp',    function() { MailApp.getRemainingDailyQuota(); });
   probeer('UrlFetchApp', function() {
     // Lichte HEAD naar een endpoint binnen onze allowlist — geen externe load
