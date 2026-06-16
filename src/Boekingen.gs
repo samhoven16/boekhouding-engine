@@ -1247,20 +1247,30 @@ function _leesGeslotenPeriodes_() {
  * Wordt automatisch aangeroepen bij het afsluiten van een BTW-periode.
  */
 function vergrendelPeriode_(van, tot, label) {
-  const props = PropertiesService.getScriptProperties();
-  const periodes = _leesGeslotenPeriodes_();
+  // LockService rond de read-modify-write van GESLOTEN_PERIODES — anders kan
+  // een gelijktijdige sluiting (BTW-periode + jaarafsluiting, of twee tabs) de
+  // net-toegevoegde periode overschrijven (lost write) en verdwijnt een slot
+  // geruisloos. Zelfde patroon als updateGrootboekSaldo_ (audit F-ACC-004).
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const periodes = _leesGeslotenPeriodes_();
 
-  // Voorkom dubbele vergrendeling
-  const al = periodes.find(p => p.van === van.toISOString() && p.tot === tot.toISOString());
-  if (!al) {
-    periodes.push({
-      van:   van.toISOString(),
-      tot:   tot.toISOString(),
-      label: label || formatDatum_(van) + ' t/m ' + formatDatum_(tot),
-      geslotenOp: new Date().toISOString(),
-    });
-    props.setProperty('GESLOTEN_PERIODES', JSON.stringify(periodes));
-    Logger.log('Periode vergrendeld: ' + label);
+    // Voorkom dubbele vergrendeling
+    const al = periodes.find(p => p.van === van.toISOString() && p.tot === tot.toISOString());
+    if (!al) {
+      periodes.push({
+        van:   van.toISOString(),
+        tot:   tot.toISOString(),
+        label: label || formatDatum_(van) + ' t/m ' + formatDatum_(tot),
+        geslotenOp: new Date().toISOString(),
+      });
+      props.setProperty('GESLOTEN_PERIODES', JSON.stringify(periodes));
+      Logger.log('Periode vergrendeld: ' + label);
+    }
+  } finally {
+    lock.releaseLock();
   }
 }
 
