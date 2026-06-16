@@ -777,6 +777,12 @@ function aanvraagOtpEndpoint_(e) {
         String(data[i][4] || '').toLowerCase().startsWith('actief')) { gevonden = true; break; }
   }
   if (!gevonden) {
+    // Massa-enumeratie throttelen via een APARTE globale bucket (niet de bekend-
+    // bucket → geen DoS-saturatie van legitieme klanten). De behulpzame typo-
+    // melding blijft intact: binnen de cap krijgt een onbekend adres gewoon nuttig
+    // antwoord, maar een wordlist-aanval op het klantenbestand wordt globaal afgeknepen.
+    const onbekendCap = rateLimit_(e, { actie: 'aanvraag-otp-onbekend', globaal: 200, windowMin: 60 });
+    if (onbekendCap) return onbekendCap;
     return jsonResp_({ ok: false, fout: 'Dit e-mailadres is niet bekend als klant. Controleer het e-mailadres waarmee je hebt gekocht.' });
   }
 
