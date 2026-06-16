@@ -57,6 +57,9 @@ describe('CYCLE 89: CSS-only levende scroll-laag', () => {
     expect(pages.length).toBeGreaterThan(40);
     const missing = pages.filter((p) => {
       const html = fs.readFileSync(p, 'utf8');
+      // Redirect-only pagina's (meta-refresh / location.replace, bijv. /onveilig)
+      // leiden direct door en hebben dus geen scroll-animatielaag nodig.
+      if (/http-equiv="refresh"/i.test(html) || /location\.replace/.test(html)) return false;
       return !html.includes('/animations.css');
     });
     expect(missing).toEqual([]);
