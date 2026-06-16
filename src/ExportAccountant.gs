@@ -49,9 +49,8 @@ function exporteerAccountantsPakket() {
   const mapNaam = `Accountantspakket ${bedrijfSafe} ${jaar}`;
 
   // Maak Drive map aan
-  let folder;
-  const bestaandeMappen = DriveApp.getFoldersByName(mapNaam);
-  folder = bestaandeMappen.hasNext() ? bestaandeMappen.next() : DriveApp.createFolder(mapNaam);
+  // drive.file: resolve via opgeslagen ID (find-or-create), geen whole-Drive-zoeken.
+  const folder = getOfMaakLosseMap_('DRIVE_ACCPAKKET_' + jaar, mapNaam);
 
   const gemaakteFiles = [];
 
@@ -357,13 +356,9 @@ function maakBackup() {
 
     // Sla op in de map "Boekhouding Backups" (aanmaken als die niet bestaat).
     // Pak de oudste matchende map zodat backups bij elkaar blijven, ook bij dubbele.
-    const mappen = DriveApp.getFoldersByName('Boekhouding Backups');
-    let map;
-    if (mappen.hasNext()) {
-      map = mappen.next();
-    } else {
-      map = DriveApp.createFolder('Boekhouding Backups');
-    }
+    // drive.file: hoofdmap/Backups (app-created) i.p.v. whole-Drive-zoeken; zonder
+    // hoofdmap parent-loos aanmaken.
+    const map = getDriveBackupMap_() || DriveApp.createFolder('Boekhouding Backups');
     const file = map.createFile(blob);
     const fileUrl = file.getUrl();
     const mapUrl  = map.getUrl();
@@ -504,18 +499,9 @@ function _zoekOfMaakBackupFolder_() {
   let folder = vindOfMaakIn_(parent);
   if (folder) return folder;
 
-  // Fallback: Drive root
+  // drive.file-fallback: geen whole-Drive-zoeken (NIEUWE_NAAM/OUDE_NAMEN op
+  // topniveau mag niet onder drive.file). Maak de backup-folder PARENT-LOOS aan.
   try {
-    const rootIt = DriveApp.getFoldersByName(NIEUWE_NAAM);
-    if (rootIt.hasNext()) return rootIt.next();
-    for (let i = 0; i < OUDE_NAMEN.length; i++) {
-      const oudIt = DriveApp.getFoldersByName(OUDE_NAMEN[i]);
-      if (oudIt.hasNext()) {
-        const oud = oudIt.next();
-        try { oud.setName(NIEUWE_NAAM); } catch (_) {}
-        return oud;
-      }
-    }
     return DriveApp.createFolder(NIEUWE_NAAM);
   } catch (_) {
     return null;
@@ -735,20 +721,9 @@ function maakNoahArkSnapshot_() {
     const bestandsnaam = 'NoahArk_' + bedrijf + '_' + datum + '.jsonl';
 
     // Drive-map: hergebruik de Backups-folder waar de xlsx ook in staat.
-    const huidigJaar = new Date().getFullYear();
-    var backupMap = null;
-    try {
-      const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
-      if (hoofdId) {
-        const hoofd = DriveApp.getFolderById(hoofdId);
-        const it = hoofd.getFoldersByName('Backups');
-        backupMap = it.hasNext() ? it.next() : hoofd.createFolder('Backups');
-      }
-    } catch (_) {}
-    if (!backupMap) {
-      const it = DriveApp.getFoldersByName('Boekhouding Backups');
-      backupMap = it.hasNext() ? it.next() : DriveApp.createFolder('Boekhouding Backups');
-    }
+    // drive.file: hoofdmap/Backups (app-created) i.p.v. whole-Drive zoeken naar
+    // 'Boekhouding Backups'. Zonder hoofdmap → parent-loos aanmaken.
+    const backupMap = getDriveBackupMap_() || DriveApp.createFolder('Boekhouding Backups');
 
     if (backupMap.getFilesByName(bestandsnaam).hasNext()) return;  // al vandaag
 

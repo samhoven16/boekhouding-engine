@@ -69,6 +69,10 @@ function maakDriveStructuur_(jaar) {
  * één heeft aangemaakt of property verloren is.
  */
 function _vindBestaandeDriveMap_(naam) {
+  // drive.file: whole-Drive zoeken mag niet → deze getFoldersByName-call gooit
+  // een scope-error die hier wordt opgevangen (resultaat null → caller maakt een
+  // verse hoofdmap aan). Collision-detectie is onder drive.file dus niet
+  // beschikbaar; acceptabel want het primaire pad is de opgeslagen hoofdmap-ID.
   try {
     const it = DriveApp.getFoldersByName(naam);
     while (it.hasNext()) {
@@ -121,6 +125,54 @@ function getDriveMapViaKey_(key) {
   } catch (e) {
     return null;
   }
+}
+
+/**
+ * Hoofdmap van een boekjaar via de opgeslagen ID. drive.file-veilig: de app mag
+ * bij mappen die ze zélf aanmaakte (getFolderById + child-listing werken).
+ * Geeft null als de ID ontbreekt/onbereikbaar is — callers maken dan een
+ * bestand/map PARENT-LOOS aan (createFile/createFolder zonder parent werkt onder
+ * drive.file, i.t.t. DriveApp.getRootFolder() die niet toegankelijk is).
+ */
+function getDriveHoofdmap_(jaar) {
+  return getDriveMapViaKey_('DRIVE_HOOFDMAP_' + (jaar || new Date().getFullYear()));
+}
+
+/**
+ * Backups-submap binnen de hoofdmap (app-created → drive.file-veilig: zoeken/
+ * aanmaken binnen een zélf-aangemaakte map mag). Geeft null als er geen hoofdmap
+ * is. maakAan=false → alleen lezen (niet aanmaken). Vervangt het whole-Drive
+ * zoeken naar de legacy 'Boekhouding Backups'-topmap, dat onder drive.file niet
+ * is toegestaan.
+ */
+function getDriveBackupMap_(jaar, maakAan) {
+  const hoofd = getDriveHoofdmap_(jaar);
+  if (!hoofd) return null;
+  try {
+    const it = hoofd.getFoldersByName('Backups');
+    if (it.hasNext()) return it.next();
+    return maakAan === false ? null : hoofd.createFolder('Backups');
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Losse top-level map (bonnetjes/facturen) drive.file-veilig ophalen: primair via
+ * opgeslagen ID (getFolderById op een door-de-app-aangemaakte map mag), anders
+ * PARENT-LOOS aanmaken en de ID opslaan. Vermijdt DriveApp.getFoldersByName op
+ * topniveau (whole-Drive-zoeken, niet toegestaan onder drive.file) én voorkomt
+ * duplicaat-mappen.
+ */
+function getOfMaakLosseMap_(propKey, mapNaam) {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty(propKey);
+  if (id) {
+    try { return DriveApp.getFolderById(id); } catch (_) {}
+  }
+  const folder = DriveApp.createFolder(mapNaam);
+  props.setProperty(propKey, folder.getId());
+  return folder;
 }
 
 // ─────────────────────────────────────────────

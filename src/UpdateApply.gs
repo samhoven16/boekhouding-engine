@@ -313,19 +313,9 @@ function _verifieerToegepasteFiles_(projectFiles, bundleFiles) {
  */
 function _schrijfCodeBackup_(naam, inhoud) {
   try {
-    let backupMap = null;
-    try {
-      const huidigJaar = new Date().getFullYear();
-      const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
-      if (hoofdId) {
-        const it = DriveApp.getFolderById(hoofdId).getFoldersByName('Backups');
-        backupMap = it.hasNext() ? it.next() : null;
-      }
-    } catch (_) {}
-    if (!backupMap) {
-      const it = DriveApp.getFoldersByName('Boekhouding Backups');
-      backupMap = it.hasNext() ? it.next() : DriveApp.createFolder('Boekhouding Backups');
-    }
+    // drive.file: hoofdmap/Backups (app-created) i.p.v. whole-Drive zoeken naar
+    // 'Boekhouding Backups'. Zonder hoofdmap → parent-loos aanmaken (mag wél).
+    const backupMap = getDriveBackupMap_() || DriveApp.createFolder('Boekhouding Backups');
     backupMap.createFile(naam, inhoud, 'application/json');
     return { ok: true };
   } catch (e) {
@@ -339,9 +329,8 @@ function _schrijfCodeBackup_(naam, inhoud) {
  */
 function _ruimOudeCodeBackupsOp_() {
   try {
-    let backupMap = null;
-    const it = DriveApp.getFoldersByName('Boekhouding Backups');
-    if (it.hasNext()) backupMap = it.next();
+    // drive.file: lees de (app-created) hoofdmap/Backups; geen whole-Drive-zoeken.
+    const backupMap = getDriveBackupMap_(undefined, false);
     if (!backupMap) return;
     const files = [];
     const fIt = backupMap.getFiles();

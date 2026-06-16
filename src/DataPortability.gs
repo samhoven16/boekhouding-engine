@@ -38,16 +38,15 @@ function exporteerAlleData() {
   // Maak export-map binnen klant's Drive-structuur
   let exportMap = null;
   try {
-    const huidigJaar = new Date().getFullYear();
-    const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
-    if (hoofdId) {
-      const hoofd = DriveApp.getFolderById(hoofdId);
+    const hoofd = getDriveHoofdmap_();
+    if (hoofd) {
       const it = hoofd.getFoldersByName('Exports');
       const exportsParent = it.hasNext() ? it.next() : hoofd.createFolder('Exports');
       exportMap = exportsParent.createFolder(mapNaam);
     }
   } catch (_) {}
-  if (!exportMap) exportMap = DriveApp.getRootFolder().createFolder(mapNaam);
+  // drive.file: geen getRootFolder(); maak de map PARENT-LOOS aan.
+  if (!exportMap) exportMap = DriveApp.createFolder(mapNaam);
 
   let aantalBestanden = 0;
   let fouten = [];

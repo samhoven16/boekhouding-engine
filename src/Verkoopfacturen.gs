@@ -888,10 +888,8 @@ function haalSepaQrBase64_(iban, bedrijfNaam, bedrag, referentie) {
 //  HELPERS
 // ─────────────────────────────────────────────
 function getOrMaakFactuurenMap_() {
-  const mapNaam = 'Boekhoud Facturen';
-  const mappen = DriveApp.getFoldersByName(mapNaam);
-  if (mappen.hasNext()) return mappen.next();
-  return DriveApp.createFolder(mapNaam);
+  // drive.file: resolve via opgeslagen ID (find-or-create), geen whole-Drive-zoeken.
+  return getOfMaakLosseMap_('DRIVE_FACTUREN_LOS', 'Boekhoud Facturen');
 }
 
 function extractFileId_(url) {

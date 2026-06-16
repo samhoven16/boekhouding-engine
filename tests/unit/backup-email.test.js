@@ -79,6 +79,20 @@ function maakBackupCtx(opts) {
     isGeldigEmail_: (e) => String(e || '').indexOf('@') > 0,
   });
 
+  // #4 drive.file: backup-map-resolutie loopt nu via getDriveBackupMap_
+  // (DriveStructuur). Mock 'm direct op de in-memory backup-folder, net zoals
+  // voorheen DriveApp.getFoldersByName werd gemockt.
+  ctx.getDriveBackupMap_ = () => (opts.hasBackupFolder === false ? null : {
+    getFiles: () => {
+      let returned = false;
+      return {
+        hasNext: () => !returned && opts.hasBackupFile !== false,
+        next: () => { returned = true; return mockNieuwsteFile; },
+      };
+    },
+    getFilesByName: () => ({ hasNext: () => false }),
+  });
+
   return { ctx, propStore, mailCalls, auditCalls };
 }
 

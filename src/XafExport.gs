@@ -87,17 +87,17 @@ function exporteerXaf(jaarOverschrijving) {
   let driveUrl = '';
   try {
     const blob = Utilities.newBlob(xml, 'application/xml', bestandsnaam);
-    const ssFile = DriveApp.getFileById(ss.getId());
-    const parents = ssFile.getParents();
-    const parentFolder = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
 
-    // Probeer "Exports" submap aan te maken (idempotent)
+    // drive.file: gebruik de opgeslagen hoofdmap i.p.v. de spreadsheet-parent of
+    // de Drive-root (getParents()/getRootFolder() zijn onder drive.file niet
+    // betrouwbaar toegankelijk — de app maakte die mappen niet zelf aan).
+    const hoofd = getDriveHoofdmap_();
     let exportsFolder;
-    const it = parentFolder.getFoldersByName('XAF-exports');
-    if (it.hasNext()) {
-      exportsFolder = it.next();
+    if (hoofd) {
+      const it = hoofd.getFoldersByName('XAF-exports');
+      exportsFolder = it.hasNext() ? it.next() : hoofd.createFolder('XAF-exports');
     } else {
-      exportsFolder = parentFolder.createFolder('XAF-exports');
+      exportsFolder = DriveApp.createFolder('XAF-exports');
     }
 
     const bestand = exportsFolder.createFile(blob);
