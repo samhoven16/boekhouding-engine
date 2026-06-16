@@ -166,7 +166,7 @@ function bouwHelpTab_(ss) {
   // LICENTIE_GRACE_DAGEN-override. Bij langdurige server-uitval valt na
   // dag 91 ELKE klant stil — zonder dat ze weten dat ze zelf kunnen
   // verlengen. Dit is een bus-factor-risico dat in de Help-tab hoort.
-  rij = _sectieHeader_(sheet, rij, '🆘 Licentie-server onbereikbaar?', accent);
+  rij = _sectieHeader_(sheet, rij, '🏖️ Werkt het op vakantie / zonder internet? (offline-toegang)', accent);
   const grace = [
     ['Wat gebeurt er?',
       'Je administratie blijft normaal werken. Boekhoudbaar checkt 1× per dag of de licentie geldig is; bij ' +
