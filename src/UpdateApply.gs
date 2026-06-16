@@ -3,6 +3,15 @@
  *
  * Tier 2.2 — automatische update-installatie via de Apps Script Projects API.
  *
+ * ⚠️ DORMANT sinds de OAuth-verificatie-ronde: de `script.projects`-scope is uit
+ *    het manifest gehaald (zwaarste review-scrutiny, en de bundle-integriteit
+ *    leunde enkel op een self-referential hash — geen handtekening). Het menu-
+ *    item is verwijderd; klanten updaten via het handmatige pad
+ *    (UpdateBundle.gs → "📦 Download laatste versie"). Deze module blijft staan
+ *    maar is onbereikbaar tot (a) bundle-signing met gepinde public key bestaat
+ *    én (b) `script.projects` opnieuw geautoriseerd is. Zie
+ *    docs/google-oauth-verification.md.
+ *
  * Dit is het gevaarlijkste stuk code in het product: het herschrijft zijn
  * eigen broncode. Daarom vijf verdedigingslagen, in volgorde:
  *
@@ -36,10 +45,12 @@ const UPDATE_APPLY_BACKUP_PREFIX = 'CodeBackup_';
 const UPDATE_APPLY_MAX_BACKUPS = 5;
 
 /**
- * Menu-actie: volledige geleide flow. Haalt bundle op (hergebruikt
- * haalUpdateBundleOp uit UpdateBundle.gs incl. hash-verify), bevestigt
- * 2× met klant, en past toe met backup + rollback.
+ * DORMANT (zie module-header): niet meer in het menu, geen caller — bewust
+ * behouden als re-enable-pad zodra bundle-signing + script.projects-
+ * herautorisatie er zijn. Haalt bundle op (haalUpdateBundleOp incl. hash-verify),
+ * bevestigt 2× met klant, en past toe met backup + rollback.
  */
+// eslint-disable-next-line no-unused-vars -- dormant re-enable-pad, zie module-header
 function startAutomatischeUpdate() {
   const ui = SpreadsheetApp.getUi();
 
