@@ -1317,7 +1317,7 @@ function bedanktPagina_(e) {
     <ol>
       <li>Je klikt op de activatielink in de mail.</li>
       <li>Google vraagt je toestemming om een kopie in <strong>jouw Drive</strong> te zetten en <strong>namens jou mail te sturen</strong> (voor facturen).</li>
-      <li>Je ziet mogelijk <em>"Deze app is niet geverifieerd door Google"</em> — dat klopt, Boekhoudbaar is een éénpersoonszaak. Klik op <strong>Geavanceerd → Doorgaan</strong>.</li>
+      <li>Je ziet mogelijk <em>"Deze app is niet geverifieerd door Google"</em> — dat klopt, Boekhoudbaar is een éénpersoonszaak. Klik op <strong>Geavanceerd → Ga naar Boekhoudbaar (onveilig)</strong>.</li>
       <li>Je boekhoudbestand opent. Vul je e-mail in, ontvang een 6-cijferige code, voer 'm in, klaar.</li>
     </ol>
     <p class="google-note" style="margin:10px 0 0">Je data blijft 100% op jouw eigen Drive. Wij hebben er geen toegang toe.</p>
@@ -1808,7 +1808,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const stappenHtml = kopieerLink ? `
     <div style="text-align:center;margin:8px 0 24px">
       <p style="font-size:13px;color:#5F6B7A;margin:0 0 10px;line-height:1.5">
-        Eerst <strong>30 seconden voorbereiding</strong>. Daarna kom je in <strong>2 Google-schermen</strong> — en in het tweede klik je op <strong>Geavanceerd → Doorgaan</strong>.
+        Eerst <strong>30 seconden voorbereiding</strong>. Daarna kom je in <strong>3 Google-schermen</strong> — bij het laatste ("niet geverifieerd") klik je op <strong>Geavanceerd → Ga naar Boekhoudbaar (onveilig)</strong>.
       </p>
       <a href="${kopieerLink}" style="background:#0D1B4E;color:#fff;padding:16px 36px;
          border-radius:10px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;letter-spacing:.1px;box-shadow:0 4px 12px rgba(13,27,78,.18)">
