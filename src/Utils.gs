@@ -334,15 +334,13 @@ function exporteerAuditLogJson() {
     events.push(event);
   }
   const jsonl = events.map(function(e) { return JSON.stringify(e); }).join('\n');
-  const huidigJaar = new Date().getFullYear();
-  let map = null;
-  try {
-    const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
-    if (hoofdId) map = DriveApp.getFolderById(hoofdId);
-  } catch (_) {}
-  if (!map) map = DriveApp.getRootFolder();
+  const map = getDriveHoofdmap_();
   const naam = 'audit-log_' + new Date().toISOString().slice(0, 10) + '.jsonl';
-  const file = map.createFile(naam, jsonl, 'application/x-ndjson');
+  // drive.file: geen getRootFolder(). Mét hoofdmap → daarin; zonder → parent-loos
+  // (de app behoudt toegang tot bestanden die ze zelf aanmaakt).
+  const file = map
+    ? map.createFile(naam, jsonl, 'application/x-ndjson')
+    : DriveApp.createFile(naam, jsonl, 'application/x-ndjson');
   ui.alert('📁 Audit-log geëxporteerd', events.length + ' events naar ' + naam + '\n\nLocatie: ' + file.getUrl(), ui.ButtonSet.OK);
   safeAuditLog_('Audit-log JSON-export', naam + ' (' + events.length + ' events)');
 }

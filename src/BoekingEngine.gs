@@ -478,9 +478,8 @@ function _slaBonoOp_(base64Data, mimeType, naam) {
     const mime    = mimeType || 'image/jpeg';
     const ext     = mime.includes('pdf') ? 'pdf' : (mime.split('/')[1] || 'jpg');
     const blob    = Utilities.newBlob(decoded, mime, naam.replace(/[/\\:*?"<>|]/g, '_') + '.' + ext);
-    let folder;
-    const mappen = DriveApp.getFoldersByName('Bonnetjes & Ontvangstbewijzen');
-    folder = mappen.hasNext() ? mappen.next() : DriveApp.createFolder('Bonnetjes & Ontvangstbewijzen');
+    // drive.file: resolve via opgeslagen ID (find-or-create), geen whole-Drive-zoeken.
+    const folder = getOfMaakLosseMap_('DRIVE_BONNETJES', 'Bonnetjes & Ontvangstbewijzen');
     return folder.createFile(blob).getUrl();
   } catch (e) {
     Logger.log('Bon opslaan mislukt: ' + e.message);

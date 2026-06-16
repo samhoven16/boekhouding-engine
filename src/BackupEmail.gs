@@ -122,19 +122,9 @@ function _verstuurBackupEmail_(opt) {
 
   // Vind laatste NoahArk_*.jsonl in een Backups-map (zelfde zoek-pad als
   // maakNoahArkSnapshot_). Pak de meest recente.
-  const huidigJaar = new Date().getFullYear();
-  let backupMap = null;
-  try {
-    const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
-    if (hoofdId) {
-      const it = DriveApp.getFolderById(hoofdId).getFoldersByName('Backups');
-      backupMap = it.hasNext() ? it.next() : null;
-    }
-  } catch (_) {}
-  if (!backupMap) {
-    const it = DriveApp.getFoldersByName('Boekhouding Backups');
-    if (it.hasNext()) backupMap = it.next();
-  }
+  // drive.file: lees de (app-created) hoofdmap/Backups; geen whole-Drive-zoeken
+  // naar de legacy 'Boekhouding Backups'-topmap (mag niet onder drive.file).
+  const backupMap = getDriveBackupMap_(undefined, false);
   if (!backupMap) {
     return { ok: false, fout: 'Geen backup-map gevonden. Draai eerst dagelijkseTaken of maakNoahArkSnapshot_.' };
   }

@@ -89,6 +89,9 @@ function maakCtx() {
   // Verbind testhandvat aan ctx-helpers (ctx is een vm-context; nieuwe sheets
   // toevoegen mutateert het object dat ss.getSheetByName via closure leest).
   ctx._drive = drive;
+  // #4 drive.file: NoahArk-backup-map loopt nu via getDriveBackupMap_
+  // (DriveStructuur). Mock 'm direct op de in-memory Drive-folder.
+  ctx.getDriveBackupMap_ = () => drive;
   ctx._addSheet = (s) => { sheetsByName[s.getName()] = s; };
   return ctx;
 }

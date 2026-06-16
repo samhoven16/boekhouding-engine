@@ -33,7 +33,7 @@ function controleerAutorisaties() {
     if (!ss) throw new Error('geen actieve spreadsheet');
     ss.getName();
   });
-  probeer('DriveApp',   function() { DriveApp.getRootFolder().getId(); });
+  probeer('DriveApp',   function() { const f = DriveApp.createFile('._probe', '', 'text/plain'); f.setTrashed(true); });
   probeer('MailApp',    function() { MailApp.getRemainingDailyQuota(); });
   probeer('UrlFetchApp', function() {
     // Lichte HEAD naar een endpoint binnen onze allowlist — geen externe load

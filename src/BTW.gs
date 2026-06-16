@@ -258,6 +258,13 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
   }
 
   // ── Inkoopfacturen – voorbelasting ─────────
+  // F-ACC-005: voorbelasting (art. 15 Wet OB) vereist een onderliggend
+  // bewijsstuk. We FLAGGEN — niet: uitsluiten — inkooprijen die r5b-voorbelasting
+  // claimen zonder Drive-bijlage [18], zodat de klant ze kan aanvullen vóór een
+  // steekproef-controle. De aangifte zelf blijft ongewijzigd: geen stille
+  // wijziging van een juridisch bedrag (dat zou legitieme aftrek kunnen wegnemen).
+  let r5bZonderBewijsAantal = 0;
+  let r5bZonderBewijsBedrag = 0;
   for (let i = 1; i < ifData.length; i++) {
     if (!ifData[i][3]) continue;
     const datum = parseDatum_(ifData[i][3]);
@@ -282,7 +289,25 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
       aangifte.r4a_btw += btwBedrag;
     } else if (btwBedrag > 0) {
       aangifte.r5b += btwBedrag;  // Aftrekbare voorbelasting
+      // F-ACC-005: bewijsstuk-check op kolom [18] Bijlage URL.
+      if (!String(ifData[i][18] || '').trim()) {
+        r5bZonderBewijsAantal++;
+        r5bZonderBewijsBedrag += btwBedrag;
+      }
     }
+  }
+
+  // F-ACC-005: flag voorbelasting zonder bewijsstuk (markeren + audit-log;
+  // aangifte ongewijzigd). De consumer toont _r5bZonderBewijs* als waarschuwing.
+  if (r5bZonderBewijsAantal > 0) {
+    aangifte._r5bZonderBewijsAantal = r5bZonderBewijsAantal;
+    aangifte._r5bZonderBewijsBedrag = rondBedrag_(r5bZonderBewijsBedrag);
+    try {
+      schrijfAuditLog_('BTW VOORBELASTING ZONDER BEWIJSSTUK',
+        r5bZonderBewijsAantal + ' inkooprij(en) claimen € ' +
+        rondBedrag_(r5bZonderBewijsBedrag) + ' voorbelasting zonder Drive-bijlage ' +
+        '(art. 15 Wet OB) — voeg het bewijsstuk toe vóór een eventuele controle.');
+    } catch (_) {}
   }
 
   // ── Bereken totalen ─────────────────────────
@@ -499,6 +524,17 @@ function valideerAangifteVoorIndiening_(aangifte, vorigeAangifte) {
           '). Controleer of er geen facturen dubbel of een maand vergeten zijn.');
       }
     }
+  }
+
+  // 4. F-ACC-005: voorbelasting zonder onderliggend bewijsstuk (art. 15 Wet OB).
+  // Geen blokker, wél een expliciete waarschuwing zodat de klant het bewijsstuk
+  // kan aanvullen vóór indiening — bij steekproef-controle eist de Belastingdienst
+  // de onderliggende factuur per inkoopregel die voorbelasting claimt.
+  if (aangifte._r5bZonderBewijsAantal > 0) {
+    issues.push(aangifte._r5bZonderBewijsAantal + ' inkoopfactuur(en) met samen €' +
+      (aangifte._r5bZonderBewijsBedrag || 0).toFixed(2) + ' voorbelasting missen een ' +
+      'Drive-bijlage. Voeg het bewijsstuk toe (kolom Bijlage) — bij controle eist de ' +
+      'Belastingdienst de onderliggende factuur (art. 15 Wet OB).');
   }
 
   return issues;

@@ -98,6 +98,16 @@ function maakCtx(opts) {
     schrijfAuditLog_: jest.fn((a, d) => auditCalls.push({ a, d })),
   });
 
+  // #4 drive.file: code-backup-map loopt nu via getDriveBackupMap_ (DriveStructuur).
+  ctx.getDriveBackupMap_ = () => ({
+    createFile: (naam, inhoud) => {
+      if (opts.backupFaalt) throw new Error('Drive quota exceeded');
+      backupCalls.push({ naam, inhoud });
+      return {};
+    },
+    getFiles: () => ({ hasNext: () => false }),
+  });
+
   return { ctx, fetchMock, fetchCalls, backupCalls, auditCalls };
 }
 

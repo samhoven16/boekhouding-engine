@@ -524,14 +524,8 @@ function verwerkBonUpload(base64Data, bestandsnaam, type, omschrijving, datum) {
   const blob = Utilities.newBlob(decoded, mimeType, bestandsnaam);
 
   // Map ophalen of aanmaken
-  const mapNaam = 'Bonnetjes & Ontvangstbewijzen';
-  let folder;
-  const mappen = DriveApp.getFoldersByName(mapNaam);
-  if (mappen.hasNext()) {
-    folder = mappen.next();
-  } else {
-    folder = DriveApp.createFolder(mapNaam);
-  }
+  // drive.file: geen whole-Drive-zoeken; resolve via opgeslagen ID (find-or-create).
+  const folder = getOfMaakLosseMap_('DRIVE_BONNETJES', 'Bonnetjes & Ontvangstbewijzen');
 
   // Hernoem bestand voor overzichtelijkheid
   const datumStr = datum || new Date().toISOString().slice(0, 10);

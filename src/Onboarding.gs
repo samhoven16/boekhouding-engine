@@ -932,25 +932,15 @@ function _maakPreMigratieBackup_(vanaf, naar) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     if (!ss) return;
-    const huidigJaar = new Date().getFullYear();
-    let backupMap = null;
-    try {
-      const hoofdId = PropertiesService.getScriptProperties().getProperty('DRIVE_HOOFDMAP_' + huidigJaar);
-      if (hoofdId) {
-        const hoofd = DriveApp.getFolderById(hoofdId);
-        const it = hoofd.getFoldersByName('Backups');
-        backupMap = it.hasNext() ? it.next() : hoofd.createFolder('Backups');
-      }
-    } catch (_) {}
-    if (!backupMap) backupMap = DriveApp.getRootFolder();
+    const backupMap = getDriveBackupMap_();
     const ts = Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'yyyy-MM-dd_HH-mm');
     const naam = 'pre-migratie-' + vanaf + '-naar-' + naar + '-' + ts;
     const copy = ss.copy(naam);
-    try {
-      const file = DriveApp.getFileById(copy.getId());
-      backupMap.addFile(file);
-      DriveApp.getRootFolder().removeFile(file);
-    } catch (_) {}
+    // drive.file: geen getRootFolder()-move-idioom. moveTo() verplaatst de kopie
+    // naar de (app-aangemaakte) Backups-map; zonder hoofdmap blijft 'ie staan.
+    if (backupMap) {
+      try { DriveApp.getFileById(copy.getId()).moveTo(backupMap); } catch (_) {}
+    }
     safeAuditLog_('Pre-migratie backup', naam + ' (' + copy.getId() + ')');
   } catch (e) {
     Logger.log('_maakPreMigratieBackup_ fout: ' + e.message);
