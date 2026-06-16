@@ -51,4 +51,22 @@ describe('#4 stap 2 — drive.file-veilige Drive-toegang', () => {
     expect(ds).toMatch(/function getDriveBackupMap_\(/);
     expect(ds).toMatch(/function getOfMaakLosseMap_\(/);
   });
+
+  test('manifest gebruikt drive.file, niet de restricted drive', () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(SRC, 'appsscript.json'), 'utf8'));
+    expect(manifest.oauthScopes).toContain('https://www.googleapis.com/auth/drive.file');
+    expect(manifest.oauthScopes).not.toContain('https://www.googleapis.com/auth/drive');
+  });
+
+  test('geen restricted scopes meer in het manifest (gratis verificatie i.p.v. CASA)', () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(SRC, 'appsscript.json'), 'utf8'));
+    const RESTRICTED = [
+      'https://www.googleapis.com/auth/drive',
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/gmail.send',
+      'https://mail.google.com/',
+    ];
+    const gevonden = manifest.oauthScopes.filter((s) => RESTRICTED.includes(s));
+    expect(gevonden).toEqual([]);
+  });
 });
