@@ -1918,6 +1918,8 @@ function berekenPriveBelastingvoordelen_(winst) {
       titel: `💼 Lijfrente: tot ${formatBedrag_(lijfrenteMax)} aftrekbaar`,
       tekst: `U kunt maximaal 30% van uw premiegrondslag (${formatBedrag_(premiegrondslag)}) inleggen in een ` +
              `lijfrente en dit aftrekken van uw IB: maximaal ${formatBedrag_(lijfrenteMax)} dit jaar. ` +
+             `Let op: dit is de bruto jaarruimte vóór aftrek van al opgebouwd pensioen (factor A); met een ` +
+             `pensioenregeling of eerdere lijfrente is uw werkelijke aftrekruimte lager (zie de calculator). ` +
              `Sluit een bancaire lijfrente of lijfrenteverzekering af. Vervangt deels de FOR. ` +
              `Vraag uw bank of verzekeraar om de jaarnota voor uw aangifte.`,
       besparing: rondBedrag_(lijfrenteMax * marginaalIbTarief_(winst, BELASTING)),

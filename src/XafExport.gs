@@ -242,10 +242,20 @@ function _bouwGrootboekXml_(ss) {
     xml += '      <ledgerAccount>\n';
     xml += '        <accID>' + _xafEsc_(code) + '</accID>\n';
     xml += '        <accDesc>' + _xafEsc_(naam) + '</accDesc>\n';
-    // accTp = grootboek-categorie. Heuristiek op code-range:
-    //   0-1 = balans (B), 2-3 = activa (B), 4-9 = winst-verlies (P)
-    const eersteCijfer = code.charAt(0);
-    const accTp = (eersteCijfer >= '4' && eersteCijfer <= '9') ? 'P' : 'B';
+    // accTp = grootboek-categorie (B=balans, P=winst-verlies). Gebruik de
+    // expliciete Balans/W&V-kolom [4] uit het schema (F-ACC-009) i.p.v. een gok
+    // op het eerste code-cijfer — een custom schema met bv. een resultaat-
+    // rekening in de 0-3 range kreeg anders ten onrechte 'B' en moest de
+    // accountant bij import handmatig herclassificeren. Val alleen terug op de
+    // code-range-heuristiek als de Balans/W&V-kolom leeg/onbekend is.
+    const bwVlag = String(rij[4] || '').trim().toLowerCase().charAt(0);
+    let accTp;
+    if (bwVlag === 'b') accTp = 'B';        // "Balans"
+    else if (bwVlag === 'w') accTp = 'P';   // "W&V" / "Winst & Verlies"
+    else {
+      const eersteCijfer = code.charAt(0);  // fallback: code-range-heuristiek
+      accTp = (eersteCijfer >= '4' && eersteCijfer <= '9') ? 'P' : 'B';
+    }
     xml += '        <accTp>' + accTp + '</accTp>\n';
     // K2-Accountant (criticus-rapport): RGS NL-codering toevoegen zodat
     // Caseware/Visma/Twinfield/Pinkweb/Exact direct kunnen mappen
