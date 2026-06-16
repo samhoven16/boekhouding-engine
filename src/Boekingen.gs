@@ -1417,18 +1417,13 @@ function beheerGeslotenPeriodes() {
 
     periodes.splice(nr, 1);
     props.setProperty('GESLOTEN_PERIODES', JSON.stringify(periodes));
+    // PERIODE_ONTGRENDELD is legaal-significant → schrijfAuditLog_ routeert het
+    // sinds F-ACC-001 zélf duurzaam naar de AUDIT_LOG-sheet (7-jaars bewaar-
+    // plicht art. 52 AWR). Geen aparte dual-write meer — die zou nu dubbel
+    // loggen in de sheet.
     try {
       schrijfAuditLog_('PERIODE_ONTGRENDELD',
         'periode=' + periode.label + ' | motivatie=' + motivatie.slice(0, 400));
-    } catch (_) {}
-    // Ronde-3 (accountant): óók duurzaam naar AUDIT_LOG-sheet (7-jaars
-    // bewaarplicht art. 52 AWR) — periode-ontgrendeling is precies wat een
-    // controleur onderzoekt; de ScriptProperties-buffer roteert na 100.
-    try {
-      if (typeof logBusinessEventNaarAuditSheet_ === 'function') {
-        logBusinessEventNaarAuditSheet_('PERIODE_ONTGRENDELD',
-          'periode=' + periode.label + ' | motivatie=' + motivatie.slice(0, 400));
-      }
     } catch (_) {}
     ui.alert(
       'Periode ontgrendeld + gelogd',

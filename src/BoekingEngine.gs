@@ -881,7 +881,38 @@ function schrijfAuditLog_(actie, details) {
     }
     props.setProperty(LOG_KEY, buffer);
     Logger.log('[AUDIT] ' + entry);
+
+    // F-ACC-001: correctie-/uitzonderings-events óók DUURZAAM naar de
+    // AUDIT_LOG-sheet (7-jaars bewaarplicht art. 52 AWR). De buffer hierboven
+    // roteert na 100 events; routine-events (factuur/email aangemaakt) zijn al
+    // reconstrueerbaar uit de data-sheets, maar het who/what/when-spoor van
+    // correcties (storno, dubbel-blokkade, jaarafsluiting, ontgrendeling, ...)
+    // mag niet verdampen — dat is precies wat een controleur onderzoekt.
+    // Re-entrancy-guard tegen een theoretische lus (sheet-append → onEdit-
+    // trigger → schrijfAuditLog_). Best-effort: nooit crashen om een audit.
+    if (!schrijfAuditLog_._inDurable &&
+        _isAuditSignificant_(actie) &&
+        typeof logBusinessEventNaarAuditSheet_ === 'function') {
+      schrijfAuditLog_._inDurable = true;
+      try { logBusinessEventNaarAuditSheet_(actie, detailsCapped); }
+      catch (_) { /* audit mag nooit de hoofdactie breken */ }
+      finally { schrijfAuditLog_._inDurable = false; }
+    }
   } catch(e) { /* nooit crashen om audit */ }
+}
+
+/**
+ * Bepaalt of een audit-actie legaal-significant is en dus DUURZAAM naar de
+ * AUDIT_LOG-sheet moet (i.p.v. alleen de roterende ScriptProperties-buffer).
+ * Vangt de correctie-/uitzonderings-events die een Belastingdienst-controleur
+ * onderzoekt: storno's, dubbel-blokkades, jaarafsluiting, periode-(ont)-
+ * grendeling, tarief-overrides, rollbacks, factuurnummer-gaps, corrupte data
+ * en afgebroken processen. Routine-events (factuur/email aangemaakt) blijven
+ * buffer-only — die zijn al reconstrueerbaar uit de data-sheets zelf.
+ */
+function _isAuditSignificant_(actie) {
+  return /storno|gestorneerd|dubbel|geblokkeerd|geannuleerd|jaarafsluiting|onbekend|rollback|gebroken|ontgrendeld|vergrendeld|override|reject|corrupt|\bgap\b|afgebroken|mislukt|geweigerd|bewaarplicht|atomic|tarief gewijzigd/i
+    .test(String(actie || ''));
 }
 
 // Backward-compat alias (gebruikt in Branding.gs en Utils.gs)
