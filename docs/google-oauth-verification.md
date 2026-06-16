@@ -174,6 +174,14 @@ functionality").
    Boekhoudbaar → ..."). **Nooit** "koop een licentie" en **geen** OTP naar een
    inbox die de reviewer niet kan lezen.
 
+> ⚠️ **Red-team-waarschuwing (kritiek):** geef de reviewer een **gewone licentie-rij**
+> in de Licenties-sheet op het adres van het test-account, en laat ze de normale
+> OTP-flow doen (de code komt in de Gmail-inbox van datzelfde test-account, dus die
+> kunnen ze lezen). Zet de reviewer **NIET** in `ADMIN_EMAILS_EXTRA` — dat geeft een
+> onvoorwaardelijke, server-loze bypass op *élke* spreadsheet die dat account opent,
+> en is feitelijk "gratis onbeperkte kopieën" als die waarde ooit lekt. De gewone-
+> licentie-route geeft bovendien een realistische review-ervaring.
+
 Datzelfde account/flow is meteen je demo-video-opname (§6).
 
 ---
