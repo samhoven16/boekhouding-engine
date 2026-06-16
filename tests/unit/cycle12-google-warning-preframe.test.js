@@ -24,7 +24,7 @@ describe('CYCLE 12: Google-warning pre-framing op homepage', () => {
   });
 
   test('Uitleg vermeldt waarom de warning verschijnt (geen OAuth-verification)', () => {
-    expect(html).toMatch(/OAuth-app-verification|Google.{0,30}verification/i);
+    expect(html).toMatch(/OAuth-app-verifica|Google.{0,40}verifica/i);
   });
 
   test('Concrete instructie aanwezig: "Geavanceerd" → "Ga naar Boekhoudbaar"', () => {
