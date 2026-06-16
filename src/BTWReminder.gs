@@ -124,7 +124,7 @@ Met vriendelijke groet,
   const verzonden = (typeof stuurMailMetDlq_ === 'function')
     ? stuurMailMetDlq_(email, onderwerp, body)
     : (function() {
-        try { GmailApp.sendEmail(email, onderwerp, body); return true; }
+        try { MailApp.sendEmail(email, onderwerp, body); return true; }
         catch (e) {
           Logger.log('BTW herinnering MISLUKT: ' + e.message);
           safeAuditLog_('BTW reminder MISLUKT', e.message);

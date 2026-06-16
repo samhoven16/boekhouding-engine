@@ -664,7 +664,7 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
     return false;
   }
   // Strikte format-validatie via central isGeldigEmail_ (Utils.gs).
-  // Voorkomt GmailApp.sendEmail crash + audit-trail van geweigerde mails.
+  // Voorkomt MailApp.sendEmail crash + audit-trail van geweigerde mails.
   if (!isGeldigEmail_(klantEmail)) {
     Logger.log('stuurFactuurEmailNaarKlant_: e-mail niet geldig formaat: ' + klantEmail);
     safeAuditLog_('Factuur-mail geweigerd', 'Ongeldig e-mailformaat: ' + klantEmail);
@@ -730,7 +730,7 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
     };
     if (eigenEmail) opties.cc = eigenEmail;
 
-    GmailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
+    MailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
     Logger.log(`Factuur ${factuurNummer} gemaild naar ${klantEmail}`);
     return true;
   } catch (err) {

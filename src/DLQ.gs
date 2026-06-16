@@ -142,7 +142,7 @@ function _dlqHandler_(type, payload) {
     case 'EMAIL_HERINNERING':
       // Verwacht payload: { email, onderwerp, tekst, opties }
       try {
-        GmailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst, payload.opties || {});
+        MailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst, payload.opties || {});
         return true;
       } catch (_) { return false; }
 
