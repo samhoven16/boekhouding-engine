@@ -159,12 +159,25 @@ function doPost(e) {
 function doGet(e) {
   // API-flow: JSON response
   const apiSleutel = getInstelling_('Webhook API sleutel');
-  if (apiSleutel) {
-    const meegezonden = (e && e.parameter && e.parameter.apikey) || '';
-    // Constant-time compare (zelfde als doPost) — voorkomt timing-attack
-    if (!veiligVergelijkApi_(meegezonden, apiSleutel)) {
-      return jsonResponse_({ succes: false, fout: 'Ongeldige of ontbrekende API-sleutel' });
-    }
+
+  // FIX H2 (spiegelt F-RED-001 op doPost, regel 109): fail-CLOSED als géén
+  // API-sleutel is geconfigureerd. doGet kent geen HMAC-modus, dus de sleutel is
+  // de enige auth. Voorheen werd de check overgeslagen bij lege sleutel (default
+  // na verse install) — terwijl élke doGet-actie bedrijfsdata teruggeeft: 'status'
+  // lekt omzet/winst/debiteuren/BTW (statusResponse_), 'klanten' de volledige
+  // debiteurenlijst en 'facturen' de omzet per factuur. Zonder sleutel dus ALLES
+  // weigeren (geen uitzondering zoals doPost's mollie_webhook, want geen enkele
+  // GET-actie herverifieert zichzelf).
+  if (!apiSleutel) {
+    const gevraagd = e && e.parameter ? String(e.parameter.actie || 'status') : 'status';
+    safeAuditLog_('API geweigerd', 'geen auth geconfigureerd (GET actie=' + gevraagd + ')');
+    return jsonResponse_({ succes: false, fout: 'Webhook niet geconfigureerd. Stel eerst een Webhook API-sleutel in via Instellingen voordat de Web App publiek gebruikt wordt.' });
+  }
+
+  // Sleutel is gezet → valideer de meegezonden sleutel (constant-time, zelfde als doPost).
+  const meegezonden = (e && e.parameter && e.parameter.apikey) || '';
+  if (!veiligVergelijkApi_(meegezonden, apiSleutel)) {
+    return jsonResponse_({ succes: false, fout: 'Ongeldige of ontbrekende API-sleutel' });
   }
 
   const actie = e && e.parameter ? String(e.parameter.actie || 'status') : 'status';
