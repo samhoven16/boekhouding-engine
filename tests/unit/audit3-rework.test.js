@@ -105,8 +105,16 @@ describe('Durable business-event logging (7-jaars bewaarplicht)', () => {
     expect(b).toMatch(/appendRow/);
   });
 
-  test('PERIODE_ONTGRENDELD wordt nu óók duurzaam gelogd', () => {
-    expect(bok).toMatch(/logBusinessEventNaarAuditSheet_\('PERIODE_ONTGRENDELD'/);
+  test('PERIODE_ONTGRENDELD wordt duurzaam gelogd (centraal via schrijfAuditLog_, F-ACC-001)', () => {
+    // Sinds F-ACC-001 geen aparte dual-write meer op de call-site; schrijfAuditLog_
+    // routeert legaal-significante events zélf naar de durable AUDIT_LOG-sheet.
+    const sa = blok(eng, 'schrijfAuditLog_');
+    expect(sa).toMatch(/_isAuditSignificant_\(actie\)/);
+    expect(sa).toMatch(/logBusinessEventNaarAuditSheet_\(/);
+    // PERIODE_ONTGRENDELD valt onder "significant"
+    expect(blok(eng, '_isAuditSignificant_')).toMatch(/ontgrendeld/i);
+    // de oude dubbele call op de unlock-site is weg (anders 2 sheet-rijen)
+    expect(bok).not.toMatch(/logBusinessEventNaarAuditSheet_\('PERIODE_ONTGRENDELD'/);
   });
 
   test('Misleidende comment over AuditLog-fallback is gecorrigeerd', () => {

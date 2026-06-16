@@ -311,16 +311,24 @@ function sluitJaarAf() {
   if (typeof controleerBalansStrikt_ === 'function') {
     const balansCheck = controleerBalansStrikt_();
     if (balansCheck.status === 'KRITIEK') {
-      const doorgaan = ui.alert(
-        'Balans sluit niet strikt — jaarrekening-risico',
+      // Harde blokker (audit F-ACC-002): bij een verschil > €0,005 — in een
+      // integer-centen-administratie kán dat alleen een echte scheve boeking
+      // zijn — mag de afsluiting NIET doorgaan. De oude YES-bypass legde de
+      // niet-sluitende balans permanent (en daarna oncorrigeerbaar) in het
+      // archief vast. Geen override-knop: eerst herstellen, dan opnieuw.
+      schrijfAuditLog_('Jaarafsluiting GEBLOKKEERD',
+        'Balans sluit niet strikt (' + balansCheck.status + '): ' + balansCheck.bericht);
+      ui.alert(
+        'Balans sluit niet — jaarafsluiting geblokkeerd',
         balansCheck.bericht + '\n\n' +
         'Voor een formele jaarrekening MOET activa = passiva tot op €0,005 nauwkeurig. ' +
-        'Doorgaan zou de afwijking permanent in het archief vastleggen.\n\n' +
-        'Druk NEE om eerst saldi te herberekenen, JA om toch door te gaan ' +
-        '(alleen als je weet wat je doet).',
-        ui.ButtonSet.YES_NO
+        'De afsluiting is geblokkeerd zodat een niet-sluitende balans niet permanent ' +
+        'in het archief belandt.\n\n' +
+        'Herstel: kies "Grootboeksaldi herberekenen", corrigeer de scheve journaalpost, ' +
+        'en sluit daarna opnieuw af.',
+        ui.ButtonSet.OK
       );
-      if (doorgaan !== ui.Button.YES) return;
+      return;
     }
   }
 
@@ -401,6 +409,21 @@ function sluitJaarAf() {
     slaDriverLinksOpInInstellingen_(nieuwJaar);
   } catch (e) {
     fouten.push('Drive-mappen niet aangemaakt: ' + e.message);
+  }
+
+  // 6. Vergrendel het afgesloten boekjaar als gesloten periode (audit F-ACC-003).
+  // Hierdoor dekt de formele I8-immutability-verifier dit jaar via
+  // GESLOTEN_PERIODES, onafhankelijk van de losse JA-tag in maakJournaalpost_.
+  // MOET ná de resultaatverwerking gebeuren — die boekt JA-posten ín huidigJaar;
+  // eerder vergrendelen zou de afsluitboekingen zelf blokkeren.
+  try {
+    vergrendelPeriode_(
+      new Date(huidigJaar, 0, 1),
+      new Date(huidigJaar, 11, 31, 23, 59, 59, 999),
+      'Jaarafsluiting ' + huidigJaar
+    );
+  } catch (e) {
+    fouten.push('Periode-vergrendeling ' + huidigJaar + ' niet vastgelegd: ' + e.message);
   }
 
   schrijfAuditLog_('Jaarafsluiting voltooid', huidigJaar + ' → ' + nieuwJaar);

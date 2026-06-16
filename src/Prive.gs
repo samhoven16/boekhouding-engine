@@ -375,7 +375,7 @@ function openIbAangifteHelper() {
       <div class="form-row">
         <label>Schulden die aftrekbaar zijn in Box 3 (boven €3.700 drempel)</label>
         <input type="number" id="b3schulden" placeholder="0" step="100">
-        <div class="info">Heffingsvrij ${_jaar}: €${_box3Vrij.toLocaleString('nl-NL')} per persoon (€${(_box3Vrij * 2).toLocaleString('nl-NL')} fiscaal partners). Tarief Box 3: ${Math.round(_box3Tar * 100)}%.</div>
+        <div class="info">Heffingsvrij ${_jaar}: €${_box3Vrij.toLocaleString('nl-NL')} per persoon (€${(_box3Vrij * 2).toLocaleString('nl-NL')} fiscaal partners). Tarief Box 3: ${Math.round(_box3Tar * 100)}%. ⚠️ Forfait en heffingsvrij vermogen ${_jaar} zijn indicatief — de Box 3-wetgeving is nog niet definitief.</div>
       </div>
     </div>
 
@@ -513,7 +513,7 @@ function beheerVermogensoverzicht() {
   const grondslag = Math.max(0, totaal - heffingsvrij);
 
   ss.toast(
-    `Totaal vermogen: ${formatBedrag_(totaal)}  |  Box 3 grondslag (na heffingsvrij ${formatBedrag_(heffingsvrij)}): ${formatBedrag_(grondslag)}`,
+    `Totaal vermogen: ${formatBedrag_(totaal)}  |  Box 3 grondslag (na heffingsvrij ${formatBedrag_(heffingsvrij)}): ${formatBedrag_(grondslag)} — indicatief, forfait/heffingsvrij ${new Date().getFullYear()} nog niet definitief`,
     '💼 Vermogensoverzicht', 8
   );
 }
