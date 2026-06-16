@@ -18,6 +18,8 @@
 /voorwaarden /voorwaarden/ 301
 /privacy /privacy/ 301
 /transparantie /transparantie/ 301
+# /landing.html → /landing (canonieke URL zonder .html; voorkomt duplicate-indexering)
+/landing.html /landing 301
 
 # ── Affiliate tracking (/go/ routes) ──────────────────────────
 # 302 = tijdelijk, zodat target-URL bijgewerkt kan worden zonder SEO-impact.
