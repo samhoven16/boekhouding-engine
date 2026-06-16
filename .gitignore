@@ -145,3 +145,8 @@ bundle-*.json
 
 # Scratch- en audit-werkbestanden (lokale analyse-output, bewust niet gecommit)
 tmp/
+
+# clasp OAuth-credentials (bevat een Google refresh-token) — NOOIT committen.
+# Let op: .clasp.json / .clasp.dev.json / .clasp.prod.json zijn config zonder
+# token en blijven WEL getrackt; alleen dit rc-bestand met credentials niet.
+.clasprc.json
