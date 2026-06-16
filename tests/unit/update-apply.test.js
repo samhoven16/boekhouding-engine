@@ -316,20 +316,20 @@ describe('_verifieerToegepasteFiles_', () => {
 describe('Source-level checks', () => {
   const src = fs.readFileSync(UPDATE_APPLY_GS, 'utf8');
 
-  test('startAutomatischeUpdate ZONDER trailing underscore (menu-aanroepbaar)', () => {
+  test('startAutomatischeUpdate blijft als dormant functie bestaan (re-enable-pad na bundle-signing)', () => {
     expect(src).toMatch(/function startAutomatischeUpdate\(/);
     expect(src).not.toMatch(/function startAutomatischeUpdate_\(/);
   });
 
-  test('Menu.gs verwijst naar startAutomatischeUpdate', () => {
+  test('Menu.gs biedt GEEN automatische update aan (script.projects verwijderd voor OAuth-verificatie)', () => {
     const menu = fs.readFileSync(path.resolve(__dirname, '../../src/Menu.gs'), 'utf8');
-    expect(menu).toMatch(/'startAutomatischeUpdate'/);
+    expect(menu).not.toMatch(/'startAutomatischeUpdate'/);
   });
 
-  test('manifest bevat script.projects scope', () => {
+  test('manifest bevat GEEN script.projects scope (verwijderd voor OAuth-verificatie; self-update dormant)', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.resolve(__dirname, '../../src/appsscript.json'), 'utf8'));
-    expect(manifest.oauthScopes).toContain('https://www.googleapis.com/auth/script.projects');
+    expect(manifest.oauthScopes).not.toContain('https://www.googleapis.com/auth/script.projects');
   });
 
   test('kill-switch is fail-closed: geen isFeatureIngeschakeld_ (fail-open) gebruikt', () => {

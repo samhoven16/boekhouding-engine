@@ -19,15 +19,17 @@
 | Reviewer test-toegang langs de licentie-gate | ⛔ jij — zie §7 (de kern) |
 | Search Console-eigendom + consent-scherm (logo/naam/mail) | ⛔ jij — zie §3–§5 |
 
-**De grootste resterende afkeur-risicofactor:** `script.projects` (zelf-modificerende
-code). Zie §2. Overweeg self-update uit te zetten voor de eerste verificatie als
-je het risico wilt minimaliseren.
+**`script.projects` is voor deze ronde uit het manifest gehaald** — de zwaarste
+afkeur-risicofactor (zelf-modificerende code, en de bundle-integriteit leunde enkel
+op een self-referential hash zonder handtekening). De self-update is dormant; klanten
+updaten handmatig (UpdateBundle → "📦 Download laatste versie"). Re-introductie pas ná
+bundle-signing met gepinde public key + losse her-aanvraag. Zie §2.
 
 ---
 
 ## 1. Welke verificatie en waarom
 
-De app vraagt **sensitive** scopes (`spreadsheets`, `forms`, `script.projects`)
+De app vraagt **sensitive** scopes (`spreadsheets`, `forms`)
 maar **geen restricted** scopes. Daarom:
 
 - **Wel** nodig: brand-verificatie + sensitive-scope-review (zelfverklaring,
@@ -48,7 +50,6 @@ Huidig manifest (`src/appsscript.json`):
 |-------|--------------|---------------------|
 | `spreadsheets` | **sensitive** | ✅ |
 | `forms` | **sensitive** | ✅ |
-| `script.projects` | **sensitive** | ✅ |
 | `drive.file` | niet-sensitive (per-file) | nee |
 | `script.send_mail` | niet-sensitive (alleen verzenden) | nee |
 | `script.external_request` | niet-sensitive | nee |
@@ -74,18 +75,15 @@ Huidig manifest (`src/appsscript.json`):
 > bookkeeping entries. The script is spreadsheet-bound and opens its own form
 > by ID; no other forms are accessed.
 
-**`https://www.googleapis.com/auth/script.projects`**
-> Used only for the user-initiated "Update now" menu action, which installs a
-> newer version of Boekhoudbaar into the user's own copy of the script via the
-> Apps Script API. Updates are never automatic — they require an explicit click
-> by the user — and each update bundle is verified with a SHA-256 signature
-> before being applied. The app does not read or modify any other Apps Script
-> projects.
-
-> ⚠️ **Let op `script.projects`:** dit is de scope die de meeste scrutiny
-> trekt (een app die haar eigen code kan herschrijven). Twee opties:
-> (a) bovenstaande justificatie robuust verdedigen, of (b) de self-update-
-> functie uitschakelen voor de eerste verificatie en later los toevoegen.
+> ℹ️ **`script.projects` is uit het manifest gehaald voor deze ronde** (optie b).
+> De self-update is dormant — klanten updaten handmatig via UpdateBundle. Dus géén
+> justificatie nodig en de zwaarst-gescrutineerde scope is weg. Re-introductie pas na:
+> (1) bundle-signing met asymmetrische sleutel + in-code gepinde public key
+> (red-team-bevinding: de oude self-referential SHA-256 was geen authenticiteitsbewijs),
+> en (2) een losse her-aanvraag met justificatie: *"Used only for the user-initiated
+> 'Update now' action, which installs a signed, hash-pinned newer version into the
+> user's own script copy via the Apps Script API. Never automatic; each bundle is
+> signature-verified. No other projects are touched."*
 
 ---
 
@@ -175,6 +173,14 @@ functionality").
    wachtwoord van het test-account + 2 regels uitleg ("open deze sheet → menu
    Boekhoudbaar → ..."). **Nooit** "koop een licentie" en **geen** OTP naar een
    inbox die de reviewer niet kan lezen.
+
+> ⚠️ **Red-team-waarschuwing (kritiek):** geef de reviewer een **gewone licentie-rij**
+> in de Licenties-sheet op het adres van het test-account, en laat ze de normale
+> OTP-flow doen (de code komt in de Gmail-inbox van datzelfde test-account, dus die
+> kunnen ze lezen). Zet de reviewer **NIET** in `ADMIN_EMAILS_EXTRA` — dat geeft een
+> onvoorwaardelijke, server-loze bypass op *élke* spreadsheet die dat account opent,
+> en is feitelijk "gratis onbeperkte kopieën" als die waarde ooit lekt. De gewone-
+> licentie-route geeft bovendien een realistische review-ervaring.
 
 Datzelfde account/flow is meteen je demo-video-opname (§6).
 

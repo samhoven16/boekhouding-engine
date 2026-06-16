@@ -64,26 +64,28 @@ describe('Klantreis #3 — Tijdsbeloftes consistent op bedankt-pagina', () => {
 });
 
 describe('Klantreis #4 — P4 (pensioenklant) OAuth-uitleg vóór knop', () => {
-  test('Pre-button prep zin: "2 Google-schermen"', () => {
+  test('Pre-button prep zin: "3 Google-schermen"', () => {
     const start = code.indexOf('Open mijn boekhouding →');
     expect(start).toBeGreaterThan(-1);
-    const rond = code.slice(Math.max(0, start - 500), start);
-    expect(rond).toMatch(/2 Google-schermen/);
+    const rond = code.slice(Math.max(0, start - 600), start);
+    expect(rond).toMatch(/3 Google-schermen/);
   });
 
-  test('Concrete actie-instructie: "Geavanceerd → Doorgaan"', () => {
+  test('Concrete actie-instructie: "Geavanceerd → Ga naar Boekhoudbaar (onveilig)"', () => {
     const start = code.indexOf('Open mijn boekhouding →');
-    const rond = code.slice(Math.max(0, start - 500), start);
-    expect(rond).toMatch(/Geavanceerd → Doorgaan/);
+    const rond = code.slice(Math.max(0, start - 600), start);
+    expect(rond).toMatch(/Geavanceerd → Ga naar Boekhoudbaar \(onveilig\)/);
   });
 
   test('Prep-zin staat VLAK voor de knop (visuele nabijheid)', () => {
-    const start = code.indexOf('2 Google-schermen');
     const buttonStart = code.indexOf('Open mijn boekhouding →');
+    // lastIndexOf vanaf de knop: pakt de prep-zin (vlak vóór de knop), niet de
+    // gelijkluidende voorbereidende comment eerder in het bestand.
+    const start = code.lastIndexOf('3 Google-schermen', buttonStart);
     expect(start).toBeGreaterThan(-1);
     expect(buttonStart).toBeGreaterThan(-1);
-    // Binnen 400 chars van button → vlakbij
-    expect(buttonStart - start).toBeLessThan(400);
+    // Binnen 500 chars → vlakbij; de knop-inline-CSS (~245 chars) domineert de afstand.
+    expect(buttonStart - start).toBeLessThan(500);
   });
 });
 
