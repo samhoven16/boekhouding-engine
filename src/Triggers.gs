@@ -1594,9 +1594,24 @@ function dagelijkseTaken() {
         structuredLog_('INFO', 'dagelijkseTaken.formeelBewijs',
           'Alle ' + rapport.gecheckt + ' axioma\'s OK', { gecheckt: rapport.gecheckt });
       } else {
-        structuredLog_('WARN', 'dagelijkseTaken.formeelBewijs',
-          rapport.schendingen.length + '/' + rapport.gecheckt + ' invarianten geschonden',
+        const bericht = rapport.schendingen.length + '/' + rapport.gecheckt +
+          ' invarianten geschonden';
+        structuredLog_('WARN', 'dagelijkseTaken.formeelBewijs', bericht,
           { schendingen: rapport.schendingen });
+        // Accountant-audit: axioma-breuk (grootboek-drift/onbalans) mag niet stil
+        // naar Stackdriver verdwijnen — die overleeft de 7-jaars bewaarplicht niet
+        // en is onzichtbaar voor klant/accountant. Durable audit-log (in de sheet)
+        // + throttled owner-alert. Beide fail-safe zodat de dagtaak niet kettingt.
+        let detail = bericht;
+        try { detail += ': ' + JSON.stringify(rapport.schendingen).slice(0, 400); } catch (_) {}
+        try {
+          if (typeof schrijfAuditLog_ === 'function') schrijfAuditLog_('FORMEEL BEWIJS GESCHONDEN', detail);
+        } catch (_) {}
+        try {
+          if (typeof meldFataalAanOwner_ === 'function') {
+            meldFataalAanOwner_('FORMEEL_BEWIJS', detail, { gecheckt: rapport.gecheckt });
+          }
+        } catch (_) {}
       }
     }
   });

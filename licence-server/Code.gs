@@ -777,6 +777,12 @@ function aanvraagOtpEndpoint_(e) {
         String(data[i][4] || '').toLowerCase().startsWith('actief')) { gevonden = true; break; }
   }
   if (!gevonden) {
+    // Massa-enumeratie throttelen via een APARTE globale bucket (niet de bekend-
+    // bucket → geen DoS-saturatie van legitieme klanten). De behulpzame typo-
+    // melding blijft intact: binnen de cap krijgt een onbekend adres gewoon nuttig
+    // antwoord, maar een wordlist-aanval op het klantenbestand wordt globaal afgeknepen.
+    const onbekendCap = rateLimit_(e, { actie: 'aanvraag-otp-onbekend', globaal: 200, windowMin: 60 });
+    if (onbekendCap) return onbekendCap;
     return jsonResp_({ ok: false, fout: 'Dit e-mailadres is niet bekend als klant. Controleer het e-mailadres waarmee je hebt gekocht.' });
   }
 
@@ -2585,8 +2591,12 @@ function roteerEndpoint_(e) {
     // Anti-misbruik (red-team audit): onbeperkte rotatie-ketens = één betaalde
     // licentie die telkens een verse, ongebonden sleutel oplevert (elke kopie
     // teert daarna op de offline-grace). Persistente grens, sheet-gebaseerd
-    // (de cache-rate-limit van 3/uur reset en stopt ketens dus niet):
-    // max 3 rotaties per e-mail per 30 dagen, daarna via support.
+    // (de cache-rate-limit reset en stopt ketens dus niet):
+    // max 2 rotaties per e-mail per 30 dagen, daarna via support.
+    // Bewust NIET de 90d offline-grace verlaagd (continuïteits-keuze #262: klanten
+    // moeten doorwerken als de licentieserver wegvalt). De diepere fix tegen de
+    // offline-stacking — offline-grace pas ná de eerste geslaagde online-validatie
+    // toekennen — raakt Licentie.gs (client) en vereist dev-script-validatie; apart traject.
     const aangemaaktCol = headers.indexOf('Aangemaakt op');
     const mollieCol = headers.indexOf('Mollie betaling ID');
     if (aangemaaktCol >= 0 && mollieCol >= 0) {
@@ -2598,10 +2608,10 @@ function roteerEndpoint_(e) {
         const gemaakt = data[r][aangemaaktCol];
         if (gemaakt instanceof Date && gemaakt.getTime() >= dertigDagenTerug) recenteRotaties++;
       }
-      if (recenteRotaties >= 3) {
+      if (recenteRotaties >= 2) {
         return ContentService.createTextOutput(JSON.stringify({
           ok: false,
-          fout: 'Maximaal 3 sleutel-rotaties per 30 dagen. Neem contact op met support@boekhoudbaar.nl.',
+          fout: 'Maximaal 2 sleutel-rotaties per 30 dagen. Neem contact op met support@boekhoudbaar.nl.',
         })).setMimeType(ContentService.MimeType.JSON);
       }
     }
