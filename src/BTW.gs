@@ -639,6 +639,21 @@ function zetBtwAangifteOpSheet_(ss, aangifte, kwartaal, periode) {
   sheet.setColumnWidth(4, 150);
   sheet.setFrozenRows(4);
 
+  // F-ACC-005: persistente waarschuwing ONDER de tabel als voorbelasting zonder
+  // bewijsstuk is geclaimd. De pre-submission-dialog is vluchtig; een accountant
+  // die het tabblad later opent (jaarrekening) moet de ontbrekende bewijsstukken
+  // óók zien. clearContents() bovenaan wist de waarschuwing zodra het is opgelost.
+  if (aangifte._r5bZonderBewijsAantal > 0) {
+    const waarschuwRij = startRij + rijen.length + 1;
+    sheet.getRange(waarschuwRij, 1, 1, 4).merge()
+      .setValue('⚠ Voorbelasting zonder bewijsstuk: ' + aangifte._r5bZonderBewijsAantal +
+        ' inkoopfactuur(en) met samen € ' + (aangifte._r5bZonderBewijsBedrag || 0).toFixed(2) +
+        ' (rubriek 5b) missen een Drive-bijlage. Voeg het bewijsstuk toe (kolom Bijlage) ' +
+        'vóór indiening — bij controle eist de Belastingdienst de onderliggende factuur (art. 15 Wet OB).')
+      .setBackground('#FFF3CD').setFontColor('#7A5C00').setFontWeight('bold')
+      .setWrap(true).setVerticalAlignment('top');
+  }
+
   // Journaalpost voor BTW afdracht aanmaken (als saldo te betalen)
   if (aangifte.saldo > 0) {
     Logger.log(`BTW aangifte ${kwartaal} ${jaar}: te betalen ${aangifte.saldo}`);
