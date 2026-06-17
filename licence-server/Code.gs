@@ -890,7 +890,7 @@ function stuurOtpMail_(email, otp) {
   const props    = PropertiesService.getScriptProperties();
   const brevoKey = props.getProperty('BREVO_API_KEY') || '';
   const vanEmail = props.getProperty('VAN_EMAIL')     || 'info@boekhoudbaar.nl';
-  const vanNaam  = props.getProperty('VAN_NAAM')      || 'Boekhoudbaar';
+  const vanNaam  = props.getProperty('VAN_NAAM')      || 'Sam van Boekhoudbaar';
   const replyTo  = props.getProperty('SUPPORT_EMAIL') || 'support@boekhoudbaar.nl';
   const kvk      = props.getProperty('KVK_NUMMER')    || '';
   const btw      = props.getProperty('BTW_NUMMER')    || '';
@@ -1922,7 +1922,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
     // Cruciaal: klant heeft betaald, MOET sleutel ontvangen.
     MailApp.sendEmail({
       to: email,
-      subject: 'Je ' + productnm + ' is klaar — activeer nu',
+      subject: 'Je ' + productnm + ' is klaar — activeer nu 🚀',
       body: textBody,
       htmlBody: htmlBody,
       replyTo: supportEmail,

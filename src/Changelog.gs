@@ -18,6 +18,16 @@
 // uitgebreidere notes; patch-versies krijgen 1-2 regels.
 const CHANGELOG_ENTRIES = [
   {
+    versie: '2.7.0',
+    datum: '2026-06-16',
+    titel: '🔒 Minder Google-toegang + BTW-bewijsstukcheck',
+    items: [
+      'Minder Google-toegang nodig: smallere Drive- en mail-rechten → een vriendelijker toestemmingsscherm bij het eerste gebruik',
+      'BTW: waarschuwing als voorbelasting wordt geclaimd zonder bewijsstuk (art. 15 Wet OB) — handig vóór een controle',
+      'Privacybeleid uitgebreid met per-scope-uitleg + duidelijkere onboarding bij het Google "niet geverifieerd"-scherm',
+    ],
+  },
+  {
     versie: '2.6.0',
     datum: '2026-05-08',
     titel: '🎁 Verwijs een vriend',

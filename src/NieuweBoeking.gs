@@ -521,7 +521,7 @@ setInterval(function() {
     __recalcTeller++;
     var s = document.getElementById('recalc-status');
     if (s) {
-      s.textContent = '✓ Live (recalc #' + __recalcTeller + ')';
+      s.textContent = '✓ Totaal automatisch berekend';
       s.style.color = '#1B5E20';
     }
   } catch (e) {

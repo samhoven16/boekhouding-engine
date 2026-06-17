@@ -689,14 +689,15 @@ function toonPostSetupWelkomModal_() {
       .later{text-align:center;margin-top:8px}
       .later button{background:none;border:none;color:#5F6B7A;font-size:13px;cursor:pointer;font-family:inherit;padding:8px 12px;border-radius:6px;transition:all .15s}
       .later button:hover{color:#0D1B4E;background:rgba(13,27,78,.04)}
+      .actie-primair{border-color:#2EC4B6;background:rgba(46,196,182,.06)}
     </style>
     <div class="label">✨ Setup voltooid</div>
     <h1>${begroeting}</h1>
     <p class="sub">Je boekhouding staat klaar. Kies hieronder waar je wil beginnen — of later via het Boekhouding-menu.</p>
     <div class="acties">
-      <button class="actie" type="button" data-actie="instellingen">
+      <button class="actie actie-primair" type="button" data-actie="instellingen">
         <span class="n">1</span>
-        <span class="t"><strong>Bedrijfsgegevens invullen</strong><span>Naam, BTW-nummer, IBAN — nodig voor facturen</span></span>
+        <span class="t"><strong>Bedrijfsgegevens invullen</strong><span>Naam, BTW-nummer, IBAN — nodig voor facturen · begin hier</span></span>
         <span class="arrow">›</span>
       </button>
       <button class="actie" type="button" data-actie="profiel">

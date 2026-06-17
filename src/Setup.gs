@@ -738,6 +738,25 @@ function zetInstellingen_(ss) {
     sheet.getRange(n[0], 2).setNote(n[1]);
   });
 
+  // B2 self-service (audit): tooltips op de beslisvelden die beginners het
+  // meest verwarren — voorkomt fout-configuratie aan de bron. Label-gebaseerd
+  // (robuust tegen row-shifts), fail-safe gewrapt. Bewust géén setDataValidation:
+  // een dropdown zou kunnen botsen met een via de merge-overlay bewaarde
+  // klant-waarde die niet exact in de lijst staat.
+  const veldNotities = {
+    'Standaard BTW tarief': 'Meestal 21%. Kies 9% alleen als je hoofdzakelijk onder het lage tarief valt (voeding, boeken, kappers e.d.). Twijfel? 21%.',
+    'BTW aangifteperiode': "Kwartaal is standaard voor de meeste ZZP'ers. Maand alleen als de Belastingdienst je dat oplegt (>€15.000 BTW/jaar). Jaar alleen op aanvraag. Twijfel? Kwartaal.",
+    'KOR regeling actief': 'Alleen "Ja" als je je hebt aangemeld voor de Kleineondernemersregeling (<€20.000 omzet, géén BTW op je facturen). De meeste starters: Nee. Zie boekhoudbaar.nl/gids/btw-aangifte-zzp/',
+    'Bankrekening op factuur': 'Het IBAN dat op je facturen komt. Zakelijke rekening aanbevolen; privé mag, maar houd zakelijk/privé gescheiden. Zie boekhoudbaar.nl/gids/zakelijke-rekening-zzp-2026/',
+    'Betalingstermijn (dagen)': 'Aantal dagen dat een klant heeft om te betalen. Gangbaar: 14 of 30.',
+  };
+  for (let i = 0; i < data.length; i++) {
+    const lbl = String(data[i][0] || '').trim();
+    if (Object.prototype.hasOwnProperty.call(veldNotities, lbl)) {
+      try { sheet.getRange(i + 1, 2).setNote(veldNotities[lbl]); } catch (_) {}
+    }
+  }
+
   // Opmaak — START HIER banner (rij 1): accent-teal bg, donker navy tekst
   sheet.getRange(1, 1, 1, 2)
     .setBackground('#E6F7F4')

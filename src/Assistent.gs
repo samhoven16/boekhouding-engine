@@ -84,6 +84,35 @@ function openAssistent() {
           a: 'Ga naar <b>Boekhouding → Overzichten → Jaarrekening</b>. Dit genereert een compleet rapport dat u kunt delen.' },
       ],
     },
+    {
+      categorie: 'Wat betekent…? (begrippen)',
+      items: [
+        { v: 'Wat is een grootboekrekening?',
+          a: 'Een "mapje" waarin gelijksoortige bedragen worden verzameld — bijv. "Omzet hoog tarief", "Kantoorkosten" of "Bank". Samen vormen alle grootboekrekeningen je administratie. Je hoeft ze niet zelf te kiezen: het systeem boekt automatisch op de juiste rekening.' },
+        { v: 'Wat is een journaalpost?',
+          a: 'De boekhoudkundige vastlegging van één gebeurtenis (een factuur, een betaling, een kostenpost). Elke journaalpost heeft altijd twee kanten die even groot zijn (debet en credit) — zo blijft je boekhouding kloppend. Het systeem maakt ze automatisch.' },
+        { v: 'Wat betekenen "debet" en "credit"?',
+          a: 'De twee kanten van elke boeking. Simpel gezegd: <b>debet</b> = waar de waarde naartoe gaat, <b>credit</b> = waar die vandaan komt. Ze zijn altijd samen even groot. Je hoeft dit niet zelf bij te houden — het systeem doet het.' },
+      ],
+    },
+    {
+      categorie: 'Er ging iets mis',
+      items: [
+        { v: 'Mijn balans klopt niet — wat nu?',
+          a: 'Draai eerst de <b>Gezondheidscheck</b> (<b>Boekhouding → Diagnose</b>). Die wijst de oorzaak aan (meestal een ontbrekende tegenboeking of een handmatige wijziging). Zie ook boekhoudbaar.nl/faq voor de 5 meest voorkomende oorzaken.' },
+        { v: 'Hoe maak ik een creditnota (factuur terugdraaien)?',
+          a: 'Ga naar <b>Boekhouding → Facturen → Creditnota maken van factuur</b>. Kies de factuur die je wilt crediteren; het systeem maakt automatisch de tegenboeking.' },
+        { v: 'Mijn klant betaalt niet, ook na de herinneringen — wat nu?',
+          a: 'Na de automatische herinneringen (dag 1/7/14) kun je een aanmaning sturen, een incassobureau inschakelen, of de vordering uiteindelijk als oninbaar afboeken. Zie boekhoudbaar.nl/gids/debiteurenbeheer-zzp/ voor de stappen.' },
+      ],
+    },
+    {
+      categorie: 'Meer vragen?',
+      items: [
+        { v: 'Ik vind mijn antwoord hier niet',
+          a: 'Kijk op <b>boekhoudbaar.nl/faq</b> voor 40+ uitgebreide antwoorden, of mail support@boekhoudbaar.nl — we helpen snel.' },
+      ],
+    },
   ];
 
   // HTML opbouwen

@@ -166,7 +166,7 @@ function bouwHelpTab_(ss) {
   // LICENTIE_GRACE_DAGEN-override. Bij langdurige server-uitval valt na
   // dag 91 ELKE klant stil — zonder dat ze weten dat ze zelf kunnen
   // verlengen. Dit is een bus-factor-risico dat in de Help-tab hoort.
-  rij = _sectieHeader_(sheet, rij, '🆘 Licentie-server onbereikbaar?', accent);
+  rij = _sectieHeader_(sheet, rij, '🏖️ Werkt het op vakantie / zonder internet? (offline-toegang)', accent);
   const grace = [
     ['Wat gebeurt er?',
       'Je administratie blijft normaal werken. Boekhoudbaar checkt 1× per dag of de licentie geldig is; bij ' +
@@ -187,6 +187,12 @@ function bouwHelpTab_(ss) {
     ['Email check',
       'support@boekhoudbaar.nl — als je niet weet of het probleem aan jouw ' +
       'kant of die van Boekhoudbaar ligt, mail eerst.'],
+    ['Als Boekhoudbaar definitief zou stoppen',
+      'Je raakt niets kwijt: je hele administratie staat in jóuw Google Drive en blijft werken. ' +
+      'Exporteer alles via Boekhouding → Exporteren (XAF + Excel + PDF\'s) voor je accountant. ' +
+      'De volledige broncode staat open op github.com/samhoven16/boekhouding-engine, zodat een ' +
+      'technische opvolger 1-op-1 verder kan. Zet desnoods LICENTIE_GRACE_DAGEN op 3650 (zie hierboven) ' +
+      'om te blijven factureren — dit alles werkt zónder dat onze server nodig is.'],
   ];
   grace.forEach(function(g) {
     sheet.getRange(rij, 1).setValue(g[0]).setFontWeight('bold');

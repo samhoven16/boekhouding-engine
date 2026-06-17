@@ -51,7 +51,9 @@ describe('CYCLE 46: sitemap lastmod refresh op gewijzigde pages', () => {
     // (exact-online-stoppen, zonder-abonnement, e-bh-vs-mb-vs-bb, landing, gratis)
     // + 1 Trojaans-Paard slot (moneybird-alternatief-2026) = 53
     // + 1 /starters/ landing page (positionering ronde 3) = 54
+    // + 4 ontbrekende indexeerbare pagina's toegevoegd (#B3 SEO-maximalisatie:
+    //   continuiteit, tools/besparing, update, adverteren) = 58
     const urlCount = (sitemap.match(/<url>/g) || []).length;
-    expect(urlCount).toBe(54);
+    expect(urlCount).toBe(58);
   });
 });

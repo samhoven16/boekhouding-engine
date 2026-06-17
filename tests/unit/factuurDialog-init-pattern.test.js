@@ -79,9 +79,9 @@ describe('NieuweBoeking.gs — factuur-dialog init-patroon (regressie-firewall)'
     expect(fn).toMatch(/catch\s*\(/);
   });
 
-  test('recalc-status element wordt geüpdatet (klant ziet "✓ Live")', () => {
+  test('recalc-status element wordt geüpdatet (klant ziet succes-tekst)', () => {
     expect(src).toMatch(/recalc-status/);
-    expect(src).toMatch(/✓ Live/);
+    expect(src).toMatch(/✓ Totaal automatisch berekend/);
   });
 
   test('factuurregel-inputs hebben oninput="herbereken()" (HTML-fallback)', () => {

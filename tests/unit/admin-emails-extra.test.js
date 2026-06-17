@@ -78,8 +78,8 @@ describe('D4: ADMIN_EMAILS uitbreidbaar zonder code-push', () => {
 });
 
 describe('D4: HelpTab documenteert LICENTIE_GRACE_DAGEN-override', () => {
-  test('Sectie "Licentie-server onbereikbaar?" bestaat', () => {
-    expect(HELP).toMatch(/Licentie-server onbereikbaar/i);
+  test('Sectie offline-toegang/vakantie bestaat (vindbare titel)', () => {
+    expect(HELP).toMatch(/Werkt het op vakantie|offline-toegang/i);
   });
 
   test('LICENTIE_GRACE_DAGEN wordt expliciet benoemd', () => {
