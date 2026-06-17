@@ -203,7 +203,7 @@ function _bouwXafXml_(ss, jaarArg) {
   xml += '\n';
 
   // Customers + Suppliers — XSD-sequence: customersSuppliers MOET vóór
-  // generalLedger (en vóór vatCodes/transactions) komen. Optioneel blok.
+  // generalLedger (en vóór transactions) komen. Optioneel blok.
   try {
     xml += _bouwRelatiesXml_(ss);
   } catch (e) {
@@ -215,15 +215,11 @@ function _bouwXafXml_(ss, jaarArg) {
   xml += _bouwGrootboekXml_(ss);
   xml += '    </generalLedger>\n';
 
-  // VAT-codes (#2): de NL-standaardtarieven die de trLine/<vat>-blokken
-  // refereren (keyref-consistent — vaste set, zodat elke gebruikte vatID
-  // gegarandeerd is gedefinieerd). XSD-positie: ná generalLedger/relaties,
-  // vóór <transactions>.
-  xml += '    <vatCodes>\n';
-  xml += '      <vatCode><vatID>21</vatID><vatDesc>BTW hoog 21%</vatDesc></vatCode>\n';
-  xml += '      <vatCode><vatID>9</vatID><vatDesc>BTW laag 9%</vatDesc></vatCode>\n';
-  xml += '      <vatCode><vatID>0</vatID><vatDesc>BTW nultarief 0%</vatDesc></vatCode>\n';
-  xml += '    </vatCodes>\n';
+  // NB: bewust GÉÉN <vatCodes>/<vat> in deze 3.2-export. De BTW staat al als
+  // aparte grootboekmutatie op de BTW-rekeningen (14xx voorbelasting / 41xx af
+  // te dragen). Een los <vat>-blok op de BTW-afrekenregel zou de BTW dubbeltellen
+  // en de grondslag↔BTW-relatie verkeerd leggen. De correcte BTW-laag (vat op de
+  // grondslagregel) hoort in de XAF 4.0-build — zie PR-omschrijving.
 
   // Transactions — journaalposten
   xml += '    <transactions>\n';
@@ -408,30 +404,17 @@ function _bouwTransactionsXml_(ss, jaar) {
     const credit = String(rij[6] || '').trim();
     const bedrag = parseFloat(rij[8]) || 0;
     if (!id || !debet || !credit || bedrag <= 0) continue;
+    // COMMITTED-filter: CORRUPT/GESTORNEERD/Concept-journaalposten horen NIET in
+    // een auditfile — ze schenden de getrouwheid die een bewaarplicht-controle
+    // eist. Helper in Invariants.gs (leeg/korte legacy-rij = committed). Fail-open
+    // als de helper niet geladen is (zelfde defensieve patroon als elders).
+    if (typeof _journaalpostIsCommitted_ === 'function' && !_journaalpostIsCommitted_(rij)) continue;
 
     // periodNumber 1-12 — gebruik geparste datumObj direct (new Date(datum-string)
     // kan ambiguous zijn afhankelijk van locale). datumObj is gegarandeerd Date.
     const periode = datumObj && !isNaN(datumObj.getTime()) ? datumObj.getMonth() + 1 : 1;
     const klassificatie = _xafDagboekClassificeer_(dagboek);
     labels[klassificatie.id] = klassificatie.desc;
-    // #2 XAF vatCode: BTW-blok per regel als de rij BTW draagt. vatAmntTp uit
-    // dagboek: inkoop = input-BTW (D, te vorderen), overig = output-BTW (C).
-    // Keyref naar de vaste <vatCodes>-header. Verlegd/vrijgesteld (tarief null)
-    // of 0-bedrag → géén blok.
-    const _btwTarief = (typeof parseBtwTarief_ === 'function') ? parseBtwTarief_(String(rij[9] || '')) : null;
-    const _btwBedrag = Math.abs(parseFloat(rij[10]) || 0);
-    let _vatXml = '';
-    if (_btwTarief !== null && _btwBedrag > 0) {
-      const _vatID = String(Math.round(_btwTarief * 100));
-      const _vatTp = (klassificatie.id === 'I') ? 'D' : 'C';
-      _vatXml =
-        '            <vat>\n' +
-        '              <vatID>' + _vatID + '</vatID>\n' +
-        '              <vatPerc>' + (_btwTarief * 100).toFixed(2) + '</vatPerc>\n' +
-        '              <vatAmnt>' + _btwBedrag.toFixed(2) + '</vatAmnt>\n' +
-        '              <vatAmntTp>' + _vatTp + '</vatAmntTp>\n' +
-        '            </vat>\n';
-    }
     let tx = '        <transaction>\n';
     tx += '          <nr>' + _xafEsc_(id) + '</nr>\n';
     tx += '          <desc>' + _xafEsc_(omschr) + '</desc>\n';
@@ -446,7 +429,6 @@ function _bouwTransactionsXml_(ss, jaar) {
     tx += '            <desc>' + _xafEsc_(omschr) + '</desc>\n';
     tx += '            <amnt>' + bedrag.toFixed(2) + '</amnt>\n';
     tx += '            <amntTp>D</amntTp>\n';
-    tx += _vatXml;
     tx += '          </trLine>\n';
     // Credit-regel
     tx += '          <trLine>\n';

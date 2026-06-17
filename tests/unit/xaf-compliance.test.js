@@ -25,8 +25,8 @@ describe('XAF Auditfile 3.2 — compliance verificatie', () => {
   let xaf;
 
   beforeAll(() => {
-    // BTW.gs levert parseBtwTarief_ (gebruikt door de <vat>-blokken in XafExport).
-    ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Belastingadvies.gs', 'BTW.gs', 'XafExport.gs']);
+    // Invariants.gs levert _journaalpostIsCommitted_ (COMMITTED-filter in XafExport).
+    ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Belastingadvies.gs', 'Invariants.gs', 'XafExport.gs']);
 
     // Mock instellingen
     ctx.getInstelling_ = (k) => {
@@ -46,10 +46,15 @@ describe('XAF Auditfile 3.2 — compliance verificatie', () => {
     ];
     // Schema MOET matchen met Setup.gs:zetJournaalpostenHeaders_:
     //   id, datum, omschr, dagboek, debet-rek, debet-naam, credit-rek, credit-naam, bedrag, ...
+    // JP001/JP002 = 11-kolom legacy-rijen (geen status → committed). JP003 = 17
+    // kolommen met status 'CORRUPT' (index 16) → MOET door de COMMITTED-filter
+    // uit het auditfile worden gehouden (anders lekt half-geboekte data in een
+    // bewaarplicht-document).
     const journaal = [
       ['ID', 'Datum', 'Omschr', 'Dagboek', 'Debet', 'DNaam', 'Credit', 'CNaam', 'Bedrag', 'BTW%', 'BTWBedrag'],
       ['JP001', new Date(2026, 0, 15), 'Verkoop fact 001', 'Verkoop', '1300', 'Debiteuren', '4100', 'Omzet 21%', 121.00, '21%', 21.00],
       ['JP002', new Date(2026, 2, 20), 'Inkoop materiaal', 'Inkoop', '7000', 'Inkoopwaarde', '1500', 'Kredieten', 50.00, '21%', 8.68],
+      ['JP003', new Date(2026, 3, 5), 'CORRUPT half-geboekt', 'Verkoop', '1300', 'Debiteuren', '4100', 'Omzet 21%', 999.00, '21%', 0, '', '', '', '', '', 'CORRUPT'],
     ];
     // Kolomlayout conform .claude/sheet-schemas.md RELATIES:
     // [0]=Relatie ID, [1]=Type, [2]=Naam, [3]=Contactpersoon, [4]=Adres,
@@ -186,44 +191,28 @@ describe('XAF Auditfile 3.2 — compliance verificatie', () => {
     expect(xaf).not.toContain('contEmail');
   });
 
-  test('XSD company-volgorde: customersSuppliers → generalLedger → vatCodes → transactions', () => {
+  test('XSD company-volgorde: customersSuppliers → generalLedger → transactions', () => {
     const cs = xaf.indexOf('<customersSuppliers>');
     const gl = xaf.indexOf('<generalLedger>');
-    const vc = xaf.indexOf('<vatCodes>');
     const tx = xaf.indexOf('<transactions>');
     expect(cs).toBeGreaterThan(-1);
     expect(cs).toBeLessThan(gl);
-    expect(gl).toBeLessThan(vc);
-    expect(vc).toBeLessThan(tx);
+    expect(gl).toBeLessThan(tx);
   });
 
-  test('vatCodes-header definieert de gebruikte NL-tarieven (21/9/0)', () => {
-    expect(xaf).toContain('<vatCode><vatID>21</vatID>');
-    expect(xaf).toContain('<vatCode><vatID>9</vatID>');
-    expect(xaf).toContain('<vatCode><vatID>0</vatID>');
+  test('géén <vat>/<vatCodes> in de 3.2-export (BTW staat al als grootboekmutatie op 14xx/41xx)', () => {
+    // Een los <vat>-blok zou de BTW dubbeltellen + de grondslag↔BTW-relatie
+    // verkeerd leggen. Correcte vat-laag (op de grondslagregel) hoort in XAF 4.0.
+    expect(xaf).not.toContain('<vat>');
+    expect(xaf).not.toContain('<vatCodes>');
   });
 
-  test('trLine met BTW draagt een <vat>-blok met de 4 verplichte velden', () => {
-    expect(xaf).toMatch(/<vat>\s*<vatID>21<\/vatID>\s*<vatPerc>21\.00<\/vatPerc>\s*<vatAmnt>21\.00<\/vatAmnt>\s*<vatAmntTp>C<\/vatAmntTp>\s*<\/vat>/);
-  });
-
-  test('vatAmntTp-richting: inkoop = D (input-BTW), verkoop = C (output-BTW)', () => {
-    // JP002 = inkoop, BTW 8.68 → D
-    expect(xaf).toMatch(/<vatAmnt>8\.68<\/vatAmnt>\s*<vatAmntTp>D<\/vatAmntTp>/);
-    // JP001 = verkoop, BTW 21.00 → C
-    expect(xaf).toMatch(/<vatAmnt>21\.00<\/vatAmnt>\s*<vatAmntTp>C<\/vatAmntTp>/);
-  });
-
-  test('keyref: elke vatID in een trLine/<vat> is gedefinieerd in <vatCodes>', () => {
-    const headerIDs = new Set();
-    const headerRe = /<vatCode><vatID>([^<]+)<\/vatID>/g;
-    let m;
-    while ((m = headerRe.exec(xaf)) !== null) headerIDs.add(m[1]);
-    const lineRe = /<vat>\s*<vatID>([^<]+)<\/vatID>/g;
-    const used = [];
-    while ((m = lineRe.exec(xaf)) !== null) used.push(m[1]);
-    expect(used.length).toBeGreaterThan(0);
-    used.forEach((id) => expect(headerIDs.has(id)).toBe(true));
+  test('COMMITTED-filter: CORRUPT-journaalpost (status index 16) komt NIET in het auditfile', () => {
+    // JP001/JP002 (legacy, committed) wél; JP003 (status CORRUPT) eruit.
+    expect(xaf).toContain('<nr>JP001</nr>');
+    expect(xaf).toContain('<nr>JP002</nr>');
+    expect(xaf).not.toContain('JP003');
+    expect(xaf).not.toContain('CORRUPT half-geboekt');
   });
 
   test('Bedragen in 2-decimaal format', () => {
@@ -234,7 +223,7 @@ describe('XAF Auditfile 3.2 — compliance verificatie', () => {
     const open = (xaf.match(/<transaction>/g) || []).length;
     const close = (xaf.match(/<\/transaction>/g) || []).length;
     expect(open).toBe(close);
-    expect(open).toBe(2);  // 2 test-journaalposten
+    expect(open).toBe(2);  // JP001 + JP002; JP003 (CORRUPT) is uitgefilterd
   });
 
   test('Geen unescaped & in tekst-velden', () => {
