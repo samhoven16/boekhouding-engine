@@ -1565,6 +1565,51 @@ function dagelijkseTaken() {
   _runTaak_('bewaarplichtAlert', function() {
     if (typeof controleerBewaarplichtAlert_ === 'function') controleerBewaarplichtAlert_();
   });
+  // #B4.1 (gas-runtime audit): ScriptProperties-cleanup VÓÓR de dure proof/health-
+  // taken (gezondheidscheck/auditKeten/auditAnchor/formeelBewijs). De budget-guard
+  // (_runTaak_) slaat taken over zodra het 4-min-budget op is; cleanup is goedkoop
+  // (alleen Properties-iteratie, geen sheet-rendering) maar MOET dagelijks draaien
+  // om de 500KB ScriptProperties-cliff te voorkomen. De bewijs-taken zijn puur
+  // observerend (re-run morgen prima), dus die mogen als laatste skipbaar zijn.
+  _runTaak_('cleanupHerhIdem',  function() {
+    if (typeof cleanupHerhalendeKostenIdempotency_ === 'function') cleanupHerhalendeKostenIdempotency_();
+  });
+  _runTaak_('cleanupMollieIdem', function() {
+    if (typeof ruimMollieIdempotencyOp_ === 'function') ruimMollieIdempotencyOp_();
+  });
+  _runTaak_('cleanupKritiekeUpdateModalKeys', function() {
+    if (typeof cleanupKritiekeUpdateModalKeys_ === 'function') cleanupKritiekeUpdateModalKeys_();
+  });
+  _runTaak_('cleanupEmailIdem', function() {
+    const props = PropertiesService.getScriptProperties();
+    const alle = props.getProperties();
+    const cutoffMs = Date.now() - 180 * 24 * 60 * 60 * 1000;
+    let verwijderd = 0;
+    let legacy = 0;
+    Object.keys(alle).forEach(function(k) {
+      if (k.indexOf('emailVerzonden_') !== 0) return;
+      const v = String(alle[k] || '');
+      // Plain 'DONE' (legacy vóór de audit-fix) → geen ts, mag weg.
+      if (v === 'DONE') {
+        try { props.deleteProperty(k); legacy++; } catch (_) {}
+        return;
+      }
+      // 'DONE:<ts>' of 'PENDING:<ts>' — extracteer integer-timestamp.
+      const m = /^(?:DONE|PENDING):(\d{10,})$/.exec(v);
+      if (!m) return;
+      const ts = parseInt(m[1], 10);
+      if (isFinite(ts) && ts > 0 && ts < cutoffMs) {
+        try { props.deleteProperty(k); verwijderd++; } catch (_) {}
+      }
+    });
+    if (verwijderd > 0 || legacy > 0) {
+      try {
+        schrijfAuditLog_('cleanupEmailIdem',
+          'Verwijderd ' + verwijderd + ' keys ouder dan 180d' +
+          (legacy > 0 ? ' + ' + legacy + ' legacy plain-DONE' : ''));
+      } catch (_) {}
+    }
+  });
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
   // CYCLE 69: verifieer de hash-keten van het Audit Log. Een gebroken keten
   // betekent dat een eerder vastgelegde audit-regel achteraf is gewijzigd
@@ -1624,63 +1669,11 @@ function dagelijkseTaken() {
       controleerEmailQuotaProactief_();
     }
   });
-  // Audit-vondst nacht-PR (gas-runtime): cleanup-taken VÓÓR dure UI-taken.
-  // Reden: budget-guard slaat tasks vanaf budget-overschrijding over. Als
-  // cleanup pas ná dashboard/backup staat → bij 5 jaar data wordt cleanup
-  // structureel geskipped → ScriptProperties-cliff (500KB cap). Cleanup is
-  // goedkoop (alleen Properties-iteratie, geen sheet-rendering) maar moet
-  // dagelijks draaien om groei tegen te houden.
-  _runTaak_('cleanupHerhIdem',  function() {
-    if (typeof cleanupHerhalendeKostenIdempotency_ === 'function') cleanupHerhalendeKostenIdempotency_();
-  });
-  _runTaak_('cleanupMollieIdem', function() {
-    if (typeof ruimMollieIdempotencyOp_ === 'function') ruimMollieIdempotencyOp_();
-  });
-  _runTaak_('cleanupKritiekeUpdateModalKeys', function() {
-    if (typeof cleanupKritiekeUpdateModalKeys_ === 'function') cleanupKritiekeUpdateModalKeys_();
-  });
   // Tier-2 #5: cross-account backup via mail. Opt-in (default OFF), throttled
   // 1×/7 dagen. Lichte taak voor opt-in klanten; voor opt-out = no-op early
   // return na 1 getInstelling_-call.
   _runTaak_('backupEmail', function() {
     if (typeof backupEmailIndienNodig_ === 'function') backupEmailIndienNodig_();
-  });
-  // DR/SRE: emailVerzonden_F* idempotency-keys accumuleren zonder cleanup
-  // → ScriptProperties-cliff (500KB) bij high-volume klanten. Cleanup-
-  // window 180 dagen. Het waarde-formaat is 'DONE:&lt;ts&gt;' of 'PENDING:&lt;ts&gt;'.
-  // Audit 2026-06-12: voorheen new Date(value).getTime() → NaN op beide
-  // formaten → niets werd ooit verwijderd. Nu strikt regex-parsen.
-  // Legacy plain 'DONE' (geen ts) is per definitie > 180d na deze deploy
-  // niet meer actief beschermend → die mogen we direct schrappen.
-  _runTaak_('cleanupEmailIdem', function() {
-    const props = PropertiesService.getScriptProperties();
-    const alle = props.getProperties();
-    const cutoffMs = Date.now() - 180 * 24 * 60 * 60 * 1000;
-    let verwijderd = 0;
-    let legacy = 0;
-    Object.keys(alle).forEach(function(k) {
-      if (k.indexOf('emailVerzonden_') !== 0) return;
-      const v = String(alle[k] || '');
-      // Plain 'DONE' (legacy vóór de audit-fix) → geen ts, mag weg.
-      if (v === 'DONE') {
-        try { props.deleteProperty(k); legacy++; } catch (_) {}
-        return;
-      }
-      // 'DONE:&lt;ts&gt;' of 'PENDING:&lt;ts&gt;' — extracteer integer-timestamp.
-      const m = /^(?:DONE|PENDING):(\d{10,})$/.exec(v);
-      if (!m) return;
-      const ts = parseInt(m[1], 10);
-      if (isFinite(ts) && ts > 0 && ts < cutoffMs) {
-        try { props.deleteProperty(k); verwijderd++; } catch (_) {}
-      }
-    });
-    if (verwijderd > 0 || legacy > 0) {
-      try {
-        schrijfAuditLog_('cleanupEmailIdem',
-          'Verwijderd ' + verwijderd + ' keys ouder dan 180d' +
-          (legacy > 0 ? ' + ' + legacy + ' legacy plain-DONE' : ''));
-      } catch (_) {}
-    }
   });
 
   // Audit-vondst ronde 2 (cross-PR): triggerSelfHeal verplaatst naar LAATSTE
