@@ -202,17 +202,28 @@ function _bouwXafXml_(ss, jaarArg) {
   if (btwNr) xml += '    <taxRegIdent>' + _xafEsc_(btwNr) + '</taxRegIdent>\n';
   xml += '\n';
 
-  // General Ledger — rekeningen uit grootboekschema
-  xml += '    <generalLedger>\n';
-  xml += _bouwGrootboekXml_(ss);
-  xml += '    </generalLedger>\n';
-
-  // Customers + Suppliers — optioneel maar wel opnemen voor compleetheid
+  // Customers + Suppliers — XSD-sequence: customersSuppliers MOET vóór
+  // generalLedger (en vóór vatCodes/transactions) komen. Optioneel blok.
   try {
     xml += _bouwRelatiesXml_(ss);
   } catch (e) {
     Logger.log('XAF: relaties-sectie overgeslagen: ' + e.message);
   }
+
+  // General Ledger — rekeningen uit grootboekschema
+  xml += '    <generalLedger>\n';
+  xml += _bouwGrootboekXml_(ss);
+  xml += '    </generalLedger>\n';
+
+  // VAT-codes (#2): de NL-standaardtarieven die de trLine/<vat>-blokken
+  // refereren (keyref-consistent — vaste set, zodat elke gebruikte vatID
+  // gegarandeerd is gedefinieerd). XSD-positie: ná generalLedger/relaties,
+  // vóór <transactions>.
+  xml += '    <vatCodes>\n';
+  xml += '      <vatCode><vatID>21</vatID><vatDesc>BTW hoog 21%</vatDesc></vatCode>\n';
+  xml += '      <vatCode><vatID>9</vatID><vatDesc>BTW laag 9%</vatDesc></vatCode>\n';
+  xml += '      <vatCode><vatID>0</vatID><vatDesc>BTW nultarief 0%</vatDesc></vatCode>\n';
+  xml += '    </vatCodes>\n';
 
   // Transactions — journaalposten
   xml += '    <transactions>\n';
@@ -284,8 +295,7 @@ function _bouwRelatiesXml_(ss) {
   const data = sheet.getDataRange().getValues();
   if (data.length <= 1) return '';
 
-  let klanten = '';
-  let leveranciers = '';
+  let relaties = '';
   for (let i = 1; i < data.length; i++) {
     const rij = data[i];
     // Kolomindices conform .claude/sheet-schemas.md RELATIES:
@@ -299,30 +309,30 @@ function _bouwRelatiesXml_(ss) {
     const kvk = String(rij[8] || '').trim();
     const btw = String(rij[9] || '').trim();
     const email = String(rij[10] || '').trim();
+    // custSupTp (XSD Customersuppliercode): S=leverancier, anders C=klant.
+    // Vervangt de ongeldige <customers>/<suppliers>-wrappers van de vorige versie.
+    const tp = (type.indexOf('lever') === 0) ? 'S' : 'C';
+    // taxRegistrationCountry uit de BTW-prefix (EU-BTW-nrs zijn self-describing);
+    // val terug op NL als er geen 2-letter landcode-prefix is.
+    const land = /^[A-Za-z]{2}/.test(btw) ? btw.substring(0, 2).toUpperCase() : 'NL';
 
-    const entry = '      <customerSupplier>\n' +
-      '        <custSupID>' + _xafEsc_((relatieId || naam).substring(0, 50)) + '</custSupID>\n' +
-      '        <custSupName>' + _xafEsc_(naam) + '</custSupName>\n' +
-      (kvk ? '        <custSupCompanyIdent>' + _xafEsc_(kvk) + '</custSupCompanyIdent>\n' : '') +
-      (btw ? '        <taxRegIdent>' + _xafEsc_(btw) + '</taxRegIdent>\n' : '') +
-      (email ? '        <contact>\n          <contEmail>' + _xafEsc_(email) + '</contEmail>\n        </contact>\n' : '') +
+    // Elementvolgorde MOET de XSD customerSupplier-sequence volgen:
+    // custSupID(1), custSupName(2), eMail(6), commerceNr(8),
+    // taxRegistrationCountry(9)+taxRegIdent(10), custSupTp(12).
+    // custSupID = IdentificationString35 → max 35 tekens; custSupName = String50.
+    relaties += '      <customerSupplier>\n' +
+      '        <custSupID>' + _xafEsc_((relatieId || naam).substring(0, 35)) + '</custSupID>\n' +
+      '        <custSupName>' + _xafEsc_(naam.substring(0, 50)) + '</custSupName>\n' +
+      (email ? '        <eMail>' + _xafEsc_(email) + '</eMail>\n' : '') +
+      (kvk ? '        <commerceNr>' + _xafEsc_(kvk) + '</commerceNr>\n' : '') +
+      (btw ? '        <taxRegistrationCountry>' + land + '</taxRegistrationCountry>\n' +
+             '        <taxRegIdent>' + _xafEsc_(btw) + '</taxRegIdent>\n' : '') +
+      '        <custSupTp>' + tp + '</custSupTp>\n' +
       '      </customerSupplier>\n';
-
-    if (type.indexOf('lever') === 0) {
-      leveranciers += entry;
-    } else {
-      klanten += entry;
-    }
   }
 
-  let xml = '';
-  if (klanten) {
-    xml += '    <customers>\n' + klanten + '    </customers>\n';
-  }
-  if (leveranciers) {
-    xml += '    <suppliers>\n' + leveranciers + '    </suppliers>\n';
-  }
-  return xml;
+  if (!relaties) return '';
+  return '    <customersSuppliers>\n' + relaties + '    </customersSuppliers>\n';
 }
 
 /**
@@ -404,6 +414,24 @@ function _bouwTransactionsXml_(ss, jaar) {
     const periode = datumObj && !isNaN(datumObj.getTime()) ? datumObj.getMonth() + 1 : 1;
     const klassificatie = _xafDagboekClassificeer_(dagboek);
     labels[klassificatie.id] = klassificatie.desc;
+    // #2 XAF vatCode: BTW-blok per regel als de rij BTW draagt. vatAmntTp uit
+    // dagboek: inkoop = input-BTW (D, te vorderen), overig = output-BTW (C).
+    // Keyref naar de vaste <vatCodes>-header. Verlegd/vrijgesteld (tarief null)
+    // of 0-bedrag → géén blok.
+    const _btwTarief = (typeof parseBtwTarief_ === 'function') ? parseBtwTarief_(String(rij[9] || '')) : null;
+    const _btwBedrag = Math.abs(parseFloat(rij[10]) || 0);
+    let _vatXml = '';
+    if (_btwTarief !== null && _btwBedrag > 0) {
+      const _vatID = String(Math.round(_btwTarief * 100));
+      const _vatTp = (klassificatie.id === 'I') ? 'D' : 'C';
+      _vatXml =
+        '            <vat>\n' +
+        '              <vatID>' + _vatID + '</vatID>\n' +
+        '              <vatPerc>' + (_btwTarief * 100).toFixed(2) + '</vatPerc>\n' +
+        '              <vatAmnt>' + _btwBedrag.toFixed(2) + '</vatAmnt>\n' +
+        '              <vatAmntTp>' + _vatTp + '</vatAmntTp>\n' +
+        '            </vat>\n';
+    }
     let tx = '        <transaction>\n';
     tx += '          <nr>' + _xafEsc_(id) + '</nr>\n';
     tx += '          <desc>' + _xafEsc_(omschr) + '</desc>\n';
@@ -418,6 +446,7 @@ function _bouwTransactionsXml_(ss, jaar) {
     tx += '            <desc>' + _xafEsc_(omschr) + '</desc>\n';
     tx += '            <amnt>' + bedrag.toFixed(2) + '</amnt>\n';
     tx += '            <amntTp>D</amntTp>\n';
+    tx += _vatXml;
     tx += '          </trLine>\n';
     // Credit-regel
     tx += '          <trLine>\n';

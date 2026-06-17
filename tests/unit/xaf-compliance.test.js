@@ -25,7 +25,8 @@ describe('XAF Auditfile 3.2 — compliance verificatie', () => {
   let xaf;
 
   beforeAll(() => {
-    ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Belastingadvies.gs', 'XafExport.gs']);
+    // BTW.gs levert parseBtwTarief_ (gebruikt door de <vat>-blokken in XafExport).
+    ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Belastingadvies.gs', 'BTW.gs', 'XafExport.gs']);
 
     // Mock instellingen
     ctx.getInstelling_ = (k) => {
@@ -166,14 +167,63 @@ describe('XAF Auditfile 3.2 — compliance verificatie', () => {
     expect(xaf).toMatch(/<periodNumber>\d+<\/periodNumber>/);
   });
 
-  test('Customers-sectie bevat klant A', () => {
-    expect(xaf).toContain('<customers>');
+  test('customersSuppliers bevat klant A (custSupTp C), geen ongeldige wrappers', () => {
+    expect(xaf).toContain('<customersSuppliers>');
     expect(xaf).toContain('<custSupName>Klant A</custSupName>');
+    // De vorige <customers>/<suppliers>-wrappers bestaan niet in de XSD.
+    expect(xaf).not.toContain('<customers>');
+    expect(xaf).not.toContain('<suppliers>');
   });
 
-  test('Suppliers-sectie bevat leverancier B', () => {
-    expect(xaf).toContain('<suppliers>');
+  test('leverancier B: custSupTp S + commerceNr + eMail (geldige XSD-elementen)', () => {
     expect(xaf).toContain('<custSupName>Lev B</custSupName>');
+    expect(xaf).toContain('<custSupTp>S</custSupTp>');
+    // KvK via commerceNr (niet het ongeldige custSupCompanyIdent).
+    expect(xaf).toContain('<commerceNr>11223344</commerceNr>');
+    expect(xaf).not.toContain('custSupCompanyIdent');
+    // Email via <eMail> (niet via het ongeldige <contact><contEmail>).
+    expect(xaf).toContain('<eMail>b@lev.nl</eMail>');
+    expect(xaf).not.toContain('contEmail');
+  });
+
+  test('XSD company-volgorde: customersSuppliers → generalLedger → vatCodes → transactions', () => {
+    const cs = xaf.indexOf('<customersSuppliers>');
+    const gl = xaf.indexOf('<generalLedger>');
+    const vc = xaf.indexOf('<vatCodes>');
+    const tx = xaf.indexOf('<transactions>');
+    expect(cs).toBeGreaterThan(-1);
+    expect(cs).toBeLessThan(gl);
+    expect(gl).toBeLessThan(vc);
+    expect(vc).toBeLessThan(tx);
+  });
+
+  test('vatCodes-header definieert de gebruikte NL-tarieven (21/9/0)', () => {
+    expect(xaf).toContain('<vatCode><vatID>21</vatID>');
+    expect(xaf).toContain('<vatCode><vatID>9</vatID>');
+    expect(xaf).toContain('<vatCode><vatID>0</vatID>');
+  });
+
+  test('trLine met BTW draagt een <vat>-blok met de 4 verplichte velden', () => {
+    expect(xaf).toMatch(/<vat>\s*<vatID>21<\/vatID>\s*<vatPerc>21\.00<\/vatPerc>\s*<vatAmnt>21\.00<\/vatAmnt>\s*<vatAmntTp>C<\/vatAmntTp>\s*<\/vat>/);
+  });
+
+  test('vatAmntTp-richting: inkoop = D (input-BTW), verkoop = C (output-BTW)', () => {
+    // JP002 = inkoop, BTW 8.68 → D
+    expect(xaf).toMatch(/<vatAmnt>8\.68<\/vatAmnt>\s*<vatAmntTp>D<\/vatAmntTp>/);
+    // JP001 = verkoop, BTW 21.00 → C
+    expect(xaf).toMatch(/<vatAmnt>21\.00<\/vatAmnt>\s*<vatAmntTp>C<\/vatAmntTp>/);
+  });
+
+  test('keyref: elke vatID in een trLine/<vat> is gedefinieerd in <vatCodes>', () => {
+    const headerIDs = new Set();
+    const headerRe = /<vatCode><vatID>([^<]+)<\/vatID>/g;
+    let m;
+    while ((m = headerRe.exec(xaf)) !== null) headerIDs.add(m[1]);
+    const lineRe = /<vat>\s*<vatID>([^<]+)<\/vatID>/g;
+    const used = [];
+    while ((m = lineRe.exec(xaf)) !== null) used.push(m[1]);
+    expect(used.length).toBeGreaterThan(0);
+    used.forEach((id) => expect(headerIDs.has(id)).toBe(true));
   });
 
   test('Bedragen in 2-decimaal format', () => {
