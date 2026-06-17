@@ -1,5 +1,19 @@
 # XAF 3.2 `vatCode` — bouwspec (item #2)
 
+> ⛔ **ACHTERHAALD — NIET zo bouwen (2026-06).** Twee redenen, beide via onderzoek
+> bevestigd:
+> 1. **Verkeerd model.** Boekhoudbaar boekt de BTW al als aparte grootboekmutatie
+>    op 14xx (voorbelasting) / 41xx (af te dragen). Een `<vat>`-blok op de
+>    BTW-afrekenregel (zoals hieronder beschreven) **dubbeltelt** de BTW en legt de
+>    grondslag↔BTW-relatie verkeerd. De correcte plaats is een `<vat>` op de
+>    *grondslagregel* (omzet/kosten), met grouping per transactie.
+> 2. **Verkeerd formaat.** XAF **3.2 is per 1-1-2026 vervangen door XAF 4.0**
+>    (verplicht; Belastingdienst-ODB). Een nieuwe BTW-laag hoort in de 4.0-build.
+>
+> De BTW-laag is daarom uit de export verwijderd; de structurele XSD-fixes
+> (customersSuppliers, company-volgorde) + de COMMITTED-filter blijven. Dit
+> document staat hieronder bewaard als onderzoeks-/3.2-referentie.
+
 > Onderzoek gedaan (autoritatieve bron: officiële XSD `BananaAccounting/Netherlands/
 > Auditfile_v3.2/XmlAuditfileFinancieel3.2.xsd`). Dit document maakt item #2 een
 > **schone, snelle bouw** zonder her-onderzoek. Bouw + valideer in een gefocuste

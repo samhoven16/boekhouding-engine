@@ -202,17 +202,24 @@ function _bouwXafXml_(ss, jaarArg) {
   if (btwNr) xml += '    <taxRegIdent>' + _xafEsc_(btwNr) + '</taxRegIdent>\n';
   xml += '\n';
 
-  // General Ledger — rekeningen uit grootboekschema
-  xml += '    <generalLedger>\n';
-  xml += _bouwGrootboekXml_(ss);
-  xml += '    </generalLedger>\n';
-
-  // Customers + Suppliers — optioneel maar wel opnemen voor compleetheid
+  // Customers + Suppliers — XSD-sequence: customersSuppliers MOET vóór
+  // generalLedger (en vóór transactions) komen. Optioneel blok.
   try {
     xml += _bouwRelatiesXml_(ss);
   } catch (e) {
     Logger.log('XAF: relaties-sectie overgeslagen: ' + e.message);
   }
+
+  // General Ledger — rekeningen uit grootboekschema
+  xml += '    <generalLedger>\n';
+  xml += _bouwGrootboekXml_(ss);
+  xml += '    </generalLedger>\n';
+
+  // NB: bewust GÉÉN <vatCodes>/<vat> in deze 3.2-export. De BTW staat al als
+  // aparte grootboekmutatie op de BTW-rekeningen (14xx voorbelasting / 41xx af
+  // te dragen). Een los <vat>-blok op de BTW-afrekenregel zou de BTW dubbeltellen
+  // en de grondslag↔BTW-relatie verkeerd leggen. De correcte BTW-laag (vat op de
+  // grondslagregel) hoort in de XAF 4.0-build — zie PR-omschrijving.
 
   // Transactions — journaalposten
   xml += '    <transactions>\n';
@@ -284,8 +291,7 @@ function _bouwRelatiesXml_(ss) {
   const data = sheet.getDataRange().getValues();
   if (data.length <= 1) return '';
 
-  let klanten = '';
-  let leveranciers = '';
+  let relaties = '';
   for (let i = 1; i < data.length; i++) {
     const rij = data[i];
     // Kolomindices conform .claude/sheet-schemas.md RELATIES:
@@ -299,30 +305,30 @@ function _bouwRelatiesXml_(ss) {
     const kvk = String(rij[8] || '').trim();
     const btw = String(rij[9] || '').trim();
     const email = String(rij[10] || '').trim();
+    // custSupTp (XSD Customersuppliercode): S=leverancier, anders C=klant.
+    // Vervangt de ongeldige <customers>/<suppliers>-wrappers van de vorige versie.
+    const tp = (type.indexOf('lever') === 0) ? 'S' : 'C';
+    // taxRegistrationCountry uit de BTW-prefix (EU-BTW-nrs zijn self-describing);
+    // val terug op NL als er geen 2-letter landcode-prefix is.
+    const land = /^[A-Za-z]{2}/.test(btw) ? btw.substring(0, 2).toUpperCase() : 'NL';
 
-    const entry = '      <customerSupplier>\n' +
-      '        <custSupID>' + _xafEsc_((relatieId || naam).substring(0, 50)) + '</custSupID>\n' +
-      '        <custSupName>' + _xafEsc_(naam) + '</custSupName>\n' +
-      (kvk ? '        <custSupCompanyIdent>' + _xafEsc_(kvk) + '</custSupCompanyIdent>\n' : '') +
-      (btw ? '        <taxRegIdent>' + _xafEsc_(btw) + '</taxRegIdent>\n' : '') +
-      (email ? '        <contact>\n          <contEmail>' + _xafEsc_(email) + '</contEmail>\n        </contact>\n' : '') +
+    // Elementvolgorde MOET de XSD customerSupplier-sequence volgen:
+    // custSupID(1), custSupName(2), eMail(6), commerceNr(8),
+    // taxRegistrationCountry(9)+taxRegIdent(10), custSupTp(12).
+    // custSupID = IdentificationString35 → max 35 tekens; custSupName = String50.
+    relaties += '      <customerSupplier>\n' +
+      '        <custSupID>' + _xafEsc_((relatieId || naam).substring(0, 35)) + '</custSupID>\n' +
+      '        <custSupName>' + _xafEsc_(naam.substring(0, 50)) + '</custSupName>\n' +
+      (email ? '        <eMail>' + _xafEsc_(email) + '</eMail>\n' : '') +
+      (kvk ? '        <commerceNr>' + _xafEsc_(kvk) + '</commerceNr>\n' : '') +
+      (btw ? '        <taxRegistrationCountry>' + land + '</taxRegistrationCountry>\n' +
+             '        <taxRegIdent>' + _xafEsc_(btw) + '</taxRegIdent>\n' : '') +
+      '        <custSupTp>' + tp + '</custSupTp>\n' +
       '      </customerSupplier>\n';
-
-    if (type.indexOf('lever') === 0) {
-      leveranciers += entry;
-    } else {
-      klanten += entry;
-    }
   }
 
-  let xml = '';
-  if (klanten) {
-    xml += '    <customers>\n' + klanten + '    </customers>\n';
-  }
-  if (leveranciers) {
-    xml += '    <suppliers>\n' + leveranciers + '    </suppliers>\n';
-  }
-  return xml;
+  if (!relaties) return '';
+  return '    <customersSuppliers>\n' + relaties + '    </customersSuppliers>\n';
 }
 
 /**
@@ -398,6 +404,11 @@ function _bouwTransactionsXml_(ss, jaar) {
     const credit = String(rij[6] || '').trim();
     const bedrag = parseFloat(rij[8]) || 0;
     if (!id || !debet || !credit || bedrag <= 0) continue;
+    // COMMITTED-filter: CORRUPT/GESTORNEERD/Concept-journaalposten horen NIET in
+    // een auditfile — ze schenden de getrouwheid die een bewaarplicht-controle
+    // eist. Helper in Invariants.gs (leeg/korte legacy-rij = committed). Fail-open
+    // als de helper niet geladen is (zelfde defensieve patroon als elders).
+    if (typeof _journaalpostIsCommitted_ === 'function' && !_journaalpostIsCommitted_(rij)) continue;
 
     // periodNumber 1-12 — gebruik geparste datumObj direct (new Date(datum-string)
     // kan ambiguous zijn afhankelijk van locale). datumObj is gegarandeerd Date.
