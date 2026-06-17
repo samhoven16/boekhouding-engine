@@ -1,0 +1,50 @@
+/**
+ * tests/unit/centrale-config-contract.test.js
+ *
+ * Guard (#1 tarief-feed + #3 emergency-signaal): de centrale config-endpoint
+ * van de licentieserver is dé hefboom voor langetermijn-onderhoud — Sam updatet
+ * tarieven, het kritieke-update-signaal, feature-flags en een broadcast
+ * server-side, zónder dat klanten een nieuwe sheet hoeven te kopiëren.
+ *
+ * Deze test borgt dat dat delivery-contract (de velden die de client verwacht)
+ * niet stilletjes wegvalt bij een refactor. Bron-niveau, want de licentieserver
+ * draait als apart clasp-project (niet in de jest-runtime).
+ */
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const code = fs.readFileSync(path.resolve(__dirname, '../../licence-server/Code.gs'), 'utf8');
+const client = fs.readFileSync(path.resolve(__dirname, '../../src/Belastingadvies.gs'), 'utf8');
+
+describe('Centrale config-endpoint levert het volledige delivery-contract', () => {
+  const fnStart = code.indexOf('function configEndpoint_(');
+  const fn = fnStart >= 0 ? code.slice(fnStart, fnStart + 1600) : '';
+
+  test('configEndpoint_ bestaat en is gerouteerd', () => {
+    expect(fnStart).toBeGreaterThan(-1);
+    expect(code).toMatch(/actie === 'config'\)\s*return configEndpoint_/);
+  });
+
+  test('serveert belastingTarieven uit een ScriptProperty (centrale tarief-feed #1)', () => {
+    expect(fn).toMatch(/belastingTarieven:/);
+    expect(code).toMatch(/BELASTING_TARIEVEN/);
+  });
+
+  test('serveert het emergency-update-signaal (#3): ernst + kritiek-voor-lijst', () => {
+    expect(fn).toMatch(/versieErnst:/);
+    expect(fn).toMatch(/versieKritiekVoor:/);
+  });
+
+  test('serveert centrale flags + global broadcast', () => {
+    expect(fn).toMatch(/flags:/);
+    expect(fn).toMatch(/bericht:/);
+  });
+
+  test('client (getBelasting_) geeft server-tarieven voorrang op de lokale tabel', () => {
+    // serverTarieven || BELASTING_PER_JAAR[jaar] || laatstBekend — server eerst.
+    expect(client).toMatch(/serverTarieven\s*\n?\s*\|\|\s*BELASTING_PER_JAAR/);
+    expect(client).toMatch(/cfg\.belastingTarieven\[jaar\]/);
+  });
+});
