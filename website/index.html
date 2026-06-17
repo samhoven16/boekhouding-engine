@@ -2303,7 +2303,10 @@
       .then(function(j) {
         var entries = (j && Array.isArray(j.entries)) ? j.entries.slice(0, 5) : [];
         if (entries.length === 0) {
-          lijst.innerHTML = '<li class="updates-leeg">Geen recente updates.</li>';
+          // Geen updates → verberg de hele sectie i.p.v. een contradictoire
+          // "Geen recente updates" tonen onder "actief onderhouden".
+          var sectieLeeg = document.getElementById('recente-updates');
+          if (sectieLeeg) sectieLeeg.style.display = 'none';
           return;
         }
         var maanden = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
@@ -2324,7 +2327,8 @@
         }).join('');
       })
       .catch(function() {
-        lijst.innerHTML = '<li class="updates-leeg">Updates niet beschikbaar.</li>';
+        var sectieFout = document.getElementById('recente-updates');
+        if (sectieFout) sectieFout.style.display = 'none';
       });
   })();
 </script>
