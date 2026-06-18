@@ -287,6 +287,17 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
       const grondslag = parseFloat(ifData[i][8]) || 0;
       aangifte.r4a_grondslag += grondslag;
       aangifte.r4a_btw += btwBedrag;
+      // F-TAX-120: verlegde inkoop-BTW is bij aftrekrecht ÓÓK aftrekbare
+      // voorbelasting (r5b) — net kaseffect €0. Zonder deze regel droeg de
+      // klant de verlegde BTW vól af: structureel te veel betaald op élke
+      // reverse-charge inkoop (ads, SaaS, EU-diensten). De r5b vloeit hierna
+      // door de pro-rata-breuk (r5bOrigineel wordt ná deze loop bepaald).
+      aangifte.r5b += btwBedrag;
+      // Art. 15 Wet OB: ook verlegde voorbelasting vereist een bewijsstuk.
+      if (btwBedrag > 0 && !String(ifData[i][18] || '').trim()) {
+        r5bZonderBewijsAantal++;
+        r5bZonderBewijsBedrag += btwBedrag;
+      }
     } else if (btwBedrag > 0) {
       aangifte.r5b += btwBedrag;  // Aftrekbare voorbelasting
       // F-ACC-005: bewijsstuk-check op kolom [18] Bijlage URL.

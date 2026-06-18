@@ -330,8 +330,16 @@ function verwerkMollieWebhook_(payload) {
         const _data = _vf.getDataRange().getValues();
         let _factBedrag = null;
         for (let i = 1; i < _data.length; i++) {
-          if (String(_data[i][0]) === String(factuurnummer)) {
-            _factBedrag = parseFloat(_data[i][6]) || parseFloat(_data[i][5]) || null;
+          // Match op [1] Factuurnummer (opgemaakt, bv. "F000001") — exact zoals
+          // markeerVerkoopfactuurBetaald (Verkoopfacturen.gs:1026) én de metadata
+          // uit genereerMolliePaymentLink_ (regel 84). [0] is de NUMERIEKE
+          // Factuur-ID en matcht het opgemaakte nummer nooit → voorheen werd
+          // ÉLKE iDEAL-betaling stil geweigerd ("factuur onbekend").
+          if (String(_data[i][1]) === String(factuurnummer)) {
+            // [12] = Bedrag incl. BTW = het bedrag waarvoor de iDEAL-link is
+            // aangemaakt. [6]/[5] waren KvK-nr/klantnaam (tekst) → parseFloat
+            // gaf NaN/KvK-getal → de bedrag-check faalde of vergeleek onzin.
+            _factBedrag = parseFloat(_data[i][12]) || null;
             break;
           }
         }

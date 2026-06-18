@@ -34,7 +34,14 @@ function doGet(e) {
   const actie = (e && e.parameter && e.parameter.actie) || '';
 
   if (actie === 'health')        return healthEndpoint_();
-  if (actie === 'valideer')      return valideerEndpoint_(e);
+  // valideer/config/telemetry worden door ELKE klant-kopie geraakt en zijn de
+  // gedeelde hot path; zonder globale cap kan één runaway-loop of anonieme
+  // flood de hele klantenbasis platleggen (full-sheet-read per valideer,
+  // appendRow+deleteRows per telemetry). Globale cap is ruim (raakt honderden
+  // legitieme klanten à ~1/dag nooit) en rateLimit_ faalt OPEN bij cache-
+  // storing, dus dit kan nooit zélf alle klanten buitensluiten. valideer houdt
+  // daarnaast z'n bestaande per-sleutel cap (10/u) binnen valideerEndpoint_.
+  if (actie === 'valideer')      return rateLimit_(e, { actie: 'valideer', globaal: 6000, windowMin: 60 }) || valideerEndpoint_(e);
   // Globaal-cap verplaatst NAAR BINNEN aanvraagOtpEndpoint_ na klant-bekend-check.
   // Voorkomt dat aanvaller met fake emails de globale 500/u cap saturen → legitieme
   // klant zou anders 429 krijgen ondanks dat hij echt is (red-team #2 vondst).
@@ -42,9 +49,9 @@ function doGet(e) {
   if (actie === 'activeer-otp')  return rateLimit_(e, { actie: 'activeer-otp', perEmail: 12, globaal: 500, windowMin: 60 }) || activeerOtpEndpoint_(e);
   if (actie === 'herstuur-licentie') return rateLimit_(e, { actie: 'herstuur-licentie', perEmail: 3, globaal: 200, windowMin: 60 }) || herstuurLicentieEndpoint_(e);
   if (actie === 'onboarded')     return rateLimit_(e, { actie: 'onboarded', globaal: 500, windowMin: 60 }) || onboardedEndpoint_(e);
-  if (actie === 'config')        return configEndpoint_(e);
+  if (actie === 'config')        return rateLimit_(e, { actie: 'config', globaal: 6000, windowMin: 60 }) || configEndpoint_(e);
   if (actie === 'update-bundle') return rateLimit_(e, { actie: 'update-bundle', perEmail: 10, globaal: 500, windowMin: 60 }) || updateBundleEndpoint_(e);
-  if (actie === 'telemetry')     return telemetryEndpoint_(e);
+  if (actie === 'telemetry')     return rateLimit_(e, { actie: 'telemetry', globaal: 2000, windowMin: 60 }) || telemetryEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   // CYCLE-41: rate-limit admin-login om brute-force op ADMIN_WACHTWOORD
   // te voorkomen. Voorheen kon attacker onbeperkt wachtwoorden proberen

@@ -143,7 +143,11 @@ describe('berekenBtwAangifte_ — r4a reverse-charge inkoop case-insensitive (A2
     const r = ctx.berekenBtwAangifte_(maakSs([ifRij(new Date('2026-02-01'), 1000, 'verlegd', 210)]), VAN, TOT);
     expect(r.r4a_grondslag).toBeCloseTo(1000, 1);
     expect(r.r4a_btw).toBeCloseTo(210, 1);
-    expect(r.r5b).toBeCloseTo(0, 1); // niet als gewone aftrek
+    // F-TAX-120: verlegde voorbelasting ÍS aftrekbaar (reverse charge) →
+    // r5b == r4a_btw, net kaseffect €0. De oude assertie (r5b==0) borgde
+    // per ongeluk de bug: de klant droeg de verlegde BTW vól af.
+    expect(r.r5b).toBeCloseTo(210, 1);
+    expect(r.saldo).toBeCloseTo(0, 1);
   });
 
   test('label "VERLEGD" (caps) → r4a', () => {

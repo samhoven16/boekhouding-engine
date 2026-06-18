@@ -22,7 +22,8 @@ const ICP_SHEET = 'ICP-rapport';
 const _EU_LANDCODES = {
   AT:'Oostenrijk', BE:'België', BG:'Bulgarije', HR:'Kroatië', CY:'Cyprus',
   CZ:'Tsjechië', DK:'Denemarken', EE:'Estland', FI:'Finland', FR:'Frankrijk',
-  DE:'Duitsland', GR:'Griekenland', HU:'Hongarije', IE:'Ierland', IT:'Italië',
+  DE:'Duitsland', GR:'Griekenland', EL:'Griekenland', HU:'Hongarije',
+  IE:'Ierland', IT:'Italië',
   LV:'Letland', LT:'Litouwen', LU:'Luxemburg', MT:'Malta', PL:'Polen',
   PT:'Portugal', RO:'Roemenië', SK:'Slowakije', SI:'Slovenië', ES:'Spanje',
   SE:'Zweden',
