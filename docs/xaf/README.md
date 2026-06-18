@@ -1,11 +1,22 @@
 # docs/xaf — XAF auditfile-schema's
 
-De XAF 4.0-**export** (go-forward, verplicht sinds 1-1-2026) moet tegen de
-**officiële XSD** gebouwd én gevalideerd worden. Voor een fiscaal bewijsdocument
-geldt: *fout = ongeldig auditfile*. We bouwen daarom niet tegen een
-gereverse-engineerde structuur.
+> ✅ **GEBOUWD (2026-06).** De XAF **4.0**-export is er en is **schema-valide**.
+> - Officiële XSD: `docs/xaf/XmlAuditfileFinancieel4.0.xsd` (Belastingdienst-ODB).
+> - Officieel voorbeeld: `docs/xaf/XAF_4_0_Test_100425.xaf`.
+> - Builder: `src/XafExport40.gs` (`_bouwXaf40Xml_`). De export (`exporteerXaf`) +
+>   het accountantspakket leveren nu 4.0.
+> - **Bewijs:** `tests/unit/xaf40-compliance.test.js` valideert de output bij
+>   elke testrun met `xmllint` tegen die officiële XSD. Groen = geldig.
+>
+> Open punten (optioneel, niet nodig voor geldigheid): `<openingBalance>` +
+> `<vat>`-blok op de grondslagregel (nu bewust weggelaten — BTW staat al als
+> aparte grootboekmutatie op 14xx/41xx; zie `src/XafExport40.gs`-kop).
 
-## Actie nodig: leg de officiële 4.0-XSD hier neer
+De XAF 4.0-**export** (go-forward, verplicht sinds 1-1-2026) is gebouwd én
+gevalideerd tegen de **officiële XSD**. Voor een fiscaal bewijsdocument geldt:
+*fout = ongeldig auditfile* — daarom de xmllint-gate in de testsuite.
+
+## (Historie) De officiële 4.0-XSD verkrijgen
 
 De authoritatieve XSD zit alleen bij de Belastingdienst-ODB, en die host is
 geblokkeerd door de network-egress-allowlist van de Claude-omgeving (github.com
