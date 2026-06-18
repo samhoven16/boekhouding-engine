@@ -2,7 +2,8 @@
  * RgsMapping.gs
  * Referentie-Grootboekschema (RGS) NL mapping per rekeningcode.
  *
- * Bron: RGS 3.5 (rgsnl.nl / Belastingdienst). RGS-codes zijn 8-15 letters
+ * Bron: Referentie GrootboekSchema (RGS) NL — rgsnl.nl. (NB: exacte release te
+ * bevestigen; "3.5" bestaat niet — actueel zijn 3.4/3.7/3.8.) RGS-codes zijn 8-15 letters
  * lang en mappen NL-grootboeknummers naar de gestandaardiseerde Nederlandse
  * tax/audit-taxonomie. Caseware, Visma, Twinfield, Pinkweb en Exact
  * exporteren altijd via RGS-codes; zonder mapping moet de accountant elke
