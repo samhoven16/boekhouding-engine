@@ -936,7 +936,7 @@ function stuurOtpMail_(email, otp) {
           sender: { name: vanNaam, email: vanEmail },
           replyTo: { email: replyTo, name: vanNaam },
           to: [{ email }],
-          subject: 'Je activeringscode Boekhoudbaar: ' + otp,
+          subject: 'Je activeringscode: ' + otp + ' (15 min geldig) — Boekhoudbaar',
           htmlContent: html,
           textContent: textBody,
           headers: {
@@ -955,7 +955,7 @@ function stuurOtpMail_(email, otp) {
   // Fallback: MailApp via Google Workspace (lager limiet maar reliable).
   MailApp.sendEmail({
     to: email,
-    subject: 'Activeringscode Boekhoudbaar: ' + otp,
+    subject: 'Je activeringscode: ' + otp + ' (15 min geldig) — Boekhoudbaar',
     body: textBody,
     htmlBody: html,
     replyTo: replyTo,
@@ -2983,6 +2983,12 @@ function verstuurDripsDagelijks_() {
     const nu = Date.now();
     let verstuurd = 0;
 
+    // F-SCALE-142: ruim verlopen OTP-keys op VÓÓR de zware drip-loop, zodat een
+    // eventuele drip-timeout deze opruiming niet overslaat. Voorkomt dat de
+    // server-ScriptProperties richting het 500KB-quotum groeien door leads die
+    // wel een activeringscode aanvroegen maar nooit activeerden (otp_/otp_ts_).
+    try { cleanupVerlopenOtpKeys_(); } catch (e) { Logger.log('OTP-cleanup fout: ' + e.message); }
+
     // Kolom-indices op basis van setupLicentieSheet (0-based):
     // [0]=Sleutel [1]=Naam [2]=Email [3]=Versie [4]=Status [5]=Vervaldatum
     // [6]=Installatie-ID [7]=Aangemaakt op [8]=Mollie betaling ID
@@ -3043,6 +3049,50 @@ function verstuurDripsDagelijks_() {
   } catch (e) {
     Logger.log('::error:: verstuurDripsDagelijks_ fout: ' + e.message);
   }
+}
+
+/**
+ * F-SCALE-142 — sweep verlopen OTP-keys uit ScriptProperties.
+ *
+ * Bij elke code-aanvraag schrijft aanvraagOtpEndpoint_ twee keys: otp_<email>
+ * (code + 15-min-expiry) en otp_ts_<email> (rate-limit-stempel). Die worden bij
+ * succesvolle activatie gewist — maar een lead die een code aanvraagt en NOOIT
+ * activeert (conversie < 100%) laat ze voor altijd staan. Bij honderden/
+ * duizenden leads tikt dat richting het 500KB-ScriptProperties-quotum, waarna
+ * de server geen nieuwe licenties/OTP's meer kan wegschrijven → verkoop staat
+ * stil terwijl betalingen binnenkomen.
+ *
+ * Verwijdert otp_<email> zodra de 15-min-expiry (+5 min marge) voorbij is en de
+ * losse otp_ts_<email>-stempel zodra die >1u oud is. Idempotent + fail-safe.
+ * Aangeroepen aan het begin van de dagelijkse drip-trigger.
+ *
+ * @returns {number} aantal verwijderde keys
+ */
+function cleanupVerlopenOtpKeys_() {
+  const props = PropertiesService.getScriptProperties();
+  let alle;
+  try { alle = props.getProperties(); }
+  catch (e) { Logger.log('::error:: otp-cleanup getProperties: ' + e.message); return 0; }
+  const nu = Date.now();
+  let verwijderd = 0;
+  Object.keys(alle).forEach(function(key) {
+    try {
+      // otp_ts_ eerst checken — die begint óók met 'otp_'.
+      if (key.indexOf('otp_ts_') === 0) {
+        const ts = parseInt(alle[key] || '0', 10);
+        if (!ts || (nu - ts) > 3600000) { props.deleteProperty(key); verwijderd++; }  // >1u
+        return;
+      }
+      if (key.indexOf('otp_') === 0) {
+        let expiry = 0;
+        try { expiry = (JSON.parse(alle[key] || '{}').expiry) || 0; } catch (_) { expiry = 0; }
+        // expiry 0/corrupt of voorbij (5 min marge op de 15-min-geldigheid) → weg.
+        if (!expiry || nu > (expiry + 300000)) { props.deleteProperty(key); verwijderd++; }
+      }
+    } catch (_) { /* één kapotte key mag de sweep niet stoppen */ }
+  });
+  if (verwijderd > 0) Logger.log('OTP-cleanup: ' + verwijderd + ' verlopen keys verwijderd.');
+  return verwijderd;
 }
 
 function verstuurDripMail_(naam, email, sleutel, drip) {

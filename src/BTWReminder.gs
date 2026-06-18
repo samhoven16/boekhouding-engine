@@ -196,6 +196,26 @@ function toonBtwAangifteAssistent() {
     return '€\u00a0' + (n || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
 
+  // F-DOC-131: EU/verlegd-rubrieken zichtbaar maken — anders ziet een ZZP'er
+  // met buitenland-/verlegde omzet die euro's nergens en kan hij niet
+  // reconciliëren met mijn.belastingdienst.nl. Alleen tonen als er data is;
+  // labels identiek aan de BTW Aangifte-tab (zetBtwAangifteOpSheet_, BTW.gs).
+  function euRij_(code, naam, grondslag, btw) {
+    if ((grondslag || 0) <= 0.005 && (btw || 0) <= 0.005) return '';
+    return `<tr><td class="code">${code}</td><td>${naam}</td>` +
+      `<td class="${grondslag > 0 ? '' : 'nul'}">${fmt(grondslag)}</td>` +
+      `<td class="bedrag">${fmt(btw)}</td></tr>`;
+  }
+  const euRijen = [
+    euRij_('1e', 'Omzet waarbij BTW is verlegd naar de afnemer', aangifte.r1e_grondslag, aangifte.r1e_btw),
+    euRij_('2a', 'Leveringen buiten de EU (export)', aangifte.r2a, 0),
+    euRij_('3a', 'Leveringen binnen de EU (ICL)', aangifte.r3a_grondslag, aangifte.r3a_btw),
+    euRij_('4a', 'Inkopen waarbij BTW is verlegd naar jou', aangifte.r4a_grondslag, aangifte.r4a_btw),
+  ].join('');
+  const euSectie = euRijen
+    ? `<tr><td colspan="4" class="sectie">Rubriek 2/3/4 — EU &amp; buitenland</td></tr>${euRijen}`
+    : '';
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -253,6 +273,8 @@ function toonBtwAangifteAssistent() {
     <td class="bedrag">${fmt(aangifte.r1c_btw)}</td>
   </tr>
 
+  ${euSectie}
+
   <tr><td colspan="4" class="sectie">Rubriek 5 — Totalen</td></tr>
   <tr>
     <td class="code">5a</td>
@@ -275,7 +297,7 @@ function toonBtwAangifteAssistent() {
 </table>
 
 <div class="tip">
-  <strong>Invullen bij de Belastingdienst:</strong> gebruik de bedragen hierboven en vul ze in bij de overeenkomstige rubrieken (1a, 1b, 5a, 5b, 5g). Klik op de knop hieronder om direct naar het aangifte-portaal te gaan.
+  <strong>Invullen bij de Belastingdienst:</strong> gebruik de bedragen hierboven en vul ze in bij de overeenkomstige rubrieken (de codes links in de tabel). Heb je EU- of verlegde omzet, dan staan die hier ook (1e/2a/3a/4a). Klik op de knop hieronder om direct naar het aangifte-portaal te gaan.
 </div>
 
 <div style="margin-top:16px">

@@ -38,9 +38,13 @@ const LICENTIE_LAATST_GELUKT_KEY = 'licentieLaatstGelukt';
 // bij BTW-deadline. Sam's USP "Wat als Boekhoudbaar morgen stopt" eist
 // een GROTER venster.
 //
-// Nieuwe default = 90 dagen. Klant kan via ScriptProperty
-// 'LICENTIE_GRACE_DAGEN' override doen (bv. 365 voor jaar-onafhankelijk).
-// Sam kan via template-update default verlagen als hij dat ooit wil.
+// Default = 90 dagen (gepubliceerde continuïteits-belofte, audit ronde 2).
+// F-OND-131: dit venster is nu gedekt door een PROACTIEVE banner — de klant
+// wordt vanaf dag 1 dagelijks gewaarschuwd dat de server onbereikbaar is en de
+// grace tikt (ook in het onOpen-pad, zie controleerLicentieEnKopie_), i.p.v.
+// "ineens" buitengesloten te worden. Voor jaar-onafhankelijke dekking kan een
+// klant/Sam 'LICENTIE_GRACE_DAGEN' op bv. 365 zetten (1-3650). De XAF-export
+// werkt sowieso buiten de licentie-gate om.
 const LICENTIE_OFFLINE_GRACE_DAGEN_DEFAULT = 90;
 function _licentieGraceDagen_() {
   try {
@@ -267,6 +271,13 @@ function controleerLicentieEnKopie_() {
       const res = valideerLicentieOpServer_(sleutel);
       if (res.geldig) {
         userProps.setProperty('licentieLastCheck', String(Date.now()));
+        // F-OND-131: ook in het onOpen-pad de offline-grace-banner tonen.
+        // Voorheen wist alleen isLicentieGeldig_ dit; een klant die de sheet
+        // gewoon opent kreeg geen waarschuwing dat de server onbereikbaar is
+        // en de grace tikt — en zou na afloop "ineens" buitengesloten worden.
+        if (res.offline) {
+          try { toonOfflineLicentieBannerIndienNieuw_(res.dagenResterend); } catch (_) {}
+        }
       } else if (!res.offline) {
         // Server zegt expliciet ongeldig (niet offline) → nieuwe activatie
         props.deleteProperty(LICENTIE_PROP_KEY);
