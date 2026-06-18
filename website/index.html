@@ -522,7 +522,6 @@
     width: 8px; height: 8px; border-radius: 50%;
     background: var(--accent);
     box-shadow: 0 0 0 0 var(--accent);
-    animation: dot-pulse 2.4s ease-out infinite;
   }
   @keyframes dot-pulse {
     0%   { box-shadow: 0 0 0 0 rgba(46,196,182,.7); }
@@ -1854,9 +1853,8 @@
   </div>
 </section>
 
-<!-- ── RECENTE UPDATES (cycle 88) — leefsignaal #2: laat zien dat het
-     product nog ontwikkeld wordt. Data uit /changelog.json, gegenereerd
-     door scripts/update-changelog.js bij elke pre-commit. ── -->
+<!-- ── RECENTE UPDATES (cycle 88) — leefsignaal. Verbergt zich automatisch
+     als changelog.json leeg is (zie script onderaan). ── -->
 <section id="recente-updates" class="recente-updates" aria-labelledby="updates-heading">
   <div class="container">
     <p class="section-label">Wat er onlangs is gebeurd</p>
