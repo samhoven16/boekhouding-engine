@@ -249,3 +249,40 @@ describe('V2: doGet-callers gebruiken de nieuwe signature', () => {
     expect(src).not.toMatch(/rateLimit_\(e,\s*\d+\s*,\s*\d+\s*\)/);
   });
 });
+
+describe('Schaal: gedeelde hot-path-endpoints hebben een globale cap', () => {
+  // valideer/config/telemetry worden door ELKE klant-kopie geraakt. Zonder
+  // globale cap legt één runaway-loop of anonieme flood de hele klantenbasis
+  // plat (full-sheet-read per valideer; appendRow+deleteRows per telemetry).
+  // Deze drie waren als enige in doGget ONgewrapt — dit borgt dat ze nu een
+  // rateLimit_ met globaal-cap voor de echte endpoint hebben.
+  const src = fs.readFileSync(CODE_GS, 'utf8');
+
+  test('valideer → rateLimit_ met globaal vóór valideerEndpoint_', () => {
+    expect(src).toMatch(
+      /valideer['"][^\n]*rateLimit_\(e,\s*\{[^}]*globaal[^}]*\}\)\s*\|\|\s*valideerEndpoint_/
+    );
+  });
+
+  test('config → rateLimit_ met globaal vóór configEndpoint_', () => {
+    expect(src).toMatch(
+      /config['"][^\n]*rateLimit_\(e,\s*\{[^}]*globaal[^}]*\}\)\s*\|\|\s*configEndpoint_/
+    );
+  });
+
+  test('telemetry → rateLimit_ met globaal vóór telemetryEndpoint_', () => {
+    expect(src).toMatch(
+      /telemetry['"][^\n]*rateLimit_\(e,\s*\{[^}]*globaal[^}]*\}\)\s*\|\|\s*telemetryEndpoint_/
+    );
+  });
+
+  test('globale cap blokkeert na de drempel (gedrag, met kleine cap)', () => {
+    const { ctx } = maakCtx();
+    const opt = { actie: 'config', globaal: 5, windowMin: 60 };
+    for (let i = 0; i < 5; i++) {
+      expect(ctx.rateLimit_(req({}), opt)).toBeNull();
+    }
+    // 6e anonieme request → 429 (geen email nodig: pure globale breaker).
+    expect(ctx.rateLimit_(req({}), opt)).toBeTruthy();
+  });
+});

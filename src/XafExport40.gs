@@ -12,7 +12,9 @@
  *    regel: dat zou de BTW dubbeltellen / op de verkeerde regel leggen. De BTW
  *    is volledig uit het grootboek te reconstrueren. <vatCodes> documenteert
  *    wél de koppeling code → BTW-rekening (vatToPay/ClaimAccID).
- *  - Alleen COMMITTED journaalposten (CORRUPT/Concept eruit) — bewaarplicht.
+ *  - Alle saldo-rakende journaalposten — incl. Concept én Gestorneerd — want
+ *    de saldibalans op het scherm moet aansluiten op de auditfile (C-1, #324).
+ *    Alleen CORRUPT-rijen eruit: hun saldo is al atomair teruggedraaid.
  *  - Controletotalen (linesCount/totalDebit/totalCredit) zodat een verwerker de
  *    volledigheid kan checken.
  *  - RGS-codes per grootboekrekening (RGScode) zodat accountants direct mappen.

@@ -24,7 +24,10 @@ describe('Centrale config-endpoint levert het volledige delivery-contract', () =
 
   test('configEndpoint_ bestaat en is gerouteerd', () => {
     expect(fnStart).toBeGreaterThan(-1);
-    expect(code).toMatch(/actie === 'config'\)\s*return configEndpoint_/);
+    // config gaat nu via een globale rateLimit_-cap vóór configEndpoint_
+    // (schaal-bescherming: gedeeld endpoint, geraakt door élke klant-kopie).
+    expect(code).toMatch(/actie === 'config'\)[^\n]*configEndpoint_/);
+    expect(code).toMatch(/actie === 'config'\)[^\n]*rateLimit_/);
   });
 
   test('serveert belastingTarieven uit een ScriptProperty (centrale tarief-feed #1)', () => {
