@@ -52,6 +52,7 @@ function doGet(e) {
   if (actie === 'config')        return rateLimit_(e, { actie: 'config', globaal: 6000, windowMin: 60 }) || configEndpoint_(e);
   if (actie === 'update-bundle') return rateLimit_(e, { actie: 'update-bundle', perEmail: 10, globaal: 500, windowMin: 60 }) || updateBundleEndpoint_(e);
   if (actie === 'telemetry')     return rateLimit_(e, { actie: 'telemetry', globaal: 2000, windowMin: 60 }) || telemetryEndpoint_(e);
+  if (actie === 'drip-uit')      return rateLimit_(e, { actie: 'drip-uit', globaal: 2000, windowMin: 60 }) || dripUitEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   // CYCLE-41: rate-limit admin-login om brute-force op ADMIN_WACHTWOORD
   // te voorkomen. Voorheen kon attacker onbeperkt wachtwoorden proberen
@@ -2989,6 +2990,14 @@ function verstuurDripsDagelijks_() {
     // wel een activeringscode aanvroegen maar nooit activeerden (otp_/otp_ts_).
     try { cleanupVerlopenOtpKeys_(); } catch (e) { Logger.log('OTP-cleanup fout: ' + e.message); }
 
+    // Globale aan/uit-knop voor de onboarding-drips. Eén ScriptProperty
+    // DRIPS_ACTIEF='false' zet ALLE klant-drips uit (Sam wil z'n klanten niet
+    // met mails bestoken). Afwezig/elke andere waarde = aan (huidig gedrag).
+    // De OTP-cleanup hierboven draait sowieso door — die is geen klant-mail.
+    if (String(props.getProperty('DRIPS_ACTIEF') || 'true').toLowerCase() === 'false') {
+      return;
+    }
+
     // Kolom-indices op basis van setupLicentieSheet (0-based):
     // [0]=Sleutel [1]=Naam [2]=Email [3]=Versie [4]=Status [5]=Vervaldatum
     // [6]=Installatie-ID [7]=Aangemaakt op [8]=Mollie betaling ID
@@ -3000,6 +3009,9 @@ function verstuurDripsDagelijks_() {
       const aanmaakDatum  = data[i][7];
 
       if (!email || !sleutel) continue;
+      // Per-klant afmelding (één-klik-unsubscribe uit de drip-mail). Licentie-
+      // mails (activeringscode etc.) lopen via aparte functies en blijven komen.
+      if (props.getProperty('dripuit_' + _rlHash_(email)) === '1') continue;
       const statusLow = status.toLowerCase();
       // CYCLE-30: startsWith('actief') ipv `=== 'actief' || indexOf('actief —')`.
       // Vorige check miste varianten 'Actief (handmatig)', 'Actief - trial'
@@ -3095,6 +3107,43 @@ function cleanupVerlopenOtpKeys_() {
   return verwijderd;
 }
 
+/**
+ * Niet-raadbaar afmeld-token voor de één-klik-unsubscribe. Zonder secret zou
+ * iemand massaal andermans adressen kunnen afmelden (Sam's onboarding saboteren).
+ */
+function _dripToken_(email) {
+  const secret = PropertiesService.getScriptProperties().getProperty('DRIP_UNSUB_SECRET') || 'boekhoudbaar-drip-v1';
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.MD5,
+    String(email).trim().toLowerCase() + '|' + secret)
+    .map(function(b) { return (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'); })
+    .join('').slice(0, 16);
+}
+
+/**
+ * Eén-klik-afmelding uit de onboarding-drips. De klant klikt de link in de
+ * mail (token-gevalideerd) en wordt direct afgemeld — geen support-mail nodig.
+ * Licentie-/activeringsmails lopen via aparte functies en blijven komen.
+ */
+function dripUitEndpoint_(e) {
+  const email = String(((e && e.parameter && (e.parameter.e || e.parameter.email)) || '')).trim().toLowerCase();
+  const token = String(((e && e.parameter && e.parameter.t) || '')).trim();
+  const klaar = function(titel, tekst) {
+    return HtmlService.createHtmlOutput(
+      '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;max-width:460px;' +
+      'margin:48px auto;text-align:center;color:#1a1a2e;line-height:1.6">' +
+      '<h2 style="color:#0D1B4E;margin:0 0 10px">' + titel + '</h2><p>' + tekst + '</p></div>'
+    ).setTitle(titel + ' — Boekhoudbaar');
+  };
+  if (!email || !token || token !== _dripToken_(email)) {
+    return klaar('Afmeldlink ongeldig',
+      'Deze link klopt niet of is verlopen. Mail support@boekhoudbaar.nl en we melden je handmatig af.');
+  }
+  try { PropertiesService.getScriptProperties().setProperty('dripuit_' + _rlHash_(email), '1'); } catch (_) {}
+  return klaar('Afgemeld ✓',
+    'Je ontvangt geen onboarding-mails meer van Boekhoudbaar. ' +
+    'Belangrijke licentie-mails (zoals je activeringscode) blijven wél komen.');
+}
+
 function verstuurDripMail_(naam, email, sleutel, drip) {
   const props        = PropertiesService.getScriptProperties();
   const brevoKey     = props.getProperty('BREVO_API_KEY')   || '';
@@ -3105,6 +3154,14 @@ function verstuurDripMail_(naam, email, sleutel, drip) {
   const kvk          = props.getProperty('KVK_NUMMER')      || '';
   const btw          = props.getProperty('BTW_NUMMER')      || '';
   const privacyUrl   = props.getProperty('PRIVACY_URL')     || 'https://www.boekhoudbaar.nl/privacy';
+
+  // Eén-klik-afmeldlink (geen mailto meer): de klant klikt en is direct af.
+  let webappUrl = '';
+  try { webappUrl = (typeof ScriptApp !== 'undefined') ? (ScriptApp.getService().getUrl() || '') : ''; } catch (_) {}
+  if (!webappUrl) webappUrl = props.getProperty('WEBAPP_URL') || '';
+  const unsubLink = webappUrl
+    ? webappUrl + '?actie=drip-uit&e=' + encodeURIComponent(email) + '&t=' + _dripToken_(email)
+    : ('mailto:' + supportEmail + '?subject=Unsubscribe%20drip');
 
   const inhoud = dripInhoud_(drip.dag, naam, productnm);
   const html = `<!DOCTYPE html><html lang="nl"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#1a1a2e;background:#f8fafc">
@@ -3122,7 +3179,7 @@ function verstuurDripMail_(naam, email, sleutel, drip) {
       <a href="mailto:${supportEmail}" style="color:#0D1B4E">${supportEmail}</a><br>
       Hoven Strategy &amp; Solutions${kvk ? ' · KvK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''}<br>
       <a href="${privacyUrl}" style="color:#94a3b8">Privacy</a> ·
-      <a href="mailto:${supportEmail}?subject=Unsubscribe%20drip" style="color:#94a3b8">Geen drip-mails meer</a>
+      <a href="${unsubLink}" style="color:#94a3b8">Afmelden voor deze mails</a>
     </p>
   </div>
 </body></html>`;
@@ -3133,7 +3190,7 @@ function verstuurDripMail_(naam, email, sleutel, drip) {
     '---\n' +
     'Reageer op deze mail of: ' + supportEmail + '\n' +
     'Hoven Strategy & Solutions' + (kvk ? ' · KvK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') + '\n' +
-    'Geen drip-mails meer? mail: ' + supportEmail + ' subject: Unsubscribe drip\n';
+    'Afmelden voor deze mails (één klik): ' + unsubLink + '\n';
 
   if (brevoKey) {
     try {
@@ -3148,7 +3205,10 @@ function verstuurDripMail_(naam, email, sleutel, drip) {
           htmlContent: html,
           textContent: text,
           tags: ['drip', drip.vlag],
-          headers: { 'List-Unsubscribe': '<mailto:' + supportEmail + '?subject=Unsubscribe drip>' },
+          headers: {
+            'List-Unsubscribe': '<' + unsubLink + '>',
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
         }),
         muteHttpExceptions: true,
       });

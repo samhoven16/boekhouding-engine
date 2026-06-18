@@ -195,6 +195,7 @@ function onOpen() {
       .addItem('Accountantspakket exporteren', 'exporteerAccountantsPakket')
       .addItem('Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
       .addItem('Maandrapport nu versturen', 'mailMaandrapport')
+      .addItem('📧 E-mailnotificaties aan/uit zetten', 'toggleEmailNotificaties')
       .addSeparator()
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
       .addItem('🔐 Audit-keten verifiëren (is er niets gewijzigd?)', 'toonAuditKetenVerificatie')

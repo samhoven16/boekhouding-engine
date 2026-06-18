@@ -1099,6 +1099,7 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
  * @param {string} ref       Inkoopnummer / referentie
  */
 function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
+  if (!emailNotificatiesAan_()) return;  // master e-mailnotificatie-schakelaar
   const drempelStr = getInstelling_('Melding hoge uitgave');
   const drempel = drempelStr ? parseBedrag_(drempelStr) : 500;
   if (!isFinite(drempel) || drempel <= 0) return;
@@ -1527,6 +1528,39 @@ function _dagelijksBudget_() {
 var _huidigDagelijksBudgetStart = 0;
 var _huidigDagelijksBudgetOverschreden = false;
 
+/**
+ * Master aan/uit voor klant-gerichte notificatie-mails (BTW-deadline,
+ * suppletie-tip, KIA-misser, bewaarplicht, hoge-uitgave-alert, rapporten).
+ * Eén instelling 'E-mailnotificaties' (Ja/Nee) — standaard AAN (backward-compat).
+ * Raakt NIET de betalingsherinneringen naar de klanten van de gebruiker; die
+ * zijn zakelijk-essentieel en houden hun eigen flow.
+ */
+function emailNotificatiesAan_() {
+  try {
+    const v = getInstelling_('E-mailnotificaties');
+    if (v === null || v === undefined || String(v).trim() === '') return true; // default aan
+    return isJa_(String(v));
+  } catch (_) { return true; }
+}
+
+/**
+ * Menu-actie: zet de klant-notificatie-mails in één klik aan of uit.
+ * Schrijft 'E-mailnotificaties' = Ja/Nee in Instellingen en bevestigt met toast.
+ */
+function toggleEmailNotificaties() {
+  const nieuw = emailNotificatiesAan_() ? 'Nee' : 'Ja';
+  try {
+    setInstelling_('E-mailnotificaties', nieuw);
+  } catch (e) {
+    try { SpreadsheetApp.getUi().alert('Kon de instelling niet opslaan: ' + e.message); } catch (_) {}
+    return;
+  }
+  const bericht = nieuw === 'Ja'
+    ? '✓ E-mailnotificaties staan nu AAN — je krijgt BTW-deadline-, suppletie- en bespaartips per mail.'
+    : '✓ E-mailnotificaties staan nu UIT — geen meldingsmails meer. Je betalingsherinneringen naar je eigen klanten blijven gewoon werken.';
+  try { SpreadsheetApp.getActiveSpreadsheet().toast(bericht, 'Boekhoudbaar', 8); } catch (_) {}
+}
+
 function dagelijkseTaken() {
   const ss = getSpreadsheet_();
   const dagelijksTotaal0 = Date.now();
@@ -1541,29 +1575,33 @@ function dagelijkseTaken() {
   // Wrap in _runTaak_ voor automatische metrics + status-logging.
   _runTaak_('markeerVervallen', function() { markeerVervallenFacturen_(ss); });
   _runTaak_('herinneringen',    function() { stuurAutomatischeBetalingsherinneringen_(ss); });
+  // Master e-mailnotificatie-schakelaar: één 'E-mailnotificaties'=Nee zet alle
+  // klant-gerichte meldingsmails uit (de gebruiker wil niet "elke dag mails").
+  // Standaard aan; betalingsherinneringen naar de eigen klanten blijven buiten.
+  const _mailNotifAan = emailNotificatiesAan_();
   _runTaak_('btwDeadline',      function() {
     // V3-FIX: case-insensitief via isJa_. Strikte === 'Ja' liet 'ja'/'JA'/' Ja '
     // stil falen → BTW-reminder draaide niet → klant miste deadline → €68+ boete.
-    if (isJa_(getInstelling_('BTW aangifte herinnering'))) controleerBtwDeadlines_();
+    if (_mailNotifAan && isJa_(getInstelling_('BTW aangifte herinnering'))) controleerBtwDeadlines_();
   });
   // V3-FIX: proactieve suppletie-check. detecteerSuppletieMogelijk_ bestond
   // al maar zat alleen op een menu-item. Klant die niet handmatig "Controleer
   // afsluiting" runt mist de boete-vrije 8-weken-termijn voor vrijwillige
   // verbetering → bij latere Belastingdienst-ontdekking: 30% boete + rente.
   _runTaak_('suppletieCheck',   function() {
-    if (typeof controleerSuppletieProactief_ === 'function') controleerSuppletieProactief_();
+    if (_mailNotifAan && typeof controleerSuppletieProactief_ === 'function') controleerSuppletieProactief_();
   });
   // V5: KIA-misser detectie. Investering verkeerd op kostenrekening = klant
   // mist 28% KIA-aftrek. Aggregeer jaar-totaal, mail bij ≥€2.901 potentieel
   // gemist. Idempotent per kwartaal.
   _runTaak_('kiaMisser', function() {
-    if (typeof controleerKiaMisserProactief_ === 'function') controleerKiaMisserProactief_();
+    if (_mailNotifAan && typeof controleerKiaMisserProactief_ === 'function') controleerKiaMisserProactief_();
   });
   // V6: bewaarplicht pre-alert. Oudste boeking > 6,5 jaar = klant moet XAF +
   // PDF-archief offline opslaan vóór 7-jaars-grens. Voorkomt bewijslast-
   // omkering bij latere Belastingdienst-controle. 1×/kalenderjaar.
   _runTaak_('bewaarplichtAlert', function() {
-    if (typeof controleerBewaarplichtAlert_ === 'function') controleerBewaarplichtAlert_();
+    if (_mailNotifAan && typeof controleerBewaarplichtAlert_ === 'function') controleerBewaarplichtAlert_();
   });
   // #B4.1 (gas-runtime audit): ScriptProperties-cleanup VÓÓR de dure proof/health-
   // taken (gezondheidscheck/auditKeten/auditAnchor/formeelBewijs). De budget-guard
