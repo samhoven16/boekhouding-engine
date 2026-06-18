@@ -16,6 +16,13 @@ const { createGasRuntime } = require('../__helpers__/gas-runtime');
 
 const XSD = path.resolve(__dirname, '../../docs/xaf/XmlAuditfileFinancieel4.0.xsd');
 
+// xmllint is de schema-validator. Beschikbaar lokaal + op GitHub-ubuntu-runners
+// (libxml2-utils). Mocht een omgeving 'm missen, dan slaan we de schema-check
+// over i.p.v. te falen op een ontbrekende binary — de structurele checks blijven.
+const HEEFT_XMLLINT = (() => {
+  try { execSync('xmllint --version', { stdio: 'pipe' }); return true; } catch (_) { return false; }
+})();
+
 describe('XAF 4.0 — valideert tegen de officiële XSD', () => {
   let xaf;
 
@@ -73,6 +80,10 @@ describe('XAF 4.0 — valideert tegen de officiële XSD', () => {
   });
 
   test('output valideert tegen de officiële XmlAuditfileFinancieel4.0.xsd (xmllint)', () => {
+    if (!HEEFT_XMLLINT) {
+      console.warn('[xaf40] xmllint niet beschikbaar — schema-validatie overgeslagen.');
+      return;
+    }
     const tmp = path.join(os.tmpdir(), 'xaf40-' + Date.now() + '.xaf');
     fs.writeFileSync(tmp, xaf, 'utf8');
     let fout = '';
