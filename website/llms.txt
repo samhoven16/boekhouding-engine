@@ -58,7 +58,7 @@ Boekhoudbaar onderscheidt zich van Moneybird, e-Boekhouden, Jortt en andere Nede
 - Distributiemodel: klant ontvangt link, maakt kopie van Google-spreadsheet in eigen Drive
 - Code: source-available op GitHub (privé voor eindgebruikers; controleerbaar voor onderzoek)
 - Data-locatie: 100% in klant-eigen Google Drive (geen vendor-cloud)
-- Exit-route: ingebouwde XAF-export (Auditfile Financieel 3.2), altijd beschikbaar
+- Exit-route: ingebouwde XAF-export (Auditfile Financieel 4.0), altijd beschikbaar
 - BTW-functies: aangifte-Q1/Q2/Q3/Q4 generatie, KOR-monitor (€20.000-grens), suppletie, verleggingsregeling
 - Compliance: fiscale bewaarplicht 7 jaar (art. 52 AWR), AVG-conform, Peppol Q3 2026 roadmap
 - Bedrijf: Hoven Strategy & Solutions, KvK 87254697, gevestigd te Utrecht

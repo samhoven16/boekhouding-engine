@@ -50,7 +50,10 @@ function _bouwXaf40Xml_(ss, jaarArg) {
   xml += '    <dateCreated>' + vandaag + '</dateCreated>\n';
   xml += '    <softwareDesc>Boekhoudbaar</softwareDesc>\n';
   xml += '    <softwareVersion>' + _xafEsc_(versie.substring(0, 20)) + '</softwareVersion>\n';
-  xml += '    <RGSVersion>RGS 3.5</RGSVersion>\n';
+  // RGSVersion bewust weggelaten: "RGS 3.5" bestaat niet als release (actuele
+  // RGS-versies zijn 3.4/3.7/3.8). Het veld is optioneel in de XSD; de RGScode-
+  // codes per rekening blijven gewoon staan. Voeg een geverifieerde versie toe
+  // zodra die tegen rgsnl.nl is bevestigd.
   xml += '  </header>\n';
 
   // ── company ── (taxRegistrationCountry + taxRegIdent zijn VERPLICHT)
@@ -200,7 +203,13 @@ function _xaf40Transactions_(ss, jaar) {
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       const rij = data[i];
-      if (typeof _journaalpostIsCommitted_ === 'function' && !_journaalpostIsCommitted_(rij)) continue;
+      // Spiegel het grootboek: élke boeking die het saldo raakt hoort in de
+      // export, zodat de aangeleverde saldibalans = de export (dé controle-test).
+      // Alleen CORRUPT (half-geboekt, saldo al teruggedraaid via atomic rollback)
+      // valt eruit — die zit ook niet in het grootboek/de rapporten. Concept én
+      // Gestorneerd tellen WÉL mee in het grootboeksaldo, dus ook hier; anders
+      // sluit de balans op het scherm niet aan op de geleverde auditfile.
+      if ((rij.length >= 17 ? String(rij[16] || '').trim().toUpperCase() : '') === 'CORRUPT') continue;
       const id = String(rij[0] || '').trim();
 
       let datum = rij[1];

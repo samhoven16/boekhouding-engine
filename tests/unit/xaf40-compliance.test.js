@@ -49,13 +49,17 @@ describe('XAF 4.0 — valideert tegen de officiële XSD', () => {
       ['8000', 'Omzet 21%', '', '', 'W&V'],
       ['7000', 'Inkoopwaarde', '', '', 'W&V'],
     ];
-    // Verkoopfactuur = 2 rijen (omzet + BTW als aparte grootboekmutatie),
-    // inkoop = 1 rij. JP099 is CORRUPT (17 kolommen, status index 16) → eruit.
+    // Verkoopfactuur = 2 rijen (omzet + BTW als aparte grootboekmutatie), inkoop
+    // = 1 rij. JP004 = Concept: telt mee in het grootboeksaldo/rapporten, dus
+    // MOET in de export (anders sluit de schermbalans niet aan op de auditfile).
+    // JP099 = CORRUPT: saldo al teruggedraaid via atomic rollback, dus MOET eruit.
+    // Beide 17 kolommen, status op index 16.
     const journaal = [
       ['ID', 'Datum', 'Omschr', 'Dagboek', 'Debet', 'DNaam', 'Credit', 'CNaam', 'Bedrag', 'BTW%', 'BTWBedrag'],
       ['JP001', new Date(2024, 0, 15), 'Verkoop 001', 'Verkoopboek', '1100', 'Debiteuren', '8000', 'Omzet', 100.00, '21%', 0],
       ['JP002', new Date(2024, 0, 15), 'Verkoop 001 (BTW)', 'Verkoopboek', '1100', 'Debiteuren', '4110', 'BTW af te dragen', 21.00, '21%', 21.00],
       ['JP003', new Date(2024, 2, 20), 'Inkoop materiaal', 'Inkoopboek', '7000', 'Inkoopwaarde', '4000', 'Crediteuren', 50.00, '21%', 0],
+      ['JP004', new Date(2024, 4, 10), 'Memoriaal (concept)', 'Memoriaal', '1100', 'Debiteuren', '8000', 'Omzet', 30.00, '0%', 0, '', '', '', '', '', 'Concept'],
       ['JP099', new Date(2024, 3, 1), 'CORRUPT half-geboekt', 'Verkoopboek', '1100', 'Debiteuren', '8000', 'Omzet', 999.00, '21%', 0, '', '', '', '', '', 'CORRUPT'],
     ];
     const relaties = [
@@ -98,13 +102,15 @@ describe('XAF 4.0 — valideert tegen de officiële XSD', () => {
     expect(fout).toBe('');
   });
 
-  test('correcte namespace + RGS-codes + controletotalen + COMMITTED-filter + géén los vat-blok', () => {
+  test('namespace + RGS + controletotalen + export=grootboek (Concept in, CORRUPT uit) + géén vat + géén valse RGSVersion', () => {
     expect(xaf).toContain('xmlns="http://www.odb.belastingdienst.nl/Belastingdienst/BCPP/1.1/structures/XmlauditfileXAF_4.0"');
     expect(xaf).toContain('<RGScode>');
-    expect(xaf).toMatch(/<linesCount>6<\/linesCount>/);          // 3 committed rijen × 2 regels
-    expect(xaf).toMatch(/<totalDebit>171\.00<\/totalDebit>/);    // 100 + 21 + 50
-    expect(xaf).toMatch(/<totalCredit>171\.00<\/totalCredit>/);
-    expect(xaf).not.toContain('JP099');                          // CORRUPT eruit
+    expect(xaf).toMatch(/<linesCount>8<\/linesCount>/);          // JP001-004 = 4 rijen × 2 regels
+    expect(xaf).toMatch(/<totalDebit>201\.00<\/totalDebit>/);    // 100 + 21 + 50 + 30
+    expect(xaf).toMatch(/<totalCredit>201\.00<\/totalCredit>/);
+    expect(xaf).toContain('<nr>JP004</nr>');                     // C-1: Concept telt mee (zit ook in het saldo/rapport)
+    expect(xaf).not.toContain('JP099');                          // CORRUPT eruit (saldo al teruggedraaid)
     expect(xaf).not.toContain('<vat>');                          // BTW zit in het grootboek, niet als los blok
+    expect(xaf).not.toContain('<RGSVersion>');                   // X-1: geen onbestaande "RGS 3.5"-claim
   });
 });

@@ -273,7 +273,7 @@ function _bouwGrootboekXml_(ss) {
       const rgs = getRgsCode_(code);
       if (rgs) {
         xml += '        <leadCode>' + _xafEsc_(rgs) + '</leadCode>\n';
-        xml += '        <leadDescription>RGS NL 3.5</leadDescription>\n';
+        xml += '        <leadDescription>RGS NL</leadDescription>\n';
       }
     }
     xml += '      </ledgerAccount>\n';
