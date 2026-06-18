@@ -60,6 +60,18 @@ function getLicentieServerUrl_() {
     .getProperty('LICENTIE_SERVER_URL') || '';
 }
 
+/**
+ * F-SCALE-141: optionele warme-standby licentieserver. Leeg tenzij Sam een
+ * tweede deployment heeft en deze property zet (handmatig of via de centrale
+ * config). valideerLicentieOpServer_ probeert deze pas ná een falende primaire
+ * server, vóór de offline-grace — zodat één serveruitval niet de hele
+ * klantenbasis raakt.
+ */
+function getLicentieServerUrlFallback_() {
+  return PropertiesService.getScriptProperties()
+    .getProperty('LICENTIE_SERVER_URL_FALLBACK') || '';
+}
+
 // ─────────────────────────────────────────────
 //  OWNER / DEV BYPASS
 // ─────────────────────────────────────────────
@@ -839,44 +851,70 @@ function meldOnboardingAanServer_() {
 
 function valideerLicentieOpServer_(sleutel) {
   const serverUrl  = getLicentieServerUrl_();
-  const huidigSsId = PropertiesService.getScriptProperties().getProperty(LICENTIE_SS_ID_KEY) || '';
+  // F-RED-150: bind op de LIVE spreadsheet-ID, niet op de opgeslagen
+  // ScriptProperty. Die property is door een knoeier te wissen/spoofen — dan
+  // stuurt een kopie een lege/oude installatie mee en ontwijkt de server-bind
+  // (1 sleutel → oneindig kopieën). De live-ID is per kopie écht anders en niet
+  // te vervalsen zonder de client-code te herschrijven. Fallback op de property
+  // als er (bv. in een trigger zonder actieve sheet) geen live-ID beschikbaar is;
+  // het onOpen-pad gebruikt dan alsnog de live-ID en blokkeert de kopie.
+  let huidigSsId = PropertiesService.getScriptProperties().getProperty(LICENTIE_SS_ID_KEY) || '';
+  try {
+    const liveSs = SpreadsheetApp.getActiveSpreadsheet();
+    if (liveSs) huidigSsId = liveSs.getId();
+  } catch (_) {}
 
   if (!serverUrl) {
     Logger.log('WAARSCHUWING: Geen licentieserver — licentie geaccepteerd zonder validatie.');
     return { geldig: true, naam: 'Demo', versie: 'Demo' };
   }
 
-  try {
-    const url  = serverUrl
-      + '?actie=valideer&sleutel=' + encodeURIComponent(sleutel)
-      + '&installatie='            + encodeURIComponent(huidigSsId);
-    const resp = UrlFetchApp.fetch(url, {
-      muteHttpExceptions: true, followRedirects: true,
-      headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
-    });
-    if (resp.getResponseCode() === 200) {
-      const json = parseServerJson_(resp.getContentText());
-      // Cycle 82: track laatste succesvolle server-call ALLEEN als de licentie
-      // ook daadwerkelijk geldig is. Een server-200 met geldig=false (revoke,
-      // verlopen, ingetrokken) mag de offline-grace niet verlengen.
-      if (json && json.geldig) {
-        try { PropertiesService.getScriptProperties().setProperty(
-          LICENTIE_LAATST_GELUKT_KEY, String(Date.now())); } catch (_) {}
-      } else if (json && json.geldig === false) {
-        // Expliciete server-revoke (chargeback/refund/ingetrokken): wis de
-        // offline-grace-basis. Anders kan een klant ná een ontvangen revoke
-        // de server blokkeren en via _offlineFallback_ alsnog de volledige
-        // grace-periode op een ingetrokken licentie doorwerken.
-        try { PropertiesService.getScriptProperties().deleteProperty(
-          LICENTIE_LAATST_GELUKT_KEY); } catch (_) {}
+  // F-SCALE-141: probeer na een onbereikbare/falende primaire server een
+  // warme-standby (LICENTIE_SERVER_URL_FALLBACK) vóór we op de offline-grace
+  // terugvallen. Zo overleeft de hele klantenbasis één serveruitval zónder dat
+  // elke kopie opnieuw gedeployd hoeft te worden. Leeg = identiek gedrag aan
+  // voorheen (één server, dan offline-grace). NB: dit is alleen de client-helft;
+  // de standby-deploy + uptime-monitor zijn operationele stappen van Sam.
+  const bases = [serverUrl];
+  const fallbackUrl = (typeof getLicentieServerUrlFallback_ === 'function')
+    ? getLicentieServerUrlFallback_() : '';
+  if (fallbackUrl && fallbackUrl !== serverUrl) bases.push(fallbackUrl);
+
+  let laatsteReden = '';
+  for (let b = 0; b < bases.length; b++) {
+    try {
+      const url  = bases[b]
+        + '?actie=valideer&sleutel=' + encodeURIComponent(sleutel)
+        + '&installatie='            + encodeURIComponent(huidigSsId);
+      const resp = UrlFetchApp.fetch(url, {
+        muteHttpExceptions: true, followRedirects: true,
+        headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
+      });
+      if (resp.getResponseCode() === 200) {
+        const json = parseServerJson_(resp.getContentText());
+        // Cycle 82: track laatste succesvolle server-call ALLEEN als de licentie
+        // ook daadwerkelijk geldig is. Een server-200 met geldig=false (revoke,
+        // verlopen, ingetrokken) mag de offline-grace niet verlengen.
+        if (json && json.geldig) {
+          try { PropertiesService.getScriptProperties().setProperty(
+            LICENTIE_LAATST_GELUKT_KEY, String(Date.now())); } catch (_) {}
+        } else if (json && json.geldig === false) {
+          // Expliciete server-revoke (chargeback/refund/ingetrokken): wis de
+          // offline-grace-basis. Anders kan een klant ná een ontvangen revoke
+          // de server blokkeren en via _offlineFallback_ alsnog de volledige
+          // grace-periode op een ingetrokken licentie doorwerken.
+          try { PropertiesService.getScriptProperties().deleteProperty(
+            LICENTIE_LAATST_GELUKT_KEY); } catch (_) {}
+        }
+        return json;
       }
-      return json;
+      laatsteReden = 'HTTP ' + resp.getResponseCode();
+    } catch (err) {
+      Logger.log('Licentievalidatie fout (' + bases[b] + '): ' + err.message);
+      laatsteReden = err.message;
     }
-    return _offlineFallback_(sleutel, 'HTTP ' + resp.getResponseCode());
-  } catch (err) {
-    Logger.log('Licentievalidatie fout: ' + err.message);
-    return _offlineFallback_(sleutel, err.message);
   }
+  return _offlineFallback_(sleutel, laatsteReden);
 }
 
 /**

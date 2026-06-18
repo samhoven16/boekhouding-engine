@@ -104,3 +104,39 @@ rubriek 1d/1e/3a/3b/4 → EU/verlegd onzichtbaar).
 niet absoluut — de **server-SPOF (F-SCALE-141)** en de **piraterij-binding
 (F-RED-150)** zijn de twee resterende structurele risico's voor schaal, en die
 vragen jouw beslissing vóór ze sluitbaar zijn.
+
+---
+
+## Addendum — ronde 3b/3c (na merge #325, op Sam's keuze "doe alles")
+
+Op verzoek alsnog 5 van de 6 uitgestelde BLOKKER-klasse-items aangepakt; elk met
+een ratel-test. PR #325 (de 4 geld-/schaalblokkers) is intussen gemerged.
+
+**Ronde 3b — waarheid-fixes (claims = realiteit), `audit-ronde3-waarheid-claims.test.js`:**
+- **F-VOICE-130** (GEBORGD): HITL-"afgesloten voor de Belastingdienst (art. 52 AWR)"
+  valse finaliteit → nu "nagekeken; blijft bewerkbaar tot periode-afsluiting".
+- **F-VOICE-131** (GEBORGD): accountant-export "compatibel met Exact & Twinfield"
+  → gekwalificeerd (codes voor meest-gebruikte rekeningen; rest handmatig; XAF leidend).
+- **F-DOC-130** (GEBORGD): "read-only delen, auto-vervalt 30d" bestond niet →
+  teruggebracht naar de echte flow (exportpakket in eigen Drive + XAF, zelf delen)
+  in functies-kaart, FAQ-tekst, FAQ JSON-LD én vergelijkingstabel.
+
+**Ronde 3c — schaal/anti-piraterij (hot-path, conservatief + backward-compat):**
+- **F-RED-150** (GEBORGD): client bond op de wisbare/spoofbare opgeslagen ssId-
+  property → nu op de LIVE sheet-ID (`f-red-150-licentie-live-ssid-bind.test.js`).
+  Sluit de "wis de property → stuur lege/oude installatie → ontwijk de server-bind"-
+  route. Server-bind + Cycle-82 (geen offline-grace zonder eerdere online-OK) bleken
+  al aanwezig; dit completeert de bind. Determined piraterij die de Apps-Script-code
+  herschrijft blijft in een copy-template-model fundamenteel onmogelijk hard te maken.
+- **F-SCALE-141** (GEBORGD code / OPEN infra): client probeert nu een warme-standby
+  (`LICENTIE_SERVER_URL_FALLBACK`) vóór de offline-grace
+  (`f-scale-141-licentie-fallback-server.test.js`); leeg = ongewijzigd gedrag.
+  **Sam's operationele helft blijft open**: een tweede deployment draaien + een
+  externe uptime-monitor op `?actie=health`.
+
+**Nog OPEN (bewust niet eenzijdig):**
+- **F-OND-130** — activatie-/order-mail + /bedankt-copy raakt de **koopflow** die
+  werkt en die Sam expliciet ongemoeid wil → niet zonder zijn ok.
+- Backlog HOOG: F-SCALE-142, F-OND-131, F-DOC-131 (zie ledger).
+
+Volledige suite groen (2724 tests), lint 0 errors.
