@@ -522,7 +522,6 @@
     width: 8px; height: 8px; border-radius: 50%;
     background: var(--accent);
     box-shadow: 0 0 0 0 var(--accent);
-    animation: dot-pulse 2.4s ease-out infinite;
   }
   @keyframes dot-pulse {
     0%   { box-shadow: 0 0 0 0 rgba(46,196,182,.7); }
@@ -671,6 +670,16 @@
   /* ── COMPARE-INLINE TABEL ── */
   .compare-inline-sectie { background: var(--wit); padding: 80px 24px; }
   .compare-inline-sectie .container { max-width: 980px; margin: 0 auto; text-align: center; }
+  /* ── ZO WERKT HET (3 stappen) — helderheid-blok onder de hero ── */
+  .hoe-werkt { padding: 48px 32px; background: var(--wit); border-bottom: 1px solid var(--rand); }
+  .hoe-werkt .container { max-width: 980px; margin: 0 auto; }
+  .hoe-label { text-align: center; }
+  .hoe-werkt h2 { text-align: center; font-size: 26px; line-height: 1.25; margin: 0 0 28px; }
+  .hoe-stappen { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .hoe-stap { background: var(--bg); border-radius: 12px; padding: 22px; }
+  .hoe-stap-nr { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .hoe-stap strong { display: block; margin-bottom: 4px; }
+  .hoe-stap span { color: var(--grijs); font-size: 15px; line-height: 1.55; }
   .compare-tabel-wrap { overflow-x: auto; margin: 32px 0 22px; border-radius: var(--radius-l); box-shadow: var(--shadow-card); }
   .compare-tabel {
     width: 100%; min-width: 640px; border-collapse: collapse;
@@ -1532,11 +1541,11 @@
     <div class="hero-content">
       <div class="hero-badge">
         <span class="hero-badge-dot" aria-hidden="true"></span>
-        Eenmalig €49 · geen abonnement · jouw Drive
+        In jouw Google Drive · eenmalig €49 · geen abonnement
       </div>
-      <h1 id="hero-heading"><span class="hero-brand">Boekhoudbaar</span>Boekhoudprogramma voor ZZP &amp; eenmanszaak — zonder abonnement.</h1>
+      <h1 id="hero-heading"><span class="hero-brand">Boekhoudbaar</span>Je boekhouding in één Google Sheet die je zélf bezit — Boekhoudprogramma voor ZZP &amp; eenmanszaak.</h1>
       <p class="hero-sub">
-        Voor ZZP'ers die klaar zijn met €30 per maand voor software die ze nooit echt bezitten. Facturen, BTW-aangifte en dashboard — in een Google Sheet die voor je werkt. Na vijf minuten setup ben je klaar. <a href="/tools/besparing/" class="hero-sub-link">Reken eerst je besparing uit →</a>
+        Boekhoudbaar regelt je facturen, BTW-aangifte en overzicht — in een Google Sheet in je eigen Drive. Geen ingewikkeld programma, geen abonnement. Klaar in vijf minuten. <a href="/tools/besparing/" class="hero-sub-link">Reken je besparing uit →</a>
       </p>
       <div class="hero-ctas">
         <a href="/kopen" class="btn-primair">
@@ -1560,6 +1569,31 @@
 </header>
 
 <main id="main" tabindex="-1">
+
+<!-- ── ZO WERKT HET — 3 stappen (helderheid: beantwoordt 'hoe werkt het') ── -->
+<section class="hoe-werkt" aria-labelledby="hoe-heading">
+  <div class="container">
+    <p class="section-label hoe-label">Zo werkt het</p>
+    <h2 id="hoe-heading">In drie stappen jouw eigen boekhouding</h2>
+    <div class="hoe-stappen">
+      <div class="hoe-stap">
+        <div class="hoe-stap-nr">Stap 1</div>
+        <strong>Je krijgt je eigen Sheet</strong>
+        <span>Een kopie in jóuw Google Drive — klaar in vijf minuten.</span>
+      </div>
+      <div class="hoe-stap">
+        <div class="hoe-stap-nr">Stap 2</div>
+        <strong>Je vult je facturen en kosten in</strong>
+        <span>Boekhoudbaar boekt en rekent automatisch.</span>
+      </div>
+      <div class="hoe-stap">
+        <div class="hoe-stap-nr">Stap 3</div>
+        <strong>Je BTW en overzicht staan klaar</strong>
+        <span>Aangifte-cijfers en dashboard, altijd actueel.</span>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- ── ANCHORED PRICING — visualiseert besparing tov concurrenten ── -->
 <section class="anchor-sectie" aria-labelledby="anchor-heading">
@@ -1854,9 +1888,8 @@
   </div>
 </section>
 
-<!-- ── RECENTE UPDATES (cycle 88) — leefsignaal #2: laat zien dat het
-     product nog ontwikkeld wordt. Data uit /changelog.json, gegenereerd
-     door scripts/update-changelog.js bij elke pre-commit. ── -->
+<!-- ── RECENTE UPDATES (cycle 88) — leefsignaal. Verbergt zich automatisch
+     als changelog.json leeg is (zie script onderaan). ── -->
 <section id="recente-updates" class="recente-updates" aria-labelledby="updates-heading">
   <div class="container">
     <p class="section-label">Wat er onlangs is gebeurd</p>
@@ -2303,7 +2336,10 @@
       .then(function(j) {
         var entries = (j && Array.isArray(j.entries)) ? j.entries.slice(0, 5) : [];
         if (entries.length === 0) {
-          lijst.innerHTML = '<li class="updates-leeg">Geen recente updates.</li>';
+          // Geen updates → verberg de hele sectie i.p.v. een contradictoire
+          // "Geen recente updates" tonen onder "actief onderhouden".
+          var sectieLeeg = document.getElementById('recente-updates');
+          if (sectieLeeg) sectieLeeg.style.display = 'none';
           return;
         }
         var maanden = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
@@ -2324,7 +2360,8 @@
         }).join('');
       })
       .catch(function() {
-        lijst.innerHTML = '<li class="updates-leeg">Updates niet beschikbaar.</li>';
+        var sectieFout = document.getElementById('recente-updates');
+        if (sectieFout) sectieFout.style.display = 'none';
       });
   })();
 </script>
