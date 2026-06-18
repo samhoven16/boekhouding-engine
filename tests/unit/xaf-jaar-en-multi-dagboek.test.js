@@ -143,8 +143,8 @@ describe('C3: exporteerXaf accepteert jaar-overschrijving', () => {
     expect(XAF).toMatch(/function exporteerXaf\(jaarOverschrijving\)/);
   });
 
-  test('ExportAccountant.gs geeft het jaar door aan _bouwXafXml_', () => {
+  test('ExportAccountant.gs geeft het jaar door aan _bouwXaf40Xml_', () => {
     const EA = fs.readFileSync(path.resolve(__dirname, '../../src/ExportAccountant.gs'), 'utf8');
-    expect(EA).toMatch(/_bouwXafXml_\(ss,\s*jaar\)/);
+    expect(EA).toMatch(/_bouwXaf40Xml_\(ss,\s*jaar\)/);
   });
 });

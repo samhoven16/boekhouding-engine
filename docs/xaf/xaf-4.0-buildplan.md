@@ -1,9 +1,12 @@
 # XAF 4.0-export — bouwplan
 
+> ✅ **UITGEVOERD (2026-06).** De officiële XSD is binnen (`XmlAuditfileFinancieel4.0.xsd`),
+> de export is gebouwd (`src/XafExport40.gs`) en valideert met `xmllint` tegen die
+> XSD (`tests/unit/xaf40-compliance.test.js`). Dit plan blijft als ontwerp-/
+> beslis-referentie. Resterend (optioneel): `<openingBalance>` + vat-op-grondslag.
+>
 > Status (2026-06): **3.2 is verouderd, 4.0 verplicht sinds 1-1-2026.** Dit plan
-> bankt de fiscale bevindingen van de Belastingdienst-/accountant-review zodat de
-> 4.0-bouw snel én correct is. **Blokker:** de officiële 4.0-XSD is nog niet in de
-> repo — zie `README.md`. Bouw de XML-serialisatie pas als de XSD er is.
+> bankt de fiscale bevindingen van de Belastingdienst-/accountant-review.
 
 ## Waarom 4.0 (en niet de 3.2-export uitbreiden)
 - 4.0 verplicht per 1-1-2026 (Belastingdienst-ODB); velden 250→90; RGS-aligned;

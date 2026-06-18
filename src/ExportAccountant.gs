@@ -85,14 +85,14 @@ function exporteerAccountantsPakket() {
     folder.createFile(`6_Grootboeksaldi_${jaar}.csv`, gbCsv, 'text/csv');
     gemaakteFiles.push('📊 Grootboeksaldi');
 
-    // ── 7. XAF 3.2 auditfile ─────────────────────────────────────────────
-    // Het importeerbare bestand voor Exact/Twinfield/etc. Zonder dit bevat
-    // het pakket alleen CSV/TXT en moet de accountant zelf de losse
-    // XAF-menu-actie vinden — eerste-blik-test faalt dan.
+    // ── 7. XAF 4.0 auditfile ─────────────────────────────────────────────
+    // Het importeerbare bestand voor Exact/Twinfield/etc. (XAF 4.0 — verplicht
+    // per 1-1-2026). Zonder dit bevat het pakket alleen CSV/TXT en moet de
+    // accountant zelf de losse XAF-menu-actie vinden — eerste-blik-test faalt.
     try {
       // Pak het EXPORT-jaar dat de caller wil (variabele `jaar` hierboven),
       // niet impliciet new Date().getFullYear(). C3-audit 2026-06-12.
-      const xafXml = _bouwXafXml_(ss, jaar);
+      const xafXml = _bouwXaf40Xml_(ss, jaar);
       folder.createFile(`7_Auditfile_${bedrijfSafe}_${jaar}.xaf`, xafXml, 'application/xml');
       gemaakteFiles.push('📑 XAF-auditfile (importeerbaar)');
     } catch (xafErr) {
@@ -299,7 +299,7 @@ INHOUD:
   4_Inkoopfacturen_${jaar}.csv  — Alle ontvangen facturen/kosten
   5_BTW_aangifte_${jaar}.txt    — BTW overzicht per kwartaal
   6_Grootboeksaldi_${jaar}.csv  — Eindstanden per grootboekrekening
-  7_Auditfile_*_${jaar}.xaf     — XAF 3.2 auditfile (direct importeerbaar)
+  7_Auditfile_*_${jaar}.xaf     — XAF 4.0 auditfile (direct importeerbaar)
 
 GEBRUIKTE GROOTBOEKSCHEMA:
   Conform Nederlands RGS (Referentie Grootboekschema).

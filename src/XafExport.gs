@@ -67,7 +67,7 @@ function exporteerXaf(jaarOverschrijving) {
 
   let xml;
   try {
-    xml = _bouwXafXml_(ss, exportJaar);
+    xml = _bouwXaf40Xml_(ss, exportJaar);
   } catch (e) {
     Logger.log('XAF-export fout: ' + e.message);
     ui.alert('XAF-export mislukt',
@@ -126,7 +126,7 @@ function _toonXafDialog_(xml, bestandsnaam, fout, driveUrl) {
     const html = HtmlService.createHtmlOutput(`
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;padding:24px;color:#1A1A1A">
         <h2 style="color:#0D1B4E;margin:0 0 12px;font-size:20px">✓ XAF-export gemaakt</h2>
-        <p style="margin:0 0 16px">Je administratie is geëxporteerd als <strong>Auditfile Financieel 3.2</strong> (${sizeKb} KB).</p>
+        <p style="margin:0 0 16px">Je administratie is geëxporteerd als <strong>Auditfile Financieel 4.0</strong> (${sizeKb} KB).</p>
         <div style="background:#F7F9FC;border-radius:8px;padding:14px;margin:0 0 16px">
           <div style="font-size:12px;color:#5F6B7A;margin-bottom:4px">Bestand</div>
           <div style="font-family:monospace;font-size:13px;color:#0D1B4E;word-break:break-all">${bestandsnaam}</div>
