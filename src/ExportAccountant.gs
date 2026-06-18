@@ -302,8 +302,10 @@ INHOUD:
   7_Auditfile_*_${jaar}.xaf     — XAF 4.0 auditfile (direct importeerbaar)
 
 GEBRUIKTE GROOTBOEKSCHEMA:
-  Conform Nederlands RGS (Referentie Grootboekschema).
-  Codes zijn compatibel met Exact Online en Twinfield.
+  Gebaseerd op het Nederlandse RGS (Referentie Grootboekschema).
+  RGS-codes zijn toegevoegd voor de meest-gebruikte rekeningen; eigen of
+  zelden-gebruikte rekeningen koppel je zo nodig handmatig. De XAF-import
+  hieronder is de leidende route.
 
 IMPORT IN BOEKHOUDPAKKET:
   Gebruik bij voorkeur het XAF-bestand (7) — dat is het standaard

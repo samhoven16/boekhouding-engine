@@ -50,7 +50,7 @@
     {"@type":"Question","name":"Werkt Boekhoudbaar offline?","acceptedAnswer":{"@type":"Answer","text":"Niet volledig. Google Sheets heeft een offline-mode, maar de live functies (PDF genereren, e-mailen, BTW-aangifte) hebben internet nodig."}},
     {"@type":"Question","name":"Wat is de iDEAL-betaal-link op mijn factuur?","acceptedAnswer":{"@type":"Answer","text":"Bij elke factuur krijgt je klant een betaal-knop met iDEAL, Bancontact en creditcard. Klant scant of klikt — direct betaald. Werkt via Mollie. Mollie kent geen abonnement, alleen kleine kosten per transactie (zie mollie.com voor actuele tarieven)."}},
     {"@type":"Question","name":"Hoe werkt de AI-bonnen-scan?","acceptedAnswer":{"@type":"Answer","text":"Maak een foto van je bon of upload een PDF. Boekhoudbaar leest leverancier, datum, bedrag en BTW automatisch in via Gemini Vision. Je hoeft alleen nog te checken en op Opslaan te klikken."}},
-    {"@type":"Question","name":"Hoe werkt de read-only-deelflow met mijn accountant?","acceptedAnswer":{"@type":"Answer","text":"Eén klik en er wordt een aparte spreadsheet gemaakt met alleen rapportages — Balans, W&V, Cashflow, BTW. Bron-data is verborgen. Accountant krijgt leesrechten voor 30 dagen (configureerbaar 1-365), daarna automatisch ingetrokken."}},
+    {"@type":"Question","name":"Hoe deel ik mijn cijfers met mijn accountant?","acceptedAnswer":{"@type":"Answer","text":"Eén klik maakt een map in je eigen Google Drive met de rapportages (Balans, W&V, Cashflow, BTW-aangifte) plus CSV's en het XAF-auditfile. Die map deel je zelf met je accountant via Google Drive — jij kiest de leesrechten en haalt de toegang weer weg. Voor inlezen gebruikt je accountant het XAF-bestand, dat direct in Exact, Twinfield en AFAS importeert."}},
     {"@type":"Question","name":"Wat is de BTW-spaarpot?","acceptedAnswer":{"@type":"Answer","text":"Bij elke factuur reserveert het systeem automatisch jouw BTW-deel op een aparte rekening (1205) zodat je het niet per ongeluk uitgeeft. Bij kwartaalaangifte staat het bedrag klaar voor overmaking naar de Belastingdienst."}}
   ]}
 ]}
@@ -297,8 +297,8 @@ footer{background:#0A132F;color:rgba(255,255,255,.55);padding:56px 24px 32px;fon
     </details>
 
     <details data-cat="features">
-      <summary>Hoe werkt de read-only-deelflow met mijn accountant?</summary>
-      <p>Eén klik en er wordt een aparte spreadsheet gemaakt met alleen rapportages — Balans, W&amp;V, Cashflow, BTW Aangifte, Belastingadvies. Bron-data (Verkoopfacturen, Bankafschriften, Relaties) zijn verborgen. Je accountant krijgt alleen leesrechten via specifieke email. Default: 30 dagen toegang, daarna automatisch ingetrokken. Configureerbaar 1-365 dagen.</p>
+      <summary>Hoe deel ik mijn cijfers met mijn accountant?</summary>
+      <p>Eén klik (menu → "Exporteer accountantspakket") maakt een map in je eigen Google Drive met de rapportages — Balans, W&amp;V, Cashflow, BTW-aangifte, Belastingadvies — plus CSV's en het XAF-auditfile. Die map deel je vervolgens zelf met je accountant via Google Drive: jij kiest de leesrechten en haalt de toegang weer weg wanneer je klaar bent. Voor inlezen in zijn boekhoudpakket gebruikt je accountant het XAF-bestand — het standaard Belastingdienst-auditfileformaat dat direct in Exact, Twinfield en AFAS importeert.</p>
     </details>
 
     <details data-cat="features">
