@@ -926,14 +926,20 @@ function valideerLicentieOpServer_(sleutel) {
         if (json && json.geldig) {
           try { PropertiesService.getScriptProperties().setProperty(
             LICENTIE_LAATST_GELUKT_KEY, String(Date.now())); } catch (_) {}
-        } else if (json && json.geldig === false) {
-          // Expliciete server-revoke (chargeback/refund/ingetrokken): wis de
-          // offline-grace-basis. Anders kan een klant ná een ontvangen revoke
-          // de server blokkeren en via _offlineFallback_ alsnog de volledige
-          // grace-periode op een ingetrokken licentie doorwerken.
+        } else if (_isAuthoritatieveAfwijzing_(json)) {
+          // Expliciete server-revoke (chargeback/refund/ingetrokken/verlopen):
+          // wis de offline-grace-basis. Anders kan een klant ná een ontvangen
+          // revoke de server blokkeren en via _offlineFallback_ alsnog de
+          // volledige grace-periode op een ingetrokken licentie doorwerken.
           try { PropertiesService.getScriptProperties().deleteProperty(
             LICENTIE_LAATST_GELUKT_KEY); } catch (_) {}
         }
+        // F-RED-M1: een TRANSIENTE serverfout (rate-limit / interne fout / geen
+        // sleutel) is GEEN oordeel over de licentie en wist het grace-anker NIET.
+        // Anders cascadeert één serverhik naar een harde lockout zodra de server
+        // even onbereikbaar is — een betalende klant verliest z'n vangnet door
+        // een tijdelijke 200-fout. We geven de geldig:false wél terug (deze call
+        // faalt), maar het anker blijft staan voor echte onbereikbaarheid.
         return json;
       }
       laatsteReden = 'HTTP ' + resp.getResponseCode();
@@ -943,6 +949,29 @@ function valideerLicentieOpServer_(sleutel) {
     }
   }
   return _offlineFallback_(sleutel, laatsteReden);
+}
+
+/**
+ * Onderscheidt een AUTHORITATIEVE licentie-afwijzing (revoke/verlopen/ingetrokken/
+ * andere installatie/niet gevonden/bounce) van een TRANSIENTE serverfout
+ * (rate-limit / interne fout / geen sleutel). Alléén een authoritatieve afwijzing
+ * mag het offline-grace-anker wissen — een tijdelijke serverhik mag een betalende
+ * klant z'n vangnet niet afpakken (F-RED-M1).
+ *
+ * Primair signaal: server-veld `permanent:true` (nieuwe licentieserver, robuust
+ * tegen tekstwijzigingen). Backward-compat: voor een nog-niet-geüpdate server
+ * vallen we terug op de STABIELE redentekst van de authoritatieve afwijzingen.
+ * De transiente meldingen staan hier bewust NIET tussen.
+ */
+function _isAuthoritatieveAfwijzing_(json) {
+  if (!json || json.geldig !== false) return false;
+  if (json.permanent === true) return true;
+  const f = String(json.fout || '').toLowerCase();
+  return f.indexOf('ingetrokken') !== -1
+      || f.indexOf('verlopen') !== -1
+      || f.indexOf('andere installatie') !== -1
+      || f.indexOf('niet gevonden') !== -1
+      || f.indexOf('ontvangt geen post') !== -1;   // bounce-status
 }
 
 /**

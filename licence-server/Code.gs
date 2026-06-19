@@ -1012,8 +1012,8 @@ function valideerEndpoint_(e) {
       // kon de spreadsheet blijven gebruiken. Plus bounce-status werd niet
       // gecheckt → klant met onbereikbare email kon door zonder dat wij hen
       // konden bereiken voor support.
-      if (status.startsWith('ingetrokken')) return jsonResp_({ geldig: false, fout: 'Licentie is ingetrokken.' });
-      if (status === 'bounce') return jsonResp_({ geldig: false, fout: 'E-mailadres ontvangt geen post. Neem contact op via support@boekhoudbaar.nl.' });
+      if (status.startsWith('ingetrokken')) return jsonResp_({ geldig: false, permanent: true, fout: 'Licentie is ingetrokken.' });
+      if (status === 'bounce') return jsonResp_({ geldig: false, permanent: true, fout: 'E-mailadres ontvangt geen post. Neem contact op via support@boekhoudbaar.nl.' });
 
       // CYCLE 79: grace-period bij verlopen licentie. Een harde cut-off op
       // de exacte vervaldatum drukt klanten midden in hun werkflow eruit
@@ -1026,7 +1026,7 @@ function valideerEndpoint_(e) {
       if (vervaldat && vervaldat < new Date()) {
         const dagenVerlopen = Math.floor((new Date() - vervaldat) / 86400000);
         if (dagenVerlopen > GRACE_DAGEN) {
-          return jsonResp_({ geldig: false, fout: 'Licentie is verlopen.' });
+          return jsonResp_({ geldig: false, permanent: true, fout: 'Licentie is verlopen.' });
         }
         const dagenResterend = GRACE_DAGEN - dagenVerlopen;
         graceWaarschuwing = 'Je licentie is verlopen. Je hebt nog ' + dagenResterend +
@@ -1038,7 +1038,7 @@ function valideerEndpoint_(e) {
       if (installatieId && !huidigInstId) {
         sheet.getRange(i + 1, 7).setValue(installatieId);
       } else if (huidigInstId && installatieId && huidigInstId !== installatieId) {
-        return jsonResp_({ geldig: false, fout: 'Licentie is al actief op een andere installatie.' });
+        return jsonResp_({ geldig: false, permanent: true, fout: 'Licentie is al actief op een andere installatie.' });
       }
 
       // Update laatste validatie
@@ -1048,7 +1048,7 @@ function valideerEndpoint_(e) {
       if (graceWaarschuwing) resp.waarschuwing = graceWaarschuwing;
       return jsonResp_(resp);
     }
-    return jsonResp_({ geldig: false, fout: 'Licentiesleutel niet gevonden.' });
+    return jsonResp_({ geldig: false, permanent: true, fout: 'Licentiesleutel niet gevonden.' });
   } catch (err) {
     // Geen err.message naar buiten — kan sheet-id's/interne paden lekken
     // naar elke klant-kopie (consistent met revoke-/roteerEndpoint_).
