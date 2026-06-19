@@ -629,7 +629,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
       formatBedrag_(_subtotaal) + '). Een factuur mag niet negatief zijn — maak een correctiefactuur (creditnota) voor terugbetaling.');
   }
   const totalExcl    = rondBedrag_(_subtotaal - korting);
-  const totalBtw   = btwTarief !== null ? rondBedrag_(totalExcl * btwTarief) : 0;
+  const totalBtw   = btwTarief !== null ? rondTariefCent_(totalExcl, btwTarief) : 0;
   const totalIncl  = rondBedrag_(totalExcl + totalBtw);
 
   // Klant opslaan/ophalen (inclusief e-mailadres)
@@ -929,7 +929,7 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
   const btwTarief   = parseBtwTarief_(data['BTW tarief uitgave'] || '21% (hoog)');
   let btwBedrag     = parseBedrag_(data['BTW bedrag uitgave'] || '0');
   if (btwBedrag === 0 && btwTarief !== null) {
-    btwBedrag = rondBedrag_(bedragExcl * btwTarief);
+    btwBedrag = rondTariefCent_(bedragExcl, btwTarief);
   }
   // Pro-rata BTW: bij mixed-use (privé+zakelijk) is alleen het zakelijke
   // deel BTW-aftrekbaar. Klant geeft 'Zakelijk %' op (default 100%).
@@ -1153,7 +1153,7 @@ function verwerkDeclaratieUitHoofdformulier_(ss, data) {
   // fall back to computed value for Forms submissions that don't include this field.
   let btwBedrag = parseBedrag_(data['BTW bedrag declaratie'] || '0');
   if (btwBedrag === 0 && btwTarief !== null) {
-    btwBedrag = rondBedrag_(bedragExcl * btwTarief);
+    btwBedrag = rondTariefCent_(bedragExcl, btwTarief);
   }
   const bedragIncl = rondBedrag_(bedragExcl + btwBedrag);
   const categorie  = data['Categorie declaratie'] || 'Overige kosten';
@@ -1294,7 +1294,7 @@ function verwerkVerkoopfactuurFormulier(e) {
     // vereist doorlopend nummering — gaten = audit-flag bij controle).
     // Volgorde nu: ALLE validatie eerst, daarna pas nummer claimen.
     const btwTarief = parseBtwTarief_(data['BTW tarief'] || '21% (hoog)');
-    totalBtw = btwTarief !== null ? rondBedrag_(totalExcl * btwTarief) : 0;
+    totalBtw = btwTarief !== null ? rondTariefCent_(totalExcl, btwTarief) : 0;
     const totalIncl = rondBedrag_(totalExcl + totalBtw);
 
     const klantnaam = String(data['Klantnaam'] || '').trim();

@@ -27,7 +27,9 @@ function BEREKEN_BTW(bedragExcl, tarief) {
   if (pct === null) return 0;
   var n = Number(bedragExcl);
   if (!isFinite(n)) return 0;
-  return Math.round(n * pct * 100) / 100;
+  // klasse 9 (precisie): float-tarief × bedrag → cent-drift (€21,50 × 21% gaf
+  // €4,51 i.p.v. €4,52). Exact via integer-centen.
+  return (typeof rondTariefCent_ === 'function') ? rondTariefCent_(n, pct) : Math.round(n * pct * 100) / 100;
 }
 
 /**

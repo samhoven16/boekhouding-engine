@@ -131,7 +131,10 @@ function berekenBtw(tarief, bedragExcl, bedragIncl) {
   let excl, btw, incl;
   if (bedragExcl > 0) {
     excl  = Math.round(bedragExcl * 100) / 100;
-    btw   = Math.round(excl * pct * 100) / 100;
+    // klasse 9 (precisie): float-tarief × bedrag → cent-drift (bv. €21,50 × 21%
+    // = €4,515 → code gaf €4,51 i.p.v. €4,52). Exact via integer-centen — dit is
+    // BINDENDE BTW die in de aangifte landt.
+    btw   = (typeof rondTariefCent_ === 'function') ? rondTariefCent_(excl, pct) : Math.round(excl * pct * 100) / 100;
     incl  = Math.round((excl + btw) * 100) / 100;
   } else if (bedragIncl > 0) {
     incl  = Math.round(bedragIncl * 100) / 100;
