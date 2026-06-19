@@ -179,7 +179,15 @@ function safeAuditLog_(actie, details) {
   try { if (typeof schrijfAuditLog_ === 'function') schrijfAuditLog_(actie, details); } catch (_) {}
 }
 `;
-  const code = prelude + files
+  // KOL (src/SheetKolom.gs) is de gedeelde kolom-accessor; in GAS is hij overal
+  // beschikbaar (alle .gs delen één scope). Laad 'm hier altijd eerst zodat
+  // gemigreerde bestanden (EUVerkoop/Mollie/BTW/…) KOL.VF/KOL.IF kunnen lezen
+  // zonder dat elke test 'm expliciet hoeft te laden. Dedupe voorkomt dubbele
+  // `const KOL`-declaratie als een test 'm tóch meegeeft.
+  const _alFiles = files.some(f => String(f).endsWith('SheetKolom.gs'))
+    ? files
+    : ['SheetKolom.gs', ...files];
+  const code = prelude + _alFiles
     .map(f => {
       const fullPath = path.isAbsolute(f) ? f : path.join(SRC, f);
       return `\n// ── ${path.basename(f)} ──\n` + fs.readFileSync(fullPath, 'utf8');

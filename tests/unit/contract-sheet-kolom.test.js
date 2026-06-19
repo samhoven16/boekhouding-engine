@@ -81,7 +81,7 @@ describe('CONTRACT — KOL ⇄ sheet-schemas.md (kritieke velden)', () => {
 describe('CONTRACT — gemigreerde bestanden bevatten geen bare data[i][<getal>] (VF/IF)', () => {
   // Ban-lijst: bestanden die naar KOL zijn gemigreerd mogen geen magische
   // sheet-index meer hebben. Breidt uit naarmate meer bestanden migreren.
-  const GEMIGREERD = ['src/EUVerkoop.gs', 'src/Mollie.gs'];
+  const GEMIGREERD = ['src/EUVerkoop.gs', 'src/Mollie.gs', 'src/BTW.gs'];
   GEMIGREERD.forEach((f) => {
     test(`${f}: geen bare (_)data[i][<getal>]`, () => {
       const src = fs.readFileSync(path.resolve(__dirname, '../../', f), 'utf8');
