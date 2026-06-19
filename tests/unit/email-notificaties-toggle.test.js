@@ -57,11 +57,15 @@ describe('toggleEmailNotificaties — één klik aan/uit', () => {
 describe('dagelijkseTaken gate (broncode-borging)', () => {
   const src = fs.readFileSync(TRIGGERS, 'utf8');
   const taken = src.slice(src.indexOf('function dagelijkseTaken'));
-  test('proactieve mail-taken hangen aan _mailNotifAan', () => {
+  test('routine-mail (BTW-deadline) gegate; compliance-detectie draait ALTIJD', () => {
     expect(taken).toMatch(/const _mailNotifAan = emailNotificatiesAan_\(\)/);
+    // BTW-deadline-herinnering (routine) hangt aan de master-gate
     expect(taken).toMatch(/_mailNotifAan && isJa_\(getInstelling_\('BTW aangifte herinnering'\)\)/);
-    expect(taken).toMatch(/_mailNotifAan && typeof controleerKiaMisserProactief_/);
-    expect(taken).toMatch(/_mailNotifAan && typeof controleerBewaarplichtAlert_/);
+    // F-cross-PR: suppletie/KIA/bewaarplicht-DETECTIE (+ durable audit-log van een
+    // wettelijke verplichting) mag NIET door de mail-gate uitgezet worden.
+    expect(taken).not.toMatch(/_mailNotifAan && typeof controleerSuppletieProactief_/);
+    expect(taken).not.toMatch(/_mailNotifAan && typeof controleerKiaMisserProactief_/);
+    expect(taken).not.toMatch(/_mailNotifAan && typeof controleerBewaarplichtAlert_/);
   });
   test('betalingsherinneringen blijven ONgegate (zakelijk-essentieel)', () => {
     expect(taken).toMatch(/_runTaak_\('herinneringen',\s*function\(\) \{ stuurAutomatischeBetalingsherinneringen_\(ss\); \}\)/);

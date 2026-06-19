@@ -184,6 +184,22 @@ function isEigenaarBypass_() {
  *   5. Sluit editor en herlaad spreadsheet
  */
 function activeerEigenaarLicentie() {
+  // F-RED-151: deze bypass zet een permanente 10-jaar-licentie ZONDER server-
+  // binding. Alleen toegestaan voor de beheerder (ADMIN_EMAILS) — anders kan
+  // elke klant of kopie-houder via de "eigenaar-bypass"-knop een gratis,
+  // nooit-vervallende licentie zetten. Echte klanten activeren met hun OTP-code.
+  try {
+    const u = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+    const isAdmin = !!(u && typeof ADMIN_EMAILS !== 'undefined' && ADMIN_EMAILS.indexOf(u) !== -1);
+    if (!isAdmin) {
+      try { SpreadsheetApp.getActiveSpreadsheet().toast(
+        'Eigenaar-bypass is alleen voor de beheerder. Activeer met de code uit je e-mail via Boekhoudbaar → Licentie activeren.',
+        'Boekhoudbaar', 8); } catch (_) {}
+      return { ok: false, fout: 'Niet toegestaan — activeer met je licentiecode.' };
+    }
+  } catch (_) {
+    return { ok: false, fout: 'Kon beheerder niet verifiëren.' };
+  }
   const props = PropertiesService.getScriptProperties();
   props.setProperty(OWNER_BYPASS_KEY, 'true');
 
@@ -354,10 +370,11 @@ function toonActivatieDialog_() {
   let serverGeconfigureerd = false;
   try {
     serverGeconfigureerd = !!getLicentieServerUrl_();
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const ownerEmail = ss.getOwner() ? ss.getOwner().getEmail() : null;
-    const userEmail = Session.getActiveUser().getEmail();
-    isOwner = !!(ownerEmail && userEmail && ownerEmail === userEmail);
+    // F-RED-151: toon de eigenaar-bypass ALLEEN aan een beheerder (ADMIN_EMAILS).
+    // owner==user is op élke klant-kopie waar → dat zou de gratis-licentie-knop
+    // aan iedereen tonen. De bypass-functie weigert 'm nu óók voor niet-admins.
+    const userEmail = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+    isOwner = !!(userEmail && typeof ADMIN_EMAILS !== 'undefined' && ADMIN_EMAILS.indexOf(userEmail) !== -1);
   } catch (_) {}
 
   const ownerBlock = isOwner ? `

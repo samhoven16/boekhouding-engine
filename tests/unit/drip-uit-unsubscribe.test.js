@@ -16,7 +16,7 @@ const { createGasRuntime } = require('../__helpers__/gas-runtime');
 
 const CODE_GS = path.resolve(__dirname, '../../licence-server/Code.gs');
 
-function ctxMet(propStore) {
+function ctxMet(propStore, klanten) {
   const store = propStore || {};
   const ctx = createGasRuntime([CODE_GS], {
     PropertiesService: {
@@ -35,6 +35,9 @@ function ctxMet(propStore) {
       createHtmlOutput: (h) => ({ _h: h, setTitle() { return this; } }),
     },
   });
+  // E3 existence-check: getLicentieSheet_ met e-mail in kolom [2].
+  const rows = [['Sleutel', 'Naam', 'Email']].concat((klanten || []).map((em) => ['BKHE-X', 'N', em]));
+  ctx.getLicentieSheet_ = () => ({ getDataRange: () => ({ getValues: () => rows }) });
   return { ctx, store };
 }
 
@@ -49,14 +52,22 @@ describe('drip één-klik-afmelding', () => {
     expect(a).toMatch(/^[0-9a-f]{16}$/);
   });
 
-  test('geldig token → afgemeld + dripuit_-flag gezet', () => {
-    const { ctx, store } = ctxMet({});
+  test('geldig token + bestaand klant-adres → afgemeld + dripuit_-flag gezet', () => {
     const email = 'klant@x.nl';
+    const { ctx, store } = ctxMet({}, [email]);   // klant staat in de licentie-sheet
     const res = ctx.dripUitEndpoint_(req({ e: email, t: ctx._dripToken_(email) }));
     expect(res._h).toMatch(/Afgemeld/);
     const flag = Object.keys(store).find((k) => k.indexOf('dripuit_') === 0);
     expect(flag).toBeDefined();
     expect(store[flag]).toBe('1');
+  });
+
+  test('E3: geldig token maar ONBEKEND adres → geen key (anti-DoS) + zelfde bevestiging', () => {
+    const { ctx, store } = ctxMet({}, ['andere@x.nl']);  // gevraagd adres ontbreekt
+    const email = 'nepadres@x.nl';
+    const res = ctx.dripUitEndpoint_(req({ e: email, t: ctx._dripToken_(email) }));
+    expect(res._h).toMatch(/Afgemeld/);   // anti-enumeration: zelfde pagina
+    expect(Object.keys(store).some((k) => k.indexOf('dripuit_') === 0)).toBe(false);
   });
 
   test('ongeldig token → NIET afgemeld (geen sabotage van andermans adres)', () => {
@@ -85,10 +96,21 @@ describe('drip kill-switch + loop-skip (broncode-borging)', () => {
     expect(body).toMatch(/DRIPS_ACTIEF/);
     expect(body).toMatch(/=== 'false'/);
   });
-  test('drip-loop slaat afgemelde klanten over', () => {
-    expect(body).toMatch(/dripuit_'\s*\+\s*_rlHash_\(email\)/);
+  test('E1: drip-loop matcht de afmeld-vlag op de LOWERCASE e-mail', () => {
+    expect(body).toMatch(/dripuit_'\s*\+\s*_rlHash_\(email\.toLowerCase\(\)\)/);
   });
   test('OTP-cleanup draait nog steeds (vóór de kill-switch)', () => {
     expect(body.indexOf('cleanupVerlopenOtpKeys_')).toBeLessThan(body.indexOf('DRIPS_ACTIEF'));
+  });
+  test('E2: random DRIP_UNSUB_SECRET wordt geseed (geen hardcoded publieke secret in productie)', () => {
+    const heal = src.slice(src.indexOf('function zelfHerstelProductConfig_'));
+    const healBody = heal.slice(0, heal.indexOf('\nfunction '));
+    expect(healBody).toMatch(/DRIP_UNSUB_SECRET/);
+    expect(healBody).toMatch(/Utilities\.getUuid\(\)/);
+  });
+  test('E4: doPost honoreert de One-Click-unsubscribe (drip-uit)', () => {
+    const post = src.slice(src.indexOf('function doPost'));
+    const postBody = post.slice(0, post.indexOf('\nfunction '));
+    expect(postBody).toMatch(/adminActie === 'drip-uit'[^\n]*dripUitEndpoint_/);
   });
 });

@@ -179,7 +179,7 @@ function controleerOssDrempel_() {
     if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== huidigJaar) continue;
     const status = String(data[i][14] || '');
     if (status === 'Gecrediteerd') continue;
-    const btwNrKlant = String(data[i][21] || '').trim();
+    const btwNrKlant = String(data[i][7] || '').trim();   // [7] = BTW-nr klant (NIET [21] = Aangemaakt op)
     const klantAdres = String(data[i][6] || '');
     // Detecteer EU-land
     let euLand = detecteerEULand_(btwNrKlant, '');
@@ -253,7 +253,7 @@ function genereerIcpRapport() {
     if (!datum || isNaN(datum.getTime()) || datum < van || datum > tot) continue;
     const status = String(data[i][14] || '');
     if (status === 'Gecrediteerd') continue;
-    const btwNrKlant = String(data[i][21] || '').trim();
+    const btwNrKlant = String(data[i][7] || '').trim();   // [7] = BTW-nr klant (NIET [21] = Aangemaakt op)
     const land = detecteerEULand_(btwNrKlant);
     if (!land || !btwNrKlant || btwNrKlant.length <= 5) continue;  // alleen EU B2B
     const klantnaam = String(data[i][5] || '');

@@ -118,6 +118,10 @@ function doPost(e) {
   const isAdminWrite = adminActie && adminActie.indexOf('admin-') === 0;
 
   try {
+    // RFC 8058 One-Click unsubscribe: Gmail/Outlook POSTen naar de List-Unsubscribe-
+    // URL (?actie=drip-uit&e=…&t=…). Honoreer dat net als de zichtbare GET-link,
+    // anders zegt de mailclient "afgemeld" terwijl de server niets registreert.
+    if (adminActie === 'drip-uit') return dripUitEndpoint_(e);
     if (isAdminWrite) {
       // Forward naar doGet's dispatcher (zelfde actie-routing).
       // Return is HtmlService HTML met JSON-body — bevestiging in browser.
@@ -222,6 +226,14 @@ function veiligVergelijk_(a, b) {
  */
 function zelfHerstelProductConfig_() {
   const props = PropertiesService.getScriptProperties();
+
+  // 0. DRIP_UNSUB_SECRET — seed één random secret bij eerste run. Zonder dit valt
+  //    _dripToken_ terug op een PUBLIEKE hardcoded string uit de open-source repo,
+  //    waarmee iedereen afmeld-tokens voor elk adres kan vervalsen (red-team).
+  //    Eénmalig random → tokens zijn niet meer te forgen.
+  if (!props.getProperty('DRIP_UNSUB_SECRET')) {
+    try { props.setProperty('DRIP_UNSUB_SECRET', Utilities.getUuid() + Utilities.getUuid()); } catch (_) {}
+  }
 
   // 1. Prijs — als waarde parseet als geheel getal >= 100, is het waarschijnlijk
   //    in centen opgeslagen door een oude deploy. Converteer naar euro's.
@@ -3011,7 +3023,9 @@ function verstuurDripsDagelijks_() {
       if (!email || !sleutel) continue;
       // Per-klant afmelding (één-klik-unsubscribe uit de drip-mail). Licentie-
       // mails (activeringscode etc.) lopen via aparte functies en blijven komen.
-      if (props.getProperty('dripuit_' + _rlHash_(email)) === '1') continue;
+      // E-mail lowercasen: dripUitEndpoint_ slaat de vlag óók lowercased op, dus
+      // een hoofdletter-adres (John.Doe@…) moet hier dezelfde hash krijgen.
+      if (props.getProperty('dripuit_' + _rlHash_(email.toLowerCase())) === '1') continue;
       const statusLow = status.toLowerCase();
       // CYCLE-30: startsWith('actief') ipv `=== 'actief' || indexOf('actief —')`.
       // Vorige check miste varianten 'Actief (handmatig)', 'Actief - trial'
@@ -3138,7 +3152,22 @@ function dripUitEndpoint_(e) {
     return klaar('Afmeldlink ongeldig',
       'Deze link klopt niet of is verlopen. Mail support@boekhoudbaar.nl en we melden je handmatig af.');
   }
-  try { PropertiesService.getScriptProperties().setProperty('dripuit_' + _rlHash_(email), '1'); } catch (_) {}
+  // E3 (red-team): schrijf de afmeld-vlag ALLEEN voor een adres dat écht in de
+  // licentie-sheet staat. Zo kunnen er (zelfs als de secret ooit zou lekken)
+  // geen onbegrensde keys voor verzonnen adressen ontstaan → géén 500KB-DoS.
+  let bestaatKlant = false;
+  try {
+    const sheet = getLicentieSheet_();
+    const data = sheet ? sheet.getDataRange().getValues() : [];
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][2] || '').trim().toLowerCase() === email) { bestaatKlant = true; break; }
+    }
+  } catch (_) {}
+  if (bestaatKlant) {
+    try { PropertiesService.getScriptProperties().setProperty('dripuit_' + _rlHash_(email), '1'); } catch (_) {}
+  }
+  // Altijd dezelfde bevestiging (anti-enumeration): de bezoeker leert niet of
+  // het adres een klant is.
   return klaar('Afgemeld ✓',
     'Je ontvangt geen onboarding-mails meer van Boekhoudbaar. ' +
     'Belangrijke licentie-mails (zoals je activeringscode) blijven wél komen.');
@@ -3231,11 +3260,11 @@ function dripInhoud_(dag, naam, productnm) {
       body:
         '<p>Drie dagen geleden activeerde je ' + escHtml_(productnm) + ' — hopelijk loopt alles soepel.</p>' +
         '<p><strong>Tip voor je eerste factuur:</strong> houd het simpel. Eén regel, juiste BTW (21% standaard, 9% voor specifieke diensten zoals catering of fysiotherapie). De PDF wordt automatisch opgemaakt — geen Word nodig.</p>' +
-        '<p>Vastgelopen? Open Boekhouding → Controle → ✅ Werkt-alles-test (12 punts gezondheidscheck).</p>',
+        '<p>Vastgelopen? Open het <strong>Boekhoudbaar</strong>-menu → <strong>Controle &amp; Export</strong> → <strong>Alles werkt-check</strong> (controleert je installatie).</p>',
       bodyTekst:
         'Drie dagen geleden activeerde je ' + productnm + ' — hopelijk loopt alles soepel.\n\n' +
         'Tip voor je eerste factuur: houd het simpel. Eén regel, juiste BTW (21% standaard, 9% specifiek). De PDF wordt automatisch opgemaakt.\n\n' +
-        'Vastgelopen? Open Boekhouding → Controle → ✅ Werkt-alles-test.',
+        'Vastgelopen? Open het Boekhoudbaar-menu → Controle & Export → Alles werkt-check.',
     };
   }
   if (dag === 7) {
@@ -3245,11 +3274,11 @@ function dripInhoud_(dag, naam, productnm) {
         '<p>Een week ' + escHtml_(productnm) + ' achter de rug. Goede gewoonte ingebouwd?</p>' +
         '<p><strong>BTW-aangifte:</strong> NL-ZZP\'ers doen kwartaalaangifte. Deadlines:<br>' +
         '<strong>Q1</strong>: vóór 30 april · <strong>Q2</strong>: vóór 31 juli · <strong>Q3</strong>: vóór 31 oktober · <strong>Q4</strong>: vóór 31 januari.</p>' +
-        '<p>Boekhoudbaar berekent automatisch — open <strong>Boekhouding → BTW → BTW-aangifte (kwartaal)</strong> en je hebt de cijfers in 30 seconden.</p>',
+        '<p>Boekhoudbaar berekent automatisch — open het <strong>Boekhoudbaar</strong>-menu en kies de <strong>BTW-aangifte</strong>; je hebt de cijfers in 30 seconden.</p>',
       bodyTekst:
         'Een week ' + productnm + ' achter de rug.\n\n' +
         'BTW-aangifte deadlines: Q1=30/4, Q2=31/7, Q3=31/10, Q4=31/1.\n' +
-        'Boekhoudbaar berekent automatisch via Boekhouding → BTW.',
+        'Boekhoudbaar berekent automatisch — open het Boekhoudbaar-menu en kies de BTW-aangifte.',
     };
   }
   if (dag === 14) {
@@ -3258,11 +3287,11 @@ function dripInhoud_(dag, naam, productnm) {
       body:
         '<p>Twee weken ' + escHtml_(productnm) + '. Heb je al gedacht aan je accountant?</p>' +
         '<p><strong>Boekhouder mee laten kijken:</strong> in Google Sheets klik je op <strong>Delen</strong> rechtsboven, typ je het mailadres, en kies je rechten (alleen-lezen of bewerken). Geen extra licentie, geen tweede account.</p>' +
-        '<p>Of: <strong>Boekhouding → Accountantspakket exporteren</strong> maakt een ZIP met PDF + XLSX + JSONL die je accountant kan inlezen in elk pakket (Snelstart, Exact, Twinfield).</p>',
+        '<p>Of: het <strong>Boekhoudbaar</strong>-menu → <strong>Controle &amp; Export → Accountantspakket exporteren</strong> maakt een map in je eigen Drive met CSV-bestanden én het XAF-auditfile — dat XAF leest je accountant in de meeste pakketten (Exact, Twinfield, AFAS) in.</p>',
       bodyTekst:
         'Twee weken ' + productnm + '.\n\n' +
         'Boekhouder mee laten kijken: klik Delen in Google Sheets en typ mailadres.\n' +
-        'Of: Boekhouding → Accountantspakket exporteren = ZIP voor elk pakket.',
+        'Of: Boekhoudbaar-menu → Controle & Export → Accountantspakket exporteren = map in je Drive met CSV + XAF-auditfile.',
     };
   }
   if (dag === 30) {

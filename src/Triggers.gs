@@ -1556,8 +1556,8 @@ function toggleEmailNotificaties() {
     return;
   }
   const bericht = nieuw === 'Ja'
-    ? '✓ E-mailnotificaties staan nu AAN — je krijgt BTW-deadline-, suppletie- en bespaartips per mail.'
-    : '✓ E-mailnotificaties staan nu UIT — geen meldingsmails meer. Je betalingsherinneringen naar je eigen klanten blijven gewoon werken.';
+    ? '✓ E-mailnotificaties staan nu AAN — je krijgt o.a. de BTW-deadline-herinnering en hoge-uitgave-alerts per mail.'
+    : '✓ E-mailnotificaties staan nu UIT — geen routine-meldingsmails meer (BTW-deadline, hoge uitgave). Belangrijke compliance-seintjes (suppletie, bewaarplicht) en betalingsherinneringen naar je eigen klanten blijven werken.';
   try { SpreadsheetApp.getActiveSpreadsheet().toast(bericht, 'Boekhoudbaar', 8); } catch (_) {}
 }
 
@@ -1589,19 +1589,24 @@ function dagelijkseTaken() {
   // afsluiting" runt mist de boete-vrije 8-weken-termijn voor vrijwillige
   // verbetering → bij latere Belastingdienst-ontdekking: 30% boete + rente.
   _runTaak_('suppletieCheck',   function() {
-    if (_mailNotifAan && typeof controleerSuppletieProactief_ === 'function') controleerSuppletieProactief_();
+    // NIET achter de e-mail-gate: deze detectie schrijft óók de durable audit-log
+    // van een wettelijk verplichte suppletie (boete-vrije 8-wkn-termijn). Alleen
+    // het mailtje is "ruis"; de detectie + registratie moeten altijd draaien.
+    if (typeof controleerSuppletieProactief_ === 'function') controleerSuppletieProactief_();
   });
   // V5: KIA-misser detectie. Investering verkeerd op kostenrekening = klant
   // mist 28% KIA-aftrek. Aggregeer jaar-totaal, mail bij ≥€2.901 potentieel
   // gemist. Idempotent per kwartaal.
   _runTaak_('kiaMisser', function() {
-    if (_mailNotifAan && typeof controleerKiaMisserProactief_ === 'function') controleerKiaMisserProactief_();
+    // Detectie + audit-log altijd; alleen het mailtje valt onder de gate (intern).
+    if (typeof controleerKiaMisserProactief_ === 'function') controleerKiaMisserProactief_();
   });
   // V6: bewaarplicht pre-alert. Oudste boeking > 6,5 jaar = klant moet XAF +
   // PDF-archief offline opslaan vóór 7-jaars-grens. Voorkomt bewijslast-
   // omkering bij latere Belastingdienst-controle. 1×/kalenderjaar.
   _runTaak_('bewaarplichtAlert', function() {
-    if (_mailNotifAan && typeof controleerBewaarplichtAlert_ === 'function') controleerBewaarplichtAlert_();
+    // Detectie + audit-log altijd (7-jaars-bewaarplicht is wettelijk); gate intern.
+    if (typeof controleerBewaarplichtAlert_ === 'function') controleerBewaarplichtAlert_();
   });
   // #B4.1 (gas-runtime audit): ScriptProperties-cleanup VÓÓR de dure proof/health-
   // taken (gezondheidscheck/auditKeten/auditAnchor/formeelBewijs). De budget-guard
