@@ -204,7 +204,15 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
 
     // Case-INsensitive tarief-detectie. Voorheen miste 'verlegd' (kleine v)
     // en 'VRIJGESTELD' de buckets → totaal verdween uit r5a.
-    if (btwLabel.includes('21%') || /\bhoog\b/i.test(btwLabel)) {
+    // F-TAX-132: 'verlegd' wordt als EERSTE getoetst — vóór de 21%/9%/0%-buckets.
+    // Een label "21% verlegd" (reverse-charge mét onderliggend tarief) hoort in
+    // r1e, niet r1a; matchte `includes('21%')` eerst, dan belandde de grondslag
+    // van een verlegde verkoop in 1a (legaal-significante mis-rubriek, rubriek
+    // 1e). Consistent met de inkoop-zijde die verlegd ook eerst toetst.
+    if (/verlegd/i.test(btwLabel)) {
+      aangifte.r1e_grondslag += grondslag;
+      aangifte.r1e_btw += btwBedrag;
+    } else if (btwLabel.includes('21%') || /\bhoog\b/i.test(btwLabel)) {
       aangifte.r1a_grondslag += grondslag;
       aangifte.r1a_btw += btwBedrag;
     } else if (btwLabel.includes('9%') || /\blaag\b/i.test(btwLabel)) {
@@ -238,9 +246,6 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
           grondslag: grondslag,
         });
       }
-    } else if (/verlegd/i.test(btwLabel)) {
-      aangifte.r1e_grondslag += grondslag;
-      aangifte.r1e_btw += btwBedrag;
     } else if (grondslag !== 0) {
       // Onbekend label én niet-nul grondslag → kritieke detectie
       onbekendeLabels[btwLabel || '(leeg)'] = (onbekendeLabels[btwLabel || '(leeg)'] || 0) + 1;
