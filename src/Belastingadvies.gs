@@ -614,9 +614,16 @@ function berekenKiaAftrek_(investering, B) {
   if (inv < B.KIA_MIN || inv > B.KIA_MAX) return 0;
   if (inv <= B.KIA_VAST_VAN)         return rondBedrag_(inv * B.KIA_PCT);
   if (inv <= B.KIA_AFBOUW_START)     return rondBedrag_(B.KIA_VAST_BEDRAG);
-  // Afbouwzone: vast bedrag − afbouwpct × overschrijding
+  // Afbouwzone: vast bedrag − afbouwpct × overschrijding.
+  // klasse 9 (precisie): 0.0756 is niet exact in IEEE-754 → 275 cent-afwijkingen
+  // in de afbouwzone (bv. overschrijding €27.587,50 gaf €17.986,38 i.p.v. de
+  // juiste €17.986,39 — float onderschat de aftrek met 1 cent). Reken met de
+  // exacte breuk: tarief×10000 = heel getal (756), pas /10000 NA de
+  // vermenigvuldiging. De round-final-strategie (rondBedrag_) blijft identiek;
+  // alleen de representatie-drift verdwijnt.
   const overschrijding = inv - B.KIA_AFBOUW_START;
-  const aftrek = B.KIA_VAST_BEDRAG - B.KIA_AFBOUW_PCT * overschrijding;
+  const afbouwE4 = Math.round(B.KIA_AFBOUW_PCT * 10000);   // 0.0756 → 756 (exact)
+  const aftrek = B.KIA_VAST_BEDRAG - (afbouwE4 * overschrijding) / 10000;
   return rondBedrag_(Math.max(0, aftrek));
 }
 
