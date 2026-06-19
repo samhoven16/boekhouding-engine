@@ -97,29 +97,59 @@ describe('CONTRACT — KOL ⇄ sheet-schemas.md (kritieke velden)', () => {
   });
 });
 
-describe('CONTRACT — gemigreerde bestanden bevatten geen literal sheet-kolom-index', () => {
-  // Ban-lijst: bestanden die naar KOL zijn gemigreerd mogen GEEN magische
-  // kolom-index meer hebben. We bannen de WORTEL-vorm van de klasse:
-  // `<rij>[<idx>][<getal>]` — een tweede-dimensie-index als letterlijk getal,
-  // ongeacht variabelenaam of lus-variabele.
+describe('CONTRACT — GEEN literal sheet-kolom-index (omgekeerde ban, hele src/)', () => {
+  // OMGEKEERDE BAN: i.p.v. een opt-in lijst van gemigreerde bestanden eisen we
+  // dat ÉLK `src/*.gs`-bestand schoon is — behalve een expliciete `LEGACY_TODO`.
+  // Voordeel: een NIEUW bestand of nieuwe bare index in nog-niet-gemigreerde
+  // code wordt direct gevangen; de default is "schoon", schuld is zichtbaar.
   //
-  // De oude regex /data\[i\]\[\d+\]/ ving ALLEEN kleine-letter `data[i][N]` en
-  // miste daardoor `vfData[i][2]`, `ifData[i][3]`, `jrData[i][1]` (hoofdletter D)
-  // én elke andere lus-variabele dan `i` → vals vertrouwen. Deze bredere vorm
-  // matcht de echte bug-shape: een `]` direct gevolgd door `[<getal>]`.
-  // (Een named accessor `data[i][KOL.VF.datum]` matcht NIET — kolom is benoemd.)
-  // Breidt uit naarmate meer bestanden migreren.
-  const GEMIGREERD = [
-    'src/EUVerkoop.gs', 'src/Mollie.gs', 'src/BTW.gs', 'src/Dashboard.gs',
-    'src/Verkoopfacturen.gs', 'src/Inkoopfacturen.gs', 'src/Rapportages.gs',
-    'src/Boekingen.gs',
-  ];
+  // We bannen de WORTEL-vorm van de klasse: `<rij>[<idx>][<getal>]` — een
+  // tweede-dimensie-index als letterlijk getal, ongeacht variabelenaam of
+  // lus-variabele. (Named accessor `data[i][KOL.VF.datum]` matcht NIET.)
+  // Een regel met `kol-ban-ok` is een ECHTE niet-sheet 2D-array (bv. een
+  // browser-API-resultaat) en telt niet mee.
   const LITERAL_KOLOM = /\]\s*\[\s*\d+\s*\]/g;
-  GEMIGREERD.forEach((f) => {
-    test(`${f}: geen literal [..][<getal>] sheet-kolom-index`, () => {
-      const src = fs.readFileSync(path.resolve(__dirname, '../../', f), 'utf8');
-      const treffers = src.match(LITERAL_KOLOM) || [];
-      expect(treffers).toEqual([]);
+  const ALLOW = /kol-ban-ok/;
+  const SRC_DIR = path.resolve(__dirname, '../../src');
+
+  // Nog niet gemigreerd (bekende schuld). SELF-CLEANING: zodra een bestand
+  // schoon is, faalt zijn LEGACY-test → haal het hier weg, dan valt het
+  // automatisch onder de "moet schoon"-eis. Zo verschuift de teller alleen
+  // de goede kant op en kan de lijst niet stilletjes verouderen.
+  const LEGACY_TODO = new Set([
+    'BankImport.gs', 'Bankboek.gs', 'Belastingadvies.gs', 'Belastingvoordeel.gs',
+    'BoekingEngine.gs', 'DLQ.gs', 'DataPortability.gs', 'Diagnostiek.gs',
+    'DriveStructuur.gs', 'EmailDeliverability.gs', 'Engagement.gs', 'FormeelBewijs.gs',
+    'GezondheidCheck.gs', 'HerhalendeKosten.gs', 'Invariants.gs', 'Jaarafsluiting.gs',
+    'MoneybirdImport.gs', 'Prive.gs', 'Setup.gs', 'SmartCategorisatie.gs',
+    'Suggesties.gs', 'Triggers.gs', 'Utils.gs',
+  ]);
+
+  function hitsIn(file) {
+    const src = fs.readFileSync(path.join(SRC_DIR, file), 'utf8');
+    return src.split('\n')
+      .filter((l) => !ALLOW.test(l))
+      .join('\n')
+      .match(LITERAL_KOLOM) || [];
+  }
+
+  const alleGs = fs.readdirSync(SRC_DIR).filter((f) => f.endsWith('.gs'));
+
+  test('LEGACY_TODO bevat geen al-gemigreerd (of niet-bestaand) bestand', () => {
+    LEGACY_TODO.forEach((f) => {
+      expect(alleGs.includes(f)).toBe(true);
     });
+  });
+
+  alleGs.forEach((f) => {
+    if (LEGACY_TODO.has(f)) {
+      test(`LEGACY ${f}: heeft nog bare kolom-index (migreer → verwijder uit LEGACY_TODO)`, () => {
+        expect(hitsIn(f).length).toBeGreaterThan(0);
+      });
+    } else {
+      test(`${f}: geen literal [..][<getal>] sheet-kolom-index`, () => {
+        expect(hitsIn(f)).toEqual([]);
+      });
+    }
   });
 });

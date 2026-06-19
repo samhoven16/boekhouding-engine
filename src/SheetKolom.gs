@@ -2,7 +2,7 @@
  * SheetKolom.gs — DE ENIGE bron van kolom-indexen voor sheet-toegang.
  *
  * KLASSE-SLUITER (zie .claude/bug-class-register.md, klasse 1): bare magische
- * indexen als `data[i][7]` veroorzaakten meermaals stille fiscale/betaal-bugs
+ * indexen als `data[i][7]` veroorzaakten meermaals stille fiscale/betaal-bugs (kol-ban-ok: voorbeeld in docstring)
  * (EUVerkoop las [21] i.p.v. [7] → ICP leeg; Mollie las [6]/[0] i.p.v. [12]/[1]
  * → elke iDEAL-betaling geweigerd). Met een named accessor wordt een verkeerde
  * kolom een NAAM-fout (`KOL.VF.btwNrKlnt` bestaat niet → crash/lint), geen
