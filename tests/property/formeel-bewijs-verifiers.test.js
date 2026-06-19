@@ -169,17 +169,36 @@ describe('I₈ — Afgesloten periode immutability (echte verifier)', () => {
 });
 
 describe('I₉ — Leaf-only boekingen (echte verifier)', () => {
-  // '1000' is parent (kinderen 1100/1300); 1100,1300,8000 zijn leaves.
-  const gb = [GB_H, gbRow({ code: '1000' }), gbRow({ code: '1100' }), gbRow({ code: '1300' }), gbRow({ code: '8000' })];
-  test('boekingen alleen op leaf-rekeningen → geldig', () => {
+  // F-ACC-330: I₉ spiegelt nu valideerJournaalpostBalans_.purePArents
+  // (0100/0200/0300) i.p.v. een numerieke "eindigt-op-000"-heuristiek. De oude
+  // test borgde de bug: ze claimde dat boeken op 1000 (Voorraden — een gewone
+  // leaf) een schending was. Dat is fout; alleen de categorie-headers zijn dat.
+  const gb = [GB_H, gbRow({ code: '1000' }), gbRow({ code: '1100' }), gbRow({ code: '4000' }),
+    gbRow({ code: '4100' }), gbRow({ code: '4110' }), gbRow({ code: '8000' })];
+
+  test('boekingen op gewone leaves (incl. 1000, 8000) → geldig', () => {
     const jp = [JP_H,
-      jpRow({ debet: '1100', credit: '8000', bedrag: 100 }),
-      jpRow({ debet: '1300', credit: '8000', bedrag: 50 }),
+      jpRow({ debet: '1000', credit: '8000', bedrag: 100 }),
+      jpRow({ debet: '1100', credit: '8000', bedrag: 50 }),
     ];
     expect(ctx._bewijs_I9_leafOnlyBoekingen_(mockSs({ Grootboekschema: gb, Journaalposten: jp })).geldig).toBe(true);
   });
-  test('boeking op parent-rekening (1000) → schending I9', () => {
-    const jp = [JP_H, jpRow({ debet: '1000', credit: '8000', bedrag: 100 })];
+
+  test('RATEL F-ACC-330: boeking op 4000 (Crediteuren-leaf) → geldig (was vals-rood)', () => {
+    // 4000 wordt op élke inkoopfactuur geboekt; de oude heuristiek vlagde 'm als
+    // "parent" van 4100/4110 → I₉ vals-rood op een correcte administratie.
+    const jp = [JP_H, jpRow({ debet: '7990', credit: '4000', bedrag: 100 })];
+    expect(ctx._bewijs_I9_leafOnlyBoekingen_(mockSs({ Grootboekschema: gb, Journaalposten: jp })).geldig).toBe(true);
+  });
+
+  test('ambigue-maar-postbare parents (1400/4100) → geldig (consistent met validator)', () => {
+    const jp = [JP_H, jpRow({ debet: '1400', credit: '1100', bedrag: 21 }),
+      jpRow({ debet: '1100', credit: '4100', bedrag: 21 })];
+    expect(ctx._bewijs_I9_leafOnlyBoekingen_(mockSs({ Grootboekschema: gb, Journaalposten: jp })).geldig).toBe(true);
+  });
+
+  test('boeking op echte categorie-header (0100) → schending I9', () => {
+    const jp = [JP_H, jpRow({ debet: '0100', credit: '8000', bedrag: 100 })];
     const res = ctx._bewijs_I9_leafOnlyBoekingen_(mockSs({ Grootboekschema: gb, Journaalposten: jp }));
     expect(res.geldig).toBe(false); expect(res.code).toBe('I9');
   });

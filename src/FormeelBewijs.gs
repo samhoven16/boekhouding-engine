@@ -458,46 +458,37 @@ function _bewijs_I8_afgeslotenPeriode_(ss) {
 // ─────────────────────────────────────────────────────────────
 function _bewijs_I9_leafOnlyBoekingen_(ss) {
   const meta = { code: 'I9', naam: 'Boekingen alleen op leaf-rekeningen', soort: 'Discrete wiskunde' };
-  // I₉ wordt al afgedwongen door valideerJournaalpostBalans_ (Invariants.gs).
-  // Post-hoc verificatie: zijn er ouder-rekeningen (rond getal eindigend
-  // op 00 met onder-kinderen) waar journaalposten op staan?
-  const gb = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
+  // I₉ wordt afgedwongen door valideerJournaalpostBalans_ (Invariants.gs): die
+  // THROWT op de pure categorie-headers (0100/0200/0300) bij het boeken, zodat
+  // ze nooit in de sheet belanden. Deze post-hoc verificatie bevestigt dat en
+  // gebruikt EXACT dezelfde lijst als de validator (single source of truth).
+  //
+  // F-ACC-330: de vorige numerieke heuristiek ("eindigt op 000" ⇒ parent van
+  // álles met hetzelfde eerste cijfer) was fout in twee richtingen:
+  //   • vals-POSITIEF: ze vlagde 4000 (Crediteuren — een leaf die op élke
+  //     inkoopfactuur geboekt wordt) als parent van 4100/4110 → I₉ vals-rood op
+  //     een volkomen correcte administratie.
+  //   • vals-NEGATIEF: de échte headers 0100/0200/0300 eindigen NIET op '000'
+  //     en werden dus juist gemist.
+  // 1400/4100 zijn bewust postbaar (ambigue parents → alleen audit-warning in de
+  // validator, niet geblokkeerd) en zijn daarom géén I₉-schending.
   const jp = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
-  if (!gb || !jp) return Object.assign(meta, { geldig: true });
+  if (!jp) return Object.assign(meta, { geldig: true });
 
-  // Bouw set van rekening-codes; bepaal welke 'parent' zijn op basis
-  // van numerieke voorvoegsel-relatie (bv. 1000 heeft kinderen 1100, 1200...)
-  const codes = [];
-  const gbData = gb.getDataRange().getValues();
-  for (let i = 1; i < gbData.length; i++) {
-    const c = String(gbData[i][KOL.GB.code] || '').trim();
-    if (c) codes.push(c);
-  }
-  const isParent = {};
-  codes.forEach(function(c) {
-    // Een code is "parent" als er een andere code is die hetzelfde voorvoegsel
-    // heeft maar specifieker is (langer of hoger laatste cijfer).
-    const heeftKind = codes.some(function(other) {
-      if (other === c) return false;
-      // Heuristiek: c=1000 is parent van 1100, 1200, …
-      if (c.endsWith('000') && other.startsWith(c.charAt(0))) return true;
-      return false;
-    });
-    if (heeftKind) isParent[c] = true;
-  });
-
+  // Mirror van valideerJournaalpostBalans_.purePArents (Invariants.gs:144).
+  const pureParents = ['0100', '0200', '0300'];
   const jpData = jp.getDataRange().getValues();
   const fout = [];
   for (let i = 1; i < jpData.length; i++) {
     const debet = String(jpData[i][KOL.JP.debetRekening] || '').trim();
     const credit = String(jpData[i][KOL.JP.creditRekening] || '').trim();
-    if (isParent[debet]) fout.push({ jp: jpData[i][KOL.JP.boekingId], rek: debet, zijde: 'debet' });
-    if (isParent[credit]) fout.push({ jp: jpData[i][KOL.JP.boekingId], rek: credit, zijde: 'credit' });
+    if (pureParents.indexOf(debet) !== -1) fout.push({ jp: jpData[i][KOL.JP.boekingId], rek: debet, zijde: 'debet' });
+    if (pureParents.indexOf(credit) !== -1) fout.push({ jp: jpData[i][KOL.JP.boekingId], rek: credit, zijde: 'credit' });
   }
   if (fout.length > 0) {
     return Object.assign(meta, {
       geldig: false,
-      boodschap: fout.length + ' boeking(en) op parent-rekening (graf-invariant gebroken)',
+      boodschap: fout.length + ' boeking(en) op een niet-postbare categorie-header (0100/0200/0300)',
       tegenvoorbeeld: fout.slice(0, 3),
     });
   }
