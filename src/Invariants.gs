@@ -411,8 +411,11 @@ function controleerBewaarplichtAlert_() {
     'verweer als je administratie niet meer compleet is.\n\n' +
     'Boekhoudbaar';
 
-  // klasse 4: via notificatie-gate (detectie + audit-log draaiden hierboven al).
-  stuurKlantNotificatie_(ontvanger, '📦 Bewaarplicht: archiveer je boekhouding nu', body);
+  // COMPLIANCE — NIET achter de notificatie-gate (7-jaars bewaarplicht; de
+  // toggle-toast belooft expliciet dat dit blijft werken). Direct via DLQ-laag.
+  if (typeof stuurMailMetDlq_ === 'function') {
+    stuurMailMetDlq_(ontvanger, '📦 Bewaarplicht: archiveer je boekhouding nu', body);
+  }
 }
 
 // ─────────────────────────────────────────────

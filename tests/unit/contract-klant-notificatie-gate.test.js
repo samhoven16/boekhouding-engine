@@ -48,10 +48,11 @@ describe('CONTRACT — klant-mail loopt langs de notificatie-gate (klasse 4)', (
 
   test('informatieve owner-notificaties routen via stuurKlantNotificatie_ (geen directe send)', () => {
     // Deze bestanden bevatten precies één owner-notificatie; die moet gegate zijn.
+    // NB: suppletie (Fiscaal) + bewaarplicht (Invariants) zijn COMPLIANCE en
+    // gaan BEWUST NIET via de gate (direct via stuurMailMetDlq_) — de toggle-
+    // toast belooft dat die blijven werken. Hier alleen de informatieve mails.
     [['BTWReminder.gs', /stuurKlantNotificatie_\(/],
-      ['Fiscaal.gs', /stuurKlantNotificatie_\(/],
-      ['Belastingadvies.gs', /stuurKlantNotificatie_\(/],
-      ['Invariants.gs', /stuurKlantNotificatie_\(/]].forEach(([f, re]) => {
+      ['Belastingadvies.gs', /stuurKlantNotificatie_\(/]].forEach(([f, re]) => {
       const src = gs(f);
       expect(src).toMatch(re);
       // én geen ongemarkeerde directe send in die bestanden
@@ -66,5 +67,18 @@ describe('CONTRACT — klant-mail loopt langs de notificatie-gate (klasse 4)', (
     expect(t).toMatch(/function stuurKlantNotificatie_\(/);
     expect(t).toMatch(/function emailNotificatiesAan_\(/);
     expect(t).toMatch(/if \(!emailNotificatiesAan_\(\)\) return false;/); // gate zit IN het chokepoint
+  });
+
+  test('compliance-mails (suppletie + bewaarplicht) gaan NIET via de gate', () => {
+    // De toggle-toast belooft dat deze blijven werken; ze moeten dus direct via
+    // de DLQ-laag, niet via stuurKlantNotificatie_ (die de master-switch checkt).
+    const fis = gs('Fiscaal.gs');
+    const inv = gs('Invariants.gs');
+    expect(fis).toMatch(/stuurMailMetDlq_\([^)]*Suppletie/);
+    expect(fis).not.toMatch(/stuurKlantNotificatie_\(/);
+    expect(inv).toMatch(/stuurMailMetDlq_\([^)]*[Bb]ewaarplicht/);
+    expect(inv).not.toMatch(/stuurKlantNotificatie_\(/);
+    // én de toast belooft het ook letterlijk
+    expect(gs('Triggers.gs')).toMatch(/compliance-seintjes \(suppletie, bewaarplicht\)/);
   });
 });
