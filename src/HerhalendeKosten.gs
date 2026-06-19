@@ -345,7 +345,9 @@ function verwerkHerhalendeKosten_() {
         // stil falen → herhalende kost werd niet auto-geboekt → klant mist
         // aftrek (huur, abonnement, verzekering) → meer IB.
         if (isJa_(auto) && bedrag > 0) {
-          const zakelijkBedrag = rondBedrag_(bedrag * (splitPct / 100));
+          // klasse 9 (precisie): exact zakelijk-deel via integer-centen; privé-deel
+          // is het restant zodat zakelijk + privé exact = bedrag (geen cent-lek).
+          const zakelijkBedrag = rondTariefCent_(bedrag, splitPct / 100);
           const privaatBedrag  = rondBedrag_(bedrag - zakelijkBedrag);
           if (zakelijkBedrag > 0) {
             maakJournaalpost_(ss, {
