@@ -154,6 +154,21 @@ function rondTariefCent_(bedragEuro, tarief) {
 }
 
 /**
+ * Afschrijvingsbedrag = saldo × pct × factor, exact in integer-centen (half-up).
+ * factor = 1 (jaarafschrijving) of 1/12 (maand) — als breuk (noemer 12) zodat de
+ * dubbel-float `saldo * pct * factor` geen cent-drift geeft (10% van €166,85 =
+ * €16,685 → €16,69, niet €16,68). saldo/pct verondersteld ≥ 0. (bug-klasse 9.)
+ */
+function berekenAfschrijvingCent_(saldo, pct, factor) {
+  const e4 = Math.round((parseFloat(pct) || 0) * 10000);
+  const sc = Math.round((parseFloat(saldo) || 0) * 100);
+  const f = parseFloat(factor) || 1;
+  const noemer = 10000 * Math.round(1 / f);   // 10000 (jaar) of 120000 (maand)
+  if (!(noemer > 0) || sc <= 0 || e4 <= 0) return 0;
+  return Math.floor((e4 * sc + noemer / 2) / noemer) / 100;
+}
+
+/**
  * Formatteert een bedrag als EUR-string in NL-standaard.
  * Gebruikt non-breaking space (U+00A0) tussen € en bedrag — voorkomt dat
  * "€ 1.234,56" over twee regels wordt afgebroken in HTML/PDF-render.

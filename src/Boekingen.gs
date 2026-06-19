@@ -778,7 +778,8 @@ function verwerkAfschrijvingen(data) {
     const saldo = getGrootboekSaldo_(ss, code);
     if (saldo <= 0) return;
 
-    const afschrBedrag = rondBedrag_(saldo * pct * factor);
+    // klasse 9 (precisie): exact in integer-centen (raakt W&V → IB, dus bindend).
+    const afschrBedrag = berekenAfschrijvingCent_(saldo, pct, factor);
     const naam = zoekGrootboekNaam_(code);
 
     // Debet afschrijving | Credit gecumuleerde afschrijving
