@@ -241,7 +241,6 @@ function _trimAuditLog_(auditSheet) {
   const lastRow = auditSheet.getLastRow();
   if (lastRow <= 1) return;
 
-  const HARD_CAP = 5000;
   const ZEVEN_JAAR_MS = 7 * 365.25 * 24 * 3600 * 1000;
   const cutoffDate = new Date(Date.now() - ZEVEN_JAAR_MS);
 
@@ -255,14 +254,14 @@ function _trimAuditLog_(auditSheet) {
     aantalTeOud++;
   }
 
-  // Hard-cap: als totaal nog steeds > HARD_CAP na 7y-trim, verwijder ook oudste
-  // recent-jonge rijen om limit te respecteren.
-  const naCutoffTrim = lastRow - 1 - aantalTeOud;
-  let extraOver = Math.max(0, naCutoffTrim - HARD_CAP);
-
-  const totaalTeVerwijderen = aantalTeOud + extraOver;
-  if (totaalTeVerwijderen > 0) {
-    auditSheet.deleteRows(2, totaalTeVerwijderen);
+  // BEWAARPLICHT (art. 52 AWR): verwijder ALLEEN rijen ouder dan 7 jaar.
+  // Een eerdere harde rij-cap (5000) knipte óók JONGERE rijen weg om de limiet
+  // te respecteren — dat vernietigt wettelijk verplicht audit-bewijs (storno,
+  // jaarafsluiting) vóór de bewaartermijn (accountant-controle-bevinding). Een
+  // Google Sheet houdt het reële 7-jaars-volume moeiteloos aan (10M-cel-limiet);
+  // log-groei is dus geen reden om bewijs te wissen. Alleen de 7-jaar-trim blijft.
+  if (aantalTeOud > 0) {
+    auditSheet.deleteRows(2, aantalTeOud);
   }
 }
 
