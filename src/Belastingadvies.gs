@@ -144,7 +144,11 @@ const BELASTING_PER_JAAR = {
     BOX3_FORFAIT_SPAAR:     0.0144,
     BOX3_TARIEF:            0.36,
     IB_SCHIJF_1_MAX:        78426,   // bovengrens schijf 2 (= IB_SCHIJVEN[1].tot; was 79137 — drift uit 2025-snapshot, audit F-TAX-101)
-    IB_SCHIJF_1_PCT:        0.357,   // schijf 1: 35,7%
+    IB_SCHIJF_1_PCT:        0.3575,  // schijf 1: 35,75% — MOET gelijk zijn aan
+                                     // IB_SCHIJVEN[0].pct (verlegd-fallback +
+                                     // marginaal-tarief lezen deze scalar). Stond
+                                     // op 0,357 → fallback-IB week af van de
+                                     // array-gedreven hoofdberekening (F-TAX-133).
     IB_SCHIJF_2_PCT:        0.495,   // schijf 3: 49,5% (legacy naam)
     HEFFINGSKORTING_MAX:    3115,    // 2026: max algemene heffingskorting
     HEFFINGSKORTING_AFBOUW_VAN: 29739,
