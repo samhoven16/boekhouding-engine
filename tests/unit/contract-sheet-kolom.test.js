@@ -48,6 +48,7 @@ describe('CONTRACT — KOL is intern consistent', () => {
   test('HK: 0..11 zonder duplicaat/gat', () => checkContig(KOL.HK, 'HK'));
   test('INST: 0..1 zonder duplicaat/gat', () => checkContig(KOL.INST, 'INST'));
   test('AUDIT: 0..7 zonder duplicaat/gat', () => checkContig(KOL.AUDIT, 'AUDIT'));
+  test('TAAK: 0..4 zonder duplicaat/gat', () => checkContig(KOL.TAAK, 'TAAK'));
 });
 
 describe('CONTRACT — KOL ⇄ sheet-schemas.md (kritieke velden)', () => {
@@ -119,9 +120,11 @@ describe('CONTRACT — GEEN literal sheet-kolom-index (omgekeerde ban, hele src/
   // schoon is, faalt zijn LEGACY-test → haal het hier weg, dan valt het
   // automatisch onder de "moet schoon"-eis. Zo verschuift de teller alleen
   // de goede kant op en kan de lijst niet stilletjes verouderen.
-  const LEGACY_TODO = new Set([
-    'Triggers.gs',
-  ]);
+  //
+  // 🎉 LEEG: ALLE src/*.gs zijn naar KOL gemigreerd. Klasse 1 is volledig
+  // gesloten — élk bestand moet nu schoon zijn; een nieuwe bare kolom-index
+  // (in welk bestand dan ook) faalt direct in CI.
+  const LEGACY_TODO = new Set([]);
 
   function hitsIn(file) {
     const src = fs.readFileSync(path.join(SRC_DIR, file), 'utf8');

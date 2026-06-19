@@ -122,9 +122,6 @@ function openExecutionsDashboard() {
  *
  * Aangeroepen vanuit onOpen — fail-silently.
  */
-// Module-lokale kolom-accessor (Taakstatus-tab); [1] = Laatste run.
-// eslint-disable-next-line no-unused-vars
-const TAAKSTATUS_KOL = Object.freeze({ taak: 0, laatsteRun: 1 });
 function controleerTriggerWatchdog_() {
   try {
     // Laatste run van dagelijkseTaken via Taakstatus-tab
@@ -135,7 +132,7 @@ function controleerTriggerWatchdog_() {
     const data = sheet.getDataRange().getValues();
     let laatsteRun = null;
     for (let i = 1; i < data.length; i++) {
-      const ts = data[i][TAAKSTATUS_KOL.laatsteRun];  // kolom 1 = Laatste run
+      const ts = data[i][KOL.TAAK.laatsteRun];  // kolom 1 = Laatste run
       if (ts instanceof Date) {
         if (!laatsteRun || ts > laatsteRun) laatsteRun = ts;
       }

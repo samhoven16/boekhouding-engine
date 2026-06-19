@@ -246,10 +246,10 @@ function _trimAuditLog_(auditSheet) {
   const cutoffDate = new Date(Date.now() - ZEVEN_JAAR_MS);
 
   // Lees alleen kolom 1 (datum) — efficiënt voor grote logs
-  const datums = auditSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const datums = auditSheet.getRange(2, 1, lastRow - 1, 1).getValues().map(function (r) { return r[0]; });
   let aantalTeOud = 0;
   for (let i = 0; i < datums.length; i++) {
-    const d = datums[i][0];
+    const d = datums[i];
     if (!(d instanceof Date)) break;        // log corrupt? stop trim
     if (d.getTime() >= cutoffDate.getTime()) break;  // alle volgende zijn jonger
     aantalTeOud++;
@@ -385,7 +385,7 @@ function verifieerAuditKeten_(auditSheet) {
   var gecontroleerd = 0;
   for (var i = 0; i < data.length; i++) {
     var rij7 = data[i].slice(0, 7);
-    var stored = data[i][7] ? String(data[i][7]) : '';
+    var stored = data[i][KOL.AUDIT.ketenhash] ? String(data[i][KOL.AUDIT.ketenhash]) : '';
     if (prev !== null && stored !== '') {
       if (_auditKetenHash_(prev, rij7) !== stored) {
         return { ok: false, gebrokenRij: i + 2, gecontroleerd: gecontroleerd };
@@ -670,20 +670,20 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   const datumStr = Utilities.formatDate(datum, 'Europe/Amsterdam', 'yyyy-MM-dd');
   let recenteDuplicate = null;
   for (let i = 1; i < bestaandeRijen.length; i++) {
-    if (bestaandeRijen[i][0] === factuurNr) {
+    if (bestaandeRijen[i][KOL.VF.factuurId] === factuurNr) {
       schrijfAuditLog_('Factuur DUBBEL geblokkeerd', factuurNummerOpgemaakt + ' bestaat al in sheet');
       throw new Error('Factuur ' + factuurNummerOpgemaakt + ' bestaat al — dubbele verwerking geblokkeerd.');
     }
     // Self-healing: detecteer 'gevoelsmatige' duplicate — zelfde klant + zelfde
     // datum + zelfde bedrag binnen 5 minuten = waarschijnlijk dubbel-submit.
     // Geen blokkade (kan legitiem zijn), wél waarschuwing in audit-log.
-    const exDatum = bestaandeRijen[i][2];
-    const exKlant = String(bestaandeRijen[i][5] || '');
-    const exIncl  = parseFloat(bestaandeRijen[i][12]) || 0;
+    const exDatum = bestaandeRijen[i][KOL.VF.datum];
+    const exKlant = String(bestaandeRijen[i][KOL.VF.klantnaam] || '');
+    const exIncl  = parseFloat(bestaandeRijen[i][KOL.VF.bedragIncl]) || 0;
     if (exDatum) {
       const exDatumStr = Utilities.formatDate(new Date(exDatum), 'Europe/Amsterdam', 'yyyy-MM-dd');
       if (exDatumStr === datumStr && exKlant === klantnaam && Math.abs(exIncl - totalIncl) < 0.01) {
-        recenteDuplicate = bestaandeRijen[i][1] || ('rij ' + (i + 1));
+        recenteDuplicate = bestaandeRijen[i][KOL.VF.factuurnummer] || ('rij ' + (i + 1));
       }
     }
   }
@@ -1385,7 +1385,7 @@ function verwerkVerkoopfactuurFormulier(e) {
       const rijen = vfSheet.getDataRange().getValues();
       for (let i = 1; i < rijen.length; i++) {
         // Strict numeric compare — voorkomt cross-type match (bv. '100' == 100)
-        if (parseInt(rijen[i][0], 10) === factuurNr) {
+        if (parseInt(rijen[i][KOL.VF.factuurId], 10) === factuurNr) {
           vfSheet.getRange(i + 1, 20).setValue(pdfUrl);
           break;
         }
@@ -1773,8 +1773,8 @@ function dagelijkseTaken() {
         // [1] = Factuurnummer ("F000001") — de dunning-keys gebruiken dit
         // formaat. Kolom [0] is het numerieke Factuur ID; dat matcht nooit
         // met een key en zou élke dag alle dunning-state wissen.
-        const fnr = String(data[i][1] || '');
-        const datum = data[i][2];
+        const fnr = String(data[i][KOL.VF.factuurnummer] || '');
+        const datum = data[i][KOL.VF.datum];
         if (!fnr) continue;
         const ts = (datum instanceof Date) ? datum.getTime() : 0;
         if (ts >= cutoff) actieveFacturen[fnr] = true;
@@ -1898,7 +1898,7 @@ function _updateTaakStatus_(naam, status, durMs, fout) {
   const data = sheet.getDataRange().getValues();
   let rij = -1;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === naam) { rij = i + 1; break; }
+    if (String(data[i][KOL.TAAK.taak]) === naam) { rij = i + 1; break; }
   }
   const waarden = [naam, new Date(), durMs, status, fout || ''];
   if (rij === -1) {
@@ -2146,29 +2146,29 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       safeAuditLog_('Dunning batch-pauze', 'rij ' + i + ' van ' + data.length);
       return;
     }
-    const status = data[i][14];
+    const status = data[i][KOL.VF.status];
     if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
 
     // CYCLE-59: parseDatum_ — anders skipt dunning string-dated facturen
     // → klant verstuurt nooit herinnering → debiteuren-saldo loopt op.
-    const vervaldatum = data[i][3] ? ((data[i][3] instanceof Date) ? data[i][3] : parseDatum_(data[i][3])) : null;
+    const vervaldatum = data[i][KOL.VF.vervaldatum] ? ((data[i][KOL.VF.vervaldatum] instanceof Date) ? data[i][KOL.VF.vervaldatum] : parseDatum_(data[i][KOL.VF.vervaldatum])) : null;
     if (!vervaldatum || isNaN(vervaldatum.getTime())) continue;
     const dagenOver = Math.floor((vandaag - vervaldatum) / 86400000);
     if (dagenOver < 1) continue;
 
-    const factuurnummer = String(data[i][1]);
+    const factuurnummer = String(data[i][KOL.VF.factuurnummer]);
     const stapKey = 'herinneringsStap_' + factuurnummer;
     const gestuurdeStap = parseInt(props.getProperty(stapKey) || '0');
     const volgendeStap = STAP_DAGEN.filter(d => dagenOver >= d).length;
     if (volgendeStap <= gestuurdeStap) continue;
 
-    const klantId = data[i][4];
+    const klantId = data[i][KOL.VF.klantId];
     const klantEmail = relatieEmailMap[String(klantId)] || null;
     if (!klantEmail) continue;
 
-    const klantnaam   = data[i][5];
-    const bedragOpen  = rondBedrag_((data[i][12] || 0) - (data[i][13] || 0));
-    const pdfUrl      = data[i][19] || '';
+    const klantnaam   = data[i][KOL.VF.klantnaam];
+    const bedragOpen  = rondBedrag_((data[i][KOL.VF.bedragIncl] || 0) - (data[i][KOL.VF.betaaldBedrag] || 0));
+    const pdfUrl      = data[i][KOL.VF.pdfUrl] || '';
 
     // Skip als al volledig betaald (negatief = overbetaling, status nog niet bijgewerkt)
     if (bedragOpen <= 0) continue;
@@ -2250,10 +2250,10 @@ function koppelBankTransactieAanFactuur_(ss, transactieId, ref, bedrag, isOntvan
     const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      const fnr = String(data[i][1]); // Factuurnummer
+      const fnr = String(data[i][KOL.VF.factuurnummer]); // Factuurnummer
       if (!matchFnr(fnr)) continue;
-      const totalIncl = parseFloat(data[i][12]) || 0;
-      const reedsBetaald = parseFloat(data[i][13]) || 0;
+      const totalIncl = parseFloat(data[i][KOL.VF.bedragIncl]) || 0;
+      const reedsBetaald = parseFloat(data[i][KOL.VF.betaaldBedrag]) || 0;
       const openstaand = rondBedrag_(totalIncl - reedsBetaald);
       const tePlaatsen = Math.max(0, Math.min(bedrag, openstaand));
       if (tePlaatsen <= 0) break;
@@ -2293,10 +2293,10 @@ function koppelBankTransactieAanFactuur_(ss, transactieId, ref, bedrag, isOntvan
     const sheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      const fnr = String(data[i][4]); // Factuurref leverancier
+      const fnr = String(data[i][KOL.IF.factuurrefLeverancier]); // Factuurref leverancier
       if (!matchFnr(fnr)) continue;
       // Idempotency-guard: als al BETAALD, geen tweede journaalpost.
-      const huidigeStatus = String(data[i][12] || '');
+      const huidigeStatus = String(data[i][KOL.IF.status] || '');
       if (huidigeStatus === FACTUUR_STATUS.BETAALD) break;
       sheet.getRange(i + 1, 13).setValue(FACTUUR_STATUS.BETAALD);
       sheet.getRange(i + 1, 14).setValue(datum);
@@ -2334,11 +2334,11 @@ function markeerVervallenFacturen_(ss) {
   // via getRangeList (één sheet-roundtrip). Bij 0 hits = 0 writes.
   const teVervallenRijen = [];
   for (let i = 1; i < data.length; i++) {
-    const status = data[i][14];
+    const status = data[i][KOL.VF.status];
     if (teMarkeren.indexOf(status) === -1) continue;
     // Vervaldatum kan in cell als Date-object OF als string staan (na CSV-import).
     // parseDatum_ accepteert beide. Native new Date(stringNL) zou NaN geven.
-    const ruwVerval = data[i][3];
+    const ruwVerval = data[i][KOL.VF.vervaldatum];
     if (!ruwVerval) continue;
     const verval = (ruwVerval instanceof Date) ? ruwVerval : parseDatum_(ruwVerval);
     if (!verval || isNaN(verval.getTime())) continue;
@@ -2436,19 +2436,19 @@ function stuurBetalingsherinneringen() {
   const relatieEmailMap = bouwRelatieEmailMap_(ss);
 
   for (let i = 1; i < data.length; i++) {
-    const status = data[i][14];
-    const klantId = data[i][4];
+    const status = data[i][KOL.VF.status];
+    const klantId = data[i][KOL.VF.klantId];
 
     if (status !== FACTUUR_STATUS.VERVALLEN && status !== FACTUUR_STATUS.VERZONDEN) continue;
 
     const klantEmail = relatieEmailMap[String(klantId)] || null;
     if (!klantEmail) continue;
 
-    const fnr = data[i][1];
+    const fnr = data[i][KOL.VF.factuurnummer];
     // Defensief parsen: als een klant handmatig 'betaald' of een datum in
     // betaald-kolom zet, geven we liever €0 dan NaN in de herinneringsmail.
-    const bedragOpen = rondBedrag_((parseFloat(data[i][12]) || 0) - (parseFloat(data[i][13]) || 0));
-    const vervaldatum = data[i][3];
+    const bedragOpen = rondBedrag_((parseFloat(data[i][KOL.VF.bedragIncl]) || 0) - (parseFloat(data[i][KOL.VF.betaaldBedrag]) || 0));
+    const vervaldatum = data[i][KOL.VF.vervaldatum];
     if (bedragOpen <= 0) continue; // Geen herinnering sturen voor volledig betaalde factuur
 
     const iban = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '';
@@ -2524,8 +2524,8 @@ function bouwRelatieEmailMap_(ss) {
   const data = sheet.getDataRange().getValues();
   const map = {};
   for (let i = 1; i < data.length; i++) {
-    const id = String(data[i][0]);
-    if (id && !(id in map)) map[id] = data[i][10]; // E-mailadres kolom
+    const id = String(data[i][KOL.REL.relatieId]);
+    if (id && !(id in map)) map[id] = data[i][KOL.REL.email]; // E-mailadres kolom
   }
   return map;
 }

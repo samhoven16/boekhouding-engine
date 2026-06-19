@@ -33,8 +33,9 @@ describe('B4 — dunning-cleanup leest factuurnummer-kolom [1], niet ID-kolom [0
     expect(start).toBeGreaterThan(-1);
     // Zoek einde van deze taak: eerste '});' na 'actieveFacturen[fnr]'
     const blokRuw = triggers.slice(start, start + 2000);
-    expect(blokRuw).toMatch(/String\(data\[i\]\[1\] \|\| ''\)/);
-    expect(blokRuw).not.toMatch(/const fnr = String\(data\[i\]\[0\]/);
+    // migratie-agnostisch: factuurnummer = [1] óf KOL.VF.factuurnummer; NIET [0]/factuurId.
+    expect(blokRuw).toMatch(/String\(data\[i\]\[(?:1|KOL\.VF\.factuurnummer)\] \|\| ''\)/);
+    expect(blokRuw).not.toMatch(/const fnr = String\(data\[i\]\[(?:0|KOL\.VF\.factuurId)\]/);
   });
 });
 

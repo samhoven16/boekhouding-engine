@@ -147,6 +147,14 @@ const KOL = Object.freeze({
     type: 6,
     ketenhash: 7,
   }),
+  // TAAKSTATUS (Triggers._updateTaakStatus_ schrijft; Diagnostiek leest)
+  TAAK: Object.freeze({
+    taak: 0,
+    laatsteRun: 1,
+    duurMs: 2,
+    status: 3,
+    laatsteFout: 4,
+  }),
   // INKOOPFACTUREN
   IF: Object.freeze({
     inkoopId: 0,
