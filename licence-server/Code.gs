@@ -3380,9 +3380,12 @@ function kolomIndex_(sheet, naam) {
  * (URL wordt alleen aan Brevo gegeven via hun dashboard, niet publiek).
  *
  * Side-effects:
- *  - hard_bounce / invalid_email / spam → markeer email als ongeldig
+ *  - hard_bounce / invalid_email / blocked → markeer email als ongeldig
  *    (Bouncestatus = 'hard') en zet Status van actieve licenties op
  *    'Bounce' zodat verdere drips niet versturen.
+ *  - unsubscribed / spam → afmelding/klacht op marketing, GEEN bezorgfout:
+ *    zet alleen de drip-uit-vlag. De Status (= de betaalde licentie) blijft
+ *    intact — een marketing-afmelding mag het product nooit breken.
  *  - soft_bounce → noteer als 'soft' (info-only, geen Status-wijziging).
  */
 function verwerkBrevoBounce_(e) {
@@ -3412,7 +3415,24 @@ function verwerkBrevoBounce_(e) {
   const reden = String(payload.reason || payload['delivery_status'] || '').substring(0, 240);
   if (!event || !email) return;
 
-  const hardBounceEvents = ['hard_bounce', 'invalid_email', 'spam', 'blocked', 'unsubscribed'];
+  // 'unsubscribed' (afmelding) en 'spam' (spamklacht) zijn GEEN bezorgfouten:
+  // de mailbox werkt prima, de ontvanger wil alleen geen onboarding-/marketing-
+  // mail meer. Ze als hard-bounce behandelen zou Status op 'Bounce' zetten,
+  // waarna valideerEndpoint_ (regel ~1016) geldig:false teruggeeft → de
+  // BETAALDE licentie van die klant ligt eruit louter omdat-ie zich op marketing
+  // afmeldde (of, vaker, de spamknop pakte i.p.v. de afmeldlink). Dat mag nooit.
+  // Behandel het exact als de één-klik-afmeldlink: zet de drip-uit-vlag (stopt
+  // de drips) en laat zowel Status als Bouncestatus ongemoeid.
+  if (event === 'unsubscribed' || event === 'spam') {
+    try {
+      PropertiesService.getScriptProperties()
+        .setProperty('dripuit_' + _rlHash_(email), '1');
+    } catch (_) {}
+    Logger.log('Brevo ' + event + ' → drip-uit voor ' + email + ' (licentie ongemoeid)');
+    return;
+  }
+
+  const hardBounceEvents = ['hard_bounce', 'invalid_email', 'blocked'];
   const softBounceEvents = ['soft_bounce', 'deferred'];
   let bounceStatus = '';
   if (hardBounceEvents.indexOf(event) !== -1) bounceStatus = 'hard';
