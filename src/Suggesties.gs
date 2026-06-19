@@ -226,7 +226,7 @@ function telOpenstaandeVerkoopfacturen_(ss) {
     const data = sheet.getDataRange().getValues();
     let aantal = 0;
     for (let i = 1; i < data.length; i++) {
-      const status = String(data[i][14] || '').trim();
+      const status = String(data[i][KOL.VF.status] || '').trim();
       if (!status) continue;
       if (status === FACTUUR_STATUS.BETAALD) continue;
       if (status === FACTUUR_STATUS.GECREDITEERD) continue;
@@ -247,7 +247,7 @@ function telActieveHerhalendeKosten_(ss) {
     const data = sheet.getDataRange().getValues();
     let aantal = 0;
     for (let i = 1; i < data.length; i++) {
-      const status = String(data[i][8] || '').trim();
+      const status = String(data[i][KOL.HK.status] || '').trim();
       if (status === 'Actief') aantal++;
     }
     return aantal;

@@ -262,7 +262,7 @@ function slaDriverLinksOpInInstellingen_(jaar) {
   const data = sheet.getDataRange().getValues();
   let driveStartRij = -1;
   for (let i = 0; i < data.length; i++) {
-    if (String(data[i][0]).startsWith('Drive:') || data[i][0] === 'GOOGLE DRIVE MAPPEN') {
+    if (String(data[i][KOL.INST.sleutel]).startsWith('Drive:') || data[i][KOL.INST.sleutel] === 'GOOGLE DRIVE MAPPEN') {
       driveStartRij = i + 1;
       break;
     }
@@ -443,7 +443,7 @@ function sluitJaarAf() {
       'Thuiswerk dagen per jaar': '0',
     };
     for (let i = 0; i < data.length; i++) {
-      const sleutel = String(data[i][0]);
+      const sleutel = String(data[i][KOL.INST.sleutel]);
       if (Object.prototype.hasOwnProperty.call(updates, sleutel)) {
         instSheet.getRange(i + 1, 2).setValue(updates[sleutel]);
       }

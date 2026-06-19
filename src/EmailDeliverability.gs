@@ -96,7 +96,7 @@ function toonOngeldigeEmailRelaties() {
   const ongeldig = [];
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][statusCol]) === EMAIL_STATUS_ONGELDIG) {
-      ongeldig.push((data[i][1] || '?') + ' — ' + (data[i][10] || '?'));
+      ongeldig.push((data[i][KOL.REL.naam] || '?') + ' — ' + (data[i][KOL.REL.email] || '?'));
     }
   }
   const ui = SpreadsheetApp.getUi();

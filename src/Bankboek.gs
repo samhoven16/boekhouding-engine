@@ -13,9 +13,9 @@ function getBanksaldo_(ss, rekeningCode) {
   let saldo = 0;
 
   for (let i = 1; i < data.length; i++) {
-    const rekening = String(data[i][5] || '');
+    const rekening = String(data[i][KOL.BT.rekening] || '');
     if (rekening !== String(rekeningCode)) continue;
-    saldo += parseFloat(data[i][3]) || 0;
+    saldo += parseFloat(data[i][KOL.BT.bedrag]) || 0;
   }
 
   return rondBedrag_(saldo);

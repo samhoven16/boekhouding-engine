@@ -116,6 +116,26 @@ const KOL = Object.freeze({
     notities: 17,
     aangemaaktOp: 18,
   }),
+  // HERHALENDE KOSTEN (voegHerhalendeKostToe_ / verwerkHerhalendeKosten_)
+  HK: Object.freeze({
+    id: 0,
+    naam: 1,
+    leverancier: 2,
+    bedragExcl: 3,
+    btwTarief: 4,
+    frequentie: 5,
+    volgendeDatum: 6,
+    grootboekrekening: 7,
+    status: 8,
+    automatischBoeken: 9,
+    notities: 10,
+    zakelijkPct: 11,
+  }),
+  // INSTELLINGEN (key-value; getInstelling_ leest [0]=sleutel → [1]=waarde)
+  INST: Object.freeze({
+    sleutel: 0,
+    waarde: 1,
+  }),
   // INKOOPFACTUREN
   IF: Object.freeze({
     inkoopId: 0,
