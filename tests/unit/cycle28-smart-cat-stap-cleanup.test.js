@@ -37,8 +37,9 @@ describe('CYCLE 28: SmartCategorisatie auto-koppel cleanup', () => {
     expect(omgeving).toMatch(/\}\s*catch\s*\(_\)\s*\{\s*\}/);
   });
 
-  test('Cleanup gebruikt vfData[gevondenFactuurRij][1] (factuurnr)', () => {
-    expect(src).toMatch(/deleteProperty\([\s\S]{0,80}vfData\[gevondenFactuurRij\]\[1\]/);
+  test('Cleanup gebruikt vfData[gevondenFactuurRij] factuurnr-kolom', () => {
+    // migratie-agnostisch: literal [1] óf KOL.VF.factuurnummer (klasse-1).
+    expect(src).toMatch(/deleteProperty\([\s\S]{0,80}vfData\[gevondenFactuurRij\]\[(?:1|KOL\.VF\.factuurnummer)\]/);
   });
 
   test('DEELS_BETAALD-pad doet GEEN cleanup (alleen op volledig betaald)', () => {

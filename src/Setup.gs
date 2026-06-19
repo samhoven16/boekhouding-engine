@@ -130,8 +130,7 @@ function setup() {
     try { ss.toast('Even geduld — eerste setup duurt ~1-3 minuten', 'Boekhoudbaar — Setup gestart', 6); } catch (_) {}
 
     for (let i = 0; i < stappen.length; i++) {
-      const label = stappen[i][0];
-      const fn    = stappen[i][1];
+      const [label, fn] = stappen[i];  // [label, fn]-tuple, geen sheet-kolom
       try {
         Logger.log('Setup-stap ' + (i + 1) + '/' + stappen.length + ': ' + label);
         // UX: live progress-toast per stap. Klant ziet exact wat gebeurt
@@ -567,21 +566,21 @@ function vulGrootboekschema_(ss) {
   try {
     const bestaande = sheet.getDataRange().getValues();
     for (let i = 1; i < bestaande.length; i++) {
-      const code = String(bestaande[i][0] || '').trim();
+      const code = String(bestaande[i][KOL.GB.code] || '').trim();
       if (!code) continue;
       if (standaardCodes.has(code)) {
-        const saldoRaw = bestaande[i][5];
+        const saldoRaw = bestaande[i][KOL.GB.saldo];
         const saldo = parseFloat(saldoRaw);
         if (isFinite(saldo) && saldo !== 0) bestaandeSaldi[code] = saldo;
       } else {
         // Klant-rij: bewaar exact zoals ingevoerd (6 kolommen)
         klantRijen.push([
           code,
-          String(bestaande[i][1] || ''),
-          String(bestaande[i][2] || ''),
-          String(bestaande[i][3] || ''),
-          String(bestaande[i][4] || ''),
-          parseFloat(bestaande[i][5]) || 0,
+          String(bestaande[i][KOL.GB.naam] || ''),
+          String(bestaande[i][KOL.GB.type] || ''),
+          String(bestaande[i][KOL.GB.categorie] || ''),
+          String(bestaande[i][KOL.GB.balansWenv] || ''),
+          parseFloat(bestaande[i][KOL.GB.saldo]) || 0,
         ]);
       }
     }
@@ -706,9 +705,9 @@ function zetInstellingen_(ss) {
   // van de default, terwijl nieuwe default-rijen wél worden toegevoegd.
   let aantalBehouden = 0;
   for (let i = 0; i < data.length; i++) {
-    const label = String(data[i][0] || '').trim();
+    const label = String(data[i][KOL.INST.sleutel] || '').trim();
     if (label && Object.prototype.hasOwnProperty.call(bestaandeWaarden, label)) {
-      data[i][1] = bestaandeWaarden[label];
+      data[i][KOL.INST.waarde] = bestaandeWaarden[label];
       aantalBehouden++;
     }
   }
@@ -752,7 +751,7 @@ function zetInstellingen_(ss) {
     'Betalingstermijn (dagen)': 'Aantal dagen dat een klant heeft om te betalen. Gangbaar: 14 of 30.',
   };
   for (let i = 0; i < data.length; i++) {
-    const lbl = String(data[i][0] || '').trim();
+    const lbl = String(data[i][KOL.INST.sleutel] || '').trim();
     if (Object.prototype.hasOwnProperty.call(veldNotities, lbl)) {
       try { sheet.getRange(i + 1, 2).setNote(veldNotities[lbl]); } catch (_) {}
     }
@@ -1265,10 +1264,10 @@ function getInstelling_(sleutel) {
     const data = sheet.getDataRange().getValues();
     _instellingenCache = {};
     for (let i = 0; i < data.length; i++) {
-      if (data[i][0]) {
-        const val = String(data[i][1] != null ? data[i][1] : '');
+      if (data[i][KOL.INST.sleutel]) {
+        const val = String(data[i][KOL.INST.waarde] != null ? data[i][KOL.INST.waarde] : '');
         // Verouderde placeholder-tekst (begint met ←) behandelen als leeg
-        _instellingenCache[String(data[i][0])] = val.startsWith('←') ? '' : val;
+        _instellingenCache[String(data[i][KOL.INST.sleutel])] = val.startsWith('←') ? '' : val;
       }
     }
   }
@@ -1290,7 +1289,7 @@ function setInstelling_(sleutel, waarde) {
   if (!sheet) throw new Error('Tabblad Instellingen niet gevonden');
   const data = sheet.getDataRange().getValues();
   for (let i = 0; i < data.length; i++) {
-    if (String(data[i][0] || '') === String(sleutel)) {
+    if (String(data[i][KOL.INST.sleutel] || '') === String(sleutel)) {
       sheet.getRange(i + 1, 2).setValue(waarde);
       wisInstellingenCache_(); // Invalideert ook belasting-overrides cache
       return;
