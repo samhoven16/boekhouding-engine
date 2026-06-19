@@ -147,9 +147,18 @@ function rondBedrag_(bedrag) {
  */
 function rondTariefCent_(bedragEuro, tarief) {
   const bc = Math.round((parseFloat(bedragEuro) || 0) * 100);   // bedrag in centen
-  const e4 = Math.round((parseFloat(tarief) || 0) * 10000);     // tarief × 10000 (heel getal)
-  const N = e4 * bc;                                            // = tarief × bedrag × 1e6
-  const cent = N >= 0 ? Math.floor((N + 5000) / 10000) : -Math.floor((-N + 5000) / 10000);
+  const t = parseFloat(tarief) || 0;
+  // Schaal het tarief naar een EXACTE integer-breuk (tarief × schaal). Standaard
+  // NL-tarieven (≤4 dec: 0.21/0.09/0.0756/…) → schaal 10000, identiek aan eerder.
+  // Een fijner tarief (bv. =BEREKEN_BTW(…;"12,345%")) werd voorheen afgekapt op
+  // 4 decimalen → 1 cent fout; nu schaalt 'm tot de benodigde precisie
+  // (cap 1e7 = overflow-veilig: bc≤1e8 × eN≤1e7 = 1e15 < 2^53).
+  let schaal = 10000;
+  while (schaal < 1e7 && Math.abs(t * schaal - Math.round(t * schaal)) > 1e-9) schaal *= 10;
+  const eN = Math.round(t * schaal);                           // tarief × schaal (heel getal)
+  const N = bc * eN;                                           // = tarief × bedrag × schaal
+  const half = Math.floor(schaal / 2);
+  const cent = N >= 0 ? Math.floor((N + half) / schaal) : -Math.floor((-N + half) / schaal);
   return cent / 100;
 }
 

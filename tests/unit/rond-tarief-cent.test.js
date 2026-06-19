@@ -50,4 +50,10 @@ describe('rondTariefCent_ — exacte pct-van-bedrag (klasse 9)', () => {
     expect(ctx.rondTariefCent_(0, 0.21)).toBe(0);
     expect(ctx.rondTariefCent_('x', 0.21)).toBe(0);
   });
+
+  test('exotisch tarief >4 decimalen wordt NIET afgekapt (€1000 × 12,345% = €123,45)', () => {
+    // regressie: Math.round(t*10000) kapte 0.12345 af op 0.1235 → €123,50.
+    expect(ctx.rondTariefCent_(1000, 0.12345)).toBe(123.45);
+    expect(ctx.rondTariefCent_(1000, 0.123456)).toBe(123.46);  // 6 decimalen
+  });
 });
