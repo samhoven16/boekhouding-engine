@@ -1,0 +1,63 @@
+# Bug-klasse-register — de weg naar "100% af"
+
+> **Het inzicht (Sam, 2026-06-19):** elke mega-audit vindt nieuwe dingen, dus we
+> pakken het verkeerd aan. Klopt. Heuristische review (mensen/agents) kan
+> *nooit* bewijzen dat hij álles zag — dat is een wiskundige grens, geen luiheid.
+> En elke fix verandert code → nieuwe bugs. Whack-a-mole op **instanties**.
+>
+> **De oplossing:** stop met instanties zoeken. Identificeer de **klassen**
+> (een handvol) en maak elke klasse **mechanisch onmogelijk of automatisch
+> gevangen**. Dan vindt een volgende audit niets meer in die klasse, want CI
+> faalt al vóór de merge. "Elke bug in één keer vinden" kan niet; **"elke
+> terugkerende klasse sluiten" is eindig en meetbaar** — dit register is de teller.
+>
+> Regel: een audit-bevinding is pas écht klaar als de **KLASSE** is gesloten of
+> hier geregistreerd met het benodigde structurele werk. Niet alleen de instantie.
+
+## Hoe een klasse "gesloten" is
+
+| Sluiting | Betekenis | Kosten |
+|----------|-----------|--------|
+| **Contract-test** | Uniforme syntax → één test enumereert exhaustief over de codebase en faalt op elke nieuwe overtreder. | Laag |
+| **Chokepoint + ban** | Heterogene syntax → alle gevallen door één helper; lint/test verbiedt het patroon erbuiten. | Midden (refactor) |
+| **Onmogelijk-by-design** | Het type bug kan niet meer ontstaan (bv. accessor met compile-time naam i.p.v. magische index). | Midden/hoog |
+
+Een **enumeratie-test op heterogene syntax is GEEN sluiting** — hij mist gevallen
+(false negatives) en geeft vals vertrouwen. Eerlijk blijven.
+
+---
+
+## Het register
+
+| # | Klasse | Wortel-patroon | Instanties (deze + vorige rondes) | Sluiting | Status |
+|---|--------|----------------|-----------------------------------|----------|--------|
+| 1 | **Verkeerde sheet-kolom-index** | bare `data[i][N]` magische nummers; semantiek niet in de naam | EUVerkoop `[21]` vs `[7]` (F-TAX-130) · Mollie `[0]/[6]` vs `[1]/[12]` (F-PAY-130) · XAF accTp (F-ACC-009) | **Nodig:** `KOL.VF.btwNrKlant`-accessor uit `sheet-schemas.md` + ESLint-ban op bare numerieke sheet-index in `*.gs` die sheets lezen. Dan is een verkeerde kolom een naamfout (compile/lint), geen stille fiscale bug. | 🔴 OPEN — hoogste prioriteit (fiscaal geld) |
+| 2 | **Router-endpoint zonder rate-limit/quota-cap** | nieuwe `actie === 'x'` zonder `rateLimit_` | config · valideer · telemetry (F-SCALE-140, red-team 2×) | **GESLOTEN:** `contract-router-ratelimit.test.js` enumereert élke actie, eist rate-limit of allowlist-met-reden. | 🟢 CLOSED |
+| 3 | **Onbegrensde ScriptProperty-key-klasse** | `setProperty('prefix_' + id)` zonder cleanup → 500KB-cliff | dripuit_ (F-SCALE-143) · otp_/otp_ts_ (F-SCALE-142) · (eerder herinneringsStap_, mollie_) | **Nodig:** chokepoint `zetVluchtigeKey_(prefix, id, val, ttlDagen)` die de prefix + TTL centraal registreert en periodiek opruimt; test verbiedt raw `setProperty('x_' +`. Enumeratie-test alleen = vals vertrouwen. | 🟠 PARTIAL — per-instantie gefixt; klasse vereist chokepoint |
+| 4 | **Klant-mail zonder opt-out / gate** | nieuwe `MailApp.sendEmail` naar de klant zonder notificatie-gate | drips · BTW-deadline · hoge-uitgave (deze sessie) | **Nodig:** alle klant-notificaties via `stuurKlantNotificatie_()` die `emailNotificatiesAan_()` checkt; test verbiedt directe `MailApp.sendEmail` in klant-notificatie-context (allowlist: facturen/herinneringen naar derden). | 🟠 PARTIAL |
+| 5 | **Copy belooft niet-bestaande feature / verkeerd menupad / stale claim** | marketing/mail-tekst niet gekoppeld aan code-realiteit | read-only-deelflow (F-DOC-130/130b) · drip-ZIP + menupaden (F-VOICE-160) · Exact/Twinfield (F-VOICE-131) | **Nodig:** (a) menupad-strings genereren uit `Menu.gs` i.p.v. los typen; (b) claims-registry: elke feature-claim verwijst naar een code-capability-id. Nu: negatieve guards (`mega-audit-copy-fixes`, `audit-ronde3-waarheid-claims`). | 🟠 PARTIAL |
+| 6 | **Licentie/security-gate op het verkeerde signaal** | gate op `owner==user` of een raadbare default i.p.v. een echte secret/identiteit | eigenaar-bypass (F-RED-151) · drip-token (F-RED-152) | **Nodig:** review-checklist "elke bypass/gate → bind aan ADMIN_EMAILS of een geseede random secret, nooit aan owner/copy-eigenschappen". Per-instantie gefixt + test. | 🟠 PARTIAL |
+| 7 | **Jaar/tarief hardcoded** | jaargebonden constante zonder fallback-vlag | tarief-cliff (F-OND-024) · API-versies (BACKLOG-DURABILITY) | Tarief: gemitigeerd (laatst-bekend-jaar-fallback + `TARIEF_VEROUDERD`). API-versies: nog hardgepind. | 🟠 PARTIAL |
+| 8 | **Test borgt het verkeerde (vals-groen)** | test codeert het buggy gedrag of mist de echte seam | btw-classificatie r5b==0 · drip-uit source-regex · cleanup `%100`-gate | **Nodig:** elke BLOCKER/HOOG-fix krijgt een ratel-test die zónder de fix faalt (al protocol); + mutation-spot-checks op de fiscale kern. | 🟠 PARTIAL |
+
+---
+
+## De eindige roadmap naar "klassen dicht"
+
+In volgorde van geld/risico-impact:
+
+1. **Klasse 1 (sheet-kolom):** bouw `KOL`-accessor + ESLint-ban; migreer eerst de fiscale/betaal-bestanden (BTW, Boekingen, Verkoopfacturen, Inkoop, Mollie, EUVerkoop, XAF). **Grootste fiscale risico — eerst.**
+2. **Klasse 3 (onbegrensde keys):** `zetVluchtigeKey_`-chokepoint + cleanup-trigger + ban.
+3. **Klasse 4 (klant-mail-gate):** `stuurKlantNotificatie_`-chokepoint + ban.
+4. **Klasse 5 (copy↔code):** menupaden uit `Menu.gs` genereren + claims-registry.
+5. **Klassen 6/8:** review-checklist hard maken (zie `/audit` Stap 6).
+
+Pas als **alle 8 klassen op CLOSED** staan, is een mega-audit-herhaling
+zinvol-leeg: hij kan dan alleen nog een *nieuwe* klasse vinden (zeldzaam),
+niet opnieuw een oude. **Dát** is "100% af" in de enige vorm die echt bestaat.
+
+## Eerlijke grens
+Dit register sluit *bekende* klassen. Een volledig nieuwe klasse (een soort bug
+die we nog nooit zagen) kan nog steeds opduiken — daarvoor blijft één periodieke
+audit nuttig, maar dan als *klasse-ontdekker*, niet als instantie-jager. En geen
+enkele machine vervangt de jaarlijkse fiscale wetscheck of een echte klant.
