@@ -274,7 +274,17 @@ function getBelasting_() {
   // Belastingplan 2027 op Prinsjesdag) hebben placeholder:true gemarkeerd
   // en horen óók TARIEF_VEROUDERD-flag te triggeren. Was: alleen bij
   // ontbrekend jaar → stil-verkeerd risico voor heel 2027 als Sam stopt.
-  const isPlaceholderJaar = !!(BELASTING_PER_JAAR[jaar] && BELASTING_PER_JAAR[jaar].placeholder);
+  // F-TAX-340: de placeholder/bevestigd-status staat op BELASTING_META, NIET op
+  // BELASTING_PER_JAAR. Voorheen keek deze check alleen naar
+  // BELASTING_PER_JAAR[jaar].placeholder (= undefined) → 2027 rekende stil met
+  // preliminaire tarieven ZONDER verouderd-waarschuwing. Nu: een jaar telt als
+  // placeholder als z'n tarieven nog niet bevestigd zijn (bevestigd === null) of
+  // expliciet placeholder zijn — in BELASTING_META óf BELASTING_PER_JAAR.
+  const _meta = (typeof BELASTING_META === 'object' && BELASTING_META) ? BELASTING_META[jaar] : null;
+  const isPlaceholderJaar = !!(
+    (BELASTING_PER_JAAR[jaar] && BELASTING_PER_JAAR[jaar].placeholder) ||
+    (_meta && (_meta.placeholder || _meta.bevestigd === null))
+  );
   // Markeer dat klant een fallback OF placeholder ziet — UI moet expliciet waarschuwen.
   if ((!heeftJaarTarieven || isPlaceholderJaar) && tarieven && typeof tarieven === 'object') {
     tarieven.TARIEF_VEROUDERD = true;
