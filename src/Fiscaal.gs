@@ -270,24 +270,20 @@ function controleerSuppletieProactief_() {
   const verplicht = verschillen.filter(function(v) { return v.verplicht; });
   if (verplicht.length === 0) return;  // alle verschillen <€1.000 = mogen mee in volgende aangifte
 
-  const props = PropertiesService.getScriptProperties();
   const nuMs = Date.now();
-  const cooldownMs = 90 * 24 * 60 * 60 * 1000;  // 90 dgn
 
   const opnieuwTeMelden = verplicht.filter(function(v) {
-    const key = 'SUPPLETIE_GEMELD_' + v.periode;
-    const eerderRaw = props.getProperty(key);
-    if (eerderRaw) {
-      const eerder = parseInt(eerderRaw, 10);
-      if (eerder && (nuMs - eerder) < cooldownMs) return false;  // nog binnen 90d
-    }
-    return true;
+    // klasse 3: vluchtige TTL-key (90d) i.p.v. handmatige timestamp-cooldown.
+    // Key bestaat (niet verlopen) ⟺ nog binnen cooldown → niet opnieuw melden.
+    return !leesVluchtigeKey_('SUPPLETIE_GEMELD_', v.periode);
   });
   if (opnieuwTeMelden.length === 0) return;
 
   // Markeer ALS GEMELD vóór mail-poging — voorkomt mail-storm bij retry-loop.
+  // TTL == cooldown (90d): de key verloopt precies wanneer hij irrelevant wordt
+  // en wordt door ruimVluchtigeKeysOp_ opgeruimd (geen ScriptProperty-cliff).
   opnieuwTeMelden.forEach(function(v) {
-    try { props.setProperty('SUPPLETIE_GEMELD_' + v.periode, String(nuMs)); } catch (_) {}
+    try { zetVluchtigeKey_('SUPPLETIE_GEMELD_', v.periode, nuMs, 90); } catch (_) {}
   });
 
   // Audit-log + klant-melding via toast + email

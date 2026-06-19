@@ -1611,6 +1611,88 @@ function clearCheckpoint_(taak) {
   PropertiesService.getScriptProperties().deleteProperty('CKPT_' + taak);
 }
 
+// ─────────────────────────────────────────────
+//  VLUCHTIGE SCRIPTPROPERTY-KEYS — chokepoint (bug-klasse 3)
+// ─────────────────────────────────────────────
+//
+// Dynamische keys (`prefix_<id>`) zonder opruiming vullen ScriptProperties
+// (limiet: 500KB totaal, 9KB per key) → in een klant-kopie die jaren draait
+// leidt dat tot stille schrijf-fouten (de "500KB-cliff"). Élke TTL-gebonden
+// (vluchtige) key MOET via deze helpers: de waarde wordt met een verloopdatum
+// opgeslagen en de prefix in `VLUCHTIGE_PREFIXES` geregistreerd, zodat een
+// dagelijkse sweep (`ruimVluchtigeKeysOp_`) verlopen keys verwijdert — óók als
+// ze nooit meer gelezen worden. Permanente/gebonden keys (bv. opt-out,
+// vaste taaknamen) horen hier NIET en staan met reden op de allowlist in
+// `tests/unit/contract-vluchtige-keys.test.js`.
+//
+// eslint-disable-next-line no-unused-vars
+const VLUCHTIGE_PREFIXES = Object.freeze([
+  'SUPPLETIE_GEMELD_',   // BTW-suppletie-cooldown per periode (TTL = cooldown)
+]);
+
+/**
+ * Schrijf een vluchtige key met TTL. De waarde wordt verpakt als {v, exp}.
+ * @param {string} prefix   bv. 'SUPPLETIE_GEMELD_' (moet in VLUCHTIGE_PREFIXES)
+ * @param {string} id       het dynamische deel (bv. periode)
+ * @param {*}      waarde   JSON-serialiseerbare waarde
+ * @param {number} ttlDagen levensduur in dagen
+ */
+function zetVluchtigeKey_(prefix, id, waarde, ttlDagen) {
+  const exp = Date.now() + (ttlDagen * 86400000);
+  PropertiesService.getScriptProperties()
+    .setProperty(prefix + id, JSON.stringify({ v: waarde, exp: exp }));
+}
+
+/**
+ * Lees een vluchtige key. Verlopen? → verwijder 'm (lazy expiry) en geef null.
+ * @returns {*} de bewaarde waarde, of null als afwezig/verlopen/corrupt.
+ */
+function leesVluchtigeKey_(prefix, id) {
+  const props = PropertiesService.getScriptProperties();
+  const raw = props.getProperty(prefix + id);
+  if (!raw) return null;
+  let o;
+  try { o = JSON.parse(raw); } catch (_) { return null; }
+  if (!o || typeof o.exp !== 'number') return null;
+  if (Date.now() > o.exp) {
+    try { props.deleteProperty(prefix + id); } catch (_) {}
+    return null;
+  }
+  return o.v;
+}
+
+/**
+ * Verwijder een vluchtige key expliciet (bv. bij vroegtijdige voltooiing).
+ */
+function wisVluchtigeKey_(prefix, id) {
+  try { PropertiesService.getScriptProperties().deleteProperty(prefix + id); } catch (_) {}
+}
+
+/**
+ * Dagelijkse sweep: verwijder ALLE verlopen vluchtige keys. Fail-safe — mag
+ * dagelijkseTaken nooit breken. Retourneert het aantal verwijderde keys.
+ */
+function ruimVluchtigeKeysOp_() {
+  const props = PropertiesService.getScriptProperties();
+  let alle;
+  try { alle = props.getProperties(); } catch (_) { return 0; }
+  const nu = Date.now();
+  let opgeruimd = 0;
+  Object.keys(alle).forEach(function (key) {
+    let isVluchtig = false;
+    for (let p = 0; p < VLUCHTIGE_PREFIXES.length; p++) {
+      if (key.indexOf(VLUCHTIGE_PREFIXES[p]) === 0) { isVluchtig = true; break; }
+    }
+    if (!isVluchtig) return;
+    let o;
+    try { o = JSON.parse(alle[key]); } catch (_) { return; }
+    if (o && typeof o.exp === 'number' && nu > o.exp) {
+      try { props.deleteProperty(key); opgeruimd++; } catch (_) {}
+    }
+  });
+  return opgeruimd;
+}
+
 /**
  * Wrapper voor lange operatie met checkpoint-recovery. Bij time-out kan
  * een time-driven trigger deze functie aanroepen met dezelfde taak-naam

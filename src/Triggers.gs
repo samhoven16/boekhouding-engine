@@ -1796,6 +1796,13 @@ function dagelijkseTaken() {
     } catch (_) { /* fail-safe — cleanup mag dagelijkseTaken nooit breken */ }
   });
 
+  // Bug-klasse 3: generieke sweep van verlopen vluchtige ScriptProperty-keys
+  // (SUPPLETIE_GEMELD_ e.a. via VLUCHTIGE_PREFIXES) — voorkomt de 500KB-cliff
+  // ongeacht of de keys ooit nog gelezen worden.
+  _runTaak_('ruimVluchtigeKeys', function() {
+    try { if (typeof ruimVluchtigeKeysOp_ === 'function') ruimVluchtigeKeysOp_(); } catch (_) {}
+  });
+
   // SelfHeal trigger-check: ALLERLAATSTE step in dagelijkseTaken — beperkt
   // blast-radius als sanitize-recreate halverwege faalt op ScriptApp-quota.
   // Alle nuttige work is dan al gedaan. Throttle 24u via SelfHeal.gs.
