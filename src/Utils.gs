@@ -121,10 +121,16 @@ function maandNaam_(maandNr) {
 // ─────────────────────────────────────────────
 
 /**
- * Rondt een bedrag af op 2 decimalen (bankiersmethode)
+ * Rondt een bedrag rekenkundig af op 2 decimalen: half-up, SYMMETRISCH
+ * (weg-van-nul, ook bij negatieve bedragen). NB: dit is GEEN bankiersmethode
+ * (half-even) — rekenkundig half-up is precies wat de Belastingdienst
+ * voorschrijft. De symmetrie voorkomt dat `Math.round(-0,5)=0` een cent schept
+ * of verliest bij negatieve bedragen (creditnota/storno).
  */
 function rondBedrag_(bedrag) {
-  return Math.round((parseFloat(bedrag) || 0) * 100) / 100;
+  const n = parseFloat(bedrag) || 0;
+  const cents = Math.round(Math.abs(n) * 100);
+  return (n < 0 ? -cents : cents) / 100;
 }
 
 /**
@@ -138,7 +144,8 @@ function rondBedrag_(bedrag) {
  *   formatBedrag_(0)        → "€ 0,00"
  */
 function formatBedrag_(bedrag) {
-  const b = parseFloat(bedrag) || 0;
+  // Rond + ruim -0 op: rondBedrag_(-0.002) = -0 -> `|| 0` -> 0 -> geen "-EUR 0,00".
+  const b = rondBedrag_(parseFloat(bedrag) || 0) || 0;
   const prefix = b < 0 ? '-€ ' : '€ ';
   return prefix + Math.abs(b).toLocaleString('nl-NL', {
     minimumFractionDigits: 2,
@@ -149,17 +156,38 @@ function formatBedrag_(bedrag) {
 /**
  * Parseert een bedrag uit een string (verwerkt comma's, punten, €-teken)
  */
+/**
+ * Positie-bewuste kern voor bedrag-parsing — DE enige plek waar de NL/US-
+ * separatorlogica leeft (klasse-1 chokepoint tegen format-parse-drift).
+ *
+ * Regel (geld = max 2 decimalen): de LAATSTE separator (`.` of `,`) is de
+ * decimaal ALS er 1-2 cijfers op volgen; alle andere separators zijn duizendtal.
+ * Volgen er ≥3 cijfers, dan is het géén decimaal maar duizendtal ("1.000" =
+ * 1000, NL-conventie). Lost NL ("1.234,56") én US ("1,234.56") correct op;
+ * voorheen mangelde de regex "1,234.56" → 1,23 en stripte "0.999" inconsistent.
+ *
+ * @returns {number} getal, of NaN bij onparsbaar (caller kiest 0-of-throw).
+ */
+function _parseBedragKern_(ruw) {
+  const s = String(ruw).replace(/[€\s]/g, '');
+  if (!s) return NaN;
+  const iKomma = s.lastIndexOf(',');
+  const iPunt  = s.lastIndexOf('.');
+  const iSep   = Math.max(iKomma, iPunt);
+  if (iSep === -1) return parseFloat(s);                     // geen separator
+  const naSep = s.slice(iSep + 1).replace(/\D/g, '');
+  if (naSep.length >= 1 && naSep.length <= 2) {
+    // laatste separator = decimaal; strip de overige separators uit het gehele deel
+    return parseFloat(s.slice(0, iSep).replace(/[.,]/g, '') + '.' + naSep);
+  }
+  return parseFloat(s.replace(/[.,]/g, ''));                 // ≥3 cijfers → alles duizendtal
+}
+
 function parseBedrag_(str) {
   if (!str && str !== 0) return 0;
   if (typeof str === 'number') return rondBedrag_(str);
-
-  const cleaned = String(str)
-    .replace(/[€\s]/g, '')
-    .replace(/\.(?=\d{3})/g, '')  // Verwijder duizendtalpunten
-    .replace(',', '.');           // Komma naar punt
-
-  const waarde = parseFloat(cleaned);
-  return isNaN(waarde) ? 0 : rondBedrag_(waarde);
+  const w = _parseBedragKern_(str);
+  return isNaN(w) ? 0 : rondBedrag_(w);
 }
 
 /**
@@ -187,11 +215,7 @@ function parseBedragStrict_(ruw, veldnaam) {
     if (!isFinite(ruw)) throw new Error(label + ' is geen getal (Infinity/NaN).');
     return rondBedrag_(ruw);
   }
-  const cleaned = String(ruw)
-    .replace(/[€\s]/g, '')
-    .replace(/\.(?=\d{3})/g, '')
-    .replace(',', '.');
-  const w = parseFloat(cleaned);
+  const w = _parseBedragKern_(ruw);
   if (isNaN(w) || !isFinite(w)) {
     throw new Error(label + " is geen geldig bedrag: '" + String(ruw).slice(0, 40) + "'. Gebruik cijfers, bv. 1234,56.");
   }

@@ -24,12 +24,32 @@
 
 ---
 
+## Ronde 2026-06-19 — precisie-audit (2 onafhankelijke assen)
+
+**Geverifieerd EXACT (met getallen-bewijs over miljoenen waarden):** journaalpost-
+balans (integer-cent, 1 cent onbalans = harde weigering) · factuur-decompositie
+excl/btw/incl (0 mismatches / 2M, round-trip exact) · BTW-aangifte ↔ grootboek
+(één en hetzelfde opgeslagen getal → geen €0,01-splitsing) · Σ factuurregels
+(volgorde-onafhankelijk) · pro-rata kosten- én BTW-aftrek (residu-patroon, geen
+cent zoek) · grootboek carry-forward over jaren · storno/creditnota (hergebruik
+opgeslagen cent, geen her-afronding) · UBL/PEPPOL-XML · afschrijving.
+
+**Gefixt deze ronde (`precisie-geld.test.js` + integer-cent-balans):** `parseBedrag_`
+US-formaat-bug (P1) · `rondBedrag_` symmetrie + docstring (P0) · `formatBedrag_`
+`-€ 0,00` · balans-controle nu integer-cent EXACT (`=== 0`, geen ε) — de
+jaarrekening sluit nu bewijsbaar op 0,00, niet "< €0,005".
+
+**Backlog (MIDDEL, geen huidige fout):** KIA-afbouw rekent met float `0.0756` →
+naar integer-breuk (756/10000); BTW-aangifte rondt op centen terwijl het
+OB-formulier op hele euro's rondt → beleidskeuze documenteren of euro-rondingslaag
+op de export. Chokepoint voor de overige parsers (parseEU/parseBankBedrag_).
+
 ## Het register
 
 | # | Berekening | file:functie | Model | Tests | Status |
 |---|-----------|--------------|-------|-------|--------|
-| **P0** | **`rondBedrag_` (het fundament)** | `Utils.gs:126` | `Math.round(n*100)/100` | — | 🔴 **RISICO** — `n*100` float-fout: `rondBedrag_(1.005)=1.00` i.p.v. 1,01; asymmetrisch bij negatief (`Math.round(-0.5)=0`). Raakt ÁLLE geld-berekeningen. **Eerst fixen + property-test.** |
-| P1 | `parseBedrag_` (string→getal) | `Utils.gs` | parse NL/EN-format | fuzz-factuur-payloads | RISICO — round-trip parse→format→parse exact? |
+| **P0** | **`rondBedrag_` (het fundament)** | `Utils.gs:126` | half-up symmetrisch | `precisie-geld.test.js` | 🟢 **EXACT (ronde 2026-06-19)** — nu `Math.sign·Math.round(|n|·100)` → symmetrisch (geen cent-schepping bij negatief); docstring gecorrigeerd (half-up = Belastingdienst-conform, géén bankiersmethode). `1.005→1.00` is de float-repr-realiteit (1.00499…), consistent met `toFixed` — geen bug. |
+| P1 | `parseBedrag_` / `parseBedragStrict_` | `Utils.gs:_parseBedragKern_` | positie-bewust (laatste sep, ≤2 cijfers=decimaal) | `precisie-geld.test.js` | 🟢 **EXACT (ronde 2026-06-19)** — US-formaat `"1,234.56"`→1234,56 (was 1,23, eerste-komma-bug) + dot-decimaal gefixt; NL-duizendtal `"1.000"`→1000 behouden (gepind). Chokepoint voor klasse 1. (parseEU/parseBankBedrag_ nog apart — backlog.) |
 | 1 | BTW-decompositie (excl/btw/incl) | `BTW.gs` berekenBtw | rate×bedrag→rond | btw-export, btw-classificatie | RISICO — afrond-moment + 21%/9%-float |
 | 2 | BTW-aangifte rubrieken (r1a…r5g) | `BTW.gs:berekenBtwAangifte_` | Σ + pro-rata | property (formeel-bewijs I₅) · golden | RISICO — Σ in euro-float over een jaar; rubriek-sommen |
 | 3 | Pro-rata BTW-aftrek | `BTW.gs:349` | breuk × r5b | — | RISICO — float-breuk × bedrag |

@@ -399,33 +399,38 @@ function controleerBalansStrikt_() {
     if (!gb) return { check: 'Balans (strikt)', status: 'INFO', bericht: 'Grootboekschema niet gevonden.' };
 
     const data = gb.getDataRange().getValues();
-    let totaalActiva = 0;
-    let totaalPassiva = 0;
+    // Som in GEHELE CENTEN, niet in euro-float: de jaarrekening-balans moet
+    // bewijsbaar EXACT 0 zijn ("0,000000"), niet "< €0,005". Saldi zijn al op de
+    // cent afgerond, dus Math.round(saldo*100) is exact — geen IEEE754-naad meer.
+    let activaCenten = 0;
+    let passivaCenten = 0;
     for (let i = 1; i < data.length; i++) {
       // FIX F-ACC-001: balans-side zit in kolom [2] (type = Actief/Passief),
       // niet in [4] (bw = Balans/W&V). Oude code maakte deze strikte check
       // een no-op (altijd €0=€0). Spiegelt controleerBalans_.
       const type = String(data[i][2] || '');
       const bw = String(data[i][4] || '');
-      const saldo = parseFloat(data[i][5]) || 0;
+      const saldoCenten = Math.round((parseFloat(data[i][5]) || 0) * 100);
       if (bw !== 'Balans') continue;
-      if (type === 'Actief')  totaalActiva  += saldo;
-      if (type === 'Passief') totaalPassiva += saldo;
+      if (type === 'Actief')  activaCenten  += saldoCenten;
+      if (type === 'Passief') passivaCenten += saldoCenten;
     }
-    const verschil = Math.abs(totaalActiva - totaalPassiva);
+    const totaalActiva = activaCenten / 100;
+    const totaalPassiva = passivaCenten / 100;
+    const verschil = Math.abs(activaCenten - passivaCenten) / 100;
 
-    if (verschil < 0.005) {
+    if (activaCenten === passivaCenten) {   // EXACT op de cent — geen epsilon
       return {
         check: 'Balans (strikt — jaarrekening)',
         status: 'OK',
-        bericht: `Activa en passiva sluiten exact (${formatBedrag_(totaalActiva)}).`,
+        bericht: `Activa en passiva sluiten EXACT op de cent (${formatBedrag_(totaalActiva)}).`,
       };
     }
     return {
       check: 'Balans (strikt — jaarrekening)',
       status: 'KRITIEK',
       bericht: `Verschil ${formatBedrag_(verschil)} tussen activa (${formatBedrag_(totaalActiva)}) ` +
-               `en passiva (${formatBedrag_(totaalPassiva)}). Voor jaarrekening MOET dit < €0,005 zijn. ` +
+               `en passiva (${formatBedrag_(totaalPassiva)}). Voor de jaarrekening MOET dit exact €0,00 (op de cent) zijn. ` +
                `Loop de journaalposten van december na — er staat ergens een afgerond bedrag scheef. ` +
                `Tip: Boekhoudbaar → Geavanceerd → Saldi herberekenen.`,
     };
