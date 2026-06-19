@@ -109,7 +109,10 @@ describe('CONTRACT — gemigreerde bestanden bevatten geen literal sheet-kolom-i
   // matcht de echte bug-shape: een `]` direct gevolgd door `[<getal>]`.
   // (Een named accessor `data[i][KOL.VF.datum]` matcht NIET — kolom is benoemd.)
   // Breidt uit naarmate meer bestanden migreren.
-  const GEMIGREERD = ['src/EUVerkoop.gs', 'src/Mollie.gs', 'src/BTW.gs', 'src/Dashboard.gs'];
+  const GEMIGREERD = [
+    'src/EUVerkoop.gs', 'src/Mollie.gs', 'src/BTW.gs', 'src/Dashboard.gs',
+    'src/Verkoopfacturen.gs', 'src/Inkoopfacturen.gs', 'src/Rapportages.gs',
+  ];
   const LITERAL_KOLOM = /\]\s*\[\s*\d+\s*\]/g;
   GEMIGREERD.forEach((f) => {
     test(`${f}: geen literal [..][<getal>] sheet-kolom-index`, () => {
