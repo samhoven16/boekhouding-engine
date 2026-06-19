@@ -1164,7 +1164,7 @@ function stuurMailMetDlq_(ontvanger, onderwerp, tekst) {
   if (!ontvanger) return false;
   if (typeof isGeldigEmail_ === 'function' && !isGeldigEmail_(ontvanger)) return false;
   try {
-    MailApp.sendEmail(ontvanger, onderwerp, tekst);
+    MailApp.sendEmail(ontvanger, onderwerp, tekst);  // klant-mail-ok: laag-niveau DLQ-sender; de aanroeper bepaalt de gate
     return true;
   } catch (mailErr) {
     try {

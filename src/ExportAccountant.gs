@@ -198,7 +198,7 @@ function verstuurSamenvattingAccountant(emailAccountant, persoonlijkBericht) {
   const jaar    = getBoekjaar_();
   const kg      = berekenKengetallen_(ss);
 
-  MailApp.sendEmail(emailAccountant, `Financieel overzicht ${bedrijf} — ${jaar}`, '', {
+  MailApp.sendEmail(emailAccountant, `Financieel overzicht ${bedrijf} — ${jaar}`, '', {  // klant-mail-ok: door gebruiker getriggerde accountant-export
     htmlBody: `
       <html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:600px;color:#1A1A1A;margin:0;padding:0;background:#F7F9FC">
         <div style="background:#0D1B4E;padding:22px 24px;border-radius:10px 10px 0 0">
@@ -865,7 +865,7 @@ function mailMaandrapport() {
     }
 
     const opties = bijlagen.length > 0 ? { attachments: bijlagen, htmlBody: body.html } : { htmlBody: body.html };
-    MailApp.sendEmail(ontvangers.join(','), onderwerp, body.tekst, opties);
+    MailApp.sendEmail(ontvangers.join(','), onderwerp, body.tekst, opties);  // klant-mail-ok: door gebruiker getriggerde accountant-export
 
     schrijfAuditLog_('Maandrapport verzonden', `${maandNaam} ${jaar} → ${ontvangers.join(', ')}`);
     Logger.log('Maandrapport verstuurd naar: ' + ontvangers.join(', '));

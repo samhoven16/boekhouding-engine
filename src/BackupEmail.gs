@@ -169,7 +169,7 @@ function _verstuurBackupEmail_(opt) {
         'adres (bijv. ProtonMail, Fastmail). Dan blijft je administratie zelfs ' +
         'bereikbaar als je Google-account ooit wordt afgesloten.\n\n' +
         '— Boekhoudbaar';
-      MailApp.sendEmail({
+      MailApp.sendEmail({  // klant-mail-ok: backup naar eigenaar (data-bescherming; eigen trigger)
         to: adres,
         subject: onderwerp,
         body: body,
@@ -187,7 +187,7 @@ function _verstuurBackupEmail_(opt) {
         'Trigger: ' + triggerLabel + '\n\n' +
         'Sla dit bestand offline op (USB, externe schijf, niet-Google cloud) ' +
         'voor maximale redundantie.';
-      MailApp.sendEmail(adres, onderwerp + ' (download-link)', body);
+      MailApp.sendEmail(adres, onderwerp + ' (download-link)', body);  // klant-mail-ok: backup-download-link (data-bescherming)
     }
     try { safeAuditLog_('Backup-email verstuurd',
       'trigger=' + opt.trigger + ' bytes=' + bytes + ' adres=' + adres.slice(0, 3) + '***'); } catch (_) {}

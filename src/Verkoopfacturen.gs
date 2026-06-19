@@ -730,7 +730,7 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
     };
     if (eigenEmail) opties.cc = eigenEmail;
 
-    MailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
+    MailApp.sendEmail(klantEmail, onderwerp, tekst, opties);  // klant-mail-ok: factuur naar DERDE (klant) - kernfunctie, geen notificatie
     Logger.log(`Factuur ${factuurNummer} gemaild naar ${klantEmail}`);
     return true;
   } catch (err) {

@@ -169,7 +169,7 @@ function controleerEmailQuotaProactief_() {
     '— Boekhoudbaar';
 
   try {
-    MailApp.sendEmail(klantEmail, onderwerp, body);
+    MailApp.sendEmail(klantEmail, onderwerp, body);  // klant-mail-ok: operationele quota-waarschuwing (safety, invoicing hangt ervan af)
     props.setProperty(_EMAIL_QUOTA_WAARSCHUWING_PROP, sleutel);
     try { safeAuditLog_('EmailQuota waarschuwing', status.niveau + ' → ' + klantEmail); } catch (_) {}
   } catch (_) {

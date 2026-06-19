@@ -1125,7 +1125,7 @@ function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
     return;
   }
   try {
-    MailApp.sendEmail(ontvanger, onderwerp, body);
+    stuurKlantNotificatie_(ontvanger, onderwerp, body);
     schrijfAuditLog_('Hoge uitgave alert', `${leverancier} ${formatBedrag_(bedrag)} → ${ontvanger}`);
   } catch (e) {
     Logger.log('Hoge-uitgave alert niet verzonden: ' + e.message);
@@ -1541,6 +1541,33 @@ function emailNotificatiesAan_() {
     if (v === null || v === undefined || String(v).trim() === '') return true; // default aan
     return isJa_(String(v));
   } catch (_) { return true; }
+}
+
+/**
+ * CHOKEPOINT (bug-klasse 4) — ENIGE sanctie-route voor systeem-notificaties naar
+ * de EIGENAAR (de ZZP'er zelf): BTW-deadline, suppletie, KIA, bewaarplicht,
+ * hoge-uitgave, weekoverzicht, sheet-grootte enz. Respecteert de master-
+ * schakelaar `emailNotificatiesAan_()` zodat "uit" écht álles stopt — geen lek
+ * via een losse trigger of een vergeten `MailApp.sendEmail`.
+ *
+ * BELANGRIJK: zakelijke mail naar DERDEN (facturen, betalingsherinneringen aan
+ * debiteuren) loopt hier NIET langs en blijft altijd versturen — die hoort niet
+ * onder de notificatie-schakelaar.
+ *
+ * De ontvanger wordt door de aanroeper bepaald (geen recipient-wijziging), zodat
+ * dit puur een gate is bovenop de bestaande DLQ-verzendlaag.
+ *
+ * @returns {boolean} true als verstuurd, false als gate uit / ongeldig adres.
+ */
+function stuurKlantNotificatie_(ontvanger, onderwerp, tekst) {
+  if (!emailNotificatiesAan_()) return false;   // master-schakelaar
+  // Een falende notificatie mag de aanroeper (bv. dagelijkseTaken) nooit breken.
+  try {
+    if (typeof stuurMailMetDlq_ === 'function') return stuurMailMetDlq_(ontvanger, onderwerp, tekst);
+    if (!ontvanger) return false;
+    MailApp.sendEmail(ontvanger, onderwerp, tekst);  // klant-mail-ok: chokepoint-fallback (al gegate door stuurKlantNotificatie_)
+    return true;
+  } catch (_) { return false; }
 }
 
 /**
@@ -2044,7 +2071,7 @@ function stuurWeeklySamenvatting_() {
       safeAuditLog_('Weekly summary OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger);
       return;
     }
-    MailApp.sendEmail(ontvanger, onderwerp, body);
+    stuurKlantNotificatie_(ontvanger, onderwerp, body);
     schrijfAuditLog_('Weekly summary verzonden', `naar ${ontvanger} – omzet ${formatBedrag_(omzetWeek)}`);
   } catch (e) {
     Logger.log('stuurWeeklySamenvatting_ fout: ' + e.message);
@@ -2087,7 +2114,7 @@ function controleerSheetGrootte_(ss) {
   safeAuditLog_('Sheet-grootte waarschuwing', bericht);
   if (eigenEmail && isGeldigEmail_(eigenEmail)) {
     try {
-      MailApp.sendEmail(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
+      stuurKlantNotificatie_(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
         bericht + '\n\n— Boekhoudbaar' + (bedrijf ? ' (' + bedrijf + ')' : ''));
     } catch (_) {}
   }
@@ -2211,7 +2238,7 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
           opties.attachments = [DriveApp.getFileById(extractFileId_(pdfUrl)).getAs('application/pdf')];
         } catch (e) { /* PDF optioneel */ }
       }
-      MailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
+      MailApp.sendEmail(klantEmail, onderwerp, tekst, opties);  // klant-mail-ok: betalingsherinnering naar DERDE (debiteur), zakelijk
       props.setProperty(stapKey, String(volgendeStap));
       verwerkt++;  // tel alleen werkelijk verstuurde mails — voorkomt batch-skip bij scrolling
       Logger.log(`Herinnering stap ${volgendeStap}/3 verstuurd voor ${factuurnummer} naar ${klantEmail}`);
@@ -2402,7 +2429,7 @@ function controleerBtwDeadlines_() {
     if (dagenTot > 0 && dagenTot <= 14) {
       const kwLabel = 'Q' + d.kw + (d.suffix || '');
       try {
-        MailApp.sendEmail(email,
+        stuurKlantNotificatie_(email,
           `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
           `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
           `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
@@ -2420,7 +2447,7 @@ function stuurFoutEmail_(context, err) {
   try {
     const email = getInstelling_('Email rapporten naar');
     if (email && isGeldigEmail_(email)) {
-      MailApp.sendEmail(email,
+      MailApp.sendEmail(email,  // klant-mail-ok: fout-email naar eigenaar (safety, event-driven)
         `Fout in boekhoudprogramma: ${context}`,
         `Er is een fout opgetreden bij het verwerken van: ${context}\n\nFoutmelding: ${err.message}\n\nStack: ${err.stack}`
       );
@@ -2497,7 +2524,7 @@ function stuurBetalingsherinneringen() {
       continue;
     }
     try {
-      MailApp.sendEmail(klantEmail,
+      MailApp.sendEmail(klantEmail,  // klant-mail-ok: betalingsherinnering naar DERDE (debiteur)
         `Herinnering factuur ${fnr} · ${bedragStr}`,
         tekst,
         { htmlBody: htmlBody, name: bedrijf }

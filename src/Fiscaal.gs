@@ -317,11 +317,9 @@ function controleerSuppletieProactief_() {
       // V8: via stuurMailMetDlq_ — bij MailApp-quota-fail komt het in de DLQ
       // en wordt automatisch opnieuw geprobeerd. Stille verdwijning van een
       // suppletie-melding zou de boete-vrije 8-weken-termijn kunnen kosten.
-      if (typeof stuurMailMetDlq_ === 'function') {
-        stuurMailMetDlq_(ontvanger, '🔄 Suppletie BTW verplicht — actie binnen 8 weken', body);
-      } else {
-        try { MailApp.sendEmail(ontvanger, '🔄 Suppletie BTW verplicht — actie binnen 8 weken', body); } catch (_) {}
-      }
+      // klasse 4: via notificatie-gate (detectie + audit-log + SUPPLETIE_GEMELD_-
+      // markering draaiden hierboven al; alleen het mailtje valt onder de gate).
+      stuurKlantNotificatie_(ontvanger, '🔄 Suppletie BTW verplicht — actie binnen 8 weken', body);
     }
   } catch (_) {}
 }

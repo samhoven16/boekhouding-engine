@@ -121,16 +121,9 @@ Met vriendelijke groet,
   // markeren zodat een succesvolle retry alsnog een fresh herinnering geeft
   // (de DLQ-retry zélf verstuurt; periodeKey wordt dan in volgende dag-loop
   // alsnog gemarkeerd via dezelfde flow).
-  const verzonden = (typeof stuurMailMetDlq_ === 'function')
-    ? stuurMailMetDlq_(email, onderwerp, body)
-    : (function() {
-        try { MailApp.sendEmail(email, onderwerp, body); return true; }
-        catch (e) {
-          Logger.log('BTW herinnering MISLUKT: ' + e.message);
-          safeAuditLog_('BTW reminder MISLUKT', e.message);
-          return false;
-        }
-      })();
+  // klasse 4: via de notificatie-gate (master-schakelaar). stuurKlantNotificatie_
+  // valt intern terug op de DLQ-laag, dus de retry-garantie blijft behouden.
+  const verzonden = stuurKlantNotificatie_(email, onderwerp, body);
   if (verzonden) {
     props.setProperty(verstuurdKey, periodeKey);
     Logger.log('BTW herinnering verstuurd naar ' + email);

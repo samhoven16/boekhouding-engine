@@ -411,9 +411,8 @@ function controleerBewaarplichtAlert_() {
     'verweer als je administratie niet meer compleet is.\n\n' +
     'Boekhoudbaar';
 
-  if (typeof stuurMailMetDlq_ === 'function') {
-    stuurMailMetDlq_(ontvanger, '📦 Bewaarplicht: archiveer je boekhouding nu', body);
-  }
+  // klasse 4: via notificatie-gate (detectie + audit-log draaiden hierboven al).
+  stuurKlantNotificatie_(ontvanger, '📦 Bewaarplicht: archiveer je boekhouding nu', body);
 }
 
 // ─────────────────────────────────────────────

@@ -1174,7 +1174,7 @@ function _verstuurAuditAnchorMail_(datum, entryCount, hash, prevHash) {
     'of persoonsgegevens in deze mail.';
 
   try {
-    MailApp.sendEmail({ to: ontvanger, subject: subject, body: body, noReply: true });
+    MailApp.sendEmail({ to: ontvanger, subject: subject, body: body, noReply: true });  // klant-mail-ok: audit-anchor integriteits-alert (zeldzaam)
     return true;
   } catch (mailErr) {
     Logger.log('Audit-anker-mail mislukt: ' + mailErr.message);

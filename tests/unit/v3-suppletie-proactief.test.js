@@ -52,7 +52,7 @@ describe('V3: detecteerSuppletieMogelijk_ werkt nu met geschreven snapshots', ()
       setProperty(k, v) { this._store[k] = v; },
       deleteProperty(k) { delete this._store[k]; },
     };
-    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Fiscaal.gs'], {
+    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Fiscaal.gs', 'Triggers.gs'], {
       PropertiesService: {
         getScriptProperties: () => props,
         getUserProperties: () => props,
@@ -112,7 +112,7 @@ describe('V3: controleerSuppletieProactief_ — proactief mailen + idempotent', 
     };
     const mailCalls = [];
     const auditCalls = [];
-    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Fiscaal.gs'], {
+    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Fiscaal.gs', 'Triggers.gs'], {
       PropertiesService: {
         getScriptProperties: () => props,
         getUserProperties: () => props,
@@ -217,7 +217,7 @@ describe('V3: controleerSuppletieProactief_ — proactief mailen + idempotent', 
       setProperty(k, v) { this._store[k] = v; },
       deleteProperty(k) { delete this._store[k]; },
     };
-    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Fiscaal.gs'], {
+    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Fiscaal.gs', 'Triggers.gs'], {
       PropertiesService: {
         getScriptProperties: () => props,
         getUserProperties: () => props,

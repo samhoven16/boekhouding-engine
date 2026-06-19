@@ -148,7 +148,7 @@ function _dlqHandler_(type, payload) {
     case 'EMAIL_HERINNERING':
       // Verwacht payload: { email, onderwerp, tekst, opties }
       try {
-        MailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst, payload.opties || {});
+        MailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst, payload.opties || {});  // klant-mail-ok: DLQ-retry, replay van reeds-besloten bericht
         return true;
       } catch (_) { return false; }
 
@@ -156,7 +156,7 @@ function _dlqHandler_(type, payload) {
       // V8: proactieve checks (BTW-reminder/suppletie/KIA-misser/bewaarplicht)
       // gebruiken stuurMailMetDlq_ → bij MailApp-fail komt het hier terecht.
       try {
-        MailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst);
+        MailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst);  // klant-mail-ok: DLQ-retry, replay van reeds-besloten bericht
         return true;
       } catch (_) { return false; }
 

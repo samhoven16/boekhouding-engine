@@ -1892,9 +1892,8 @@ function controleerKiaMisserProactief_() {
     '31 december van dit jaar om KIA te claimen.\n\n' +
     'Boekhoudbaar';
 
-  if (typeof stuurMailMetDlq_ === 'function') {
-    stuurMailMetDlq_(ontvanger, '💰 KIA-aftrek mogelijk gemist (~€' + Math.round(kiaGeschat) + ')', body);
-  }
+  // klasse 4: via notificatie-gate (detectie + audit-log draaiden hierboven al).
+  stuurKlantNotificatie_(ontvanger, '💰 KIA-aftrek mogelijk gemist (~€' + Math.round(kiaGeschat) + ')', body);
 }
 
 // ─────────────────────────────────────────────
