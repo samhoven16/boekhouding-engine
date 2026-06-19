@@ -178,6 +178,21 @@ function berekenAfschrijvingCent_(saldo, pct, factor) {
 }
 
 /**
+ * Factuurregel-totaal = aantal × prijs, exact afgerond op centen (half-up), in
+ * INTEGER-centen i.p.v. via een float-product. `rondBedrag_(aantal * prijs)`
+ * week in ~3% van de gevallen 1 cent af (€0,25 × €19,90 = €4,975 → €4,98, niet
+ * €4,97) — en die regel-drift vloeit door naar factuurtotaal → BTW → aangifte.
+ * aantal tot 3 decimalen (milli), prijs een geldbedrag. (bug-klasse 9.)
+ */
+function regelTotaalCent_(aantal, prijs) {
+  const aMilli = Math.round((parseFloat(aantal) || 0) * 1000);   // aantal × 1000
+  const pCent = Math.round((parseFloat(prijs) || 0) * 100);      // prijs in centen
+  const N = aMilli * pCent;                                      // aantal×prijs×1e5; /1000 = cent
+  const cent = N >= 0 ? Math.floor((N + 500) / 1000) : -Math.floor((-N + 500) / 1000);
+  return cent / 100;
+}
+
+/**
  * Formatteert een bedrag als EUR-string in NL-standaard.
  * Gebruikt non-breaking space (U+00A0) tussen € en bedrag — voorkomt dat
  * "€ 1.234,56" over twee regels wordt afgebroken in HTML/PDF-render.

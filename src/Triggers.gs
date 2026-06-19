@@ -577,7 +577,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 
     if (aantal <= 0) { overgeslagenRegels.push(`Regel ${i} (${omschr}): aantal moet > 0 zijn`); continue; }
     if (prijs <= 0) { overgeslagenRegels.push(`Regel ${i} (${omschr}): prijs moet > €0 zijn`); continue; }
-    const totaal = rondBedrag_(aantal * prijs);
+    const totaal = regelTotaalCent_(aantal, prijs);
     regels.push({ omschr, aantal, prijs, totaal });
   }
 
@@ -1278,7 +1278,7 @@ function verwerkVerkoopfactuurFormulier(e) {
       const aantal = parseFloat(data[`Factuurregel ${i} – Aantal`] || '0');
       const prijs = parseBedrag_(data[`Factuurregel ${i} – Prijs per eenheid (excl. BTW)`] || '0');
       if (!omschr || aantal === 0) continue;
-      const regelBedrag = rondBedrag_(aantal * prijs);
+      const regelBedrag = regelTotaalCent_(aantal, prijs);
       regels.push({ omschr, aantal, prijs, totaal: regelBedrag });
       totalExcl += regelBedrag;
     }

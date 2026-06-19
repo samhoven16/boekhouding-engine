@@ -52,3 +52,23 @@ describe('klasse 9 — afschrijving exact (geen dubbel-float-drift)', () => {
     expect(ctx.berekenAfschrijvingCent_(1000, 0, 1)).toBe(0);
   });
 });
+
+describe('klasse 9 — regelTotaalCent_ (aantal × prijs) exact', () => {
+  const ctx2 = createGasRuntime(['Config.gs', 'Utils.gs']);
+  function trueLine(aantal, prijs) {
+    const aMilli = Math.round(aantal * 1000), pCent = Math.round(prijs * 100);
+    return Math.floor((aMilli * pCent + 500) / 1000) / 100;
+  }
+  test('€0,25 × €19,90 = €4,98 (float gaf €4,97)', () => {
+    expect(ctx2.regelTotaalCent_(0.25, 19.90)).toBe(4.98);
+  });
+  test('exact over een bereik van hoeveelheden × prijzen', () => {
+    for (const aq of [1, 2, 3, 5, 10]) {        // 0,25 .. 2,5 (kwart-stappen)
+      const aantal = aq / 4;
+      for (let pc = 1; pc <= 200000; pc += 311) {
+        const prijs = pc / 100;
+        expect(ctx2.regelTotaalCent_(aantal, prijs)).toBe(trueLine(aantal, prijs));
+      }
+    }
+  });
+});
