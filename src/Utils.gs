@@ -134,6 +134,26 @@ function rondBedrag_(bedrag) {
 }
 
 /**
+ * Exact "tarief × bedrag" → euro met cent-afronding (half-up), berekend in
+ * INTEGER-centen i.p.v. via een float-tarief. Tarief-floats als 0.0756 / 0.28 /
+ * 0.1270 zijn niet exact in IEEE-754 → `rondBedrag_(bedrag * tarief)` wijkt in
+ * duizenden gevallen één cent af van de wiskundig-exacte waarde. Hier leiden we
+ * de exacte breuk af (tarief × 10000 = heel getal) en ronden de teller exact.
+ * (bug-klasse 9 — geld-precisie.)
+ *
+ * @param {number} bedragEuro
+ * @param {number} tarief      bv. 0.0756 (= 7,56%)
+ * @returns {number} tarief × bedrag, exact afgerond op centen.
+ */
+function rondTariefCent_(bedragEuro, tarief) {
+  const bc = Math.round((parseFloat(bedragEuro) || 0) * 100);   // bedrag in centen
+  const e4 = Math.round((parseFloat(tarief) || 0) * 10000);     // tarief × 10000 (heel getal)
+  const N = e4 * bc;                                            // = tarief × bedrag × 1e6
+  const cent = N >= 0 ? Math.floor((N + 5000) / 10000) : -Math.floor((-N + 5000) / 10000);
+  return cent / 100;
+}
+
+/**
  * Formatteert een bedrag als EUR-string in NL-standaard.
  * Gebruikt non-breaking space (U+00A0) tussen € en bedrag — voorkomt dat
  * "€ 1.234,56" over twee regels wordt afgebroken in HTML/PDF-render.

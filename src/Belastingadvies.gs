@@ -622,19 +622,18 @@ function voegBelastingOverridesToeAanInstellingen_() {
 function berekenKiaAftrek_(investering, B) {
   const inv = parseFloat(investering) || 0;
   if (inv < B.KIA_MIN || inv > B.KIA_MAX) return 0;
-  if (inv <= B.KIA_VAST_VAN)         return rondBedrag_(inv * B.KIA_PCT);
-  if (inv <= B.KIA_AFBOUW_START)     return rondBedrag_(B.KIA_VAST_BEDRAG);
-  // Afbouwzone: vast bedrag − afbouwpct × overschrijding.
-  // klasse 9 (precisie): 0.0756 is niet exact in IEEE-754 → 275 cent-afwijkingen
-  // in de afbouwzone (bv. overschrijding €27.587,50 gaf €17.986,38 i.p.v. de
-  // juiste €17.986,39 — float onderschat de aftrek met 1 cent). Reken met de
-  // exacte breuk: tarief×10000 = heel getal (756), pas /10000 NA de
-  // vermenigvuldiging. De round-final-strategie (rondBedrag_) blijft identiek;
-  // alleen de representatie-drift verdwijnt.
-  const overschrijding = inv - B.KIA_AFBOUW_START;
-  const afbouwE4 = Math.round(B.KIA_AFBOUW_PCT * 10000);   // 0.0756 → 756 (exact)
-  const aftrek = B.KIA_VAST_BEDRAG - (afbouwE4 * overschrijding) / 10000;
-  return rondBedrag_(Math.max(0, aftrek));
+  // klasse 9 (precisie): tarief-floats (0.28 / 0.0756) zijn niet exact in
+  // IEEE-754 → `rondBedrag_(bedrag * tarief)` wijkt in ~2000 gevallen 1 cent af
+  // van de wiskundig-exacte waarde (bv. overschrijding €87,50 → €20.065,38
+  // i.p.v. €20.065,39). Reken daarom volledig in INTEGER-centen, half-up.
+  if (inv <= B.KIA_VAST_VAN)     return rondTariefCent_(inv, B.KIA_PCT);   // inv × 28%
+  if (inv <= B.KIA_AFBOUW_START) return rondBedrag_(B.KIA_VAST_BEDRAG);
+  // Afbouwzone: vast − 7,56% × overschrijding (round-final, exact integer-cent):
+  //   aftrek_cent = round( (vast_cent × 10000 − tariefE4 × overschr_cent) / 10000 )
+  const afbouwE4 = Math.round(B.KIA_AFBOUW_PCT * 10000);            // 0.0756 → 756
+  const oc = Math.round((inv - B.KIA_AFBOUW_START) * 100);          // overschrijding in centen
+  const N = Math.round(B.KIA_VAST_BEDRAG * 100) * 10000 - afbouwE4 * oc;
+  return (N > 0 ? Math.floor((N + 5000) / 10000) : 0) / 100;        // half-up, ≥ 0
 }
 
 /**
@@ -717,7 +716,8 @@ function berekenZvw_(winst, B) {
   const w = parseFloat(winst) || 0;
   if (w <= 0) return 0;
   const grondslag = Math.min(w, B.ZVW_MAX_INKOMEN || 75864);
-  return rondBedrag_(grondslag * (B.ZVW_PCT || 0.0526));
+  // klasse 9 (precisie): float-tarief → cent-drift; exact via integer-centen.
+  return rondTariefCent_(grondslag, (B.ZVW_PCT || 0.0526));
 }
 
 /**
@@ -1021,7 +1021,9 @@ function _berekenBelastingadviesRaw_(ss) {
   // klant onderbetaalde IB. Fix-audit 2026-06-12.
   if (isZzp && winst > 0) {
     const winstNaAftrekken = Math.max(0, winst - totaalAftrek);
-    const mkbAftrek = rondBedrag_(winstNaAftrekken * BELASTING.MKB_WINSTVRIJSTELLING);
+    // klasse 9 (precisie): 0.1270-float gaf 578 cent-afwijkingen (1 cent te laag,
+    // bv. €155 → €19,68 i.p.v. €19,69). Exact via integer-centen.
+    const mkbAftrek = rondTariefCent_(winstNaAftrekken, BELASTING.MKB_WINSTVRIJSTELLING);
     aftrekken.push({
       naam: `MKB-winstvrijstelling (${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}%)`,
       bedrag: mkbAftrek,

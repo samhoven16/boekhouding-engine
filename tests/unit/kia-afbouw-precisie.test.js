@@ -2,13 +2,14 @@
  * tests/unit/kia-afbouw-precisie.test.js
  *
  * RATEL (bug-klasse 9, precisie): de KIA-afbouw rekende met de float-literal
- * `0.0756`, die niet exact is in IEEE-754. In de afbouwzone gaf dat 275
- * cent-afwijkingen — de aftrek werd telkens €0,01 te LAAG berekend (de klant
- * kreeg minder aftrek dan wettelijk). Voorbeeld: investering €160.334,50 →
- * overschrijding €27.587,50 → €17.986,38 i.p.v. de juiste €17.986,39.
+ * `0.0756`. Float-tarieven zijn niet exact in IEEE-754 → de cent-afgeronde
+ * aftrek week in ~2000 gevallen 1 cent af van de wiskundig-exacte waarde.
+ * De definitieve fix rekent VOLLEDIG in integer-centen (half-up), wiskundig
+ * exact: aftrek_cent = round((vast_cent×10000 − tariefE4×overschr_cent)/10000).
  *
- * De fix gebruikt de exacte breuk (756/10000) met dezelfde round-final-strategie.
- * Deze test faalt op de oude float-berekening.
+ * Let op: een eerdere tussenfix (`756×overschr/10000`) was béter maar nóg niet
+ * exact — €87,50 overschrijding gaf €20.065,38 i.p.v. €20.065,39. Die waarde
+ * staat hieronder en faalt op zowel de originele float ÁLS de tussenfix.
  */
 'use strict';
 
@@ -25,6 +26,7 @@ describe('klasse 9 — KIA-afbouw exact (geen 0.0756-float-drift)', () => {
 
   // Bewezen pure-float-drift-gevallen (zelfde round-final): oud = exact − €0,01.
   const GEVALLEN = [
+    [132834.50, 20065.39],  // overschrijding €87,50 — faalt op float ÉN op de /10000-tussenfix
     [160334.5, 17986.39],
     [160959.5, 17939.14],
     [161584.5, 17891.89],
