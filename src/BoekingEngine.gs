@@ -989,6 +989,11 @@ function verifieerAuditChain_() {
   }
 }
 
+// Module-lokale kolom-accessor (_Audit_Anchor-tab; zie appendRow in
+// schrijfAuditAnchor_). Geen sheet-kolommen van JOURNAALPOSTEN — eigen layout.
+// eslint-disable-next-line no-unused-vars
+const ANCHOR_KOL = Object.freeze({ datum: 0, entryCount: 1, ketenHash: 2, vorigeHash: 3 });
+
 /**
  * Verifieer de continuïteit van de _Audit_Anchor-tab: elke rij z'n
  * 'Vorige-hash' (kolom 4) moet gelijk zijn aan de 'Keten-hash' (kolom 3)
@@ -1009,8 +1014,8 @@ function verifieerAuditAnchorSheet_(ssArg) {
     }
     const rijen = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
     for (let i = 1; i < rijen.length; i++) {
-      const vorigeHash = String(rijen[i - 1][2] || '');
-      const dezePrev = String(rijen[i][3] || '');
+      const vorigeHash = String(rijen[i - 1][ANCHOR_KOL.ketenHash] || '');
+      const dezePrev = String(rijen[i][ANCHOR_KOL.vorigeHash] || '');
       if (dezePrev !== vorigeHash) {
         return { ok: false, totaal: rijen.length, gebroken: i + 1,
           reden: 'Anchor-schakel gebroken op rij ' + (i + 2) + ' — rij verwijderd of gewijzigd' };

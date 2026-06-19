@@ -347,7 +347,7 @@ function exporteerAuditLogJson() {
   const events = [];
   const grens = Date.now() - 90 * 86400000;  // laatste 90 dagen
   for (let i = 1; i < data.length; i++) {
-    const ts = data[i][0] instanceof Date ? data[i][0].getTime() : 0;
+    const ts = data[i][KOL.AUDIT.tijdstip] instanceof Date ? data[i][KOL.AUDIT.tijdstip].getTime() : 0;
     if (ts < grens) continue;
     const event = {};
     headers.forEach(function(h, idx) {

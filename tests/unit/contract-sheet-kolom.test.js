@@ -47,6 +47,7 @@ describe('CONTRACT — KOL is intern consistent', () => {
   test('REL: 0..18 zonder duplicaat/gat', () => checkContig(KOL.REL, 'REL'));
   test('HK: 0..11 zonder duplicaat/gat', () => checkContig(KOL.HK, 'HK'));
   test('INST: 0..1 zonder duplicaat/gat', () => checkContig(KOL.INST, 'INST'));
+  test('AUDIT: 0..7 zonder duplicaat/gat', () => checkContig(KOL.AUDIT, 'AUDIT'));
 });
 
 describe('CONTRACT — KOL ⇄ sheet-schemas.md (kritieke velden)', () => {
@@ -119,10 +120,8 @@ describe('CONTRACT — GEEN literal sheet-kolom-index (omgekeerde ban, hele src/
   // automatisch onder de "moet schoon"-eis. Zo verschuift de teller alleen
   // de goede kant op en kan de lijst niet stilletjes verouderen.
   const LEGACY_TODO = new Set([
-    'BoekingEngine.gs', 'DLQ.gs', 'DataPortability.gs', 'Diagnostiek.gs',
     'FormeelBewijs.gs', 'GezondheidCheck.gs', 'Invariants.gs',
-    'Prive.gs', 'Setup.gs', 'SmartCategorisatie.gs',
-    'Triggers.gs', 'Utils.gs',
+    'Setup.gs', 'SmartCategorisatie.gs', 'Triggers.gs',
   ]);
 
   function hitsIn(file) {

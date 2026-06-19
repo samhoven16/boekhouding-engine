@@ -136,6 +136,17 @@ const KOL = Object.freeze({
     sleutel: 0,
     waarde: 1,
   }),
+  // AUDIT LOG (Setup.gs:1207; cross-cutting — Triggers/Utils/DataPortability)
+  AUDIT: Object.freeze({
+    tijdstip: 0,
+    gebruiker: 1,
+    tabblad: 2,
+    cel: 3,
+    oudeWaarde: 4,
+    nieuweWaarde: 5,
+    type: 6,
+    ketenhash: 7,
+  }),
   // INKOOPFACTUREN
   IF: Object.freeze({
     inkoopId: 0,
