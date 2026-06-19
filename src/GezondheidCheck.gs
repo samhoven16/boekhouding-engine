@@ -480,7 +480,10 @@ function controleerReferentiele_(ss) {
     if (ifSheet) {
       const ifData = ifSheet.getDataRange().getValues();
       for (let i = 1; i < ifData.length; i++) {
-        const levId = String(ifData[i][KOL.IF.factuurrefLeverancier] || '').trim();
+        // Referentiële integriteit op de RELATIE-ID (= leverancierId [5]), niet
+        // op de factuurref [4] (vrije tekst zoals "INV-2023-001"). Voorheen [4]
+        // → vrijwel elke inkoopfactuur vals geflagd als "verwijderde leverancier".
+        const levId = String(ifData[i][KOL.IF.leverancierId] || '').trim();
         if (levId && !relIds.has(levId)) {
           verweesdIf++;
           if (voorbeeldIf.length < 3) voorbeeldIf.push(String(ifData[i][KOL.IF.internNummer] || '?'));
