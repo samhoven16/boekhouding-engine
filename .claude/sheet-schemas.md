@@ -113,6 +113,9 @@
 [13] Type                    string     BOEKING_TYPE
 [14] Notities                string
 [15] Aangemaakt op           Date       new Date()
+[16] Status                  string     HITL: Concept/Gevalideerd/CORRUPT/GESTORNEERD (HitlValidatie.gs)
+[17] Gevalideerd door        string     HITL: email-stempel bij validatie
+[18] Gevalideerd op          Date       HITL: validatie-datum
 ```
 
 ---

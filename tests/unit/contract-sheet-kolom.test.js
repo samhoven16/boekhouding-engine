@@ -41,11 +41,19 @@ describe('CONTRACT — KOL is intern consistent', () => {
   }
   test('VF: 0..22 zonder duplicaat/gat', () => checkContig(KOL.VF, 'VF'));
   test('IF: 0..19 zonder duplicaat/gat', () => checkContig(KOL.IF, 'IF'));
+  test('JP: 0..18 zonder duplicaat/gat', () => checkContig(KOL.JP, 'JP'));
+  test('GB: 0..5 zonder duplicaat/gat', () => checkContig(KOL.GB, 'GB'));
+  test('BT: 0..14 zonder duplicaat/gat', () => checkContig(KOL.BT, 'BT'));
+  test('REL: 0..18 zonder duplicaat/gat', () => checkContig(KOL.REL, 'REL'));
 });
 
 describe('CONTRACT — KOL ⇄ sheet-schemas.md (kritieke velden)', () => {
   const VF = parseBlok('VERKOOPFACTUREN');
   const IF = parseBlok('INKOOPFACTUREN');
+  const JP = parseBlok('JOURNAALPOSTEN');
+  const GB = parseBlok('GROOTBOEKSCHEMA');
+  const BT = parseBlok('BANKTRANSACTIES');
+  const REL = parseBlok('RELATIES');
 
   // [KOL-veld, sheet, doc-trefwoord(en) die op die index moeten staan]
   const KRITIEK = [
@@ -63,6 +71,17 @@ describe('CONTRACT — KOL ⇄ sheet-schemas.md (kritieke velden)', () => {
     [KOL.IF.btwBedrag, IF, /BTW bedrag/i],
     [KOL.IF.status, IF, /Status/i],
     [KOL.IF.bijlageUrl, IF, /Bijlage/i],
+    [KOL.JP.bedrag, JP, /Bedrag/i],
+    [KOL.JP.btwBedrag, JP, /BTW bedrag/i],
+    [KOL.JP.debetRekening, JP, /Debet rekening/i],
+    [KOL.JP.creditRekening, JP, /Credit rekening/i],
+    [KOL.GB.balansWenv, GB, /Balans/i],
+    [KOL.GB.saldo, GB, /Saldo/i],
+    [KOL.BT.bedrag, BT, /Bedrag/i],
+    [KOL.BT.status, BT, /Status/i],
+    [KOL.REL.btwNummer, REL, /BTW-?nummer/i],
+    [KOL.REL.email, REL, /Email/i],
+    [KOL.REL.iban, REL, /IBAN/i],
   ];
 
   test('doc geparset (sanity)', () => {
