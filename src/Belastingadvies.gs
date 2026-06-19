@@ -571,7 +571,7 @@ function voegBelastingOverridesToeAanInstellingen_() {
   const MARKER = 'BELASTING-TARIEVEN (aanpasbaar bij Prinsjesdag-update)';
   const data = sheet.getDataRange().getValues();
   for (let i = 0; i < data.length; i++) {
-    if (String(data[i][0]).indexOf(MARKER) === 0) return;
+    if (String(data[i][KOL.INST.sleutel]).indexOf(MARKER) === 0) return;
   }
 
   const startRij = sheet.getLastRow() + 2;
@@ -1087,10 +1087,10 @@ function _berekenBelastingadviesRaw_(ss) {
   if (aovInJp && isZzp) {
     const jpData = aovInJp.getDataRange().getValues();
     for (let i = 1; i < jpData.length; i++) {
-      const omschrJp = String(jpData[i][2] || '').toLowerCase();
+      const omschrJp = String(jpData[i][KOL.JP.omschrijving] || '').toLowerCase();
       if (/aov|arbeidsongeschikt/i.test(omschrJp)) {
         heeftAov = true;
-        aovBetaald += parseFloat(jpData[i][8]) || 0;
+        aovBetaald += parseFloat(jpData[i][KOL.JP.bedrag]) || 0;
       }
     }
   }
@@ -1819,23 +1819,23 @@ function controleerKiaMisserProactief_() {
   let totaalPotMisser = 0;
   const kandidaten = [];
   for (let i = 1; i < data.length; i++) {
-    if (!data[i][3]) continue;
-    const datum = parseDatum_(data[i][3]);  // [3] Factuurdatum
+    if (!data[i][KOL.IF.factuurdatumLeverancier]) continue;
+    const datum = parseDatum_(data[i][KOL.IF.factuurdatumLeverancier]);  // [3] Factuurdatum
     if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== huidigJaar) continue;
-    const status = String(data[i][12] || '');
+    const status = String(data[i][KOL.IF.status] || '');
     if (status === FACTUUR_STATUS.GECREDITEERD) continue;
-    const bedragExcl = parseFloat(data[i][8]) || 0;
+    const bedragExcl = parseFloat(data[i][KOL.IF.bedragExcl]) || 0;
     if (bedragExcl < grens) continue;
-    const kostenRek = String(data[i][15] || '').trim();
+    const kostenRek = String(data[i][KOL.IF.kostenrekening] || '').trim();
     // Skip als al op activa (0xxx) geboekt — dan is KIA al van toepassing
     if (!kostenRek || kostenRek.charAt(0) === '0') continue;
     totaalPotMisser += bedragExcl;
     kandidaten.push({
       datum:       Utilities.formatDate(datum, 'Europe/Amsterdam', 'yyyy-MM-dd'),
-      leverancier: String(data[i][6] || ''),
+      leverancier: String(data[i][KOL.IF.leveranciernaam] || ''),
       bedrag:      bedragExcl,
       rek:         kostenRek,
-      omschr:      String(data[i][7] || ''),
+      omschr:      String(data[i][KOL.IF.omschrijving] || ''),
     });
   }
 
