@@ -97,14 +97,24 @@ describe('CONTRACT — KOL ⇄ sheet-schemas.md (kritieke velden)', () => {
   });
 });
 
-describe('CONTRACT — gemigreerde bestanden bevatten geen bare data[i][<getal>] (VF/IF)', () => {
-  // Ban-lijst: bestanden die naar KOL zijn gemigreerd mogen geen magische
-  // sheet-index meer hebben. Breidt uit naarmate meer bestanden migreren.
-  const GEMIGREERD = ['src/EUVerkoop.gs', 'src/Mollie.gs', 'src/BTW.gs'];
+describe('CONTRACT — gemigreerde bestanden bevatten geen literal sheet-kolom-index', () => {
+  // Ban-lijst: bestanden die naar KOL zijn gemigreerd mogen GEEN magische
+  // kolom-index meer hebben. We bannen de WORTEL-vorm van de klasse:
+  // `<rij>[<idx>][<getal>]` — een tweede-dimensie-index als letterlijk getal,
+  // ongeacht variabelenaam of lus-variabele.
+  //
+  // De oude regex /data\[i\]\[\d+\]/ ving ALLEEN kleine-letter `data[i][N]` en
+  // miste daardoor `vfData[i][2]`, `ifData[i][3]`, `jrData[i][1]` (hoofdletter D)
+  // én elke andere lus-variabele dan `i` → vals vertrouwen. Deze bredere vorm
+  // matcht de echte bug-shape: een `]` direct gevolgd door `[<getal>]`.
+  // (Een named accessor `data[i][KOL.VF.datum]` matcht NIET — kolom is benoemd.)
+  // Breidt uit naarmate meer bestanden migreren.
+  const GEMIGREERD = ['src/EUVerkoop.gs', 'src/Mollie.gs', 'src/BTW.gs', 'src/Dashboard.gs'];
+  const LITERAL_KOLOM = /\]\s*\[\s*\d+\s*\]/g;
   GEMIGREERD.forEach((f) => {
-    test(`${f}: geen bare (_)data[i][<getal>]`, () => {
+    test(`${f}: geen literal [..][<getal>] sheet-kolom-index`, () => {
       const src = fs.readFileSync(path.resolve(__dirname, '../../', f), 'utf8');
-      const treffers = src.match(/data\[i\]\[\d+\]/g) || [];  // matcht ook _data[i][N]
+      const treffers = src.match(LITERAL_KOLOM) || [];
       expect(treffers).toEqual([]);
     });
   });
