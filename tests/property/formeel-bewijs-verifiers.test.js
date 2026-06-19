@@ -30,11 +30,12 @@ function mockSheet(rows) {
 function mockSs(sheets) {
   return { getSheetByName: (naam) => (sheets[naam] ? mockSheet(sheets[naam]) : null) };
 }
-// Journaalpost-rij: [0]=id [1]=datum [4]=debet [6]=credit [8]=bedrag [14]=aangemaakt [16]=status
+// Journaalpost-rij: [0]=id [1]=datum [4]=debet [6]=credit [8]=bedrag [15]=aangemaakt-op [16]=status
+// ([14]=Notities; aangemaakt-op staat op [15] — F-FB-340: I8 las voorheen abusievelijk [14].)
 function jpRow(o) {
-  const r = new Array(17).fill('');
+  const r = new Array(19).fill('');
   r[0] = o.id || 'J'; r[1] = o.datum || ''; r[4] = o.debet || ''; r[6] = o.credit || '';
-  r[8] = (o.bedrag != null ? o.bedrag : 0); r[14] = o.aangemaakt || ''; r[16] = o.status || '';
+  r[8] = (o.bedrag != null ? o.bedrag : 0); r[15] = o.aangemaakt || ''; r[16] = o.status || '';
   return r;
 }
 // Grootboek-rij: [0]=code [2]=type(Actief/Passief) [4]=bw(Balans/WenV) [5]=saldo

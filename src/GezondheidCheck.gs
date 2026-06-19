@@ -344,9 +344,9 @@ function controleerBalans_(ss) {
     let totaalPassiva = 0;
 
     for (let i = 1; i < gbData.length; i++) {
-      const type  = gbData[i][2];
-      const bw    = gbData[i][4];
-      const saldo = parseFloat(gbData[i][5]) || 0;
+      const type  = gbData[i][KOL.GB.type];
+      const bw    = gbData[i][KOL.GB.balansWenv];
+      const saldo = parseFloat(gbData[i][KOL.GB.saldo]) || 0;
       if (bw !== 'Balans') continue;
 
       if (type === 'Actief')  totaalActiva  += saldo;
@@ -408,9 +408,9 @@ function controleerBalansStrikt_() {
       // FIX F-ACC-001: balans-side zit in kolom [2] (type = Actief/Passief),
       // niet in [4] (bw = Balans/W&V). Oude code maakte deze strikte check
       // een no-op (altijd €0=€0). Spiegelt controleerBalans_.
-      const type = String(data[i][2] || '');
-      const bw = String(data[i][4] || '');
-      const saldoCenten = Math.round((parseFloat(data[i][5]) || 0) * 100);
+      const type = String(data[i][KOL.GB.type] || '');
+      const bw = String(data[i][KOL.GB.balansWenv] || '');
+      const saldoCenten = Math.round((parseFloat(data[i][KOL.GB.saldo]) || 0) * 100);
       if (bw !== 'Balans') continue;
       if (type === 'Actief')  activaCenten  += saldoCenten;
       if (type === 'Passief') passivaCenten += saldoCenten;
@@ -458,7 +458,7 @@ function controleerReferentiele_(ss) {
     const relData = relSheet.getDataRange().getValues();
     const relIds = new Set();
     for (let i = 1; i < relData.length; i++) {
-      const id = String(relData[i][0] || '').trim();
+      const id = String(relData[i][KOL.REL.relatieId] || '').trim();
       if (id) relIds.add(id);
     }
 
@@ -470,20 +470,20 @@ function controleerReferentiele_(ss) {
     if (vfSheet) {
       const vfData = vfSheet.getDataRange().getValues();
       for (let i = 1; i < vfData.length; i++) {
-        const klantId = String(vfData[i][4] || '').trim();
+        const klantId = String(vfData[i][KOL.VF.klantId] || '').trim();
         if (klantId && !relIds.has(klantId)) {
           verweesdVf++;
-          if (voorbeeldVf.length < 3) voorbeeldVf.push(String(vfData[i][1] || '?'));
+          if (voorbeeldVf.length < 3) voorbeeldVf.push(String(vfData[i][KOL.VF.factuurnummer] || '?'));
         }
       }
     }
     if (ifSheet) {
       const ifData = ifSheet.getDataRange().getValues();
       for (let i = 1; i < ifData.length; i++) {
-        const levId = String(ifData[i][4] || '').trim();
+        const levId = String(ifData[i][KOL.IF.factuurrefLeverancier] || '').trim();
         if (levId && !relIds.has(levId)) {
           verweesdIf++;
-          if (voorbeeldIf.length < 3) voorbeeldIf.push(String(ifData[i][1] || '?'));
+          if (voorbeeldIf.length < 3) voorbeeldIf.push(String(ifData[i][KOL.IF.internNummer] || '?'));
         }
       }
     }
@@ -531,10 +531,10 @@ function controleerBetalingsIntegriteit_(ss) {
     const jpData = jpSheet.getDataRange().getValues();
     const bankRefs = new Set();
     for (let i = 1; i < jpData.length; i++) {
-      const debet  = String(jpData[i][4] || '');
-      const credit = String(jpData[i][6] || '');
+      const debet  = String(jpData[i][KOL.JP.debetRekening] || '');
+      const credit = String(jpData[i][KOL.JP.creditRekening] || '');
       if (debet === '1200' && credit === '1100') {
-        const ref = String(jpData[i][9] || '').trim();
+        const ref = String(jpData[i][KOL.JP.referentie] || '').trim();
         if (ref) bankRefs.add(ref);
       }
     }
@@ -543,9 +543,9 @@ function controleerBetalingsIntegriteit_(ss) {
     const vfData = vfSheet.getDataRange().getValues();
     const ontbrekend = [];
     for (let i = 1; i < vfData.length; i++) {
-      const status = String(vfData[i][14] || '');
+      const status = String(vfData[i][KOL.VF.status] || '');
       if (status !== FACTUUR_STATUS.BETAALD) continue;
-      const factuurnr = String(vfData[i][1] || '').trim();
+      const factuurnr = String(vfData[i][KOL.VF.factuurnummer] || '').trim();
       if (factuurnr && !bankRefs.has(factuurnr)) {
         ontbrekend.push(factuurnr);
         if (ontbrekend.length > 10) break; // cap voor performance
@@ -587,10 +587,10 @@ function controleerJournaalposten_(ss) {
     const vandaag = new Date();
 
     for (let i = 1; i < data.length; i++) {
-      const debet  = String(data[i][4] || '');
-      const credit = String(data[i][6] || '');
-      const bedrag = parseFloat(data[i][8]) || 0;
-      const datum  = data[i][1] ? parseDatum_(data[i][1]) : null;
+      const debet  = String(data[i][KOL.JP.debetRekening] || '');
+      const credit = String(data[i][KOL.JP.creditRekening] || '');
+      const bedrag = parseFloat(data[i][KOL.JP.bedrag]) || 0;
+      const datum  = data[i][KOL.JP.datum] ? parseDatum_(data[i][KOL.JP.datum]) : null;
 
       // Zelfde rekening op debet én credit = fout
       if (debet && credit && debet === credit) zelfboekingen++;
@@ -659,15 +659,15 @@ function controleerVerkoopfacturen_(ss) {
     for (let i = 1; i < data.length; i++) {
       // Rijen die compleet leeg lijken (geen ID + geen klant + geen bedrag)
       // overslaan — voorkomt false positives op trailing-blanks na rijdelete.
-      const heeftId     = !!String(data[i][0] || '').trim();
-      const klant       = String(data[i][5] || '').trim();
-      const bedragRaw   = parseFloat(data[i][12]);
+      const heeftId     = !!String(data[i][KOL.VF.factuurId] || '').trim();
+      const klant       = String(data[i][KOL.VF.klantnaam] || '').trim();
+      const bedragRaw   = parseFloat(data[i][KOL.VF.bedragIncl]);
       if (!heeftId && !klant && (isNaN(bedragRaw) || bedragRaw === 0)) continue;
 
-      const nr      = String(data[i][1] || '').trim();
+      const nr      = String(data[i][KOL.VF.factuurnummer] || '').trim();
       const bedrag  = bedragRaw || 0;
-      const status  = String(data[i][14] || '');
-      const vervalD = data[i][3] ? parseDatum_(data[i][3]) : null;
+      const status  = String(data[i][KOL.VF.status] || '');
+      const vervalD = data[i][KOL.VF.vervaldatum] ? parseDatum_(data[i][KOL.VF.vervaldatum]) : null;
 
       // CYCLE-26: factuurnummer ontbreken = wettelijk probleem (NL OB-1968
       // art. 35 vereist een doorlopend nummer per factuur). Eerder werd dit
@@ -734,10 +734,10 @@ function controleerBtwConsistentie_(ss) {
     let btwMismatch = 0;
 
     for (let i = 1; i < vfData.length; i++) {
-      const exclBtw  = parseFloat(vfData[i][9])  || 0;
-      const btwLabel = String(vfData[i][10] || '');
-      const btwBedrag = parseFloat(vfData[i][11]) || 0;
-      const inclBtw  = parseFloat(vfData[i][12]) || 0;
+      const exclBtw  = parseFloat(vfData[i][KOL.VF.bedragExcl])  || 0;
+      const btwLabel = String(vfData[i][KOL.VF.btwLabel] || '');
+      const btwBedrag = parseFloat(vfData[i][KOL.VF.btwBedrag]) || 0;
+      const inclBtw  = parseFloat(vfData[i][KOL.VF.bedragIncl]) || 0;
 
       if (exclBtw <= 0) continue;
 

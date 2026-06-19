@@ -120,7 +120,7 @@ describe('CONTRACT — GEEN literal sheet-kolom-index (omgekeerde ban, hele src/
   // automatisch onder de "moet schoon"-eis. Zo verschuift de teller alleen
   // de goede kant op en kan de lijst niet stilletjes verouderen.
   const LEGACY_TODO = new Set([
-    'FormeelBewijs.gs', 'GezondheidCheck.gs', 'Triggers.gs',
+    'Triggers.gs',
   ]);
 
   function hitsIn(file) {

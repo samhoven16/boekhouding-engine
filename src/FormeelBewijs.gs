@@ -161,9 +161,9 @@ function _bewijs_I1_debitCreditBalans_(ss) {
   let totaalDebet = 0, totaalCredit = 0;
   // Kolommen: [4] debet rek, [6] credit rek, [8] bedrag, [16] status
   for (let i = 1; i < data.length; i++) {
-    const status = String(data[i][16] || '').toUpperCase();
+    const status = String(data[i][KOL.JP.status] || '').toUpperCase();
     if (status === 'CORRUPT' || status === 'GESTORNEERD') continue;
-    const bedrag = parseFloat(data[i][8]) || 0;
+    const bedrag = parseFloat(data[i][KOL.JP.bedrag]) || 0;
     totaalDebet += bedrag;   // debet-zijde van deze journaalpost
     totaalCredit += bedrag;  // credit-zijde van deze journaalpost (gelijk per I₁)
   }
@@ -192,7 +192,7 @@ function _bewijs_I2_grootboekConsistent_(ss, opt) {
   const verwacht = {};
   const jpData = jp.getDataRange().getValues();
   for (let i = 1; i < jpData.length; i++) {
-    const status = String(jpData[i][16] || '').toUpperCase();
+    const status = String(jpData[i][KOL.JP.status] || '').toUpperCase();
     if (status === 'CORRUPT' || status === 'GESTORNEERD') continue;
     // Issue #123 batch 3: opt-in strikte modus telt alléén COMMITTED
     // rijen mee. Bij default (legacy) werkt het bewijs zoals voorheen —
@@ -200,9 +200,9 @@ function _bewijs_I2_grootboekConsistent_(ss, opt) {
     if (opt.alleenCommitted &&
         typeof _journaalpostIsCommitted_ === 'function' &&
         !_journaalpostIsCommitted_(jpData[i])) continue;
-    const debet = String(jpData[i][4] || '');
-    const credit = String(jpData[i][6] || '');
-    const bedrag = parseFloat(jpData[i][8]) || 0;
+    const debet = String(jpData[i][KOL.JP.debetRekening] || '');
+    const credit = String(jpData[i][KOL.JP.creditRekening] || '');
+    const bedrag = parseFloat(jpData[i][KOL.JP.bedrag]) || 0;
     if (debet) verwacht[debet] = (verwacht[debet] || 0) + bedrag;
     if (credit) verwacht[credit] = (verwacht[credit] || 0) - bedrag;
   }
@@ -211,9 +211,9 @@ function _bewijs_I2_grootboekConsistent_(ss, opt) {
   const gbData = gb.getDataRange().getValues();
   const drift = [];
   for (let i = 1; i < gbData.length; i++) {
-    const code = String(gbData[i][0] || '').trim();
+    const code = String(gbData[i][KOL.GB.code] || '').trim();
     if (!code) continue;
-    const saldoGB = parseFloat(gbData[i][5]) || 0;
+    const saldoGB = parseFloat(gbData[i][KOL.GB.saldo]) || 0;
     const saldoVerwacht = verwacht[code] || 0;
     const verschil = Math.abs(saldoGB - saldoVerwacht);
     if (verschil > 0.005) {
@@ -245,9 +245,9 @@ function _bewijs_I3_balansWet_(ss) {
     // NIET in kolom [4] (bw = Balans/W&V). De oude code vergeleek [4] met
     // 'Activa'/'Passiva' — waarden die nergens bestaan — waardoor I₃ ALTIJD
     // slaagde (vals-groen). Spiegelt nu controleerBalans_ (GezondheidCheck.gs).
-    const type = String(data[i][2] || '');
-    const bw = String(data[i][4] || '');
-    const saldo = parseFloat(data[i][5]) || 0;
+    const type = String(data[i][KOL.GB.type] || '');
+    const bw = String(data[i][KOL.GB.balansWenv] || '');
+    const saldo = parseFloat(data[i][KOL.GB.saldo]) || 0;
     if (bw !== 'Balans') continue;            // alleen balansrekeningen
     if (type === 'Actief') activa += saldo;
     if (type === 'Passief') passiva += saldo; // Eigen vermogen heeft ook type 'Passief'
@@ -274,15 +274,15 @@ function _bewijs_I4_factuurDecompositie_(ss) {
   const fout = [];
   // Kolommen: [1] nr, [9] excl, [11] btw, [12] incl, [14] status
   for (let i = 1; i < data.length; i++) {
-    const status = String(data[i][14] || '').toLowerCase();
+    const status = String(data[i][KOL.VF.status] || '').toLowerCase();
     if (status === 'gestorneerd' || status === 'gecrediteerd') continue;
-    const excl = parseFloat(data[i][9]) || 0;
-    const btw = parseFloat(data[i][11]) || 0;
-    const incl = parseFloat(data[i][12]) || 0;
+    const excl = parseFloat(data[i][KOL.VF.bedragExcl]) || 0;
+    const btw = parseFloat(data[i][KOL.VF.btwBedrag]) || 0;
+    const incl = parseFloat(data[i][KOL.VF.bedragIncl]) || 0;
     if (excl === 0 && btw === 0 && incl === 0) continue;
     const verwacht = excl + btw;
     if (Math.abs(verwacht - incl) > 0.01) {
-      fout.push({ nr: data[i][1], excl: excl, btw: btw, incl: incl, verwacht: verwacht });
+      fout.push({ nr: data[i][KOL.VF.factuurnummer], excl: excl, btw: btw, incl: incl, verwacht: verwacht });
     }
   }
   if (fout.length > 0) {
@@ -342,7 +342,7 @@ function _bewijs_I6_factuurnummerUniek_(ss) {
   const gezien = {};
   const dubbel = [];
   for (let i = 1; i < data.length; i++) {
-    const nr = String(data[i][1] || '').trim();
+    const nr = String(data[i][KOL.VF.factuurnummer] || '').trim();
     if (!nr) continue;
     if (gezien[nr]) dubbel.push({ nr: nr, rijen: [gezien[nr], i + 1] });
     else gezien[nr] = i + 1;
@@ -369,8 +369,8 @@ function _bewijs_I7_factuurnummerMonotoon_(ss) {
   // Groepeer per boekjaar (jaar uit datum [2]), check binnen-jaar monotonie
   const perJaar = {};
   for (let i = 1; i < data.length; i++) {
-    const nrStr = String(data[i][1] || '').trim();
-    const datum = data[i][2];
+    const nrStr = String(data[i][KOL.VF.factuurnummer] || '').trim();
+    const datum = data[i][KOL.VF.datum];
     if (!nrStr || !(datum instanceof Date)) continue;
     // Extraheer numeriek deel (laatste serie cijfers)
     const m = nrStr.match(/(\d+)\s*$/);
@@ -425,18 +425,18 @@ function _bewijs_I8_afgeslotenPeriode_(ss) {
   const data = jp.getDataRange().getValues();
   const inbreuk = [];
   for (let i = 1; i < data.length; i++) {
-    const datum = data[i][1];
+    const datum = data[i][KOL.JP.datum];
     if (!(datum instanceof Date)) continue;
     for (let p = 0; p < periodes.length; p++) {
       const van = new Date(periodes[p].van);
       const tot = new Date(periodes[p].tot);
       if (datum >= van && datum <= tot) {
-        const aangemaakt = data[i][14];  // kolom: aangemaakt op
+        const aangemaakt = data[i][KOL.JP.aangemaaktOp];  // kolom: aangemaakt op
         // Inbreuk alleen als aangemaakt NA periode-sluiting
         if (aangemaakt instanceof Date && periodes[p].geslotenOp) {
           const gesloten = new Date(periodes[p].geslotenOp);
           if (aangemaakt > gesloten) {
-            inbreuk.push({ jpId: data[i][0], datum: datum, periode: periodes[p].label });
+            inbreuk.push({ jpId: data[i][KOL.JP.boekingId], datum: datum, periode: periodes[p].label });
           }
         }
         break;
@@ -470,7 +470,7 @@ function _bewijs_I9_leafOnlyBoekingen_(ss) {
   const codes = [];
   const gbData = gb.getDataRange().getValues();
   for (let i = 1; i < gbData.length; i++) {
-    const c = String(gbData[i][0] || '').trim();
+    const c = String(gbData[i][KOL.GB.code] || '').trim();
     if (c) codes.push(c);
   }
   const isParent = {};
@@ -489,10 +489,10 @@ function _bewijs_I9_leafOnlyBoekingen_(ss) {
   const jpData = jp.getDataRange().getValues();
   const fout = [];
   for (let i = 1; i < jpData.length; i++) {
-    const debet = String(jpData[i][4] || '').trim();
-    const credit = String(jpData[i][6] || '').trim();
-    if (isParent[debet]) fout.push({ jp: jpData[i][0], rek: debet, zijde: 'debet' });
-    if (isParent[credit]) fout.push({ jp: jpData[i][0], rek: credit, zijde: 'credit' });
+    const debet = String(jpData[i][KOL.JP.debetRekening] || '').trim();
+    const credit = String(jpData[i][KOL.JP.creditRekening] || '').trim();
+    if (isParent[debet]) fout.push({ jp: jpData[i][KOL.JP.boekingId], rek: debet, zijde: 'debet' });
+    if (isParent[credit]) fout.push({ jp: jpData[i][KOL.JP.boekingId], rek: credit, zijde: 'credit' });
   }
   if (fout.length > 0) {
     return Object.assign(meta, {

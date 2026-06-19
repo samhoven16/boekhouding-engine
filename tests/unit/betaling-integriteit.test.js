@@ -32,12 +32,13 @@ describe('controleerBetalingsIntegriteit_ (GezondheidCheck.gs)', () => {
     return r;
   }
 
-  // Journaalpost-rij: 4=debet, 6=credit, 9=ref
+  // Journaalpost-rij: 4=debet, 6=credit, 11=referentie (KOL.JP-schema).
+  // (Voorheen stond ref op [9]=BTW% — dat matchte de F-GC-341-bug; nu correct.)
   function jpRij(debet, credit, ref) {
-    const r = new Array(15).fill('');
+    const r = new Array(19).fill('');
     r[4] = debet;
     r[6] = credit;
-    r[9] = ref;
+    r[11] = ref;
     return r;
   }
 
