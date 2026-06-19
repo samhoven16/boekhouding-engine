@@ -121,7 +121,7 @@ describe('CONTRACT — GEEN literal sheet-kolom-index (omgekeerde ban, hele src/
     'BoekingEngine.gs', 'DLQ.gs', 'DataPortability.gs', 'Diagnostiek.gs',
     'DriveStructuur.gs', 'EmailDeliverability.gs', 'Engagement.gs', 'FormeelBewijs.gs',
     'GezondheidCheck.gs', 'HerhalendeKosten.gs', 'Invariants.gs', 'Jaarafsluiting.gs',
-    'MoneybirdImport.gs', 'Prive.gs', 'Setup.gs', 'SmartCategorisatie.gs',
+    'Prive.gs', 'Setup.gs', 'SmartCategorisatie.gs',
     'Suggesties.gs', 'Triggers.gs', 'Utils.gs',
   ]);
 
