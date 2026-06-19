@@ -22,15 +22,17 @@ describe('F-TAX-130 — EUVerkoop leest BTW-nr uit [7], niet [21]', () => {
     const s = eu.indexOf('function ' + naam);
     return eu.slice(s, eu.indexOf('\nfunction ', s + 1));
   };
-  test('controleerOssDrempel_ gebruikt data[i][7]', () => {
+  // Na de klasse-1-migratie leest EUVerkoop via de named accessor KOL.VF.btwNrKlant
+  // i.p.v. een magische index — een verkeerde kolom is nu een naamfout.
+  test('controleerOssDrempel_ leest het klant-BTW-nr via KOL.VF.btwNrKlant', () => {
     const b = fn('controleerOssDrempel_');
-    expect(b).toMatch(/btwNrKlant = String\(data\[i\]\[7\]/);
-    expect(b).not.toMatch(/btwNrKlant = String\(data\[i\]\[21\]/);
+    expect(b).toMatch(/btwNrKlant = String\(data\[i\]\[KOL\.VF\.btwNrKlant\]/);
+    expect(b).not.toMatch(/data\[i\]\[21\]/);
   });
-  test('genereerIcpRapport gebruikt data[i][7]', () => {
+  test('genereerIcpRapport leest het klant-BTW-nr via KOL.VF.btwNrKlant', () => {
     const b = fn('genereerIcpRapport');
-    expect(b).toMatch(/btwNrKlant = String\(data\[i\]\[7\]/);
-    expect(b).not.toMatch(/btwNrKlant = String\(data\[i\]\[21\]/);
+    expect(b).toMatch(/btwNrKlant = String\(data\[i\]\[KOL\.VF\.btwNrKlant\]/);
+    expect(b).not.toMatch(/data\[i\]\[21\]/);
   });
 });
 
