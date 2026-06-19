@@ -112,6 +112,7 @@ describe('CONTRACT — gemigreerde bestanden bevatten geen literal sheet-kolom-i
   const GEMIGREERD = [
     'src/EUVerkoop.gs', 'src/Mollie.gs', 'src/BTW.gs', 'src/Dashboard.gs',
     'src/Verkoopfacturen.gs', 'src/Inkoopfacturen.gs', 'src/Rapportages.gs',
+    'src/Boekingen.gs',
   ];
   const LITERAL_KOLOM = /\]\s*\[\s*\d+\s*\]/g;
   GEMIGREERD.forEach((f) => {
