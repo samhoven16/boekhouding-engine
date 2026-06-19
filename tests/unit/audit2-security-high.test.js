@@ -164,3 +164,23 @@ describe('Anti-regressie: bestaande security-controles blijven', () => {
     expect(matches.length).toBe(2);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// Audit-vondst (red-team): formule-injectie in bank-CSV-import
+// ─────────────────────────────────────────────────────────────
+describe('Fix — BankImport sanitiseert door-derden-bestuurbare bankvelden', () => {
+  const bankBron = fs.readFileSync(path.join(ROOT, 'src/BankImport.gs'), 'utf8');
+
+  test('omschr/tegenrekening/tegenpartij/referentie gaan door saniteer_', () => {
+    expect(bankBron).toMatch(/saniteer_\(t\.omschr\)/);
+    expect(bankBron).toMatch(/saniteer_\(t\.tegenrekening\)/);
+    expect(bankBron).toMatch(/saniteer_\(t\.tegenpartij\)/);
+    expect(bankBron).toMatch(/saniteer_\(t\.referentie\)/);
+  });
+
+  test('geen rauwe vrije-tekstvelden meer in de import-push', () => {
+    // de push-array mag de vrije-tekstvelden niet ongesaniteerd bevatten
+    expect(bankBron).not.toMatch(/^\s*t\.omschr,\s*$/m);
+    expect(bankBron).not.toMatch(/^\s*t\.tegenpartij,\s*$/m);
+  });
+});

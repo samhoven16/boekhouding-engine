@@ -361,17 +361,22 @@ function verwerkBankImport_(ss, transacties) {
       }
       const status = t.match ? 'Gekoppeld' : (grootboek ? 'Auto-gecategoriseerd' : 'Ongekoppeld');
 
-      // Push naar accumulator ipv appendRow (10× sneller bij volume)
+      // Push naar accumulator ipv appendRow (10× sneller bij volume).
+      // FIX (sibling van F-RED-304): de vrije-tekstvelden uit het bankafschrift
+      // (omschr/tegenrekening/tegenpartij/referentie) zijn door een DERDE (de
+      // betaler) bestuurbaar → saniteer_ blokkeert formule-injectie (=+-@) vóór
+      // ze als live cel in de sheet belanden en later via XLSX bij de accountant
+      // openen. MoneybirdImport doet dit al; BankImport was vergeten.
       teSchrijvenRijen.push([
         transactieId,
         t.datum,
-        t.omschr,
+        saniteer_(t.omschr),
         t.bedrag,
         t.bedrag > 0 ? 'Ontvangst' : 'Betaling',
         '1200',
-        t.tegenrekening,
-        t.tegenpartij,
-        t.referentie,
+        saniteer_(t.tegenrekening),
+        saniteer_(t.tegenpartij),
+        saniteer_(t.referentie),
         grootboek,
         '',
         gekoppeldFactuur,
