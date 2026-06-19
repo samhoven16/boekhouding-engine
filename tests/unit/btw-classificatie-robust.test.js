@@ -90,9 +90,11 @@ describe('berekenBtwAangifte_ — case-insensitive labels (regressie)', () => {
     expect(r.r5a).toBeCloseTo(210, 1);
   });
 
-  test('GECREDITEERD factuur met onbekend label → niet in onbekend-buckets (skip eerst)', () => {
+  test('gecrediteerd + creditnota met onbekend label → netto €0 in onbekend-omzet', () => {
+    // origineel (Gecrediteerd) + creditnota (negatief) tellen beide; netto 0.
     const ss = maakMockSs([
       vfRij(new Date('2026-02-01'), 500, 'mystery-label', 0, 'Gecrediteerd'),
+      vfRij(new Date('2026-02-02'), -500, 'mystery-label', 0, 'Betaald'),
     ]);
     const r = ctx.berekenBtwAangifte_(ss, VAN, TOT);
     expect(r._onbekendeOmzet || 0).toBe(0);

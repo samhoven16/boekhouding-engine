@@ -191,10 +191,12 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     // legacy-rijen zonder bedragsupdate geen dubbeltelling optreedt.
     if (String(vfData[i][KOL.VF.status] || '').toLowerCase() === 'gestorneerd') continue;
 
-    // Skip GECREDITEERD facturen — de creditnota-rij (negatieve grondslag)
-    // levert al de tegenboeking. Dubbele aftrek voorkomen bij periode-overschrijding.
-    const status = String(vfData[i][KOL.VF.status] || '');
-    if (status === FACTUUR_STATUS.GECREDITEERD) continue;
+    // Creditnota: maakCreditnota zet het origineel op 'Gecrediteerd' ÉN voegt
+    // een APARTE negatieve rij toe. We tellen BEIDE: origineel (+) en creditnota
+    // (−) vallen elk op hun eigen datum in hun eigen periode → netto 0 in
+    // dezelfde periode, en een correcte tegenboeking bij periode-overschrijding.
+    // (Voorheen werd het origineel geskipt → dubbele aftrek: skip + negatieve
+    // rij = −origineel i.p.v. 0 → onterechte BTW-teruggaaf.)
 
     const grondslag = parseFloat(vfData[i][KOL.VF.bedragExcl]) || 0;  // Excl. BTW
     const btwBedrag = parseFloat(vfData[i][KOL.VF.btwBedrag]) || 0;

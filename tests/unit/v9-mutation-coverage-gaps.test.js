@@ -22,7 +22,11 @@ const { createGasRuntime } = require('../__helpers__/gas-runtime');
 // ─────────────────────────────────────────────────────────
 //  BTW.gs — GECREDITEERD-skip + multi-jaar filter
 // ─────────────────────────────────────────────────────────
-describe('V9: berekenBtwAangifte_ MOET gecrediteerde facturen overslaan', () => {
+// NB: een creditnota = origineel op 'Gecrediteerd' ÉN een aparte NEGATIEVE rij
+// (maakCreditnota). De aangifte telt BEIDE (elk op z'n eigen datum/periode) →
+// netto 0 in dezelfde periode. (Voorheen werd het origineel geskipt → dubbele
+// aftrek; zie creditnota-aangifte-periode.test.js.)
+describe('V9: berekenBtwAangifte_ — creditnota (origineel + negatieve rij) telt netto correct', () => {
   let ctx;
   beforeAll(() => {
     ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'BTW.gs']);
@@ -43,20 +47,24 @@ describe('V9: berekenBtwAangifte_ MOET gecrediteerde facturen overslaan', () => 
   const VAN = new Date('2026-01-01');
   const TOT = new Date('2026-12-31');
 
-  test('Eén gewone + één GECREDITEERD → alleen gewone telt in r1a', () => {
+  test('gewone + (gecrediteerd origineel + creditnota) → netto alleen de gewone', () => {
     const ss = maakSs([
       vfRij(new Date('2026-02-15'), 1000, '21% (hoog)', 210, 'Verzonden'),
       vfRij(new Date('2026-03-10'), 5000, '21% (hoog)', 1050, 'Gecrediteerd'),
+      vfRij(new Date('2026-03-11'), -5000, '21% (hoog)', -1050, 'Betaald'),  // creditnota
     ]);
     const r = ctx.berekenBtwAangifte_(ss, VAN, TOT);
+    // €1.000 + (€5.000 − €5.000) = netto €1.000
     expect(r.r1a_grondslag).toBeCloseTo(1000, 1);
     expect(r.r1a_btw).toBeCloseTo(210, 1);
   });
 
-  test('Alle GECREDITEERD → 0 BTW, geen pro-rata of andere side-effects', () => {
+  test('Alle gecrediteerd (elk met creditnota) → netto 0 BTW, geen side-effects', () => {
     const ss = maakSs([
       vfRij(new Date('2026-02-15'), 1000, '21% (hoog)', 210, 'Gecrediteerd'),
+      vfRij(new Date('2026-02-16'), -1000, '21% (hoog)', -210, 'Betaald'),
       vfRij(new Date('2026-03-10'), 2000, '9% (laag)',  180, 'Gecrediteerd'),
+      vfRij(new Date('2026-03-11'), -2000, '9% (laag)',  -180, 'Betaald'),
     ]);
     const r = ctx.berekenBtwAangifte_(ss, VAN, TOT);
     expect(r.r1a_grondslag).toBe(0);
@@ -68,16 +76,18 @@ describe('V9: berekenBtwAangifte_ MOET gecrediteerde facturen overslaan', () => 
     return isFinite(a.r5a) && isFinite(a.saldo);
   }
 
-  test('Mix: 3 verzonden + 2 gecrediteerd → som van VERZONDEN', () => {
+  test('Mix: 3 actief + 2 gecrediteerd-paren → som van de ACTIEVE', () => {
     const ss = maakSs([
       vfRij(new Date('2026-02-01'), 1000, '21% (hoog)', 210, 'Verzonden'),
       vfRij(new Date('2026-02-02'), 1000, '21% (hoog)', 210, 'Gecrediteerd'),
+      vfRij(new Date('2026-02-02'), -1000, '21% (hoog)', -210, 'Betaald'),    // creditnota
       vfRij(new Date('2026-02-03'), 1000, '21% (hoog)', 210, 'Betaald'),
       vfRij(new Date('2026-02-04'), 1000, '21% (hoog)', 210, 'Gecrediteerd'),
+      vfRij(new Date('2026-02-04'), -1000, '21% (hoog)', -210, 'Betaald'),    // creditnota
       vfRij(new Date('2026-02-05'), 1000, '21% (hoog)', 210, 'Verzonden'),
     ]);
     const r = ctx.berekenBtwAangifte_(ss, VAN, TOT);
-    // 3 actief × €1.000 = €3.000 grondslag
+    // 3 actief × €1.000 = €3.000; 2 gecrediteerd-paren netto 0
     expect(r.r1a_grondslag).toBeCloseTo(3000, 1);
     expect(r.r1a_btw).toBeCloseTo(630, 1);
   });
