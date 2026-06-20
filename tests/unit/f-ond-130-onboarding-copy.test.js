@@ -46,3 +46,15 @@ describe('F-OND-130 — OTP-mail onderscheidbaar van order-mail', () => {
     expect(code).toMatch(/Je ' \+ productnm \+ ' is klaar — activeer nu/);
   });
 });
+
+describe('F-OND-141 — OTP-dialoog noemt de 15-min-vervaltijd (stap 2)', () => {
+  // Klant pauzeerde tussen mail en invoer → code verlopen → frustratie. De mail
+  // noemde 15 min wél, de dialoog niet. Nu staat het in de stap-2-banner.
+  const licentie = fs.readFileSync(path.resolve(__dirname, '../../src/Licentie.gs'), 'utf8');
+
+  test('stap-2-banner (code-invoer) noemt "15 minuten" geldig', () => {
+    const idx = licentie.indexOf('Stap 2: OTP');
+    const blok = licentie.slice(idx, idx + 600);
+    expect(blok).toMatch(/15 minuten/);
+  });
+});

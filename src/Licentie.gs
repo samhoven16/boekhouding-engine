@@ -452,7 +452,7 @@ function toonActivatieDialog_() {
 
       <!-- Stap 2: OTP -->
       <div class="stap" id="stap2">
-        <div class="banner"><strong>Code verstuurd.</strong> Check je inbox — en eventueel je spam-map.</div>
+        <div class="banner"><strong>Code verstuurd.</strong> Check je inbox — en eventueel je spam-map. De code is <strong>15 minuten</strong> geldig; vul 'm meteen in.</div>
         <label class="veld">Activeringscode (6 cijfers)</label>
         <input type="text" id="otp" placeholder="000000" maxlength="6"
                inputmode="numeric" autocomplete="one-time-code">

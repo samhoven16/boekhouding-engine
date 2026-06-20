@@ -579,6 +579,33 @@ function zetGeminiApiKey() {
   ui.alert('✅ Gemini API-key opgeslagen (versleuteld).', 'Vanaf nu leest de AI bij "Nieuwe boeking → Upload + AI" je bonnen automatisch uit.', ui.ButtonSet.OK);
 }
 
+/**
+ * F-DOC-161: vertaalt een Gemini-API-fout naar een NL, actuabele klantmelding.
+ * Het rauwe (Engelse) bericht is voor de klant onoplosbaar ("API key not valid",
+ * "Resource has been exhausted (e.g. check quota)"). Mapping op de canonieke
+ * status / HTTP-code (met message-substring als vangnet); onbekend → generieke
+ * handmatig-invoeren-hint. Elke tak eindigt op een actie die de klant zélf kan
+ * uitvoeren zonder Sam.
+ */
+function _geminiFoutNl_(err) {
+  const status = String((err && err.status) || '').toUpperCase();
+  const code = parseInt(err && err.code, 10);
+  const msg = String((err && err.message) || '').toLowerCase();
+  if (status === 'UNAUTHENTICATED' || code === 401 || msg.indexOf('api key') !== -1 || msg.indexOf('api-key') !== -1) {
+    return 'De Gemini API-sleutel is ongeldig of ontbreekt — controleer \'m via "AI-bonscan instellen". Of vul de bon handmatig in.';
+  }
+  if (status === 'PERMISSION_DENIED' || code === 403 || msg.indexOf('billing') !== -1 || msg.indexOf('permission') !== -1) {
+    return 'Geen toegang tot de AI-scan — staat facturering (billing) aan voor de API-sleutel? Anders: vul de bon handmatig in.';
+  }
+  if (status === 'RESOURCE_EXHAUSTED' || code === 429 || msg.indexOf('quota') !== -1 || msg.indexOf('exhausted') !== -1 || msg.indexOf('rate limit') !== -1) {
+    return 'De AI-scanlimiet is bereikt — probeer het over een paar minuten opnieuw, of vul de bon handmatig in.';
+  }
+  if (status === 'UNAVAILABLE' || code === 503 || (isFinite(code) && code >= 500) || msg.indexOf('overloaded') !== -1) {
+    return 'De AI-dienst is even overbelast — probeer het zo opnieuw, of vul de bon handmatig in.';
+  }
+  return 'De bonscan lukte niet (AI-fout) — vul de gegevens handmatig in.';
+}
+
 function scanDocumentMetAI(base64Data, mimeType) {
   const apiKey = ontsleutelString_(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY'));
   if (!apiKey) return { fout: 'Gemini API-sleutel niet ingesteld (Boekhouding → Instellingen → 🤖 Gemini API-key voor bon-scan).' };
@@ -644,8 +671,12 @@ function scanDocumentMetAI(base64Data, mimeType) {
     );
     const json   = JSON.parse(resp.getContentText());
     if (json.error) {
+      // F-DOC-161: log het rauwe (Engelse) Gemini-bericht voor diagnose, maar
+      // geef de klant een NL, actuabele melding i.p.v. "API key not valid" /
+      // "Resource has been exhausted" — onoplosbaar zonder Sam (zoals Mollie.gs
+      // HTTP-codes naar klanttaal vertaalt).
       logAiAanroep_('bon-scan', inputHash, { fout: json.error.message }, 'GEMINI_ERROR', { mimeType: mimeType });
-      return { fout: json.error.message };
+      return { fout: _geminiFoutNl_(json.error) };
     }
     const tekst  = json.candidates[0].content.parts[0].text.trim()
                       .replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/i,'').trim();
