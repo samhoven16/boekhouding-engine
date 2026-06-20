@@ -204,6 +204,25 @@ describe('I₉ — Leaf-only boekingen (echte verifier)', () => {
   });
 });
 
+// ── Drift-guard: I9 spiegelt de validator; de twee hardcoded lijsten mogen
+//    niet stil uiteenlopen (cross-pr LAAG: het is een COPY, geen shared const) ──
+describe('I₉ — pureParents == valideerJournaalpostBalans_.purePArents (geen drift)', () => {
+  const codesUit = (src, naam) => {
+    const m = src.match(new RegExp(naam + "\\s*=\\s*\\[([^\\]]*)\\]"));
+    return m ? (m[1].match(/'[^']+'/g) || []).map((s) => s.replace(/'/g, '')).sort() : null;
+  };
+  const i9 = codesUit(fs.readFileSync(path.resolve(__dirname, '../../src/FormeelBewijs.gs'), 'utf8'), 'pureParents');
+  const val = codesUit(fs.readFileSync(path.resolve(__dirname, '../../src/Invariants.gs'), 'utf8'), 'purePArents');
+
+  test('beide lijsten zijn vindbaar', () => {
+    expect(i9).not.toBeNull();
+    expect(val).not.toBeNull();
+  });
+  test('I9 en de validator hanteren exact dezelfde niet-postbare parents', () => {
+    expect(i9).toEqual(val);   // breidt iemand de validator uit, dan faalt dit tot I9 meegaat
+  });
+});
+
 // ── De ratel: dit gat (verifier zonder property-test) mag niet heropenen ──
 describe('Meta — invariant-dekkingsratel', () => {
   const dir = __dirname;
