@@ -306,12 +306,31 @@ In deze map vindt u de volledige boekhouding van ${bedrijf} voor ${jaar}.
 INHOUD:
   0_LEESMIJ_accountant.txt    — Dit bestand
   1_Samenvatting_${jaar}.txt  — Beknopt overzicht winst/verlies en balans
-  2_Journaalposten_${jaar}.csv — Alle boekingen (dubbel boekhouden)
-  3_Verkoopfacturen_${jaar}.csv — Alle uitgestuurde facturen
-  4_Inkoopfacturen_${jaar}.csv  — Alle ontvangen facturen/kosten
+  2_Journaalposten_${jaar}.csv — Boekingen van ${jaar} (dubbel boekhouden)
+  3_Verkoopfacturen_${jaar}.csv — Verkoopfacturen-register (volledig)
+  4_Inkoopfacturen_${jaar}.csv  — Inkoopfacturen-register (volledig)
   5_BTW_aangifte_${jaar}.txt    — BTW overzicht per kwartaal
-  6_Grootboeksaldi_${jaar}.csv  — Eindstanden per grootboekrekening
+  6_Grootboeksaldi_${jaar}.csv  — Huidige standen per grootboekrekening (cumulatief)
   7_Auditfile_*_${jaar}.xaf     — XAF 4.0 auditfile (direct importeerbaar)
+
+AANSLUITING & CONVENTIES (lees dit vóór u optelt):
+  • De administratie loopt door over jaren in één bestand. Het journaal (2) en
+    de XAF (7) zijn daarom op boekjaar ${jaar} gefilterd en sluiten 1-op-1 op
+    elkaar aan (zelfde totaal-debet/-credit). De facturen-registers (3,4) en de
+    grootboeksaldi (6) tonen de VOLLEDIGE administratie, niet alleen ${jaar}.
+  • De XAF bevat een openingsbalans (1-1-${jaar}); openingsbalans + transacties
+    = de eindstand. Daarmee staat de XAF op zichzelf, ook voor jaar 2 en later.
+  • Tekenconventie: in 6_Grootboeksaldi staat het boekhoudkundige type-saldo
+    (passiva/eigen vermogen/opbrengsten positief aan hun eigen zijde); de XAF
+    gebruikt rauwe debet/credit (D/C). Voor passief/EV/omzet is het bedrag dus
+    economisch gelijk maar tegengesteld van teken — geen fout.
+  • Jaarresultaat: bij de jaarovergang verschuift het resultaat op 1-1 van
+    rekening 2500 (Resultaat boekjaar) naar 2600 (Onverdeelde winst). In de
+    openingsbalans kan het resultaat dus nog op 2500 staan; de eerste boeking
+    van het jaar verplaatst het naar 2600.
+  • Dit pakket betreft boekjaar ${jaar}. Voor een eerder afgesloten jaar:
+    gebruik het archief-bestand van dat jaar of exporteer de XAF per jaar via
+    het menu Controle & Export.
 
 GEBRUIKTE GROOTBOEKSCHEMA:
   Gebaseerd op het Nederlandse RGS (Referentie Grootboekschema).
