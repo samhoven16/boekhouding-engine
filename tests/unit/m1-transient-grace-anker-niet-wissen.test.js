@@ -132,6 +132,15 @@ describe('M1 — authoritatieve afwijzing WIST het anker (abuse-closure intact)'
     ctx.valideerLicentieOpServer_(SLEUTEL);
     expect(propStore.licentieLaatstGelukt).toBeUndefined();
   });
+
+  test('N-M1-1 RATEL: "niet gevonden" ZONDER permanent → anker BEHOUDEN (lege/foute sheet mag niet base-breed wissen)', () => {
+    const { ctx, propStore } = maakCtx({
+      fetchImpl: () => resp200({ geldig: false, fout: 'Licentiesleutel niet gevonden.' }),
+    });
+    const r = ctx.valideerLicentieOpServer_(SLEUTEL);
+    expect(r.geldig).toBe(false);
+    expect(propStore.licentieLaatstGelukt).toBeDefined();   // anker overleeft
+  });
 });
 
 describe('M1 — _isAuthoritatieveAfwijzing_ classificatie', () => {
@@ -142,6 +151,21 @@ describe('M1 — _isAuthoritatieveAfwijzing_ classificatie', () => {
   test('rate-limit / interne fout → NIET authoritatief', () => {
     expect(ctx._isAuthoritatieveAfwijzing_({ geldig: false, fout: 'Te veel validatiepogingen.' })).toBe(false);
     expect(ctx._isAuthoritatieveAfwijzing_({ geldig: false, fout: 'Interne fout — probeer het later opnieuw.' })).toBe(false);
+  });
+  test('N-M1-1: "niet gevonden" zonder permanent → NIET authoritatief', () => {
+    expect(ctx._isAuthoritatieveAfwijzing_({ geldig: false, fout: 'Licentiesleutel niet gevonden.' })).toBe(false);
+  });
+  test('N-M1-2: hypothetische transient met los woord "verlopen"/"niet gevonden" → NIET authoritatief (geen substring-footgun)', () => {
+    expect(ctx._isAuthoritatieveAfwijzing_({ geldig: false, fout: 'Sessie verlopen — probeer opnieuw.' })).toBe(false);
+    expect(ctx._isAuthoritatieveAfwijzing_({ geldig: false, fout: 'Configuratie niet gevonden, probeer later.' })).toBe(false);
+  });
+  test('exacte authoritatieve strings → wel authoritatief (backward-compat)', () => {
+    expect(ctx._isAuthoritatieveAfwijzing_({ geldig: false, fout: 'Licentie is ingetrokken.' })).toBe(true);
+    expect(ctx._isAuthoritatieveAfwijzing_({ geldig: false, fout: 'Licentie is verlopen.' })).toBe(true);
+    expect(ctx._isAuthoritatieveAfwijzing_({ geldig: false, fout: 'E-mailadres ontvangt geen post. Neem contact op.' })).toBe(true);
+  });
+  test('permanent:true wint óók bij een "niet gevonden"-tekst (expliciet signaal)', () => {
+    expect(ctx._isAuthoritatieveAfwijzing_({ geldig: false, permanent: true, fout: 'Licentiesleutel niet gevonden.' })).toBe(true);
   });
   test('geldig:true of ontbrekend → NIET authoritatief (nooit wissen bij succes)', () => {
     expect(ctx._isAuthoritatieveAfwijzing_({ geldig: true })).toBe(false);

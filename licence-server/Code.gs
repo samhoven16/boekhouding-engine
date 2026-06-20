@@ -1048,7 +1048,14 @@ function valideerEndpoint_(e) {
       if (graceWaarschuwing) resp.waarschuwing = graceWaarschuwing;
       return jsonResp_(resp);
     }
-    return jsonResp_({ geldig: false, permanent: true, fout: 'Licentiesleutel niet gevonden.' });
+    // N-M1-1: BEWUST géén permanent:true. "Niet gevonden" is óók precies wat een
+    // lege/verkeerd-geconfigureerde licentie-sheet (bv. een standby met foute
+    // LICENTIE_SHEET_ID) voor ÉLKE sleutel teruggeeft. Zou dit het grace-anker
+    // wissen, dan ligt bij zo'n ops-fout de hele betalende basis eruit zodra de
+    // server even onbereikbaar wordt. Een echt-verwijderde sleutel is zeldzaam
+    // (revokes zetten status='ingetrokken', ze verwijderen de rij niet); die
+    // klant rijdt hooguit de grace-periode uit. Veiligheid > die randcase.
+    return jsonResp_({ geldig: false, fout: 'Licentiesleutel niet gevonden.' });
   } catch (err) {
     // Geen err.message naar buiten — kan sheet-id's/interne paden lekken
     // naar elke klant-kopie (consistent met revoke-/roteerEndpoint_).
@@ -3424,11 +3431,28 @@ function verwerkBrevoBounce_(e) {
   // Behandel het exact als de één-klik-afmeldlink: zet de drip-uit-vlag (stopt
   // de drips) en laat zowel Status als Bouncestatus ongemoeid.
   if (event === 'unsubscribed' || event === 'spam') {
+    // N-M2-1 / F-SCALE-143: schrijf de drip-uit-vlag ALLEEN voor een adres dat
+    // écht in de licentie-sheet staat — net als dripUitEndpoint_ (kolom [2] =
+    // Email). Zonder deze existence-check kan een geflood (token-geverifieerd)
+    // webhook onbegrensde dripuit_<hash>-keys maken — cleanupVerlopenOtpKeys_
+    // veegt alleen otp_-keys, nooit dripuit_ → 500KB-ScriptProperties-cliff →
+    // server-helft sterft voor de hele basis (de klasse die F-SCALE-143 sloot).
+    let bestaatKlant = false;
     try {
-      PropertiesService.getScriptProperties()
-        .setProperty('dripuit_' + _rlHash_(email), '1');
+      const sheet = getLicentieSheet_();
+      const rows = sheet ? sheet.getDataRange().getValues() : [];
+      const eCol = rows.length ? rows[0].indexOf('Email') : -1;   // robuust t.o.v. kolom-positie
+      if (eCol !== -1) {
+        for (let i = 1; i < rows.length; i++) {
+          if (String(rows[i][eCol] || '').trim().toLowerCase() === email) { bestaatKlant = true; break; }
+        }
+      }
     } catch (_) {}
-    Logger.log('Brevo ' + event + ' → drip-uit voor ' + email + ' (licentie ongemoeid)');
+    if (bestaatKlant) {
+      try { PropertiesService.getScriptProperties().setProperty('dripuit_' + _rlHash_(email), '1'); } catch (_) {}
+    }
+    Logger.log('Brevo ' + event + ' → drip-uit voor ' + email +
+      (bestaatKlant ? ' (licentie ongemoeid)' : ' (genegeerd: geen klant)'));
     return;
   }
 

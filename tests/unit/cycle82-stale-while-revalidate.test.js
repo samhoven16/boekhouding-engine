@@ -90,7 +90,10 @@ describe('CYCLE 82: bounded stale-while-revalidate', () => {
     // ingetrokken licentie (chargeback-fraude).
     const { ctx, propStore } = maakCtx({
       props: { licentieLaatstGelukt: String(Date.now() - 3 * MS_PER_DAG) },
-      fetchImpl: () => okResp({ geldig: false, fout: 'Ingetrokken' }),
+      // Realistische revoke-respons van de huidige server (permanent:true + de
+      // volledige string). N-M1-2: het anker wist op het EXPLICIETE permanent-
+      // signaal, niet op een los woord 'ingetrokken'.
+      fetchImpl: () => okResp({ geldig: false, permanent: true, fout: 'Licentie is ingetrokken.' }),
     });
     const r = ctx.valideerLicentieOpServer_(SLEUTEL);
     expect(r.geldig).toBe(false);

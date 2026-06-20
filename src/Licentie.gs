@@ -959,19 +959,22 @@ function valideerLicentieOpServer_(sleutel) {
  * klant z'n vangnet niet afpakken (F-RED-M1).
  *
  * Primair signaal: server-veld `permanent:true` (nieuwe licentieserver, robuust
- * tegen tekstwijzigingen). Backward-compat: voor een nog-niet-geüpdate server
- * vallen we terug op de STABIELE redentekst van de authoritatieve afwijzingen.
- * De transiente meldingen staan hier bewust NIET tussen.
+ * tegen tekstwijzigingen). Backward-compat voor een nog-niet-geüpdate server:
+ * EXACTE match op de bekende authoritatieve strings — bewust GEEN losse
+ * woord-substrings (N-M1-2): anders zou een toekomstige TRANSIENTE melding met
+ * "verlopen"/"niet gevonden" erin zich per ongeluk als permanent classificeren
+ * en base-breed het grace-anker wissen. 'niet gevonden' staat hier óók niet
+ * tussen (N-M1-1): dat is wat een lege/foute sheet voor élke sleutel produceert.
  */
 function _isAuthoritatieveAfwijzing_(json) {
   if (!json || json.geldig !== false) return false;
   if (json.permanent === true) return true;
-  const f = String(json.fout || '').toLowerCase();
-  return f.indexOf('ingetrokken') !== -1
-      || f.indexOf('verlopen') !== -1
-      || f.indexOf('andere installatie') !== -1
-      || f.indexOf('niet gevonden') !== -1
-      || f.indexOf('ontvangt geen post') !== -1;   // bounce-status
+  const f = String(json.fout || '').trim().toLowerCase();
+  if (f === 'licentie is ingetrokken.') return true;
+  if (f === 'licentie is verlopen.') return true;
+  if (f === 'licentie is al actief op een andere installatie.') return true;
+  if (f.indexOf('ontvangt geen post') !== -1) return true;   // bounce (langere melding)
+  return false;
 }
 
 /**

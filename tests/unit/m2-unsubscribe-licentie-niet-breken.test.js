@@ -33,6 +33,8 @@ function maakCtx(klanten) {
   const sheet = {
     getLastColumn: () => grid[0].length,
     getLastRow: () => grid.length,
+    // N-M2-1: de drip-uit existence-check leest getDataRange().getValues().
+    getDataRange: () => ({ getValues: () => grid }),
     getRange: (r, c, nr, nc) => {
       if (typeof nr === 'number') {
         return { getValues: () => grid.slice(r - 1, r - 1 + nr).map((row) => row.slice(c - 1, c - 1 + nc)) };
@@ -87,6 +89,12 @@ describe('M2 — marketing-afmelding mag de betaalde licentie niet breken', () =
     ctx.verwerkBrevoBounce_(webhook('spam', 'klant@x.nl'));
     expect(statusVan(grid, 'klant@x.nl')).toBe('Actief (handmatig)');
     expect(heeftDripUit(store)).toBe(true);
+  });
+
+  test('N-M2-1: unsubscribe voor een NIET-klant → géén dripuit_-key (anti-DoS, F-SCALE-143)', () => {
+    const { ctx, store } = maakCtx([{ email: 'klant@x.nl', status: 'Actief' }]);
+    ctx.verwerkBrevoBounce_(webhook('unsubscribed', 'vreemde@nergens.nl'));   // staat niet in de sheet
+    expect(heeftDripUit(store)).toBe(false);   // geen onbegrensde key-groei via geflood webhook
   });
 
   test('echte hard_bounce blijft Status op Bounce zetten (géén regressie)', () => {
