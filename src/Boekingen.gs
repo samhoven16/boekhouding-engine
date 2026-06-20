@@ -213,9 +213,13 @@ function maakStornoJournaalpost_(ss, origineelBoekingId, reden) {
 
   const data = sheet.getDataRange().getValues();
   let origineel = null;
+  let origineelRij = -1;
   let alGestorneerd = false;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][KOL.JP.boekingId]) === String(origineelBoekingId)) origineel = data[i];
+    if (origineelRij === -1 && String(data[i][KOL.JP.boekingId]) === String(origineelBoekingId)) {
+      origineel = data[i];
+      origineelRij = i;   // 0-based data-index; sheet-rij = i + 1
+    }
     // Detecteer eerdere storno op deze boeking (ref bevat "STORNO ${id}")
     const omschr = String(data[i][KOL.JP.omschrijving] || '');
     if (omschr.indexOf('STORNO ' + origineelBoekingId) !== -1) alGestorneerd = true;
@@ -277,6 +281,21 @@ function maakStornoJournaalpost_(ss, origineelBoekingId, reden) {
       (origineel[11] || '?') + ': ' + markErr.message);
     safeAuditLog_('STORNO factuur-mark MISLUKT',
       origineelBoekingId + ' ref=' + (origineel[11] || '?') + ': ' + markErr.message);
+  }
+
+  // F-ACC-165: markeer óók de originele JOURNAALPOST-rij als GESTORNEERD, zodat
+  // een Belastingdienst-steekproef op journaalpost-niveau ziet dat de boeking is
+  // teruggedraaid — niet alleen via de "STORNO ..."-omschrijving op de tegenrij.
+  // Saldo-veilig: herberekeningGrootboekSaldi telt op status NIET (alleen
+  // bedrag≠0, regel ~536) en de XAF houdt GESTORNEERD juist aan — dus origineel
+  // + storno blijven beide meetellen en heffen elkaar op (netto 0). Niet-fataal.
+  try {
+    if (origineelRij > 0) {
+      sheet.getRange(origineelRij + 1, KOL.JP.status + 1).setValue('GESTORNEERD');
+    }
+  } catch (statusErr) {
+    Logger.log('Storno: JP-status-markering faalde voor ' + origineelBoekingId +
+      ': ' + statusErr.message);
   }
 
   return stornoId;
