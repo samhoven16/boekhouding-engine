@@ -704,6 +704,28 @@ function zetBtwAangifteOpSheet_(ss, aangifte, kwartaal, periode) {
   ss.setActiveSheet(sheet);
 }
 
+/**
+ * F-SCALE-331: begrens BTW_SNAPSHOTS tot de laatste `max` periodes (gesorteerd
+ * op vastgelegdOp). Eén ScriptProperty heeft een 9KB-cap; zonder begrenzing
+ * overschrijdt dit object die cap op termijn (rond jaar 10-11 bij kwartaal,
+ * sneller bij maand) → `props.setProperty` throwt → de snapshot belandt stil in
+ * de catch → `detecteerSuppletieMogelijk_` ziet de nieuwe periode niet → een
+ * klant met een retroactieve correctie >€1.000 krijgt géén suppletie-signaal →
+ * naheffing + boete. De detector leest alleen huidig + vorig jaar (≤8 kwartalen),
+ * dus de recente periodes blijven sowieso behouden; de durende vastlegging zit
+ * bovendien in het AUDIT_LOG-sheet. Patroon gelijk aan de cap op
+ * GESLOTEN_PERIODES_HISTORIE.
+ */
+function _capBtwSnapshots_(snaps, max) {
+  const keys = Object.keys(snaps || {});
+  if (keys.length <= max) return snaps;
+  keys.sort(function(a, b) {
+    return String(snaps[a].vastgelegdOp || '').localeCompare(String(snaps[b].vastgelegdOp || ''));
+  });
+  keys.slice(0, keys.length - max).forEach(function(k) { delete snaps[k]; });
+  return snaps;
+}
+
 // ─────────────────────────────────────────────
 //  BTW PERIODE SLUITEN (JOURNAALPOST)
 // ─────────────────────────────────────────────
@@ -828,6 +850,7 @@ function sluitBtwPeriode() {
       r5b:      aangifte.r5b      || 0,
       vastgelegdOp: new Date().toISOString(),
     };
+    _capBtwSnapshots_(snaps, 30);   // F-SCALE-331: 9KB-property-cap-bescherming
     props.setProperty('BTW_SNAPSHOTS', JSON.stringify(snaps));
     try { schrijfAuditLog_('BTW snapshot vastgelegd',
       kwartaal + ' ' + jaar + ' — saldo ' + formatBedrag_(aangifte.saldo)); } catch (_) {}
