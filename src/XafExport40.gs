@@ -202,8 +202,11 @@ function _xaf40TrLine_(nr, accID, docRef, datum, desc, bedrag, tp) {
  * journaalposten met datum < 1-1-jaar (debet +, credit −). Balansrekeningen
  * dragen zo hun cumulatieve saldo; W&V-rekeningen netten naar 0 doordat de
  * resultaatverwerking (JA-/JO-boekingen) ze elk jaar afsluit → vallen vanzelf
- * weg. Gevolg-invariant: openingsbalans + transacties(jaar) = het huidige
- * grootboeksaldo, en Σdebet == Σcredit (elke bron-boeking is gebalanceerd).
+ * weg. Gevolg-invariant: openingsbalans + transacties(jaar) = het grootboeksaldo
+ * — afgezien van eventuele openstaande CORRUPT-halfboekingen (triple-fail: debet
+ * geboekt, credit + rollback gefaald). Die raken het grootboeksaldo wél maar
+ * horen in geen enkele auditfile en moeten apart hersteld worden. Σdebet ==
+ * Σcredit blijft sowieso (elke bron-boeking die meetelt is gebalanceerd).
  *
  * Jaar 1 (geen historie) → geen obLines → leeg blok weggelaten (XSD: optioneel).
  */
