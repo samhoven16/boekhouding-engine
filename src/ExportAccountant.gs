@@ -61,7 +61,15 @@ function exporteerAccountantsPakket() {
     gemaakteFiles.push('📄 Samenvatting');
 
     // ── 2. Journaalposten CSV ────────────────────────────────────────────
-    const jpCsv = exporteerAlsCsv_(ss, SHEETS.JOURNAALPOSTEN);
+    // F-ACC-162: sluit CORRUPT-rijen (half-geboekt, saldo atomair teruggedraaid)
+    // uit — exact zoals _bouwXaf40Xml_ doet. Anders telt de accountant in deze
+    // CSV een ander journaaltotaal dan in de XAF-auditfile (#7) van hetzelfde
+    // pakket → twee bestanden die elkaar tegenspreken. Concept/Gestorneerd
+    // blijven WÉL staan (zitten ook in het grootboeksaldo en de XAF).
+    const jpCsv = exporteerAlsCsv_(ss, SHEETS.JOURNAALPOSTEN, function(rij) {
+      return (rij.length > KOL.JP.status
+        ? String(rij[KOL.JP.status] || '').trim().toUpperCase() : '') !== 'CORRUPT';
+    });
     folder.createFile(`2_Journaalposten_${jaar}.csv`, jpCsv, 'text/csv');
     gemaakteFiles.push('📊 Journaalposten');
 
@@ -781,11 +789,17 @@ function maakNoahArkSnapshot_() {
 //  HELPER: SHEET → CSV
 // ─────────────────────────────────────────────
 
-function exporteerAlsCsv_(ss, sheetNaam) {
+function exporteerAlsCsv_(ss, sheetNaam, rijFilter) {
   const sheet = ss.getSheetByName(sheetNaam);
   if (!sheet) return '';
 
-  const data = sheet.getDataRange().getValues();
+  let data = sheet.getDataRange().getValues();
+  // Optionele rij-filter (alleen de databody, header blijft altijd staan).
+  // Gebruikt om CORRUPT-journaalposten uit te sluiten zodat de CSV hetzelfde
+  // journaal toont als de XAF-auditfile in hetzelfde pakket (F-ACC-162).
+  if (typeof rijFilter === 'function' && data.length > 1) {
+    data = [data[0]].concat(data.slice(1).filter(function(rij) { return rijFilter(rij); }));
+  }
   return data.map(rij =>
     rij.map(cel => {
       let waarde = '';
