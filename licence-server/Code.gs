@@ -1348,10 +1348,10 @@ function bedanktPagina_(e) {
   <div class="heads-up">
     <strong>Wat gebeurt er zo:</strong>
     <ol>
-      <li>Je klikt op de activatielink in de mail.</li>
-      <li>Google vraagt je toestemming om een kopie in <strong>jouw Drive</strong> te zetten en <strong>namens jou mail te sturen</strong> (voor facturen).</li>
+      <li>Open de mail <em>"Je Boekhoudbaar is klaar — activeer nu"</em> en klik <strong>"Open mijn boekhouding"</strong>. Google toont dan <strong>"Een kopie maken"</strong> — daarmee zet je jouw eigen kopie in <strong>jouw Drive</strong>.</li>
+      <li>De eerste keer dat je die kopie gebruikt (het <strong>Boekhoudbaar</strong>-menu opent of activeert) vraagt Google toegang tot jouw Drive en om <strong>namens jou mail te sturen</strong> (voor facturen). Klik <strong>Doorgaan</strong> — dit komt vóór je eerste factuur, niet erna.</li>
       <li>Je ziet mogelijk <em>"Deze app is niet geverifieerd door Google"</em> — dat klopt, Boekhoudbaar is een éénpersoonszaak. Klik op <strong>Geavanceerd → Ga naar Boekhoudbaar (onveilig)</strong>.</li>
-      <li>Je boekhoudbestand opent. Vul je e-mail in, ontvang een 6-cijferige code, voer 'm in, klaar.</li>
+      <li>Vul je e-mail in, ontvang een 6-cijferige code (15 minuten geldig), voer 'm in — klaar.</li>
     </ol>
     <p class="google-note" style="margin:10px 0 0">Je data blijft 100% op jouw eigen Drive. Wij hebben er geen toegang toe.</p>
   </div>

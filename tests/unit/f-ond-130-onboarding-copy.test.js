@@ -47,6 +47,24 @@ describe('F-OND-130 — OTP-mail onderscheidbaar van order-mail', () => {
   });
 });
 
+describe('F-OND-142 — server-bedanktpagina gelijk aan de echte kopie-/OAuth-flow', () => {
+  const code = read('licence-server/Code.gs');
+  const fn = code.slice(code.indexOf('function bedanktPagina_'), code.indexOf('function bedanktPagina_') + 4200);
+
+  test('noemt de "Een kopie maken"-stap (consistent met /bedankt, F-OND-130)', () => {
+    expect(fn).toMatch(/Een kopie maken/);
+  });
+  test('plaatst OAuth bij eerste gebruik, vóór de eerste factuur', () => {
+    expect(fn).toMatch(/vóór je eerste factuur/i);
+  });
+  test('framet de activatielink niet meer als auto-kopie ("Je klikt op de activatielink" weg)', () => {
+    expect(fn).not.toMatch(/Je klikt op de activatielink in de mail/);
+  });
+  test('noemt de 15-min-geldigheid van de code (consistent met F-OND-141)', () => {
+    expect(fn).toMatch(/15 minuten/);
+  });
+});
+
 describe('F-OND-141 — OTP-dialoog noemt de 15-min-vervaltijd (stap 2)', () => {
   // Klant pauzeerde tussen mail en invoer → code verlopen → frustratie. De mail
   // noemde 15 min wél, de dialoog niet. Nu staat het in de stap-2-banner.
