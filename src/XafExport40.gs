@@ -68,6 +68,10 @@ function _bouwXaf40Xml_(ss, jaarArg) {
   xml += _xaf40Grootboek_(ss);
   xml += _xaf40VatCodes_();
   xml += _xaf40Periods_(jaar);
+  // F-ACC-161: openingsbalans (1-1) zodat een auditfile van jaar-2+ op zichzelf
+  // staat — eindbalans N−1 == openingsbalans N (RJ 160/170). Optioneel in de
+  // XSD; fail-open zodat een fout de auditfile niet sloopt.
+  try { xml += _xaf40OpeningBalance_(ss, jaar); } catch (e) { Logger.log('XAF4.0: openingsbalans overgeslagen: ' + e.message); }
   xml += _xaf40Transactions_(ss, jaar);
   xml += '  </company>\n';
 
@@ -187,6 +191,69 @@ function _xaf40TrLine_(nr, accID, docRef, datum, desc, bedrag, tp) {
     + '            <amnt>' + bedrag.toFixed(2) + '</amnt>\n'
     + '            <amntTp>' + tp + '</amntTp>\n'
     + '          </trLine>\n';
+}
+
+/**
+ * openingBalance — saldo per grootboekrekening op 1-1 van het fiscaal jaar.
+ *
+ * Reconstructie uit het continue journaal: de administratie loopt door over
+ * jaren (sluitJaarAf archiveert + boekt resultaat, maar reset het journaal
+ * niet). Het 1-1-saldo van een rekening = de netto-som van ÁLLE niet-CORRUPT
+ * journaalposten met datum < 1-1-jaar (debet +, credit −). Balansrekeningen
+ * dragen zo hun cumulatieve saldo; W&V-rekeningen netten naar 0 doordat de
+ * resultaatverwerking (JA-/JO-boekingen) ze elk jaar afsluit → vallen vanzelf
+ * weg. Gevolg-invariant: openingsbalans + transacties(jaar) = het huidige
+ * grootboeksaldo, en Σdebet == Σcredit (elke bron-boeking is gebalanceerd).
+ *
+ * Jaar 1 (geen historie) → geen obLines → leeg blok weggelaten (XSD: optioneel).
+ */
+function _xaf40OpeningBalance_(ss, jaar) {
+  const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  if (!sheet) return '';
+  const data = sheet.getDataRange().getValues();
+  const startJaar = new Date(jaar, 0, 1);
+  const nettoCent = {};   // accID -> netto centen (debet positief, credit negatief)
+
+  for (let i = 1; i < data.length; i++) {
+    const rij = data[i];
+    // Alleen CORRUPT eruit — exact zoals _xaf40Transactions_ (consistentie).
+    if ((rij.length > 16 ? String(rij[16] || '').trim().toUpperCase() : '') === 'CORRUPT') continue;
+    const datumObj = rij[1] instanceof Date
+      ? rij[1]
+      : ((typeof parseDatum_ === 'function') ? parseDatum_(rij[1]) : new Date(rij[1]));
+    if (!datumObj || isNaN(datumObj.getTime()) || datumObj >= startJaar) continue;  // alleen vóór het jaar
+    const debet = String(rij[4] || '').trim();
+    const credit = String(rij[6] || '').trim();
+    const cent = Math.round((parseFloat(rij[8]) || 0) * 100);
+    if (!debet || !credit || cent <= 0) continue;
+    nettoCent[debet] = (nettoCent[debet] || 0) + cent;
+    nettoCent[credit] = (nettoCent[credit] || 0) - cent;
+  }
+
+  const accIDs = Object.keys(nettoCent).filter(function (a) { return nettoCent[a] !== 0; }).sort();
+  if (accIDs.length === 0) return '';   // geen historie → geen openingsbalans
+
+  let totalDebitCent = 0, totalCreditCent = 0, lines = '';
+  accIDs.forEach(function (acc, idx) {
+    const c = nettoCent[acc];
+    const amntTp = c >= 0 ? 'D' : 'C';
+    const amntCent = Math.abs(c);
+    if (amntTp === 'D') totalDebitCent += amntCent; else totalCreditCent += amntCent;
+    lines += '      <obLine>\n';
+    lines += '        <nr>' + (idx + 1) + '</nr>\n';
+    lines += '        <accID>' + _xafEsc_(String(acc).substring(0, 35)) + '</accID>\n';
+    lines += '        <amnt>' + (amntCent / 100).toFixed(2) + '</amnt>\n';
+    lines += '        <amntTp>' + amntTp + '</amntTp>\n';
+    lines += '      </obLine>\n';
+  });
+
+  let xml = '    <openingBalance>\n';
+  xml += '      <linesCount>' + accIDs.length + '</linesCount>\n';
+  xml += '      <totalDebit>' + (totalDebitCent / 100).toFixed(2) + '</totalDebit>\n';
+  xml += '      <totalCredit>' + (totalCreditCent / 100).toFixed(2) + '</totalCredit>\n';
+  xml += lines;
+  xml += '    </openingBalance>\n';
+  return xml;
 }
 
 /**
