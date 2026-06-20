@@ -165,10 +165,10 @@
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "Moet ik ieder jaar opnieuw betalen?",
+          "name": "Moet ik elk jaar opnieuw betalen?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Nee. Je betaalt eenmalig €49 en gebruikt Boekhoudbaar voor altijd. Geen abonnement, geen verborgen kosten."
+            "text": "Nee. Eén keer €49, daarna nooit meer."
           }
         },
         {
@@ -176,7 +176,7 @@
           "name": "Wat als het niet werkt voor mij?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Lukt activeren niet, of werkt iets aantoonbaar niet zoals beschreven? Mail support@boekhoudbaar.nl — ik los het op of stort je €49 terug. Boekhoudbaar is een digitaal product dat direct in jouw Drive komt; een onbeperkte 'geld terug zonder reden' bieden we daarom niet, wel een eerlijk gesprek bij twijfel. Zie voorwaarden artikel 6."
+            "text": "Lukt activeren niet, of werkt iets aantoonbaar niet zoals beschreven? Mail support@boekhoudbaar.nl — ik los het op of stort je €49 terug. Geen onbeperkte 'geld-terug zonder reden' — Boekhoudbaar is een digitaal product dat direct in jouw Drive staat — wel een eerlijk gesprek bij twijfel. Zie voorwaarden artikel 6."
           }
         },
         {
@@ -184,15 +184,7 @@
           "name": "Waar staat mijn data?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Jouw boekhouding staat in een Google Spreadsheet in jouw eigen Google Drive. Wij kunnen er niet bij — jij bezit de data volledig."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Werkt het ook op een Mac?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Ja. Boekhoudbaar werkt in Google Chrome, Safari, Firefox en Edge — op Mac, Windows, Linux en tablet. Geen installatie nodig."
+            "text": "In jouw eigen Google Drive. Alleen jij hebt toegang. Ik ook niet."
           }
         },
         {
@@ -200,31 +192,47 @@
           "name": "Heb ik een Gmail-adres nodig?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Nee. Je hebt wel een Google-account nodig (omdat Boekhoudbaar in Google Sheets draait), maar dat hoeft geen Gmail te zijn. Je kunt een gratis Google-account aanmaken met je bestaande email — Outlook, iCloud, Proton, eigen domein, etc. Ga naar accounts.google.com/signup en kies 'Use my existing email'. Duurt 2 minuten."
+            "text": "Nee. Een gratis Google-account is genoeg en die kun je aanmaken met je bestaande email (Outlook, iCloud, Proton, eigen domein). Ga naar accounts.google.com/signup → 'Use my existing email'. 2 minuten."
           }
         },
         {
           "@type": "Question",
-          "name": "Kan mijn boekhouder meekijken?",
+          "name": "Kan ik vanuit Moneybird / Exact / e-Boekhouden overstappen?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Ja, gratis. Deel je Google Spreadsheet met je boekhouder via een gewone Google-deellink. Geen extra licentie nodig."
+            "text": "Ja, via CSV-import. De meeste tools laten je facturen en bankafschriften als CSV exporteren — die sleep je in Boekhoudbaar en de boekingen worden automatisch gemaakt. Boekhoudbaar exporteert óók weg: CSV per sheet, XAF voor je accountant (Auditfile Financieel 4.0, met RGS-codes) en een JSONL-snapshot voor lange-termijn-archief. Geen vendor lock-in."
           }
         },
         {
           "@type": "Question",
-          "name": "Hoe lang duurt het om te beginnen?",
+          "name": "Mijn balans klopt niet — wat nu?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Na aankoop ontvang je je licentiesleutel per e-mail. Activeren duurt 5 minuten. Daarna kun je direct je eerste factuur versturen."
+            "text": "Top-5 oorzaken: 1) niet alle bankboekingen geboekt (check de Bankafschriften-tab); 2) BTW-spaarpot niet apart gehouden; 3) beginbalans van vorig jaar ontbreekt (bij overstap halverwege het jaar handmatig invoeren); 4) crediteuren/debiteuren niet bijgewerkt; 5) handmatige cel-overschrijving (de invariant-check detecteert dit en mailt je). Doe een diagnose via Boekhouding → Geavanceerd → Gezondheidscheck administratie."
           }
         },
         {
           "@type": "Question",
-          "name": "Google geeft een 'niet-geverifieerde app'-waarschuwing — is dat veilig?",
+          "name": "Ik heb iets fout geboekt — hoe corrigeer ik?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Ja, dat is correct én verwacht. Google's app-verificatie is een uitgebreid reviewproces (demo, scope-onderbouwing, enkele weken doorlooptijd) dat Boekhoudbaar nog niet volledig heeft doorlopen. De waarschuwing zegt niets over veiligheid; hij verschijnt voor ALLE niet-geverifieerde Apps Scripts. Klik 'Geavanceerd' → 'Ga naar Boekhoudbaar (onveilig)' — standaard procedure. Code is source-available op GitHub voor inspectie."
+            "text": "Het hangt af van de status. Verkoopfactuur al verstuurd: maak een credit-nota met negatief bedrag (de oude factuur blijft staan, art. 35a Wet OB). Inkoopboeking foutief: open de Inkoopfacturen-tab, rechtsklik de rij → 'Storneren' voor een automatische tegenboeking. Handmatige journaalpost: alleen in de lopende periode (afgesloten periodes vereisen Periode ontgrendelen met motivatie, gelogd voor de Belastingdienst)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Komen er nog kosten naast die €49?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Nee. €49 is eenmalig, geen abonnement, gratis updates voor altijd. Optioneel als jij dat wilt: Mollie (iDEAL-betaallink) ~€0,29 per geslaagde betaling; Gemini AI (bonscan) met je eigen Google AI-key ~€0,001 per scan, eerste 1500/dag gratis; Google Workspace €6/maand voor 1500 mails/dag. Boekhoudbaar betaalt nooit voor jouw API-calls — alles loopt op je eigen Google-rekening."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Google geeft een \"niet-geverifieerde app\"-waarschuwing — is dat veilig?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Ja, dat is correct én verwacht. Boekhoudbaar heeft Google's officiële OAuth-app-verificatie — een uitgebreid reviewproces van enkele weken (demo, scope-onderbouwing, domeincontrole) — nog niet volledig doorlopen. De waarschuwing zegt niets over veiligheid; hij verschijnt voor ALLE Apps Scripts die niet door Google zijn geverifieerd. Klik 'Geavanceerd' → 'Ga naar Boekhoudbaar (onveilig)' — standaard-procedure. De code is source-available op GitHub voor inspectie."
           }
         }
       ]
