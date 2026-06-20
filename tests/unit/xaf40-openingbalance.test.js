@@ -122,4 +122,17 @@ describe('XAF 4.0 — openingsbalans (F-ACC-161)', () => {
     const xaf2023 = maakCtx()._bouwXaf40Xml_(ssMet(journaal2023), 2023);
     expect(obBlok(xaf2023)).toBe('');
   });
+
+  test('F-SCALE-330: JOURNAALPOSTEN wordt één keer gelezen (gedeeld door opening + transacties)', () => {
+    let jpReads = 0;
+    const sheets = { Grootboekschema: GB, Journaalposten: [JP_H].concat(journaal2023), Relaties: [['Relatie ID', 'Type', 'Naam']] };
+    const countSs = {
+      getSheetByName: (n) => {
+        if (!sheets[n]) return null;
+        return { getDataRange: () => { if (n === 'Journaalposten') jpReads++; return { getValues: () => sheets[n] }; } };
+      },
+    };
+    maakCtx()._bouwXaf40Xml_(countSs, 2024);
+    expect(jpReads).toBe(1);   // niet 2× volledige journaal-read in één export
+  });
 });

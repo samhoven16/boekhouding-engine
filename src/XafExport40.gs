@@ -68,11 +68,17 @@ function _bouwXaf40Xml_(ss, jaarArg) {
   xml += _xaf40Grootboek_(ss);
   xml += _xaf40VatCodes_();
   xml += _xaf40Periods_(jaar);
+  // F-SCALE-330: lees JOURNAALPOSTEN ÉÉN keer en deel de array met beide loops.
+  // De openingsbalans (F-ACC-161) en de transacties scannen hetzelfde (continu,
+  // niet-resettende) journaal; bij een meerjarige administratie met tienduizenden
+  // rijen waren dat 2× volledige sheet-read + 2 arrays tegelijk in het heap →
+  // eerste plek die tegen de 6-min-/geheugengrens loopt op de consumer-tier.
+  const jpData = _xaf40JournaalData_(ss);
   // F-ACC-161: openingsbalans (1-1) zodat een auditfile van jaar-2+ op zichzelf
   // staat — eindbalans N−1 == openingsbalans N (RJ 160/170). Optioneel in de
   // XSD; fail-open zodat een fout de auditfile niet sloopt.
-  try { xml += _xaf40OpeningBalance_(ss, jaar); } catch (e) { Logger.log('XAF4.0: openingsbalans overgeslagen: ' + e.message); }
-  xml += _xaf40Transactions_(ss, jaar);
+  try { xml += _xaf40OpeningBalance_(ss, jaar, jpData); } catch (e) { Logger.log('XAF4.0: openingsbalans overgeslagen: ' + e.message); }
+  xml += _xaf40Transactions_(ss, jaar, jpData);
   xml += '  </company>\n';
 
   xml += '</auditfile>\n';
@@ -210,10 +216,14 @@ function _xaf40TrLine_(nr, accID, docRef, datum, desc, bedrag, tp) {
  *
  * Jaar 1 (geen historie) → geen obLines → leeg blok weggelaten (XSD: optioneel).
  */
-function _xaf40OpeningBalance_(ss, jaar) {
+function _xaf40JournaalData_(ss) {
   const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
-  if (!sheet) return '';
-  const data = sheet.getDataRange().getValues();
+  return sheet ? sheet.getDataRange().getValues() : [];
+}
+
+function _xaf40OpeningBalance_(ss, jaar, jpData) {
+  const data = jpData || _xaf40JournaalData_(ss);
+  if (!data.length) return '';
   const startJaar = new Date(jaar, 0, 1);
   const nettoCent = {};   // accID -> netto centen (debet positief, credit negatief)
 
@@ -264,15 +274,14 @@ function _xaf40OpeningBalance_(ss, jaar) {
  * journaalpost-rij = één gebalanceerde transaction (1 debet- + 1 creditregel).
  * Alleen COMMITTED-rijen van het fiscaal jaar.
  */
-function _xaf40Transactions_(ss, jaar) {
-  const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+function _xaf40Transactions_(ss, jaar, jpData) {
+  const data = jpData || _xaf40JournaalData_(ss);
   const grouped = {}; // klassId -> { desc, jrnTp, tx }
   let linesCount = 0;
   let debitCents = 0;
   let creditCents = 0;
 
-  if (sheet) {
-    const data = sheet.getDataRange().getValues();
+  if (data.length) {
     for (let i = 1; i < data.length; i++) {
       const rij = data[i];
       // Spiegel het grootboek: élke boeking die het saldo raakt hoort in de
