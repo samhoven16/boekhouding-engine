@@ -177,6 +177,11 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
   // bij typo of nieuw label dat we niet kennen.
   const onbekendeLabels = {};
   let onbekendeOmzet = 0;
+  // F-TAX-134: verlegde verkoop hoort €0 verschuldigde BTW te hebben (rubriek 1e
+  // is grondslag-only). Een (handmatig) ingevuld btwBedrag is een anomalie die we
+  // NIET in r5a meetellen maar wél flaggen.
+  let verlegdMetBtwAantal = 0;
+  let verlegdMetBtwBedrag = 0;
   for (let i = 1; i < vfData.length; i++) {
     // Skip lege rijen en rijen zonder datum eerst — voorheen gaf
     // parseDatum_(null) een Date(today) waardoor verwijderde rijen
@@ -210,8 +215,16 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     // van een verlegde verkoop in 1a (legaal-significante mis-rubriek, rubriek
     // 1e). Consistent met de inkoop-zijde die verlegd ook eerst toetst.
     if (/verlegd/i.test(btwLabel)) {
+      // Rubriek 1e is grondslag-only: bij verlegde verkoop brengt de leverancier
+      // €0 BTW in rekening (de afnemer verlegt). Een ingevuld btwBedrag is een
+      // data-anomalie en mag NIET in r5a (verschuldigde BTW) belanden — anders
+      // draagt de ZZP'er output-BTW af op een sale waar niets in rekening is
+      // gebracht. Grondslag wél tellen; btwBedrag flaggen (F-TAX-134).
       aangifte.r1e_grondslag += grondslag;
-      aangifte.r1e_btw += btwBedrag;
+      if (btwBedrag !== 0) {
+        verlegdMetBtwAantal++;
+        verlegdMetBtwBedrag += btwBedrag;
+      }
     } else if (btwLabel.includes('21%') || /\bhoog\b/i.test(btwLabel)) {
       aangifte.r1a_grondslag += grondslag;
       aangifte.r1a_btw += btwBedrag;
@@ -251,6 +264,17 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
       onbekendeLabels[btwLabel || '(leeg)'] = (onbekendeLabels[btwLabel || '(leeg)'] || 0) + 1;
       onbekendeOmzet += grondslag;
     }
+  }
+
+  // F-TAX-134: verlegde verkoop met een ingevuld BTW-bedrag (hoort €0) — niet in
+  // r5a, wél flaggen zodat de klant de factuur corrigeert vóór indiening.
+  if (verlegdMetBtwAantal > 0) {
+    aangifte._verlegdMetBtw = { aantal: verlegdMetBtwAantal, bedrag: rondBedrag_(verlegdMetBtwBedrag) };
+    try {
+      schrijfAuditLog_('BTW-aangifte VERLEGDE VERKOOP MET BTW',
+        verlegdMetBtwAantal + ' verlegde verkoop-rij(en) met een BTW-bedrag (€ ' +
+        rondBedrag_(verlegdMetBtwBedrag) + ', hoort €0) — niet meegeteld in r5a; controleer de facturen.');
+    } catch (_) {}
   }
 
   // Onbekende labels altijd loggen — klant moet WETEN dat ze ontbreken

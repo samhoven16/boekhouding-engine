@@ -688,7 +688,7 @@ function berekenIBProgressief_(belastbaarInkomen, B, isAowGerechtigd) {
  * @param {number} inkomen          Belastbaar inkomen Box 1
  * @param {Object} B                BELASTING-config met IB_SCHIJVEN array
  * @param {boolean} [isAowGerechtigd]
- * @return {number} Marginale tarief (0.357, 0.3756, 0.495 voor 2026)
+ * @return {number} Marginale tarief (scalar-paden: 0.3575 of 0.495 voor 2026)
  */
 function marginaalIbTarief_(inkomen, B, isAowGerechtigd) {
   const i = parseFloat(inkomen) || 0;
@@ -697,7 +697,7 @@ function marginaalIbTarief_(inkomen, B, isAowGerechtigd) {
     : B.IB_SCHIJVEN;
   if (!Array.isArray(schijven)) {
     // Legacy fallback
-    return i <= (B.IB_SCHIJF_1_MAX || 38883) ? (B.IB_SCHIJF_1_PCT || 0.357) : (B.IB_SCHIJF_2_PCT || 0.495);
+    return i <= (B.IB_SCHIJF_1_MAX || 38883) ? (B.IB_SCHIJF_1_PCT || 0.3575) : (B.IB_SCHIJF_2_PCT || 0.495);
   }
   for (const schijf of schijven) {
     if (i <= schijf.tot) return schijf.pct;
@@ -1979,7 +1979,7 @@ function berekenPriveBelastingvoordelen_(winst) {
   // in config (= laagste schijf-tarief).
   const _eersteSchijfPct = (BELASTING.IB_SCHIJVEN && BELASTING.IB_SCHIJVEN[0])
     ? BELASTING.IB_SCHIJVEN[0].pct
-    : (BELASTING.IB_SCHIJF_1_PCT || 0.357);
+    : (BELASTING.IB_SCHIJF_1_PCT || 0.3575);
   const _eersteSchijfTekst = (_eersteSchijfPct * 100).toFixed(2).replace('.', ',') + '%';
   adviezen.push({
     type: 'TIP',
