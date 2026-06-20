@@ -61,14 +61,18 @@ function exporteerAccountantsPakket() {
     gemaakteFiles.push('📄 Samenvatting');
 
     // ── 2. Journaalposten CSV ────────────────────────────────────────────
-    // F-ACC-162: sluit CORRUPT-rijen (half-geboekt, saldo atomair teruggedraaid)
-    // uit — exact zoals _bouwXaf40Xml_ doet. Anders telt de accountant in deze
-    // CSV een ander journaaltotaal dan in de XAF-auditfile (#7) van hetzelfde
-    // pakket → twee bestanden die elkaar tegenspreken. Concept/Gestorneerd
-    // blijven WÉL staan (zitten ook in het grootboeksaldo en de XAF).
+    // F-ACC-162 + F-ACC-340: sluit CORRUPT-rijen uit (half-geboekt, saldo atomair
+    // teruggedraaid) ÉN filter op het exportjaar — exact zoals _xaf40Transactions_.
+    // Anders telt de accountant in deze jaar-gelabelde CSV een ander journaal-
+    // totaal dan in de XAF-auditfile (#7): F-ACC-162 dichtte de CORRUPT-as, maar
+    // het journaal loopt continu over jaren terwijl de XAF per jaar is — zonder
+    // jaarfilter bevat `2_Journaalposten_2026.csv` óók 2024/2025. Concept/
+    // Gestorneerd blijven (zitten ook in grootboeksaldo + XAF).
     const jpCsv = exporteerAlsCsv_(ss, SHEETS.JOURNAALPOSTEN, function(rij) {
-      return (rij.length > KOL.JP.status
-        ? String(rij[KOL.JP.status] || '').trim().toUpperCase() : '') !== 'CORRUPT';
+      if ((rij.length > KOL.JP.status ? String(rij[KOL.JP.status] || '').trim().toUpperCase() : '') === 'CORRUPT') return false;
+      const d = rij[KOL.JP.datum];
+      const dObj = d instanceof Date ? d : (typeof parseDatum_ === 'function' ? parseDatum_(d) : null);
+      return !!dObj && !isNaN(dObj.getTime()) && dObj.getFullYear() === jaar;
     });
     folder.createFile(`2_Journaalposten_${jaar}.csv`, jpCsv, 'text/csv');
     gemaakteFiles.push('📊 Journaalposten');

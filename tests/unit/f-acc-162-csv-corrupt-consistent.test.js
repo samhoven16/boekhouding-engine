@@ -75,14 +75,53 @@ describe('F-ACC-162 — JP-CSV sluit CORRUPT uit, consistent met de XAF', () => 
   });
 });
 
-describe('F-ACC-162 — wiring: de JP-export in het pakket geeft de CORRUPT-filter mee', () => {
+describe('F-ACC-340 — JP-CSV óók op jaar gefilterd (consistent met de XAF-jaargrens)', () => {
+  const DATUM = 1; // KOL.JP.datum
+  function jpDat(id, datum, status) {
+    const r = new Array(17).fill('');
+    r[0] = id; r[1] = datum; r[4] = '1300'; r[6] = '8000'; r[8] = 100; r[16] = status || '';
+    return r;
+  }
+  // Gecombineerde filter zoals de call site: CORRUPT eruit + alleen exportjaar.
+  const jaarFilter = (jaar) => (rij) => {
+    if ((rij.length > STATUS ? String(rij[STATUS] || '').trim().toUpperCase() : '') === 'CORRUPT') return false;
+    const d = rij[DATUM];
+    return d instanceof Date && !isNaN(d.getTime()) && d.getFullYear() === jaar;
+  };
+
+  test('rijen van een ánder jaar vallen weg; alleen het exportjaar blijft', () => {
+    const ss = maakSs([
+      jpDat('J2024', new Date(2024, 5, 1), ''),
+      jpDat('J2025', new Date(2025, 5, 1), ''),
+      jpDat('J2025b', new Date(2025, 8, 9), ''),
+    ]);
+    const csv = ctx.exporteerAlsCsv_(ss, NAAM, jaarFilter(2025));
+    expect(csv).toMatch(/J2025/);
+    expect(csv).toMatch(/J2025b/);
+    expect(csv).not.toMatch(/J2024/);   // vorig jaar weg → telt niet meer mee dan de XAF
+  });
+
+  test('CORRUPT + verkeerd jaar samen: beide weg, juist-jaar-committed blijft', () => {
+    const ss = maakSs([
+      jpDat('Jok', new Date(2025, 0, 2), ''),
+      jpDat('Jcorrupt', new Date(2025, 0, 3), 'CORRUPT'),
+      jpDat('Joud', new Date(2023, 0, 4), ''),
+    ]);
+    const csv = ctx.exporteerAlsCsv_(ss, NAAM, jaarFilter(2025));
+    expect(csv).toMatch(/Jok/);
+    expect(csv).not.toMatch(/Jcorrupt/);
+    expect(csv).not.toMatch(/Joud/);
+  });
+});
+
+describe('F-ACC-162/340 — wiring: de JP-export filtert op CORRUPT én jaar', () => {
   const src = fs.readFileSync(SRC, 'utf8');
   test('exporteerAccountantsPakket roept exporteerAlsCsv_ voor JOURNAALPOSTEN met een rij-filter aan', () => {
     const idx = src.indexOf('2. Journaalposten CSV');
-    const blok = src.slice(idx, idx + 1000);
-    // filter-argument aanwezig + sluit CORRUPT uit via KOL.JP.status
+    const blok = src.slice(idx, idx + 1100);
     expect(blok).toMatch(/exporteerAlsCsv_\(\s*ss,\s*SHEETS\.JOURNAALPOSTEN,\s*function/);
     expect(blok).toMatch(/KOL\.JP\.status/);
-    expect(blok).toMatch(/!==\s*'CORRUPT'/);
+    expect(blok).toMatch(/'CORRUPT'/);              // CORRUPT-uitsluiting blijft
+    expect(blok).toMatch(/getFullYear\(\)\s*===\s*jaar/);  // jaar-uitsluiting toegevoegd
   });
 });
