@@ -540,7 +540,19 @@ const _GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash';
 function _geminiModel_() {
   try {
     const v = PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL');
-    if (v && v.trim()) return v.trim();
+    if (v && v.trim()) return v.trim();   // expliciete per-kopie override wint
+  } catch (_) {}
+  // F-SCALE-332: laat Sam het model centraal bijwerken via de config-payload
+  // (net als belastingTarieven), zodat een Gemini-model-EOL basisbreed op te
+  // vangen is ZONDER code-push naar elke kopie. De hardcoded default veroudert
+  // anders stil → AI-scan breekt voor de hele basis tegelijk.
+  try {
+    if (typeof haalConfigOp_ === 'function') {
+      const cfg = haalConfigOp_();
+      if (cfg && cfg.geminiModel && String(cfg.geminiModel).trim()) {
+        return String(cfg.geminiModel).trim();
+      }
+    }
   } catch (_) {}
   return _GEMINI_MODEL_DEFAULT;
 }

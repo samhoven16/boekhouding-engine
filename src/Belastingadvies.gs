@@ -265,9 +265,14 @@ function getBelasting_() {
     .filter(function(j) { return isFinite(j); })
     .sort(function(a, b) { return b - a; });  // descending
   const laatstBekendJaar = beschikbareJaren[0] || 2026;
-  const tarieven = serverTarieven
-    || BELASTING_PER_JAAR[jaar]
-    || BELASTING_PER_JAAR[laatstBekendJaar];
+  // F-SCALE-333: ondiepe kopie zodat de TARIEF_VEROUDERD-flags hieronder NIET op
+  // het gedeelde BELASTING_PER_JAAR-const-object plakken (aliasing). Anders kan
+  // een fallback-aanroep voor een toekomstig jaar het laatst-bekende-jaar-object
+  // vervuilen, waarna een latere legitieme aanroep voor dat jaar binnen dezelfde
+  // sessie ten onrechte 'verouderd' rapporteert. (Geneste IB_SCHIJVEN-array wordt
+  // hier nooit gemuteerd, dus ondiep volstaat.)
+  const tarieven = Object.assign({},
+    serverTarieven || BELASTING_PER_JAAR[jaar] || BELASTING_PER_JAAR[laatstBekendJaar]);
   // Hebben we échte tarieven voor het lopende jaar (server-override of lokale
   // tabel)? Zo niet, dan vielen we terug op de laatst-bekende-jaar-snapshot.
   // Belangrijk: serverTarieven is een ANDER object dan BELASTING_PER_JAAR[jaar],
@@ -1171,7 +1176,11 @@ function _berekenBelastingadviesRaw_(ss) {
   // Bron: belastingdienst.nl/wps/wcm/connect/.../btw-logies (officieel)
   const bedrijfsActiviteit = String(getInstelling_('Bedrijfsactiviteit') || '').toLowerCase();
   const isLogiesBedrijf = /logies|hotel|b\s*&\s*b|vakantie|airbnb|kamerverhuur|gastenverblijf/i.test(bedrijfsActiviteit);
-  if (isLogiesBedrijf && jaar >= 2026) {
+  // F-SCALE-334: alleen in het overgangsjaar 2026 tonen. `>= 2026` liet deze
+  // eenmalige-transitie-waarschuwing ("per 1-1-2026 verhoogd … update template")
+  // eeuwig staan (2027, 2028, …) alsof het nieuws is. Vanaf 2027 is 21% gewoon
+  // het normale tarief; geen waarschuwing meer nodig.
+  if (isLogiesBedrijf && jaar === 2026) {
     adviezen.push({
       type: 'WAARSCHUWING',
       titel: '⚠️ BTW-tarief logies verhoogd naar 21% per 1-1-2026',
