@@ -47,6 +47,25 @@ describe('F-OND-130 — OTP-mail onderscheidbaar van order-mail', () => {
   });
 });
 
+describe('F-OND-330 — menupad-verwijzingen kloppen met het echte menu', () => {
+  const bedankt = read('website/bedankt/index.html');
+  const home = read('website/index.html');
+  const menu = read('src/Menu.gs');
+
+  test('het echte menu-item "Nieuwe boeking — factuur, kosten of declaratie" bestaat', () => {
+    expect(menu).toMatch(/addItem\('Nieuwe boeking — factuur, kosten of declaratie'/);
+  });
+  test('/bedankt verwijst niet meer naar het niet-bestaande "Nieuwe boeking → Factuur"-submenu', () => {
+    expect(bedankt).not.toMatch(/Nieuwe boeking → Factuur/);
+    expect(bedankt).toMatch(/Nieuwe boeking — factuur, kosten of declaratie/);
+  });
+  test('homepage credit-nota-FAQ wijst naar de dedicated Creditnota-actie (niet het oude pad)', () => {
+    expect(home).not.toMatch(/Nieuwe boeking → Factuur/);          // ook geen "Boekhouding →"-variant
+    expect(home).toMatch(/Creditnota maken van factuur/);
+    expect(menu).toMatch(/addItem\('Creditnota maken van factuur'/);
+  });
+});
+
 describe('F-OND-142 — server-bedanktpagina gelijk aan de echte kopie-/OAuth-flow', () => {
   const code = read('licence-server/Code.gs');
   const fn = code.slice(code.indexOf('function bedanktPagina_'), code.indexOf('function bedanktPagina_') + 4200);
