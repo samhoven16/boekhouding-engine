@@ -1312,6 +1312,11 @@ function ensureOnboardedKolom_(sheet) {
 // ─────────────────────────────────────────────
 //  BEDANKT-PAGINA (na Mollie redirect)
 // ─────────────────────────────────────────────
+// DRIFT-LET-OP (F-OND-330): de LIVE Mollie-redirect gaat naar de website
+// `/bedankt/` (zie de redirect-URL bij _bouwBetaalRespons_), NIET hierheen.
+// Deze ?actie=bedankt-pagina is een OFF-PATH fallback (oude links / handmatige
+// URL). Houd 'm consistent met website/bedankt/index.html bij elke wijziging —
+// de website is de single source of truth voor de onboarding-flow-copy.
 function bedanktPagina_(e) {
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1348,7 +1353,7 @@ function bedanktPagina_(e) {
   <div class="heads-up">
     <strong>Wat gebeurt er zo:</strong>
     <ol>
-      <li>Open de mail <em>"Je Boekhoudbaar is klaar — activeer nu"</em> en klik <strong>"Open mijn boekhouding"</strong>. Google toont dan <strong>"Een kopie maken"</strong> — daarmee zet je jouw eigen kopie in <strong>jouw Drive</strong>.</li>
+      <li>Open de mail <em>"Je Boekhoudbaar is klaar — activeer nu 🚀"</em> en klik <strong>"Open mijn boekhouding"</strong>. Google toont dan <strong>"Een kopie maken"</strong> — daarmee zet je jouw eigen kopie in <strong>jouw Drive</strong>.</li>
       <li>De eerste keer dat je die kopie gebruikt (het <strong>Boekhoudbaar</strong>-menu opent of activeert) vraagt Google toegang tot jouw Drive en om <strong>namens jou mail te sturen</strong> (voor facturen). Klik <strong>Doorgaan</strong> — dit komt vóór je eerste factuur, niet erna.</li>
       <li>Je ziet mogelijk <em>"Deze app is niet geverifieerd door Google"</em> — dat klopt, Boekhoudbaar is een éénpersoonszaak. Klik op <strong>Geavanceerd → Ga naar Boekhoudbaar (onveilig)</strong>.</li>
       <li>Vul je e-mail in, ontvang een 6-cijferige code (15 minuten geldig), voer 'm in — klaar.</li>
