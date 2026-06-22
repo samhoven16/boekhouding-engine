@@ -8,12 +8,12 @@
 
 ## A. Harde blokkers — geen code-fix sluit deze (eigenaar = Sam / extern)
 
-| ID | Blokker | Waarom het 100% tegenhoudt | Eigenaar / actie |
-|----|---------|----------------------------|------------------|
-| F-TAX-110/111/112 | 2026 IB-schijven, arbeidskorting-opbouw, AOW-maxima nog niet RB-bevestigd | De fiscale KERN-output (IB-schatting) rust op niet-professioneel-bevestigde constanten. Code is intern consistent + golden-master-getest, maar niet wettelijk gecertificeerd. | **RB/belastingadviseur** tegen definitieve belastingdienst.nl-2026-tabel. Niet door mij te gokken. |
-| F-SCALE-141 (infra-helft) | Licentieserver = ongerepliceerde SPOF; standby-deploy + externe uptime-monitor niet operationeel | Bij serveruitval ligt (na de 90d offline-grace) de hele basis eruit. Code-helft (warme-standby-fallback) staat; de deploy + monitoring is ops. | **Sam**: tweede deploy + uptime-monitor op `?actie=health`. |
-| F-TAX-131 | Niet-EU-export-rubriek (2a/3a) niet te vullen — VF-schema heeft geen land-veld | Bepaalde 0%-export-rubricering is onvolledig (saldo klopt wel). Niet surgisch fixbaar zonder schema-uitbreiding + RB-mapping. | **Product + RB**: land-veld op VF/RELATIES + rubriek-mapping. |
-| F-OND-143 / 143b | "niet-geverifieerd"-scherm-volgorde + "Toestaan"/"Doorgaan"-woordkeuze | Onboarding-copy kan afwijken van Google's líve OAuth-flow; verkeerd raden maakt het erger. | **Sam**: één echte doorloop van Google's live flow; copy daarop ijken. |
+| ID | Blokker | Status na 2026-06-21 | Eigenaar / restactie |
+|----|---------|----------------------|----------------------|
+| F-TAX-110 | 2026-tarieven niet RB-bevestigd | **GROTENDEELS DICHT**: bron-verificatie uitgevoerd (belastingdienst.nl/Deloitte/PwC). Zwaarste constanten bevestigd; één significante fout gecorrigeerd (box-3-forfait 7,78%→6%) + 4 kleinere. Verslag in `rb-verificatie-checklist-2026.md`. | **RB**: alleen nog de ⚠️-punten aftekenen (AOW-schijf-1-tarief); F-TAX-111 arbeidskorting-opbouwtraject + F-TAX-112 AOW-korting-varianten zijn modellering, geen losse constante. |
+| F-SCALE-141 | Licentieserver-SPOF | **CODE DICHT** (F-SCALE-141b: standby-URL nu centraal pushbaar naar bestaande kopieën). Runbook klaar (`standby-server-runbook.md`). | **Sam**: tweede deploy + uptime-monitor op `?actie=health` (4 afvink-criteria in de runbook). |
+| F-TAX-131 | Niet-EU-export-rubriek | **WONTFIX-NU (beslist)**: RELATIES-land is free-text/onbetrouwbaar; 3a/3b-mapping vereist RB; saldo klopt; zeldzaam. Route = expliciet export-BTW-label ná RB-mapping. | **Product+RB** indien een klant aantoonbaar niet-EU exporteert. |
+| F-OND-143 | OAuth-scherm-copy | **GEEN BEVINDING (beslist)**: /start "Toestaan" (consent-scherm) en /bedankt "Doorgaan" (account-kiezer) zijn béide correct voor hun scherm. | **Sam**: één live end-to-end-doorloop ter bevestiging van de schermvolgorde (niet via browser door mij). |
 
 ## B. Wat de audits WÉL en NIET kunnen certificeren (de eerlijkheidsgrens)
 
