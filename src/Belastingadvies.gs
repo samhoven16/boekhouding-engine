@@ -809,6 +809,24 @@ function berekenBelastingadvies_(ss) {
   return cacheBerekening_(cacheKey, 600, function() { return _berekenBelastingadviesRaw_(ss); });
 }
 
+/**
+ * F-TAX-330 (klasse 10 — grondslag-afbakening uit grootboek-prefix): centrale
+ * test of een grootboekrekening een KIA/EIA-kwalificerend materieel
+ * bedrijfsmiddel is. Sluit de 0x90-afschrijvings/contra-rekeningen uit — anders
+ * inflateert een positief afschrijvingssaldo (bv. na een desinvestering-
+ * correctie of terugboeking) de investeringsgrondslag → te hoog KIA/EIA-advies
+ * → naheffing. Voorheen leunde dat alleen op het saldo-teken (parseFloat > 0),
+ * wat fragiel is. De wettelijke afbakening van immateriële activa (01xx
+ * software) en de €450-per-bedrijfsmiddel-ondergrens vereisen RB en zijn nog
+ * NIET ingebakken — zie bug-class-register klasse 10 (F-TAX-111-stijl RB-item).
+ * @param {*} code grootboekrekening-code
+ * @returns {boolean}
+ */
+function _isInvesteringsRekening02_(code) {
+  const c = String(code || '').trim();
+  return c.startsWith('02') && !c.endsWith('90');
+}
+
 function _berekenBelastingadviesRaw_(ss) {
   const jaar = new Date().getFullYear();
   // Re-evaluate per call zodat server-side tarief-overrides en jaar-rollovers
@@ -974,7 +992,7 @@ function _berekenBelastingadviesRaw_(ss) {
   const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);   // CYCLE-51
   let investeringen = 0;
   gbData.slice(1).forEach(r => {
-    if (r[0] && String(r[0]).startsWith('02') && parseFloat(r[5]) > 0) {
+    if (r[0] && _isInvesteringsRekening02_(r[0]) && parseFloat(r[5]) > 0) {
       investeringen += parseFloat(r[5]);
     }
   });
@@ -1063,7 +1081,7 @@ function _berekenBelastingadviesRaw_(ss) {
   gbData.slice(1).forEach(r => {
     const code = String(r[0] || '');
     const naam = String(r[1] || '').toLowerCase();
-    if (code.startsWith('02') && parseFloat(r[5]) > 0) {
+    if (_isInvesteringsRekening02_(code) && parseFloat(r[5]) > 0) {
       if (/energie|zonn?epaneel|zonn?epanelen|warmtepomp|isolat|led|elektr.?aut|laadpaal|warmteterugwinning/i.test(naam)) {
         eiaInv += parseFloat(r[5]);
       }
