@@ -1013,7 +1013,12 @@ function valideerEndpoint_(e) {
       // gecheckt → klant met onbereikbare email kon door zonder dat wij hen
       // konden bereiken voor support.
       if (status.startsWith('ingetrokken')) return jsonResp_({ geldig: false, permanent: true, fout: 'Licentie is ingetrokken.' });
-      if (status === 'bounce') return jsonResp_({ geldig: false, permanent: true, fout: 'E-mailadres ontvangt geen post. Neem contact op via support@boekhoudbaar.nl.' });
+      // F-RED-162: GEEN permanent:true. Een hard-bounce (mogelijk via een gelekt/
+      // gespooft Brevo-webhooktoken) mag een BETALENDE klant niet instant bricken
+      // + z'n 90-daagse offline-grace-anker wissen. Zonder permanent rijdt de klant
+      // de grace uit (tijd om de mail te herstellen / support te mailen) i.p.v. een
+      // directe lockout — analoog aan F-RED-161 (transiente fout wist anker niet).
+      if (status === 'bounce') return jsonResp_({ geldig: false, fout: 'E-mailadres ontvangt geen post. Neem contact op via support@boekhoudbaar.nl.' });
 
       // CYCLE 79: grace-period bij verlopen licentie. Een harde cut-off op
       // de exacte vervaldatum drukt klanten midden in hun werkflow eruit

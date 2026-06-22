@@ -322,8 +322,8 @@ function openIbAangifteHelper() {
   const _box2Pct1 = (_B && _B.BOX2_SCHIJF_1_PCT) || 0.245;
   const _box2Max1 = (_B && _B.BOX2_SCHIJF_1_MAX) || 67000;
   const _box2Pct2 = (_B && _B.BOX2_SCHIJF_2_PCT) || 0.31;
-  const _box3Vrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 57684;
-  const _box3Forf = (_B && _B.BOX3_FORFAIT_BELEGGING) || 0.0588;
+  const _box3Vrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 59357;
+  const _box3Forf = (_B && _B.BOX3_FORFAIT_BELEGGING) || 0.06;   // F-TAX-110: 2026-default, geen 0,0588-restant (dead-fallback, vuurt niet)
   const _box3Tar  = (_B && _B.BOX3_TARIEF) || 0.36;
 
   const html = HtmlService.createHtmlOutput(`
@@ -519,7 +519,7 @@ function beheerVermogensoverzicht() {
   // Heffingsvrij vermogen Box 3 — uit BELASTING_PER_JAAR (auto-update bij Prinsjesdag).
   // Bron: belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen
   const _B = (typeof getBelasting_ === 'function') ? getBelasting_() : null;
-  const heffingsvrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 57684;
+  const heffingsvrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 59357;
   const grondslag = Math.max(0, totaal - heffingsvrij);
 
   ss.toast(

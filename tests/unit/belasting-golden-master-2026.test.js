@@ -212,4 +212,14 @@ describe('LAAG 4 — UI-hint ↔ constante sync (F-TAX-136)', () => {
     // 7,78 mag alleen nog voorkomen als het expliciet "teruggedraaid/voorstel" is.
     if (/7,78/.test(hint)) expect(hint).toMatch(/teruggedraaid|voorstel/i);
   });
+
+  test('Prive.gs box-3-dead-fallbacks dragen geen 2025-restant meer (F-TAX-110-consistentie)', () => {
+    // Twee onafhankelijke audits flagden de dead-fallbacks 0,0588/57684 als
+    // inconsistent met de 6,00%/59357-correctie. Ze vuren niet (getBelasting_ is
+    // altijd beschikbaar) maar een bron-lezende controleur mag geen 5,88%-restant zien.
+    const prive = fs.readFileSync(path.resolve(__dirname, '../../src/Prive.gs'), 'utf8');
+    expect(prive).not.toMatch(/BOX3_FORFAIT_BELEGGING\) \|\| 0\.0588/);
+    expect(prive).not.toMatch(/BOX3_HEFFINGSVRIJ\) \|\| 57684/);
+    expect(prive).toMatch(/BOX3_FORFAIT_BELEGGING\) \|\| 0\.06/);   // 2026-waarde
+  });
 });

@@ -106,6 +106,15 @@ describe('F-SCALE-141 — warme-standby licentieserver (client-helft)', () => {
     expect(propStore.LICENTIE_SERVER_URL_FALLBACK).toBe('https://s.example/l');
   });
 
+  test('F-RED-163: _syncStandbyUrlUitConfig_ accepteert ALLEEN https (geen http/andere scheme)', () => {
+    const { ctx, propStore } = maakCtx({ props: {} });
+    ctx._syncStandbyUrlUitConfig_({ licentieServerUrlFallback: 'http://kwaadaardig.example/l' });
+    ctx._syncStandbyUrlUitConfig_({ licentieServerUrlFallback: 'javascript:alert(1)' });
+    expect(propStore.LICENTIE_SERVER_URL_FALLBACK).toBeUndefined();   // non-https geweigerd
+    ctx._syncStandbyUrlUitConfig_({ licentieServerUrlFallback: 'https://veilig.example/l' });
+    expect(propStore.LICENTIE_SERVER_URL_FALLBACK).toBe('https://veilig.example/l');
+  });
+
   test('geen fallback geconfigureerd → één poging, dan offline-grace (ongewijzigd)', () => {
     const { ctx, urls } = maakCtx({
       props: {}, // geen LICENTIE_SERVER_URL_FALLBACK, geen licentieLaatstGelukt

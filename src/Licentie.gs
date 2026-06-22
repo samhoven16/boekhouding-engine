@@ -91,6 +91,7 @@ function _syncStandbyUrlUitConfig_(cfg) {
   try {
     const url = (cfg && cfg.licentieServerUrlFallback) ? String(cfg.licentieServerUrlFallback).trim() : '';
     if (!url) return;
+    if (!/^https:\/\//i.test(url)) return;   // F-RED-163: alleen https — geen plaintext/andere-scheme standby (defense-in-depth op de gepushte URL)
     const props = PropertiesService.getScriptProperties();
     if (props.getProperty('LICENTIE_SERVER_URL_FALLBACK') !== url) {
       props.setProperty('LICENTIE_SERVER_URL_FALLBACK', url);
