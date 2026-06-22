@@ -908,7 +908,7 @@ function extractFileId_(url) {
 
 /**
  * Opent de factuurlijst als HTML dialog met status-tabs.
- * Menu: Boekhouding → Facturen & Betalingen → Factuurlijst openen
+ * Menu: Boekhoudbaar → Facturen & Betalingen → Factuurlijst openen
  */
 function openFactuurlijst() {
   const html = HtmlService.createHtmlOutput(_bouwFactuurlijstHtml_())

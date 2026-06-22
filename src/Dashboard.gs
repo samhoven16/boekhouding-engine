@@ -12,7 +12,7 @@ function vernieuwDashboard() {
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.DASHBOARD);
   if (!sheet) {
-    try { SpreadsheetApp.getUi().alert('Tabblad "Dashboard" ontbreekt. Run setup() via Boekhouding → Instellingen → Herinstalleer.'); } catch (_) {}
+    try { SpreadsheetApp.getUi().alert('Tabblad "Dashboard" ontbreekt. Run setup() via Boekhoudbaar → Instellingen → Herinstalleer.'); } catch (_) {}
     return;
   }
   // Progressie-indicator (verdwijnt na 30s als code vastloopt)
@@ -159,13 +159,13 @@ function vernieuwDashboard() {
       const emoji = gez.score >= 90 ? '✅' : gez.score >= 70 ? '⚠️' : '❌';
       const bg    = gez.score >= 90 ? '#E8F5E9' : gez.score >= 70 ? '#FFF8E1' : '#FFEBEE';
       const fg    = gez.score >= 90 ? '#1B5E20' : gez.score >= 70 ? '#E65100' : '#B71C1C';
-      const tekst = `${emoji} Gezondheid: ${gez.score}/100  (${gez.fouten} fout · ${gez.waarsch} let op · gecheckt ${versheid})  —  Menu: Boekhouding → Gezondheidscheck`;
+      const tekst = `${emoji} Gezondheid: ${gez.score}/100  (${gez.fouten} fout · ${gez.waarsch} let op · gecheckt ${versheid})  —  Menu: Boekhoudbaar → Gezondheidscheck`;
       sheet.getRange(6, 1, 1, 9).merge().setValue(tekst)
         .setBackground(bg).setFontColor(fg).setFontWeight('bold').setFontSize(10)
         .setHorizontalAlignment('center');
       sheet.setRowHeight(6, 22);
     } else {
-      const tekst = 'ℹ️ Nog geen gezondheidscheck uitgevoerd.  Menu: Boekhouding → Gezondheidscheck uitvoeren';
+      const tekst = 'ℹ️ Nog geen gezondheidscheck uitgevoerd.  Menu: Boekhoudbaar → Gezondheidscheck uitvoeren';
       sheet.getRange(6, 1, 1, 9).merge().setValue(tekst)
         .setBackground('#F7F9FC').setFontColor('#455A64').setFontSize(10)
         .setHorizontalAlignment('center');
@@ -285,7 +285,7 @@ function vernieuwDashboard() {
       sheet.getRange(rij, 1, 1, 8).merge()
         .setValue('💡 BELASTINGADVIES  |  Totaal aftrekposten: ' + formatBedrag_(advies.totaalAftrek) +
                   '  |  Geschatte IB: ' + formatBedrag_(advies.geschatteIB) +
-                  '  →  Klik: Boekhouding → Belastingadvies voor details')
+                  '  →  Klik: Boekhoudbaar → Belastingadvies voor details')
         .setBackground('#FFF8E1').setFontWeight('bold').setFontSize(10);
       rij++;
       topAdviezen.forEach(a => {
@@ -911,7 +911,7 @@ function bepaalStatusNu_(ss, kpi) {
       if (dagenTot >= 0 && dagenTot <= 14) {
         return {
           tekst: '🔴  BTW-aangifte ' + kw.kw + ' over ' + dagenTot + (dagenTot === 1 ? ' dag' : ' dagen') +
-                 ' — Menu: Boekhouding → BTW → BTW-aangifte assistent',
+                 ' — Menu: Boekhoudbaar → BTW → BTW-aangifte assistent',
           bg: '#FEE4E2', fg: '#7A1A1A', border: '#DC2626',
         };
       }
@@ -922,7 +922,7 @@ function bepaalStatusNu_(ss, kpi) {
   if ((kpi.aantalVervallenFacturen || 0) > 0) {
     return {
       tekst: '⚠  ' + kpi.aantalVervallenFacturen + ' factu(u)r(en) vervallen — ' +
-             'Menu: Boekhouding → Facturen → Betalingsherinneringen versturen',
+             'Menu: Boekhoudbaar → Facturen → Betalingsherinneringen versturen',
       bg: '#FFE8C7', fg: '#7A4A00', border: '#F5A623',
     };
   }
@@ -943,7 +943,7 @@ function bepaalStatusNu_(ss, kpi) {
   // 4. Lege boekhouding
   if (!kpi.omzet && !kpi.kosten && !kpi.banksaldo) {
     return {
-      tekst: '🚀  Klaar om te starten — boek je eerste factuur of kostenpost via Menu: Boekhouding → Nieuwe boeking',
+      tekst: '🚀  Klaar om te starten — boek je eerste factuur of kostenpost via Menu: Boekhoudbaar → Nieuwe boeking',
       bg: '#E6F7F4', fg: '#0E5E54', border: '#2EC4B6',
     };
   }
@@ -1280,7 +1280,7 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
   ];
   const btwDeadline = btwDeadlines.find(d => d.warnMaand === maand && dag >= d.warnVanaf);
   if (btwDeadline) {
-    waarschuwingen.push(['LET OP', `BTW aangifte ${btwDeadline.kwartaal} — deadline einde deze maand! Genereer via Boekhouding → BTW.`, '#FFF3E0']);
+    waarschuwingen.push(['LET OP', `BTW aangifte ${btwDeadline.kwartaal} — deadline einde deze maand! Genereer via Boekhoudbaar → BTW.`, '#FFF3E0']);
   }
 
   // Cash runway waarschuwing (nieuw: Fractional CFO / startup pijnpunt)
@@ -1372,7 +1372,7 @@ function diagnoseDashboard() {
 
 /**
  * Opent het interactieve dashboard als HTML dialog.
- * Menu: Boekhouding → Dashboard openen
+ * Menu: Boekhoudbaar → Dashboard openen
  */
 function openDashboard() {
   const html = HtmlService.createHtmlOutput(_bouwDashboardHtml_())

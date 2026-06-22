@@ -56,7 +56,7 @@ function bouwHelpTab_(ss) {
     ['Algemene boekhouding', '7 jaar vanaf einde boekjaar'],
     ['Onroerend goed (gebouwen, grond)', '10 jaar vanaf einde boekjaar'],
     ['Bewaarvorm', 'Origineel formaat OF gestructureerde elektronische kopie (XAF)'],
-    ['Boekhoudbaar XAF-export', 'Beschikbaar via Menu → Boekhouding → Controle & Export → "💾 Exporteer als XAF"'],
+    ['Boekhoudbaar XAF-export', 'Beschikbaar via Menu → Boekhoudbaar → Controle & Export → "💾 Exporteer als XAF"'],
     ['Drive-backup retentie', 'Dagelijks (30 dagen retentie). Voor 7-jaars: jaarlijks XAF-export downloaden.'],
   ];
   bewaarplicht.forEach(function(b) {
@@ -98,10 +98,10 @@ function bouwHelpTab_(ss) {
     ['☐ 4. Openstaande debiteuren gecontroleerd', 'Menu → Facturen → Openstaande klantfacturen'],
     ['☐ 5. BTW Q4 aangifte vóór 31 januari', 'Menu → BTW → Aangifte Q4'],
     ['☐ 6. Privé-opnames + privé-stortingen rondrekening', 'Eigen vermogen sluit op debet+credit'],
-    ['☐ 7. Afschrijvingen verwerkt', 'Menu → Boekhouding → Geavanceerd → Afschrijvingen verwerken'],
+    ['☐ 7. Afschrijvingen verwerkt', 'Menu → Boekhoudbaar → Geavanceerd → Afschrijvingen verwerken'],
     ['☐ 8. Voorraad-opname (indien van toepassing)', '31-12 inventarisatie'],
     ['☐ 9. KOR-omzet onder €20.000?', 'Anders afmelden bij Belastingdienst'],
-    ['☐ 10. Periode BTW Q4 afsluiten', 'Menu → Boekhouding → Geavanceerd → BTW-periode afsluiten'],
+    ['☐ 10. Periode BTW Q4 afsluiten', 'Menu → Boekhoudbaar → Geavanceerd → BTW-periode afsluiten'],
     ['☐ 11. XAF-export voor accountant', 'Menu → Controle & Export → Exporteer als XAF'],
     ['☐ 12. IB-aangifte vóór 1 mei (volgend jaar)', 'Of vraag uitstel aan'],
   ];
@@ -189,7 +189,7 @@ function bouwHelpTab_(ss) {
       'kant of die van Boekhoudbaar ligt, mail eerst.'],
     ['Als Boekhoudbaar definitief zou stoppen',
       'Je raakt niets kwijt: je hele administratie staat in jóuw Google Drive en blijft werken. ' +
-      'Exporteer alles via Boekhouding → Exporteren (XAF + Excel + PDF\'s) voor je accountant. ' +
+      'Exporteer alles via Boekhoudbaar → Exporteren (XAF + Excel + PDF\'s) voor je accountant. ' +
       'De volledige broncode staat open op github.com/samhoven16/boekhouding-engine, zodat een ' +
       'technische opvolger 1-op-1 verder kan. Zet desnoods LICENTIE_GRACE_DAGEN op 3650 (zie hierboven) ' +
       'om te blijven factureren — dit alles werkt zónder dat onze server nodig is.'],

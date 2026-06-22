@@ -32,7 +32,7 @@
 // hulp bij "het doet het niet" — output is plain-text die klant in
 // support-mail kan plakken.
 //
-// Menu: Boekhouding → Installatie diagnoseren
+// Menu: Boekhoudbaar → Installatie diagnoseren
 
 function diagnoseInstallatie() {
   const ui = SpreadsheetApp.getUi();
@@ -67,7 +67,7 @@ function diagnoseInstallatie() {
                  PropertiesService.getScriptProperties().getProperty('SETUP_DONE') === 'true' ||
                  (typeof PROP === 'object' && PROP && PROP.SETUP_DONE &&
                   PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) === 'true');
-    if (!done) return { ok: false, melding: 'Run Boekhouding → Setup om te installeren.' };
+    if (!done) return { ok: false, melding: 'Run Boekhoudbaar → Setup om te installeren.' };
     return { detail: 'ja' };
   });
 
@@ -126,7 +126,7 @@ function diagnoseInstallatie() {
     try {
       const props = PropertiesService.getScriptProperties();
       const sleutel = props.getProperty('licentiesleutel') || '';
-      if (!sleutel) return { ok: false, melding: 'GEEN sleutel — activeer via Boekhouding → Licentie activeren' };
+      if (!sleutel) return { ok: false, melding: 'GEEN sleutel — activeer via Boekhoudbaar → Licentie activeren' };
       if (typeof valideerLicentieOpServer_ !== 'function') return { detail: 'check overgeslagen (functie ontbreekt)' };
       const r = valideerLicentieOpServer_(sleutel);
       if (r && r.geldig === false) return { ok: false, melding: r.fout || 'Licentie ongeldig' };
@@ -715,7 +715,7 @@ function controleerVerkoopfacturen_(ss) {
 
     if (vervallenOpen > 0) {
       resultaten.push({ check: 'Facturen – Vervallen onbetaald', status: 'WAARSCHUWING',
-        bericht: `${vervallenOpen} factuur/facturen zijn vervallen maar nog niet betaald. Stuur een betalingsherinnering via Boekhouding → Facturen & Betalingen.` });
+        bericht: `${vervallenOpen} factuur/facturen zijn vervallen maar nog niet betaald. Stuur een betalingsherinnering via Boekhoudbaar → Facturen & Betalingen.` });
     } else {
       resultaten.push({ check: 'Facturen – Vervallen onbetaald', status: 'OK', bericht: 'Geen vervallen onbetaalde facturen.' });
     }

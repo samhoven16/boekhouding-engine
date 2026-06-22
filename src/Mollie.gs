@@ -2,7 +2,7 @@
  * Mollie.gs
  * Genereert iDEAL/SEPA-betaal-links per factuur via Mollie API.
  *
- * Klant zet API-key éénmalig via Boekhouding → Instellingen → Mollie API-key.
+ * Klant zet API-key éénmalig via Boekhoudbaar → Instellingen → Mollie API-key.
  * Bij factuur-creatie wordt automatisch een payment-link gegenereerd en
  * geëmbed in de email + PDF — afnemer betaalt met 1 klik i.p.v.
  * IBAN handmatig over te tikken.

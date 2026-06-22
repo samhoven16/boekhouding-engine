@@ -851,7 +851,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
       }
     }
   } else if (directMailen && !klantEmail) {
-    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen klant e-mailadres bekend. Vul het e-mailadres in bij de klant-relatie en verstuur handmatig via Boekhouding → Verkoopfacturen.');
+    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen klant e-mailadres bekend. Vul het e-mailadres in bij de klant-relatie en verstuur handmatig via Boekhoudbaar → Verkoopfacturen.');
   } else if (directMailen && klantEmail && !pdfUrl) {
     schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – PDF niet beschikbaar, email niet verzonden');
   }
@@ -1911,7 +1911,7 @@ function _runTaak_(naam, fn, opt) {
 /**
  * Verborgen tabblad 'Taakstatus' toont per achtergrond-taak: laatste run,
  * duur, status, eventueel laatste fout. Klant-vriendelijk overzicht via
- * Boekhouding → Controle → Taakstatus tonen.
+ * Boekhoudbaar → Controle & Export → Taakstatus tonen.
  */
 function _updateTaakStatus_(naam, status, durMs, fout) {
   const ss = getSpreadsheet_();
@@ -2086,7 +2086,7 @@ function stuurWeeklySamenvatting_() {
  * Drempels:
  *   - VERKOOPFACTUREN + INKOOPFACTUREN samen > 2000 rijen
  *   - JOURNAALPOSTEN > 8000 rijen
- * Dan: adviseer "Boekhouding → Beheer → Nieuw boekjaar starten"
+ * Dan: adviseer "Boekhoudbaar → Beheer → Nieuw boekjaar starten"
  */
 function controleerSheetGrootte_(ss) {
   const nu = Date.now();
@@ -2108,7 +2108,7 @@ function controleerSheetGrootte_(ss) {
   const bericht =
     'De spreadsheet bevat ' + (vfRijen + ifRijen) + ' facturen en ' + jrRijen + ' boekingen. ' +
     'Dit werkt prima, maar het Dashboard-refresh wordt merkbaar trager. ' +
-    'Overweeg om een nieuw boekjaar te starten via Boekhouding → Instellingen → Nieuw boekjaar.';
+    'Overweeg om een nieuw boekjaar te starten via Boekhoudbaar → Instellingen → Nieuw boekjaar.';
 
   safeAuditLog_('Sheet-grootte waarschuwing', bericht);
   if (eigenEmail && isGeldigEmail_(eigenEmail)) {
@@ -2431,7 +2431,7 @@ function controleerBtwDeadlines_() {
         stuurKlantNotificatie_(email,
           `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
           `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
-          `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
+          `Genereer uw aangifte via: Boekhoudbaar → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
           `Met vriendelijke groet,\n— Boekhoudbaar`
         );
       } catch (err) {

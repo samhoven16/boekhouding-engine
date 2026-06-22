@@ -1360,7 +1360,7 @@ function beheerGeslotenPeriodes() {
     ui.alert(
       'Geannuleerd',
       'De periode-naam kwam niet exact overeen — uit veiligheid is de actie afgebroken. ' +
-      'Probeer opnieuw via Boekhouding → Boekjaar → Gesloten periodes.',
+      'Probeer opnieuw via Boekhoudbaar → Boekjaar → Gesloten periodes.',
       ui.ButtonSet.OK
     );
     return;

@@ -40,6 +40,35 @@ describe('F-SCALE-332 — Gemini-model via centrale config (model-EOL-recovery)'
     expect(typeof m).toBe('string');
     expect(m).toMatch(/gemini/i);
   });
+
+  // END-TO-END (F-SCALE-332c): de tests hierboven voeden _geminiModel_ met een
+  // HANDGEMAAKT cfg-object. Dat verhulde dezelfde naad als F-SCALE-141c: de
+  // server-configEndpoint_ emitte `geminiModel` aanvankelijk NIET → cfg.geminiModel
+  // was op elke client undefined → de centrale model-EOL-recovery was inert. Deze
+  // test draait de ECHTE server-payload door _geminiModel_ en faalt zodra het veld
+  // uit configEndpoint_ verdwijnt.
+  const CODE_GS = path.resolve(__dirname, '../../licence-server/Code.gs');
+  function serverConfigPayload(scriptProps) {
+    const store = scriptProps || {};
+    const srv = createGasRuntime([CODE_GS], {
+      PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k in store ? store[k] : null), setProperty: () => {}, deleteProperty: () => {} }) },
+      ContentService: { createTextOutput: (txt) => ({ _txt: txt, setMimeType() { return this; } }), MimeType: { JSON: 'json' } },
+    });
+    return JSON.parse(srv.configEndpoint_({})._txt);
+  }
+
+  test('server emit geminiModel uit GEMINI_MODEL_CENTRAAL → _geminiModel_ gebruikt het (échte payload)', () => {
+    const payload = serverConfigPayload({ GEMINI_MODEL_CENTRAAL: 'gemini-9.9-flash' });
+    expect(payload.geminiModel).toBe('gemini-9.9-flash');       // server stuurt het veld écht
+    const ctx = ctxMet({}, payload);                            // client krijgt de echte payload
+    expect(ctx._geminiModel_()).toBe('gemini-9.9-flash');       // → centrale EOL-recovery werkt
+  });
+
+  test('zonder GEMINI_MODEL_CENTRAAL → leeg veld → client valt terug op lokale default', () => {
+    const payload = serverConfigPayload({});
+    expect(payload.geminiModel).toBe('');
+    expect(ctxMet({}, payload)._geminiModel_()).toMatch(/gemini/i);  // hardcoded default, geen crash
+  });
 });
 
 describe('F-SCALE-333/334 — broncode-borging', () => {

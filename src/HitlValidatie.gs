@@ -18,7 +18,7 @@
  * (GL/BTW/bijlage); de rij blijft BEWERKBAAR tot de periode wordt afgesloten
  * (jaarafsluiting via vergrendelPeriode_) — validatie vergrendelt niets.
  *
- * Menu: Boekhouding → Geavanceerd → "✔ Concept-boekingen valideren"
+ * Menu: Boekhoudbaar → Geavanceerd → "✔ Concept-boekingen valideren"
  */
 
 'use strict';
@@ -232,7 +232,7 @@ function _waarschuwOnvalidered_() {
     const aantal = _haalConceptBoekingen_(ss).length;
     if (aantal >= 10) {
       ss.toast(
-        aantal + ' boekingen wachten op validatie. Open Boekhouding → Geavanceerd → ' +
+        aantal + ' boekingen wachten op validatie. Open Boekhoudbaar → Geavanceerd → ' +
         'Concept-boekingen valideren.',
         '✔ HITL-validatie open',
         8

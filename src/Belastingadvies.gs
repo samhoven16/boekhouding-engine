@@ -1233,7 +1233,7 @@ function _berekenBelastingadviesRaw_(ss) {
       type: 'ACTIE',
       titel: '📅 BTW aangifte: ' + kwartaalDeadlines[maand] + ' deadline nadert',
       tekst: `De BTW aangifte voor ${kwartaalDeadlines[maand]} moet voor eind ${maandNamen[maand]} worden ingediend. ` +
-             `Genereer uw aangifte via: Boekhouding → BTW.`,
+             `Genereer uw aangifte via: Boekhoudbaar → BTW.`,
       besparing: null,
     });
   }
@@ -1534,13 +1534,13 @@ function genereerBelastingadvies() {
       .setHorizontalAlignment('center').setVerticalAlignment('middle');
     sheet.setRowHeight(4, 38);
     sheet.getRange(5, 1, 1, 3).merge()
-      .setValue('Voer eerst een paar facturen of kostenposten in via Boekhouding → "Nieuwe boeking". ' +
+      .setValue('Voer eerst een paar facturen of kostenposten in via Boekhoudbaar → "Nieuwe boeking". ' +
         'Zodra er omzet of kosten staan, krijg je hier een persoonlijke fiscale signalering met:\n\n' +
         '• Geschatte IB + Zvw voor dit jaar (informatief)\n' +
         '• Aftrekposten waar je mogelijk recht op hebt (KIA, MIA, EIA)\n' +
         '• Reiskosten, lijfrente-jaarruimte, BTW-spaarpot\n' +
         '• Signaleringen op basis van je boekjaar\n\n' +
-        'Je kunt ook eerst je fiscaal profiel invullen: Boekhouding → "Vul je profiel in voor persoonlijke berekening".\n\n' +
+        'Je kunt ook eerst je fiscaal profiel invullen: Boekhoudbaar → "Vul je profiel in voor persoonlijke berekening".\n\n' +
         '⚠️ Boekhoudbaar geeft informatieve berekeningen, geen formeel belastingadvies. Bron: Belastingdienst.nl.')
       .setBackground('#FFFFFF').setFontColor('#5F6B7A')
       .setFontSize(11).setWrap(true)
@@ -1614,7 +1614,7 @@ function genereerBelastingadvies() {
     sheet.setRowHeight(rij, 36);
     rij++;
     sheet.getRange(rij, 1, 1, 3).merge()
-      .setValue('→ Open via menu: Boekhouding → Persoonlijk fiscaal profiel invullen')
+      .setValue('→ Open via menu: Boekhoudbaar → Persoonlijk fiscaal profiel invullen')
       .setBackground('#FFF8E1').setFontColor('#5A3F00')
       .setFontSize(10).setHorizontalAlignment('center');
     rij += 2;

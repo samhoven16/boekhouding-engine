@@ -67,7 +67,7 @@ function genereerNotificaties_() {
         prioriteit: dagenTot <= 7 ? 100 : 80,
         titel: '⏰ BTW-aangifte ' + d.kw + ': nog ' + dagenTot + ' dag' + (dagenTot === 1 ? '' : 'en'),
         tekst: 'De BTW-aangifte voor ' + d.kw + ' moet uiterlijk ' + formatDatum_(d.datum) + ' worden ingediend.',
-        actie: 'Open Boekhouding → BTW → BTW-aangifte ' + d.kw,
+        actie: 'Open Boekhoudbaar → BTW → BTW-aangifte ' + d.kw,
         euros: null,
         urgent: dagenTot <= 7,
         deadline: formatDatum_(d.datum),
@@ -84,7 +84,7 @@ function genereerNotificaties_() {
       titel: '⚠️ KOR-grens binnen handbereik',
       tekst: 'Je hebt nog ' + formatBedrag_(ruimte) + ' ruimte voor de KOR (€20.000 omzet/jaar). ' +
              'Bij overschrijding moet je BTW gaan rekenen — plan resterende facturen slim.',
-      actie: 'Open Boekhouding → BTW → KOR-check',
+      actie: 'Open Boekhoudbaar → BTW → KOR-check',
       euros: null,
       urgent: ruimte < 1000,
       bron: 'kor-grens',
@@ -159,7 +159,7 @@ function genereerNotificaties_() {
           tekst: 'Je hebt ' + formatBedrag_(inv) + ' geïnvesteerd. Bij ' + formatBedrag_(B.KIA_MIN) +
                  '+ krijg je ' + Math.round(kiaPct * 100) + '% extra aftrek (KIA) — dat is ~' +
                  formatBedrag_(kiaAftrekExtra) + ' belastingvoordeel. Investeer dit jaar nog?',
-          actie: 'Boekhouding → Wat-als-rekenmachine om effect te zien',
+          actie: 'Boekhoudbaar → Wat-als-rekenmachine om effect te zien',
           euros: kiaAftrekExtra * ibPct1Kia,
           urgent: dag >= 20,
           bron: 'kia-deadline',
@@ -213,7 +213,7 @@ function genereerNotificaties_() {
       titel: '📋 Vul je profiel aan voor persoonlijk advies',
       tekst: 'Ontbrekend: ' + ontbrekend.join(', ') + '. Met deze info kunnen we ' +
              'de juiste aftrekposten voor je vinden (kost 1 minuut).',
-      actie: 'Boekhouding → Vul je profiel in voor persoonlijk advies',
+      actie: 'Boekhoudbaar → Vul je profiel in voor persoonlijk advies',
       euros: null,
       urgent: false,
       bron: 'profiel-onvolledig',

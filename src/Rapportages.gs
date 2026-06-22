@@ -71,7 +71,7 @@ function genereerBalans() {
     sheet.setRowHeight(rij, 32);
     rij++;
     sheet.getRange(rij, 1, 1, 4).merge()
-      .setValue('Mogelijke oorzaken: ontbrekende boeking, dubbele journaalpost, of foutieve openingsbalans. Run Boekhouding → Controle → Gezondheidscheck.')
+      .setValue('Mogelijke oorzaken: ontbrekende boeking, dubbele journaalpost, of foutieve openingsbalans. Run Boekhoudbaar → Controle & Export → Gezondheidscheck.')
       .setBackground('#FFEBEE').setFontColor('#B71C1C')
       .setFontStyle('italic').setFontSize(10)
       .setHorizontalAlignment('center').setWrap(true);

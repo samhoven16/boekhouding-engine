@@ -102,7 +102,7 @@ Uw BTW aangifte voor ${kw.naam} moet uiterlijk ${kw.deadline.toLocaleDateString(
 U heeft nog ${dagentot} dag${dagentot === 1 ? '' : 'en'} de tijd.${saldoTekst}
 
 Open Boekhoudbaar en kies:
-Boekhouding → BTW → 🧾 BTW aangifte assistent
+Boekhoudbaar → BTW → 🧾 BTW aangifte assistent
 
 Voor de daadwerkelijke aangifte gaat u naar:
 https://mijn.belastingdienst.nl

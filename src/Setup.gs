@@ -18,7 +18,7 @@ function setup() {
     alertOfLog_(ui, 'Setup is al klaar',
       'Je boekhouding draait al — niks meer te doen hier.\n\n' +
       'Wil je toch helemaal opnieuw beginnen? Ga naar:\n' +
-      'Boekhouding → Instellingen → Setup opnieuw uitvoeren (reset)');
+      'Boekhoudbaar → Instellingen → Setup opnieuw uitvoeren (reset)');
     return;
   }
   // ──────────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ function setup() {
         if (!isLicentieGeldig_()) {
           alertOfLog_(ui, 'Licentie vereist',
             'U heeft een geldige licentiesleutel nodig om de setup te starten.\n\n' +
-            'Ga naar Boekhouding → Licentie activeren en voer uw sleutel in.');
+            'Ga naar Boekhoudbaar → Licentie activeren en voer uw sleutel in.');
           return;
         }
       } else {
@@ -515,7 +515,7 @@ function zetJournaalpostenHeaders_(sheet) {
   // 19 kolommen: 16 originele + 3 HITL-validatie (Human-in-the-Loop):
   // Q=Status (Concept/Gevalideerd), R=Gevalideerd door (email), S=Gevalideerd op (datum).
   // Default voor nieuwe boekingen: Status='Concept'. Klant valideert via menu
-  // "Boekhouding → Geavanceerd → Boekingen valideren". Pas dan officieel "afgesloten".
+  // "Boekhoudbaar → Geavanceerd → Boekingen valideren". Pas dan officieel "afgesloten".
   const headers = [
     'Boeking ID', 'Datum', 'Omschrijving', 'Dagboek', 'Debet rekening',
     'Debet omschrijving', 'Credit rekening', 'Credit omschrijving',
@@ -732,7 +732,7 @@ function zetInstellingen_(ss) {
     [15, 'Uw telefoonnummer (bijv. 06-12345678)'],
     [16, 'Uw website (optioneel, bijv. www.uwbedrijf.nl)'],
     [32, 'Kies een sterk wachtwoord voor de API-koppeling (bijv. mijnbedrijf-2026-geheim)'],
-    [33, 'Vul hier de Web App URL in na publicatie — zie Boekhouding → Koppeling Zapier'],
+    [33, 'Vul hier de Web App URL in na publicatie — zie Boekhoudbaar → Koppeling Zapier'],
   ];
   notities.forEach(function(n) {
     sheet.getRange(n[0], 2).setNote(n[1]);
@@ -1327,6 +1327,6 @@ function resetSetup() {
 
   ui.alert('Klaar! ✓',
     'Reset gelukt. Run nu opnieuw setup via:\n' +
-    'Boekhouding → Instellingen → Eerste keer instellen (setup)',
+    'Boekhoudbaar → Instellingen → Eerste keer instellen (setup)',
     ui.ButtonSet.OK);
 }

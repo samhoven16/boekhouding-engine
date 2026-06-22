@@ -356,7 +356,7 @@ function openHoofdFormulier() {
   if (!formId) {
     SpreadsheetApp.getUi().alert(
       'Formulier nog niet aangemaakt',
-      'Voer eerst de setup uit:\nBoekhouding → Instellingen → Eerste keer instellen (setup)',
+      'Voer eerst de setup uit:\nBoekhoudbaar → Instellingen → Eerste keer instellen (setup)',
       SpreadsheetApp.getUi().ButtonSet.OK
     );
     return;

@@ -837,7 +837,7 @@ function controleerSetupGedaan_() {
     SpreadsheetApp.getUi().alert(
       'Instellen vereist',
       'Dit onderdeel is pas beschikbaar nadat het systeem is ingesteld.\n\n' +
-      'Ga naar:\nBoekhouding → Instellingen → Eerste keer instellen (setup)',
+      'Ga naar:\nBoekhoudbaar → Instellingen → Eerste keer instellen (setup)',
       SpreadsheetApp.getUi().ButtonSet.OK
     );
   } catch (e) { Logger.log('controleerSetupGedaan_: UI niet beschikbaar'); }

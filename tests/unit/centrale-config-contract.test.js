@@ -51,6 +51,12 @@ describe('Centrale config-endpoint levert het volledige delivery-contract', () =
     expect(fn).toMatch(/STANDBY_SERVER_URL/);
   });
 
+  test('serveert het centrale Gemini-model uit GEMINI_MODEL_CENTRAAL (F-SCALE-332)', () => {
+    // Zonder dit veld is de model-EOL-recovery inert: _geminiModel_ leest cfg.geminiModel.
+    expect(fn).toMatch(/geminiModel:/);
+    expect(fn).toMatch(/GEMINI_MODEL_CENTRAAL/);
+  });
+
   test('client (getBelasting_) geeft server-tarieven voorrang op de lokale tabel', () => {
     // serverTarieven || BELASTING_PER_JAAR[jaar] || laatstBekend — server eerst.
     expect(client).toMatch(/serverTarieven\s*\n?\s*\|\|\s*BELASTING_PER_JAAR/);

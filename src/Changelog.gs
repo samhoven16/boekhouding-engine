@@ -32,7 +32,7 @@ const CHANGELOG_ENTRIES = [
     datum: '2026-05-08',
     titel: '🎁 Verwijs een vriend',
     items: [
-      'Nieuwe optie: Boekhouding → 🎁 Verwijs een vriend — jullie krijgen beide €5',
+      'Nieuwe optie: Boekhoudbaar → 🎁 Verwijs een vriend — jullie krijgen beide €5',
       '/demo/ pagina op website: prospects kunnen klikken zonder te kopen',
       'Refer-a-friend met persoonlijke link + share-knoppen voor WhatsApp/email/LinkedIn/Twitter',
     ],
@@ -73,7 +73,7 @@ const CHANGELOG_ENTRIES = [
     datum: '2026-05-07',
     titel: '🎯 Eerste-klant-readiness',
     items: [
-      'Nieuw menu: Boekhouding → Controle → ✅ Werkt-alles-test (12 punts smoke-test)',
+      'Nieuw menu: Boekhoudbaar → Controle & Export → ✅ Alles werkt-check (12 punts smoke-test)',
       'Scope-lockdown: alleen door deze app gemaakte files toegankelijk',
       'Compensating rollback bij betaling-fout (factuur niet langer in BETAALD zonder journaalpost)',
       'BTW case-insensitive: "verlegd" / "VRIJGESTELD" werken nu correct',
@@ -131,7 +131,7 @@ function checkEnToonChangelog_() {
 }
 
 /**
- * Publiek: toon changelog-modal vanuit menu (Boekhouding → Wat is er nieuw?)
+ * Publiek: toon changelog-modal vanuit menu (Boekhoudbaar → Wat is er nieuw?)
  */
 function toonChangelog(huidigeVersie, sindsVersie) {
   const ui = (function() { try { return SpreadsheetApp.getUi(); } catch (_) { return null; } })();

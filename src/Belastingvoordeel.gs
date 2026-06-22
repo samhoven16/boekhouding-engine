@@ -114,7 +114,7 @@ function getSeizoensTip_() {
       tekst:
         `BTW-aangifte Q4 ${jaar - 1} moet vóór 31 januari ingediend zijn. ` +
         `Bovendien: begin met het verzamelen van bonnen/facturen voor uw IB-aangifte ${jaar - 1}. ` +
-        `Maak een einde-jaar-overzicht via Boekhouding → BTW → BTW-aangifte Q4.`,
+        `Maak een einde-jaar-overzicht via Boekhoudbaar → BTW → BTW-aangifte Q4.`,
       deadline: '31 januari',
       urgent: dag >= 20,
     };
@@ -129,7 +129,7 @@ function getSeizoensTip_() {
         `De IB-aangifte deadline is 1 mei ${jaar}. Begin nu met verzamelen: ` +
         `loonbonus van werkgever (jaaropgave), zorgnota's, hypotheek-rente-overzicht, ` +
         `bewijs zelfstandigenaftrek (urenadministratie ≥ 1.225 uur). ` +
-        `Boekhouding → Belastingadvies geeft een schatting van uw IB-aanslag.`,
+        `Boekhoudbaar → Belastingadvies geeft een schatting van uw IB-aanslag.`,
       deadline: '1 mei',
       urgent: false,
     };
@@ -149,7 +149,7 @@ function getSeizoensTip_() {
         // jaar-correcte bedragen via getBelasting_().
         `zelfstandigenaftrek, startersaftrek (eerste 3 jaar), ` +
         `MKB-winstvrijstelling, KIA, MIA/VAMIL, EIA, AOV-premie, lijfrente. ` +
-        `Open Boekhouding → Belastingadvies voor de exacte bedragen van dat jaar.`,
+        `Open Boekhoudbaar → Belastingadvies voor de exacte bedragen van dat jaar.`,
       deadline: '1 mei',
       urgent: false,
     };
@@ -180,7 +180,7 @@ function getSeizoensTip_() {
       titel: `📅 ${maand === 5 ? 'Mei' : maand === 7 ? 'Juli' : 'Oktober'}: BTW-aangifte ${kwLabel}`,
       tekst:
         `BTW-aangifte ${kwLabel} ${jaar} moet vóór ${deadlineMaand} ingediend. ` +
-        `Boekhouding → BTW → BTW-aangifte ${kwLabel} genereert het overzicht. ` +
+        `Boekhoudbaar → BTW → BTW-aangifte ${kwLabel} genereert het overzicht. ` +
         `Tip: zet BTW direct na ontvangst van facturen apart op een spaarrekening — ` +
         `voorkomt verrassingen bij aangifte.`,
       deadline: deadlineMaand,
@@ -233,7 +233,7 @@ function getSeizoensTip_() {
     tekst:
       `Tip: registreer wekelijks uw zakelijke kilometers (€0,23/km aftrekbaar) ` +
       `en thuiswerkdagen (€2,40/dag aftrekbaar). Vele ZZP'ers vergeten dit en ` +
-      `missen €500-€1.500 aftrek per jaar. Voer in via Boekhouding → Nieuwe boeking.`,
+      `missen €500-€1.500 aftrek per jaar. Voer in via Boekhoudbaar → Nieuwe boeking.`,
     deadline: null,
     urgent: false,
   };

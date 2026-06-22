@@ -1101,6 +1101,8 @@ function configEndpoint_(e) {
     belastingTarieven:    belastingTarieven,  // null = client gebruikt lokale fallback
     // F-SCALE-141b: warme-standby-URL → client synct 'm naar LICENTIE_SERVER_URL_FALLBACK (leeg = geen push).
     licentieServerUrlFallback: props.getProperty('STANDBY_SERVER_URL') || '',
+    // F-SCALE-332: centraal Gemini-model → _geminiModel_ gebruikt 'm bij model-EOL ZONDER code-push (leeg = lokale property/default wint).
+    geminiModel:          props.getProperty('GEMINI_MODEL_CENTRAAL') || '',
   });
 }
 

@@ -591,7 +591,7 @@ function toonUpdateMelding_(oudeVersie, nieuweVersie) {
   // Niet-opdringerig: gebruik een toast (kleine melding onderaan scherm)
   try {
     SpreadsheetApp.getActiveSpreadsheet().toast(
-      `Bijgewerkt van versie ${oudeVersie} naar ${nieuweVersie}. Zie Boekhouding → Wat is er nieuw? voor details.`,
+      `Bijgewerkt van versie ${oudeVersie} naar ${nieuweVersie}. Zie Boekhoudbaar → Wat is er nieuw? voor details.`,
       '✅ Boekhoudbaar bijgewerkt',
       8
     );

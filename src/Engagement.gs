@@ -150,7 +150,7 @@ function checkNpsTrigger_() {
     props.setProperty(NPS_PROP_LAATSTE, String(Date.now()));
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     if (ss && ss.toast) {
-      ss.toast('Klik op Boekhouding → Geef feedback (NPS) om je score te delen.', '📊 1-vraag-survey', 12);
+      ss.toast('Klik op Boekhoudbaar → Geef feedback (NPS) om je score te delen.', '📊 1-vraag-survey', 12);
     }
   } catch (_) {}
 }
