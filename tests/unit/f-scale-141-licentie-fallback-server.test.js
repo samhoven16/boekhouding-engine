@@ -80,6 +80,32 @@ describe('F-SCALE-141 — warme-standby licentieserver (client-helft)', () => {
     expect(urls[0]).toMatch(/primary/);
   });
 
+  test('F-SCALE-141b: centrale config → gesynct naar property → bestaande kopie valt op standby', () => {
+    const { ctx, urls, propStore } = maakCtx({
+      props: {},   // GEEN LICENTIE_SERVER_URL_FALLBACK-property (= al gedeployde kopie)
+      fetchImpl: (url) => {
+        if (url.indexOf('primary') !== -1) throw new Error('primary down');
+        return okResp({ geldig: true, naam: 'Jan', versie: 'Standaard' });
+      },
+    });
+    // Sam pusht de standby in de config; de config-refresh synct 'm naar de property.
+    ctx._syncStandbyUrlUitConfig_({ licentieServerUrlFallback: 'https://standby.example/licence' });
+    expect(propStore.LICENTIE_SERVER_URL_FALLBACK).toBe('https://standby.example/licence');
+    const r = ctx.valideerLicentieOpServer_(SLEUTEL);
+    expect(r.geldig).toBe(true);                              // gered door de gesyncte standby
+    expect(urls.some((u) => /standby/.test(u))).toBe(true);
+  });
+
+  test('F-SCALE-141b: _syncStandbyUrlUitConfig_ is idempotent + negeert lege/ontbrekende config', () => {
+    const { ctx, propStore } = maakCtx({ props: {} });
+    ctx._syncStandbyUrlUitConfig_(null);
+    ctx._syncStandbyUrlUitConfig_({});
+    ctx._syncStandbyUrlUitConfig_({ licentieServerUrlFallback: '   ' });
+    expect(propStore.LICENTIE_SERVER_URL_FALLBACK).toBeUndefined();   // niets geschreven
+    ctx._syncStandbyUrlUitConfig_({ licentieServerUrlFallback: 'https://s.example/l' });
+    expect(propStore.LICENTIE_SERVER_URL_FALLBACK).toBe('https://s.example/l');
+  });
+
   test('geen fallback geconfigureerd → één poging, dan offline-grace (ongewijzigd)', () => {
     const { ctx, urls } = maakCtx({
       props: {}, // geen LICENTIE_SERVER_URL_FALLBACK, geen licentieLaatstGelukt

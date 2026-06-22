@@ -72,8 +72,30 @@ function getLicentieServerUrl_() {
  * klantenbasis raakt.
  */
 function getLicentieServerUrlFallback_() {
+  // F-SCALE-141b: pure property-read (geen fetch op het validatie-hete-pad). De
+  // centrale config-route vult deze property via _syncStandbyUrlUitConfig_ in de
+  // normale config-refresh-cyclus (onOpen → haalConfigOp_), zodat óók BESTAANDE
+  // kopieën de standby krijgen zonder per-kopie handwerk — zie F-SCALE-332-patroon.
   return PropertiesService.getScriptProperties()
     .getProperty('LICENTIE_SERVER_URL_FALLBACK') || '';
+}
+
+/**
+ * F-SCALE-141b: synct de centraal-gepushte standby-licentieserver-URL naar de
+ * lokale ScriptProperty die getLicentieServerUrlFallback_ leest. Zo krijgen óók
+ * al-gedeployde kopieën de warme-standby zodra Sam 'm in de config-payload zet —
+ * zonder per-kopie handwerk. Draait in de config-refresh-cyclus (haalConfigOp_),
+ * NIET op het validatie-hete-pad. Idempotent; faalt stil.
+ */
+function _syncStandbyUrlUitConfig_(cfg) {
+  try {
+    const url = (cfg && cfg.licentieServerUrlFallback) ? String(cfg.licentieServerUrlFallback).trim() : '';
+    if (!url) return;
+    const props = PropertiesService.getScriptProperties();
+    if (props.getProperty('LICENTIE_SERVER_URL_FALLBACK') !== url) {
+      props.setProperty('LICENTIE_SERVER_URL_FALLBACK', url);
+    }
+  } catch (_) {}
 }
 
 // ─────────────────────────────────────────────
@@ -766,6 +788,7 @@ function haalConfigOp_() {
     const parsed = JSON.parse(resp.getContentText());
     userProps.setProperty('licentieConfig', resp.getContentText());
     userProps.setProperty('licentieConfigTs', String(Date.now()));
+    _syncStandbyUrlUitConfig_(parsed);   // F-SCALE-141b: standby-URL → ScriptProperty
     return parsed;
   } catch (err) {
     Logger.log('haalConfigOp_ fout: ' + err.message);
