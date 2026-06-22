@@ -646,6 +646,44 @@ function controleerJournaalposten_(ss) {
 //  CHECK 3: VERKOOPFACTUREN
 // ─────────────────────────────────────────────
 
+/**
+ * F-ACC-331: detecteer ontbrekende nummers binnen een doorlopende factuur-
+ * nummerreeks (signaal voor een achteraf verwijderde rij). Groepeert op het
+ * niet-numerieke prefix (zodat verschillende reeksen — bv. 'F' en 'CN' — elkaar
+ * niet vervuilen) en zoekt gaten tussen min en max. Rapporteert ALLEEN bij een
+ * dichte reeks (≥3 nummers én ≥50% bezet) — een dunne reeks is een ander
+ * nummerschema, geen verwijdering. Geeft de ontbrekende nummers als strings.
+ * @param {!Object<string,boolean>} nummerSet  verzameling bestaande nummers
+ * @returns {!Array<string>}
+ */
+function _detecteerFactuurnummerGaten_(nummerSet) {
+  const groepen = {};
+  Object.keys(nummerSet || {}).forEach((nr) => {
+    const m = String(nr).match(/^(.*?)(\d+)$/);   // prefix + trailing cijfers
+    if (!m) return;
+    const num = parseInt(m[2], 10);
+    if (!Number.isFinite(num)) return;
+    const g = (groepen[m[1]] = groepen[m[1]] || { nums: [], len: 0 });
+    g.nums.push(num);
+    g.len = Math.max(g.len, m[2].length);           // breedste zero-padding bewaren
+  });
+  const gaten = [];
+  Object.keys(groepen).forEach((prefix) => {
+    const g = groepen[prefix];
+    if (g.nums.length < 3) return;                   // te weinig om een reeks te zijn
+    const aanwezig = new Set(g.nums);
+    const min = Math.min.apply(null, g.nums);
+    const max = Math.max.apply(null, g.nums);
+    const span = max - min + 1;
+    if (span <= g.nums.length) return;               // volledig aaneengesloten
+    if (g.nums.length < span / 2) return;            // te dun → ander schema, geen gat
+    for (let n = min; n <= max && gaten.length < 50; n++) {
+      if (!aanwezig.has(n)) gaten.push(prefix + String(n).padStart(g.len, '0'));
+    }
+  });
+  return gaten;
+}
+
 function controleerVerkoopfacturen_(ss) {
   const resultaten = [];
 
@@ -701,6 +739,20 @@ function controleerVerkoopfacturen_(ss) {
         bericht: `${duplicaten} factuurnummer(s) komen meerdere keren voor. Dit is niet toegestaan — elk factuurnummer moet uniek zijn (wettelijk vereist).` });
     } else if (geenNummer === 0) {
       resultaten.push({ check: 'Facturen – Unieke nummers', status: 'OK', bericht: 'Alle factuurnummers zijn uniek.' });
+    }
+
+    // F-ACC-331 (accountant-as): uniciteit + monotonie dekken NIET een GAT in de
+    // reeks na een achteraf verwijderde rij (044 en 046 blijven uniek+oplopend,
+    // 045 ontbreekt geruisloos). Een controleur vraagt "waarom ontbreekt 045?".
+    // Detecteer ontbrekende nummers binnen een dichte reeks; gaten kunnen
+    // legitiem zijn (geannuleerd vóór verzending) maar moeten verklaarbaar zijn.
+    const gaten = _detecteerFactuurnummerGaten_(nummers);
+    if (gaten.length > 0) {
+      const toon = gaten.slice(0, 10).join(', ');
+      resultaten.push({ check: 'Facturen – Gat in nummerreeks', status: 'WAARSCHUWING',
+        bericht: `Ontbrekende factuurnummers in de reeks: ${toon}${gaten.length > 10 ? ` (+${gaten.length - 10} meer)` : ''}. ` +
+          'Een doorlopende nummering mag geen onverklaarde gaten hebben (art. 35 Wet OB). ' +
+          'Is een factuur per ongeluk verwijderd? Storneer of crediteer i.p.v. verwijderen.' });
     }
 
     if (geenKlant > 0) {

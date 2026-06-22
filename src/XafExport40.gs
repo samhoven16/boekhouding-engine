@@ -318,9 +318,18 @@ function _xaf40Transactions_(ss, jaar, jpData) {
       const klass = _xafDagboekClassificeer_(dagboek);
       if (!grouped[klass.id]) grouped[klass.id] = { desc: klass.desc, jrnTp: _xaf40Jrntp_(klass.id), tx: '' };
 
+      // F-ACC-330 (accountant-as): markeer nog-niet-gevalideerde (Concept/HITL)
+      // boekingen in de auditfile zelf, zodat een accountant die de XAF
+      // importeert ziet welke regels de klant nog moest bevestigen i.p.v. alles
+      // klakkeloos als definitief over te nemen. <desc> is een vrij tekstveld;
+      // cap op 50 (zoals custSupName) houdt 'm XSD-veilig. Niet-Concept-rijen
+      // blijven exact ongewijzigd.
+      const hitlStatus = (rij.length >= 17 ? String(rij[16] || '').trim() : '');
+      const descTekst = /^concept$/i.test(hitlStatus) ? ('[CONCEPT] ' + omschr).substring(0, 50) : omschr;
+
       let tx = '        <transaction>\n';
       tx += '          <nr>' + _xafEsc_(id.substring(0, 35)) + '</nr>\n';
-      tx += '          <desc>' + _xafEsc_(omschr) + '</desc>\n';
+      tx += '          <desc>' + _xafEsc_(descTekst) + '</desc>\n';
       tx += '          <periodNumber>' + periode + '</periodNumber>\n';
       tx += '          <trDt>' + datum + '</trDt>\n';
       tx += _xaf40TrLine_(1, debet, id, datum, omschr, bedrag, 'D');

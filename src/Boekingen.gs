@@ -318,7 +318,13 @@ function _markeerFactuurGestorneerd_(ss, ref, stornoId) {
       if (String(vfData[i][KOL.VF.factuurnummer] || '').trim() === schoonRef) {
         if (String(vfData[i][KOL.VF.status] || '').toLowerCase() === 'gestorneerd') return;
         vfSheet.getRange(i + 1, 15).setValue('Gestorneerd');   // kolom 15 = [14] Status
-        vfSheet.getRange(i + 1, 12).setValue(0);               // kolom 12 = [11] BTW bedrag
+        // F-ACC-330: NIET de BTW op 0 zetten. De aangifte (BTW.gs:197) én I4
+        // (FormeelBewijs:278) slaan een 'gestorneerd'-rij al volledig over, dus
+        // zeroën is overbodig — én het maakte de rij intern inconsistent
+        // (excl + 0 ≠ incl), wat een accountant die de VF-CSV natelt als
+        // rekenfout ziet (en GezondheidCheck als tarief-mismatch flagde). Laat
+        // de originele bedragen staan; de tegenboeking (storno-journaalpost)
+        // draait het saldo terug — dat is de correcte storno-semantiek.
         try { schrijfAuditLog_('VERKOOPFACTUUR gestorneerd',
           'Factuur ' + schoonRef + ' door storno ' + stornoId); } catch (_) {}
         return;
@@ -334,7 +340,9 @@ function _markeerFactuurGestorneerd_(ss, ref, stornoId) {
       if (String(ifData[i][KOL.IF.internNummer] || '').trim() === schoonRef) {
         if (String(ifData[i][KOL.IF.status] || '').toLowerCase() === 'gestorneerd') return;
         ifSheet.getRange(i + 1, 13).setValue('Gestorneerd');   // kolom 13 = [12] Status
-        ifSheet.getRange(i + 1, 11).setValue(0);               // kolom 11 = [10] BTW bedrag
+        // F-ACC-330: NIET de BTW op 0 zetten — zie verkoop-pad hierboven. De
+        // aangifte (BTW.gs:307) en I4 slaan 'gestorneerd' al over; zeroën maakte
+        // de rij alleen intern inconsistent. Originele bedragen blijven staan.
         try { schrijfAuditLog_('INKOOPFACTUUR gestorneerd',
           'Inkoop ' + schoonRef + ' door storno ' + stornoId); } catch (_) {}
         return;
