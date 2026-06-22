@@ -76,6 +76,20 @@ opt-in-false-negative). De andere 2 agents (accountant, gas-runtime) bevestigden
 borging ÁLLE parallelle paden dekt — een file-scoped of single-endpoint-ratel
 geeft vals vertrouwen (zelfde wortel als klasse 1's omgekeerde ban).
 
+**Derde + vierde convergentie-ronde (zelfde dag):** de hercontrole-fixes werden
+zelf hercontroleerd tot élke as schoon terugkwam. Ronde 3: red-team bevestigde
+F-RED-332 compleet (schoon); tax vond F-TAX-335 (de klasse-10-ban was syntax-
+scoped → MIA-`/^02[67]/` ontsnapte) → aparte chokepoint + ban syntax-volledig
+gemaakt; red-team-scope-grens F-RED-333 (prijs-knop-€0,01) gesloten via stamp-on-
+observe. Ronde 4 (tax, gericht): veegde álle evasie-vectoren (andere saldo-kolom,
+charAt-prefix, FOR/afschrijving/reiskosten/lijfrente/8xxx-import) → **"klasse 10
+leeg, convergentie bevestigd"**; de resterende theoretische varianten zijn
+exclusion-gates, geen selectie-grondslagen. **Eindstand: élke as (accountant,
+gas-runtime, red-team, tax) heeft een schone bevestigingsronde; elke as die een
+lek vond is herdraaid tot schoon.** De les van rondes 2-4: een fix is pas klaar
+als de borging álle dimensies dekt — bestand (file-scope), parallel pad
+(single-endpoint), én syntaxvorm. Dit is convergentie in de enige eerlijke vorm.
+
 Een mega-audit-herhaling is nu **zinvol-leeg voor de gesloten klassen**: hij kan
 alleen nog een *nieuwe* klasse vinden of een instantie in 10/12 (beide bewust
 geregistreerd met de RB-/structurele restwerk). **Dát** is "100% af" in de enige
