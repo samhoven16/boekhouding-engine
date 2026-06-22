@@ -27,6 +27,9 @@ const VERBODEN = [
   { token: /Boekhouding →/, uitleg: 'oude top-level-menunaam (nu "Boekhoudbaar →")' },
   { token: /→ Controle →/, uitleg: 'oude submenu-naam (nu "Controle & Export")' },
   { token: /Werkt-alles-test/, uitleg: 'oud item (nu "Alles werkt-check")' },
+  { token: /→ Facturen →/, uitleg: 'oude submenu-naam (nu "Facturen & Betalingen")' },
+  { token: /→ Overzichten →/, uitleg: 'oude submenu-naam (nu "Overzichten & Rapporten")' },
+  { token: /→ Nieuw invoeren/, uitleg: 'oud item (nu "Nieuwe boeking — factuur, kosten of declaratie")' },
 ];
 
 describe('in-app menu-pad-consistentie (src/*.gs ↔ echte menu-namen)', () => {

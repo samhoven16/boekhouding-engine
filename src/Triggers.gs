@@ -1679,6 +1679,14 @@ function dagelijkseTaken() {
       } catch (_) {}
     }
   });
+  _runTaak_('cleanupViesCache', function() {
+    // F-DUR-150: verlopen VIES_-cache-keys opruimen (TTL was lees-tijd-only →
+    // onbegrensde ScriptProperty-groei bij veel distinct EU-btw-nummers).
+    if (typeof cleanupViesCache_ === 'function') {
+      const n = cleanupViesCache_();
+      if (n > 0) safeAuditLog_('cleanupViesCache', 'Verwijderd ' + n + ' verlopen VIES-cache-keys');
+    }
+  });
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
   // CYCLE 69: verifieer de hash-keten van het Audit Log. Een gebroken keten
   // betekent dat een eerder vastgelegde audit-regel achteraf is gewijzigd

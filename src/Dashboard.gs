@@ -922,7 +922,7 @@ function bepaalStatusNu_(ss, kpi) {
   if ((kpi.aantalVervallenFacturen || 0) > 0) {
     return {
       tekst: '⚠  ' + kpi.aantalVervallenFacturen + ' factu(u)r(en) vervallen — ' +
-             'Menu: Boekhoudbaar → Facturen → Betalingsherinneringen versturen',
+             'Menu: Boekhoudbaar → Facturen & Betalingen → Betalingsherinneringen versturen',
       bg: '#FFE8C7', fg: '#7A4A00', border: '#F5A623',
     };
   }

@@ -152,6 +152,32 @@ function _viesCacheSet_(key, data) {
 }
 
 /**
+ * F-DUR-150: ruimt verlopen VIES_-cache-keys op. De 30-dagen-TTL was lees-tijd-
+ * only (een verlopen entry werd genegeerd maar NOOIT verwijderd) → onbegrensde
+ * ScriptProperty-groei bij veel distinct EU-btw-nummers richting de harde
+ * 500KB-cliff (zelfde klasse als F-SCALE-142/143). Verlopen entries worden tóch
+ * opnieuw opgehaald, dus verwijderen is veilig. Draait dagelijks via
+ * dagelijkseTaken, zelfde getProperties()-sweep als cleanupEmailIdem.
+ * @returns {number} aantal verwijderde keys
+ */
+function cleanupViesCache_() {
+  const props = PropertiesService.getScriptProperties();
+  const alle = props.getProperties();
+  const cutoffMs = Date.now() - VIES_CACHE_TTL_DAGEN * 24 * 60 * 60 * 1000;
+  let verwijderd = 0;
+  Object.keys(alle).forEach(function(k) {
+    if (k.indexOf('VIES_') !== 0) return;
+    let ts = 0;
+    try { ts = parseInt((JSON.parse(alle[k] || '{}') || {}).ts, 10) || 0; } catch (_) { ts = 0; }
+    // Geen/onleesbare ts (corrupt/legacy) of ouder dan de TTL → weg.
+    if (!ts || ts < cutoffMs) {
+      try { props.deleteProperty(k); verwijderd++; } catch (_) {}
+    }
+  });
+  return verwijderd;
+}
+
+/**
  * OSS-monitor: berekent cumulatieve EU-B2C-omzet huidig kalenderjaar.
  * Returns { totaalEuB2c, drempelOverschreden, perLand: {DE: 1234, FR: 567} }
  */

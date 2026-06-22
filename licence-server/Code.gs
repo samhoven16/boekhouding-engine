@@ -1028,7 +1028,7 @@ function valideerEndpoint_(e) {
       // + z'n 90-daagse offline-grace-anker wissen. Zonder permanent rijdt de klant
       // de grace uit (tijd om de mail te herstellen / support te mailen) i.p.v. een
       // directe lockout — analoog aan F-RED-161 (transiente fout wist anker niet).
-      if (status === 'bounce') return jsonResp_({ geldig: false, fout: 'E-mailadres ontvangt geen post. Neem contact op via support@boekhoudbaar.nl.' });
+      if (status === 'bounce') return jsonResp_({ geldig: false, fout: 'Je product is gepauzeerd omdat e-mails naar je adres blijven bouncen. Mail support@boekhoudbaar.nl vanaf een adres dat post ontvangt — dan zetten we hem direct weer aan.' });
 
       // CYCLE 79: grace-period bij verlopen licentie. Een harde cut-off op
       // de exacte vervaldatum drukt klanten midden in hun werkflow eruit

@@ -95,7 +95,7 @@ function bouwHelpTab_(ss) {
     ['☐ 1. Alle facturen Q4 verstuurd vóór 31-12', 'Belasting valt anders in volgend jaar'],
     ['☐ 2. Alle bonnen Q4 geboekt', 'Aftrek mag tot 7 jaar achteraf maar liever direct'],
     ['☐ 3. Banktransacties tot 31-12 geïmporteerd', 'Menu → Bank → CSV importeren'],
-    ['☐ 4. Openstaande debiteuren gecontroleerd', 'Menu → Facturen → Openstaande klantfacturen'],
+    ['☐ 4. Openstaande debiteuren gecontroleerd', 'Menu → Facturen & Betalingen → Openstaande klantfacturen'],
     ['☐ 5. BTW Q4 aangifte vóór 31 januari', 'Menu → BTW → Aangifte Q4'],
     ['☐ 6. Privé-opnames + privé-stortingen rondrekening', 'Eigen vermogen sluit op debet+credit'],
     ['☐ 7. Afschrijvingen verwerkt', 'Menu → Boekhoudbaar → Geavanceerd → Afschrijvingen verwerken'],

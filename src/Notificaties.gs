@@ -195,7 +195,7 @@ function genereerNotificaties_() {
       titel: '⏰ ' + kpi.aantalVervallenFacturen +
              ' vervallen factu' + (kpi.aantalVervallenFacturen === 1 ? 'ur' : 'ren'),
       tekst: 'Klanten zijn te laat met betalen — automatische herinneringen draaien al, maar je kunt nu zelf een nudge sturen voor de echt-vervallenen.',
-      actie: 'Boekhoudbaar → Facturen → Betalingsherinneringen',
+      actie: 'Boekhoudbaar → Facturen & Betalingen → Betalingsherinneringen',
       euros: null,
       urgent: kpi.aantalVervallenFacturen >= 3,
       bron: 'vervallen-facturen',
