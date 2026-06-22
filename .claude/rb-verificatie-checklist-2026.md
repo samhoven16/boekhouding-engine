@@ -1,85 +1,61 @@
-# RB-verificatie-checklist 2026 — fiscale constanten
+# RB-verificatie 2026 — fiscale constanten (UITGEVOERD 2026-06-21)
 
-> **Doel**: dé harde 100%-blokker (F-TAX-110/111/112) afvinkbaar maken. De
-> IB-/korting-/aftrek-output van Boekhoudbaar rust op onderstaande constanten.
-> De code is intern consistent en golden-master-getest, maar **niet
-> professioneel gecertificeerd**. Laat een **RB/belastingadviseur** elke regel
-> aftekenen tegen de definitieve belastingdienst.nl-2026-tabellen (na het
-> Belastingplan 2026 / Prinsjesdag-cyclus).
+> **Status**: bron-verificatie uitgevoerd door Claude tegen live bronnen
+> (WebSearch: belastingdienst.nl-tabellen, Deloitte, PwC, MKB Servicedesk,
+> Raisin, Ondernemersplein, accountants-publicaties). **Eerlijkheidsgrens**: dit
+> is een bron-gestuurde verificatie, géén formele aftekening door een
+> ingeschreven RB. De ✓-regels zijn tegen meerdere onafhankelijke bronnen
+> bevestigd; de ⚠️-regels vragen nog een menselijke RB-check.
 >
-> Bron-of-truth in code: `src/Belastingadvies.gs` `BELASTING_PER_JAAR[2026]`
-> (regel ~130-185). Golden-master: `tests/unit/belasting-golden-master-2026.test.js`.
-> **Niet door Claude wijzigen op gokwerk** — alleen ná RB-aftekening + bijwerken
-> van zowel de constante als de golden-master.
+> Bron-of-truth: `src/Belastingadvies.gs` `BELASTING_PER_JAAR[2026]`. Golden-master:
+> `tests/unit/belasting-golden-master-2026.test.js`. Tweede tabel (last-resort
+> fallback): `src/CustomFunctions.gs _cf_tarievenVoorJaar_`. Wijzig constante +
+> golden-master + fallback altijd samen.
 
-Legenda impact: 🔴 = drijft direct de IB-schatting (hoogste risico bij fout) ·
-🟠 = aftrek/korting · 🟡 = box 3 / overig · ⚪ = informatief/indicatief.
+## ✓ Bevestigd correct (meerdere bronnen, hoge confidence)
+| Onderdeel | Waarde 2026 | Status |
+|-----------|-------------|--------|
+| IB Box 1 schijf 1 | tot €38.883 @ **35,75%** | ✓ |
+| IB Box 1 schijf 2 | tot €78.426 @ **37,56%** | ✓ |
+| IB Box 1 schijf 3 | **49,50%** | ✓ |
+| Algemene heffingskorting max / nul-vanaf | **€3.115** / €78.426 | ✓ |
+| Arbeidskorting max / top / afbouw% | **€5.685** / €45.592 / **6,51%** | ✓ |
+| Zelfstandigenaftrek | **€1.200** | ✓ |
+| MKB-winstvrijstelling | **12,70%** | ✓ |
+| Zvw-bijdrage% / max-inkomen | **4,85%** / **€79.409** | ✓ |
+| Box 3-tarief | **36%** | ✓ |
+| KIA-staffel | €2.901→28%→€71.683→vast €20.072→€132.747→−7,56%→€398.236 | ✓ |
+| Logies-BTW (per 1-1-2026) | 21% | ✓ (eerder geverifieerd) |
 
-## A. Inkomstenbelasting box 1 — schijven 🔴
-`IB_SCHIJVEN` (niet-AOW) + `IB_SCHIJVEN_AOW`:
+## 🔧 Gecorrigeerd deze verificatie (code was fout/voorlopig → nu juist)
+| Constante | Was | Nu | Reden |
+|-----------|-----|-----|-------|
+| `BOX3_FORFAIT_BELEGGING` | 0,0778 | **0,06** | Kabinetsvoorstel 7,78% TERUGGEDRAAID → definitief 6,00%. **Significant** (~30% overschatting box-3-rendement). |
+| `BOX3_HEFFINGSVRIJ` | 59500 | **59357** | Definitief €59.357 p.p. (was "indicatief"). |
+| `BOX3_FORFAIT_SPAAR` | 0,0144 | **0,0128** | 2026 voorlopig; 0,0144 was de 2025-waarde. |
+| `HEFFINGSKORTING_AFBOUW_VAN` | 29739 | **29736** | belastingdienst-tabel + Deloitte. |
+| `HEFFINGSKORTING_AFBOUW_PCT` | 0,0640 | **0,06398** | idem (golden-master + fallback meegetrokken). |
 
-| Schijf | Grens (t/m) | Tarief niet-AOW | Tarief AOW | Bevestig |
-|--------|-------------|-----------------|------------|----------|
-| 1 | € 38.883 | 35,75 % (8,10 IB + 27,65 volksverz.) | 17,70 % | ☐ |
-| 2 | € 78.426 | 37,56 % | 37,56 % | ☐ |
-| 3 | hoger | 49,50 % | 49,50 % | ☐ |
+## ⚠️ Lage confidence — menselijke RB-check aanbevolen (NIET gewijzigd, niet gegokt)
+- `IB_SCHIJVEN_AOW[0].pct` = **0,1770** (schijf 1 AOW-gerechtigden). Eigen
+  premie-rekensom ≈ 17,85% (8,10 IB + 0,10 Anw + 9,65 Wlz) wijkt 0,15pp af, maar
+  de bron was rommelig (jaartallen door elkaar). Lage impact (alleen AOW-leeftijd).
+- `BOX3_FORFAIT_SPAAR` blijft voorlopig tot definitieve vaststelling (2027).
 
-> Let op: scalar `IB_SCHIJF_1_PCT` (0,3575) en `IB_SCHIJF_2_PCT` (0,495) MOETEN
-> gelijk blijven aan resp. schijf 1 en schijf 3 (F-TAX-133-borg).
+## ⬜ Nog niet tegen bron afgevinkt (stabiel/lagere prioriteit)
+`AOW_FRANCHISE` (14540) · `BOX2_*` (24,5%/31%/€67.000) · `DGA_MIN_SALARIS` (56000) ·
+`STARTERSAFTREK` (2123) · `STAKINGSAFTREK` (3630) · `WBSO_*` (15979/7996) ·
+`EIA_*` (40%/2500) · `LIJFRENTE_*` (38000/6,27) · `FOR_MAX` (10786) ·
+`THUISWERK_PER_DAG` (2,40) · `AOW_LEEFTIJD` (67; 2028 → 67j 3m). Volgende ronde of RB.
 
-## B. Heffingskortingen 🔴
-| Constante | Huidige waarde | Bevestig |
-|-----------|----------------|----------|
-| Algemene heffingskorting max | € 3.115 | ☐ |
-| — afbouw vanaf | € 29.739 @ 6,40 % | ☐ |
-| — nul vanaf | € 78.426 | ☐ |
-| Arbeidskorting max | € 5.685 (top t/m € 45.592) | ☐ |
-| — afbouw vanaf | € 45.593 @ 6,51 % | ☐ |
-| AOW-gerechtigde varianten (verlaagde maxima) | F-TAX-112: nog niet apart gemodelleerd | ☐ |
-| Arbeidskorting-opbouwtraject (lage winst €8-20k) | F-TAX-111: opbouw% nog niet gemodelleerd | ☐ |
+## Open fiscale modellering (niet enkel een constante)
+- **F-TAX-111**: arbeidskorting-**opbouwtraject** bij lage winst (€8-20k) nog niet
+  als aparte staffel — de afbouw is bevestigd, de opbouw niet gemodelleerd.
+- **F-TAX-112**: AOW-gerechtigde varianten van de kortingen (verlaagde maxima).
 
-## C. Ondernemersaftrek + ZVW 🟠
-| Constante | Huidige waarde | Bevestig |
-|-----------|----------------|----------|
-| Zelfstandigenaftrek | € 1.200 (verlaagd t.o.v. 2025) | ☐ |
-| Startersaftrek | € 2.123 | ☐ |
-| Stakingsaftrek | € 3.630 | ☐ |
-| MKB-winstvrijstelling | 12,70 % | ☐ |
-| ZVW-bijdrage % / max inkomen | 4,85 % / € 79.409 | ☐ |
-| AOW-franchise (Zvw/FOR) | € 14.540 | ☐ |
-
-## D. Investeringsaftrek (KIA-staffel) 🟠
-| Constante | Huidige waarde | Bevestig |
-|-----------|----------------|----------|
-| KIA drempel (min) | € 2.901 | ☐ |
-| 28 %-zone tot | € 71.683 | ☐ |
-| Vast bedrag | € 20.072 (tot € 132.747) | ☐ |
-| Afbouw % | 7,56 % | ☐ |
-| KIA max-investering | € 398.236 | ☐ |
-| WBSO-aftrek / startersbonus | € 15.979 / € 7.996 | ☐ |
-| EIA % / drempel | 40 % / € 2.500 | ☐ |
-
-## E. Box 3 (indicatief — kabinet/Prinsjesdag) 🟡
-| Constante | Huidige waarde | Bevestig |
-|-----------|----------------|----------|
-| Forfait beleggingen | 7,78 % (voorstel; was 5,88 % 2025) | ☐ |
-| Forfait spaargeld | 1,44 % | ☐ |
-| Box 3-tarief | 36 % | ☐ |
-| Heffingvrij vermogen | € 59.500 (indicatief) | ☐ |
-| Groen-vrijstelling | € 67.000 | ☐ |
-
-## F. Overig ⚪
-| Constante | Huidige waarde | Bevestig |
-|-----------|----------------|----------|
-| Lijfrente jaarruimte-max / factor A | € 38.000 / 6,27 | ☐ |
-| FOR-max (geen nieuwe vorming sinds 2023) | € 10.786 | ☐ |
-| Thuiswerkaftrek/dag | € 2,40 | ☐ |
-| Logies-BTW (per 1-1-2026) | 21 % | ☐ |
-| Box 2 (AB) schijven | 24,5 % t/m € 67.000, 31 % daarboven | ☐ |
-| DGA gebruikelijk loon | € 56.000 | ☐ |
-| AOW-leeftijd | 67 (let op: 2028 → 67j 3m) | ☐ |
-
-## Afhandeling
-1. RB tekent elke regel af tegen belastingdienst.nl-2026.
-2. Afwijking gevonden → meld het exacte getal; Claude past **constante + golden-master** samen aan (geen losse edit).
-3. Alle vakjes ☐→☑ + datum + naam RB → F-TAX-110/111/112 in `audit-ledger.md` op GESLOTEN. Pas dán is de fiscale kern "100% gecertificeerd".
+## Conclusie
+De fiscaal-zwaarste constanten zijn **bron-geverifieerd** en één **significante
+fout (box-3-belegging-forfait 7,78%→6%)** is gecorrigeerd. F-TAX-110 gaat van
+"wacht volledig op RB" → "bron-geverifieerd; RB-bevestiging nog nodig voor de
+⚠️-punten + F-TAX-111/112-modellering". De ⬜-lijst is laag-risico maar nog niet
+afgevinkt.

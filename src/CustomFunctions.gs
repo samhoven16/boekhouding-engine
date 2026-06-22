@@ -91,8 +91,8 @@ function _cf_tarievenVoorJaar_(jaar) {
     ZELFSTANDIGENAFTREK: 1200,        // 2026 verlaagd van 2470
     MKB_WINSTVRIJSTELLING: 0.127,     // 12,70%, ongewijzigd
     HEFFINGSKORTING_MAX: 3115,        // 2026 (audit F-TAX-102: was 2025-waarde 3068)
-    HEFFINGSKORTING_AFBOUW_VAN: 29739, // 2026 (was 28406)
-    HEFFINGSKORTING_AFBOUW_PCT: 0.0640, // 2026 (was 0.0634)
+    HEFFINGSKORTING_AFBOUW_VAN: 29736, // 2026 RB-verificatie 2026-06-21 (was 29739)
+    HEFFINGSKORTING_AFBOUW_PCT: 0.06398, // 2026 RB-verificatie (was 0.0640)
     HEFFINGSKORTING_NUL_VAN: 78426,   // 2026 schijf-2-grens
     ARBEIDSKORTING_MAX: 5685,         // 2026 (was 5599)
     ARBEIDSKORTING_TOP_TOT: 45592,    // 2026 (was 43071)

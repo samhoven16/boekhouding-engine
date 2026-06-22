@@ -139,9 +139,13 @@ const BELASTING_PER_JAAR = {
     AOW_FRANCHISE:          14540,
     AOW_LEEFTIJD:           67,
     BOX3_GROEN_VRIJSTELLING: 67000,
-    BOX3_HEFFINGSVRIJ:      59500,    // Indicatief; bevestigen na Prinsjesdag
-    BOX3_FORFAIT_BELEGGING: 0.0778,   // Voorstel kabinet (was 5,88% in 2025)
-    BOX3_FORFAIT_SPAAR:     0.0144,
+    BOX3_HEFFINGSVRIJ:      59357,    // F-TAX-110 RB-verificatie 2026-06-21 (def.)
+    BOX3_FORFAIT_BELEGGING: 0.06,     // F-TAX-110: 6,00% DEFINITIEF — het kabinets-
+                                      // voorstel 7,78% is TERUGGEDRAAID (was 0,0778;
+                                      // 5,88% in 2025). Bron: belastingdienst.nl/
+                                      // MKB Servicedesk box 3 2026.
+    BOX3_FORFAIT_SPAAR:     0.0128,   // 2026 VOORLOPIG (~1,28%); definitief begin 2027
+                                      // o.b.v. werkelijke spaarrente (was 0,0144 = 2025).
     BOX3_TARIEF:            0.36,
     IB_SCHIJF_1_MAX:        78426,   // bovengrens schijf 2 (= IB_SCHIJVEN[1].tot; was 79137 — drift uit 2025-snapshot, audit F-TAX-101)
     IB_SCHIJF_1_PCT:        0.3575,  // schijf 1: 35,75% — MOET gelijk zijn aan
@@ -151,8 +155,8 @@ const BELASTING_PER_JAAR = {
                                      // array-gedreven hoofdberekening (F-TAX-133).
     IB_SCHIJF_2_PCT:        0.495,   // schijf 3: 49,5% (legacy naam)
     HEFFINGSKORTING_MAX:    3115,    // 2026: max algemene heffingskorting
-    HEFFINGSKORTING_AFBOUW_VAN: 29739,
-    HEFFINGSKORTING_AFBOUW_PCT: 0.0640,
+    HEFFINGSKORTING_AFBOUW_VAN: 29736,  // F-TAX-110 RB-verificatie (was 29739)
+    HEFFINGSKORTING_AFBOUW_PCT: 0.06398, // F-TAX-110: 6,398% (was 0,0640)
     HEFFINGSKORTING_NUL_VAN:    78426,
     ARBEIDSKORTING_MAX:     5685,    // 2026: tot inkomen €45.592
     ARBEIDSKORTING_TOP_TOT: 45592,

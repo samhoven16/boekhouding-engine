@@ -62,8 +62,8 @@ describe('LAAG 1 — 2026-tarieven gepind op Belastingdienst (oracle-anker)', ()
   });
   test('Algemene heffingskorting', () => {
     expect(B.HEFFINGSKORTING_MAX).toBe(3115);
-    expect(B.HEFFINGSKORTING_AFBOUW_VAN).toBe(29739);
-    expect(B.HEFFINGSKORTING_AFBOUW_PCT).toBe(0.0640);
+    expect(B.HEFFINGSKORTING_AFBOUW_VAN).toBe(29736);  // F-TAX-110 RB-verificatie 2026-06-21
+    expect(B.HEFFINGSKORTING_AFBOUW_PCT).toBe(0.06398); // (was 29739/0,0640; bron belastingdienst-tabel + Deloitte)
     expect(B.HEFFINGSKORTING_NUL_VAN).toBe(78426);
   });
   test('Arbeidskorting', () => {
@@ -116,8 +116,8 @@ describe('LAAG 2 — golden-master berekeningen (hand-afgeleid uit de tarieven)'
   test('Heffingskorting €25.000 → €3.115,00 (onder afbouwgrens → max)', () => {
     expect(ctx.berekenHeffingskorting_(25000, B)).toBeCloseTo(3115.00, 2);
   });
-  test('Heffingskorting €30.000 → €3.098,30 (3115 − 261×0,064)', () => {
-    expect(ctx.berekenHeffingskorting_(30000, B)).toBeCloseTo(3098.30, 2);
+  test('Heffingskorting €30.000 → €3.098,11 (3115 − 264×0,06398; F-TAX-110 RB-verificatie)', () => {
+    expect(ctx.berekenHeffingskorting_(30000, B)).toBeCloseTo(3098.11, 2);
   });
 
   test('Arbeidskorting €40.000 → €5.685,00 (onder topgrens → max)', () => {
@@ -159,8 +159,8 @@ describe('LAAG 3 — rate-source consistentie: CustomFunctions-fallback == 2026'
 
   test('F-TAX-102: fallback-kortingen zijn 2026, niet 2025', () => {
     expect(fb.HEFFINGSKORTING_MAX).toBe(3115);
-    expect(fb.HEFFINGSKORTING_AFBOUW_VAN).toBe(29739);
-    expect(fb.HEFFINGSKORTING_AFBOUW_PCT).toBe(0.0640);
+    expect(fb.HEFFINGSKORTING_AFBOUW_VAN).toBe(29736);   // F-TAX-110 RB-verificatie
+    expect(fb.HEFFINGSKORTING_AFBOUW_PCT).toBe(0.06398);
     expect(fb.ARBEIDSKORTING_MAX).toBe(5685);
     expect(fb.ARBEIDSKORTING_TOP_TOT).toBe(45592);
     expect(fb.ARBEIDSKORTING_AFBOUW_VAN).toBe(45593);
