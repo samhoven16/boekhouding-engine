@@ -1581,7 +1581,16 @@ function adminTestModusEndpoint_(e) {
  */
 function _herstelVerlopenTestModus_(props) {
   try {
+    const prijs = parseFloat(props.getProperty('PRODUCT_PRIJS') || '49');
     const verloopt = parseInt(props.getProperty('TEST_MODUS_VERLOOPT') || '0', 10);
+    // F-RED-332 (3e ronde): start de 24u-klok zodra de prijs ≤€0,01 staat zónder
+    // vervalmoment — bv. gezet via de generieke prijs-knop (adminZetPrijs) of welk
+    // toekomstig pad dan ook. €0,01 is nooit een legitieme permanente prijs, dus
+    // élk pad ernaartoe valt nu onder de auto-revert (niet enkel de test-toggle).
+    if (prijs <= 0.01 && !verloopt) {
+      props.setProperty('TEST_MODUS_VERLOOPT', String(Date.now() + 24 * 3600 * 1000));
+      return false;
+    }
     if (!verloopt || Date.now() <= verloopt) return false;   // niet actief of nog geldig
     props.setProperty('PRODUCT_PRIJS', '49.00');
     props.deleteProperty('REF_KORTING');

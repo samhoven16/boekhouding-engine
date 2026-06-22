@@ -68,6 +68,15 @@ describe('F-RED-331 — test-modus verloopt automatisch', () => {
     expect(herstelVerlopenTestModus(props)).toBe(false);
     expect(props.getProperty('PRODUCT_PRIJS')).toBe('49.00');
   });
+
+  test('F-RED-332 (3e ronde): prijs ≤€0,01 ZONDER vervalmoment → stempelt de 24u-klok (élk pad, ook de prijs-knop)', () => {
+    const props = maakProps({ PRODUCT_PRIJS: '0.01' }); // gezet via bv. adminZetPrijs, geen TTL
+    const voor = Date.now();
+    expect(herstelVerlopenTestModus(props)).toBe(false);  // nog niet hersteld, wel gestempeld
+    const stamp = parseInt(props.getProperty('TEST_MODUS_VERLOOPT'), 10);
+    expect(stamp).toBeGreaterThanOrEqual(voor + 23 * 3600 * 1000);
+    expect(props.getProperty('PRODUCT_PRIJS')).toBe('0.01'); // prijs nog test, klok loopt nu
+  });
 });
 
 describe('F-RED-331 — wiring (de auto-revert is op de juiste plekken ingehaakt)', () => {

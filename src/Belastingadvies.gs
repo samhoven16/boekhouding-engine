@@ -827,6 +827,19 @@ function _isInvesteringsRekening02_(code) {
   return c.startsWith('02') && !c.endsWith('90');
 }
 
+/**
+ * F-TAX-335 (klasse 10): MIA/VAMIL-variant — milieu-investeringen staan op
+ * 026x/027x. Zelfde 0x90-contra/afschrijving-exclusie als _isInvesteringsRekening02_
+ * zodat een positief afschrijvings/contra-saldo de MIA-grondslag (45,5% aftrek)
+ * niet opblaast → geen te hoog advies → geen naheffing.
+ * @param {*} code grootboekrekening-code
+ * @returns {boolean}
+ */
+function _isMilieuInvesteringsRekening_(code) {
+  const c = String(code || '').trim();
+  return /^02[67]/.test(c) && !c.endsWith('90');
+}
+
 function _berekenBelastingadviesRaw_(ss) {
   const jaar = new Date().getFullYear();
   // Re-evaluate per call zodat server-side tarief-overrides en jaar-rollovers
@@ -1279,7 +1292,7 @@ function _berekenBelastingadviesRaw_(ss) {
   const gbDataMia = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);   // CYCLE-51
   let milieu = 0;
   gbDataMia.slice(1).forEach(r => {
-    if (r[0] && /^02[67]/.test(String(r[0])) && parseFloat(r[5]) > 0) milieu += parseFloat(r[5]);
+    if (r[0] && _isMilieuInvesteringsRekening_(r[0]) && parseFloat(r[5]) > 0) milieu += parseFloat(r[5]);
   });
   if (milieu >= BELASTING.MIA_MIN) {
     const miaAftrek = rondBedrag_(milieu * BELASTING.MIA_PCT);

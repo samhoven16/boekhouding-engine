@@ -19,6 +19,10 @@ const start = src.indexOf('function _isInvesteringsRekening02_');
 const eind = src.indexOf('\nfunction ', start + 1);
 const isInvestering = (new Function(src.slice(start, eind) + '\n;return _isInvesteringsRekening02_;'))();
 
+const mStart = src.indexOf('function _isMilieuInvesteringsRekening_');
+const mEind = src.indexOf('\nfunction ', mStart + 1);
+const isMilieu = (new Function(src.slice(mStart, mEind) + '\n;return _isMilieuInvesteringsRekening_;'))();
+
 describe('F-TAX-330 — investeringsgrondslag-afbakening (klasse 10)', () => {
   test('echte materiële investering (02xx, niet x90) telt mee', () => {
     expect(isInvestering('0200')).toBe(true);   // machines/installaties
@@ -42,22 +46,47 @@ describe('F-TAX-330 — investeringsgrondslag-afbakening (klasse 10)', () => {
     expect(isInvestering(' 0200 ')).toBe(true);
   });
 
-  test('de KIA- én EIA-grondslagscan gebruiken de chokepoint', () => {
+  test('de KIA-, EIA- én MIA-grondslagscan gebruiken de chokepoint', () => {
     expect(src).toContain('_isInvesteringsRekening02_(r[0])');
     expect(src).toContain('_isInvesteringsRekening02_(code)');
+    expect(src).toContain('_isMilieuInvesteringsRekening_(r[0])');  // F-TAX-335 (MIA)
   });
 
-  test('CODEBASE-BREED: geen enkele kale `startsWith(\'02\') && parseFloat`-grondslagscan in src/', () => {
-    // F-TAX-330-lek (2e ronde): de ban was eerst file-scoped (alleen
-    // Belastingadvies.gs) → een 4e instantie in Notificaties.gs ontsnapte. De
-    // ban scant nu ÉLK src/*.gs-bestand (omgekeerd, zoals klasse 1) zodat een
-    // nieuwe kale 02xx-grondslagscan in welk bestand dan ook in CI faalt.
+  test('CODEBASE-BREED + SYNTAX-VOLLEDIG: geen kale grootboek-prefix-grondslagscan zonder chokepoint', () => {
+    // Twee lekken in deze klasse-10-ban (2e + 3e ronde): (1) file-scoped → een
+    // 4e instantie in Notificaties.gs ontsnapte (F-TAX-334); (2) syntax-scoped →
+    // de MIA-scan gebruikte `/^02[67]/.test()` i.p.v. `startsWith('02')` en
+    // glipte erlangs (F-TAX-335). De ban scant nu ÉLK src/*.gs én vangt BEIDE
+    // syntaxvormen: een grondslag-sommatie = `parseFloat(r[5])` op dezelfde regel
+    // als een KALE 0x-prefix-test (startsWith('0…') OF /^0…/-regex), zónder de
+    // chokepoint (_is…Rekening…). Élke nieuwe vorm in welk bestand dan ook faalt.
     const SRC_DIR = path.resolve(__dirname, '../../src');
     const overtreders = [];
     fs.readdirSync(SRC_DIR).filter((f) => f.endsWith('.gs')).forEach((f) => {
-      const txt = fs.readFileSync(path.join(SRC_DIR, f), 'utf8');
-      if (/startsWith\(\s*'02'\s*\)\s*&&\s*parseFloat/.test(txt)) overtreders.push(f);
+      fs.readFileSync(path.join(SRC_DIR, f), 'utf8').split('\n').forEach((regel, i) => {
+        const heeftSaldoSom = /parseFloat\(\s*r\[5\]\s*\)/.test(regel);
+        const kalePrefix = /startsWith\(\s*'0\d/.test(regel) || /\/\^0\d/.test(regel);
+        const chokepoint = /_is\w*Rekening\w*\(/.test(regel);
+        if (heeftSaldoSom && kalePrefix && !chokepoint) overtreders.push(`${f}:${i + 1}`);
+      });
     });
-    expect(overtreders).toEqual([]); // leeg = klasse-10-ban codebase-breed dicht
+    expect(overtreders).toEqual([]); // leeg = klasse-10-ban codebase-breed én syntax-volledig dicht
+  });
+});
+
+describe('F-TAX-335 — MIA-grondslag-afbakening (klasse 10, 3e ronde)', () => {
+  test('milieu-investering 026x/027x telt mee', () => {
+    expect(isMilieu('0260')).toBe(true);
+    expect(isMilieu('0275')).toBe(true);
+  });
+  test('contra/afschrijving x90 in de MIA-range telt NIET mee', () => {
+    expect(isMilieu('02690')).toBe(false);   // 5-cijferige contra
+    expect(isMilieu('02790')).toBe(false);
+  });
+  test('buiten de MIA-range (gewone 02xx, 0290, niet-02) telt niet mee', () => {
+    expect(isMilieu('0200')).toBe(false);   // wél KIA, geen MIA
+    expect(isMilieu('0290')).toBe(false);   // afschrijving
+    expect(isMilieu('8000')).toBe(false);
+    expect(isMilieu('')).toBe(false);
   });
 });
