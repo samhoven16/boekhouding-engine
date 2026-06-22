@@ -3615,6 +3615,47 @@ function controleerKritiekeConfig_() {
   return { ok: crit.length === 0, crit: crit, warn: warn };
 }
 
+/**
+ * F-TAX-115: 3e dinsdag van september (Prinsjesdag) van `jaar`.
+ */
+function _prinsjesdag_(jaar) {
+  const d = new Date(jaar, 8, 1);   // 1 september
+  let n = 0;
+  while (n < 3) {
+    if (d.getDay() === 2) n++;       // dinsdag = 2
+    if (n < 3) d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
+/**
+ * F-TAX-115: review-herinnering voor de tarieven van het VOLGENDE jaar. Actief
+ * vanaf Prinsjesdag t/m 31 dec, zolang de centrale config (BELASTING_TARIEVEN)
+ * nog géén tabel voor dat jaar heeft. Zo wordt Sam elk najaar geattendeerd de
+ * nieuwe tarieven/voordelen in te voeren vóór 1 januari — anders valt elke
+ * klant-kopie vanaf 1-1 terug op het oude jaar (met "verouderd"-waarschuwing,
+ * F-OND-024). De tarieven zijn centraal pushbaar via de BELASTING_TARIEVEN-
+ * ScriptProperty (JSON) ZÓNDER code-push; idealiter ná RB-aftekening.
+ */
+function _tariefReviewHerinnering_(nu, props) {
+  try {
+    const jaar = nu.getFullYear();
+    const volgendJaar = jaar + 1;
+    if (nu < _prinsjesdag_(jaar)) return null;     // vóór Prinsjesdag: nog niets bekend
+    let tarieven = null;
+    try { tarieven = JSON.parse(props.getProperty('BELASTING_TARIEVEN') || 'null'); } catch (_) {}
+    if (tarieven && tarieven[volgendJaar]) return null;   // al ingevoerd → klaar
+    return {
+      jaar: volgendJaar,
+      tekst: 'Prinsjesdag is geweest. Zet de ' + volgendJaar + '-tarieven en ' +
+        '-voordelen klaar in de centrale config (ScriptProperty BELASTING_TARIEVEN, ' +
+        'JSON) — clients halen ze automatisch op, zónder code-push. Toets tegen ' +
+        'belastingdienst.nl + de RB-verificatie-checklist. Zonder dit valt elke ' +
+        'kopie vanaf 1-1-' + volgendJaar + ' terug op de ' + jaar + '-tarieven.',
+    };
+  } catch (_) { return null; }
+}
+
 function verstuurDagelijkseStatusmail_() {
   const props = PropertiesService.getScriptProperties();
   const ontvanger = props.getProperty('OWNER_STATUS_EMAIL') ||
@@ -3657,7 +3698,19 @@ function verstuurDagelijkseStatusmail_() {
     html = wb + html;
   }
 
-  const prefix = !config.ok ? '[CRIT] ' : '';
+  // F-TAX-115: tarief-review-banner — na Prinsjesdag tot de volgend-jaar-tarieven
+  // centraal klaarstaan. Boven de config-warnings, onder de CRIT-banner.
+  const review = _tariefReviewHerinnering_(new Date(), props);
+  if (review) {
+    const rb =
+      '<div style="background:#FEF3C7;border:2px solid #F59E0B;border-radius:8px;padding:16px 20px;margin-bottom:20px">' +
+      '<div style="font-size:17px;font-weight:700;color:#92400E;margin-bottom:8px">' +
+      '📋 Fiscale tarieven ' + review.jaar + ' — review vereist</div>' +
+      '<div style="font-size:14px;color:#78350F;line-height:1.55">' + review.tekst + '</div></div>';
+    html = rb + html;
+  }
+
+  const prefix = !config.ok ? '[CRIT] ' : (review ? '[TARIEF-REVIEW] ' : '');
   const onderwerp = prefix + '📊 Boekhoudbaar status — ' +
     Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'd MMM') +
     ' · ' + stats.nieuw24u + ' nieuw, ' + stats.totaalActief + ' actief';
