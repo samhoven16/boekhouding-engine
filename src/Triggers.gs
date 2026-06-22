@@ -403,24 +403,41 @@ function verifieerAuditKeten_(auditSheet) {
 function controleerAuditKetenProactief_() {
   var ss = getSpreadsheet_();
   if (!ss) return;
-  var auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
-  if (!auditSheet) return;
 
-  var r = verifieerAuditKeten_(auditSheet);
-  if (!r.ok) {
+  // F-ACC-330: er zijn DRIE onafhankelijke tamper-detectoren, maar voorheen
+  // draaide alléén de AUDIT_LOG-sheet-keten automatisch — de buffer- en
+  // anchor-keten waren menu-only, dus tampering daarin bleef stil tot iemand
+  // toevallig het menu-item indrukte. Verifieer nu alle drie, elk GEÏSOLEERD:
+  // een fout (of breuk) in de één mag de andere twee niet stoppen.
+  var auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  var ketens = [
+    { naam: 'AUDIT_LOG-sheet', fn: function () { return auditSheet ? verifieerAuditKeten_(auditSheet) : null; } },
+    { naam: 'audit-buffer',    fn: function () { return (typeof verifieerAuditChain_ === 'function') ? verifieerAuditChain_() : null; } },
+    { naam: '_Audit_Anchor',   fn: function () { return (typeof verifieerAuditAnchorSheet_ === 'function') ? verifieerAuditAnchorSheet_(ss) : null; } }
+  ];
+
+  ketens.forEach(function (k) {
+    var r;
+    try { r = k.fn(); } catch (_) { return; }            // verifier-fout isoleren
+    if (!r || r.ok) return;
+    // De drie verifiers gebruiken verschillende veldnamen voor "waar": de
+    // sheet-keten geeft gebrokenRij, buffer/anchor geven gebroken.
+    var waar = (r.gebrokenRij != null) ? r.gebrokenRij : r.gebroken;
+    var reden = r.reden || 'hash-keten wijkt af';
     try {
       schrijfAuditLog_('AUDIT_KETEN_GEBROKEN',
-        'Hash-keten wijkt af op rij ' + r.gebrokenRij + ' — eerdere audit-regel mogelijk achteraf gewijzigd');
+        k.naam + ': ' + reden + (waar != null ? ' (rij ' + waar + ')' : '') +
+        ' — eerder vastgelegde regel mogelijk achteraf gewijzigd');
     } catch (_) {}
     try {
       if (typeof meldFataalAanOwner_ === 'function') {
         meldFataalAanOwner_('AUDIT_KETEN_GEBROKEN',
-          'De hash-keten van het Audit Log is gebroken op rij ' + r.gebrokenRij +
+          'De ' + k.naam + '-hashketen is gebroken: ' + reden +
           '. Een eerder vastgelegde audit-regel is mogelijk achteraf gewijzigd of corrupt geraakt.',
-          { rij: r.gebrokenRij, gecontroleerd: r.gecontroleerd });
+          { keten: k.naam, reden: reden, rij: waar });
       }
     } catch (_) {}
-  }
+  });
 }
 
 /**

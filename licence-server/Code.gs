@@ -245,6 +245,11 @@ function zelfHerstelProductConfig_() {
     try { props.setProperty('ADMIN_REVOKE_TOKEN', Utilities.getUuid() + Utilities.getUuid()); } catch (_) {}
   }
 
+  // 0c. Test-modus auto-verloop (F-RED-331) — herstel de live-prijs vóór de
+  //     prijs-normalisatie hieronder, zodat een vergeten "koop voor €0,01"-
+  //     stand niet stil blijft staan. Draait op elke doGet (idempotent).
+  _herstelVerlopenTestModus_(props);
+
   // 1. Prijs — als waarde parseet als geheel getal >= 100, is het waarschijnlijk
   //    in centen opgeslagen door een oude deploy. Converteer naar euro's.
   const huidigePrijs = props.getProperty('PRODUCT_PRIJS');
@@ -508,6 +513,11 @@ function _isGeldigeRefCode_(ref, koperEmail) {
 //  BETAALPAGINA: BETALING AANMAKEN (Mollie)
 // ─────────────────────────────────────────────
 function maakBetaling(klantnaam, klantEmail, refCode) {
+  // F-RED-331: laatste vangnet — herstel een verlopen test-modus vóór we de
+  // prijs lezen, zodat een echte klant nooit voor €0,01 afrekent omdat Sam de
+  // teststand vergat uit te zetten (maakBetaling kan via google.script.run
+  // worden geraakt zonder voorafgaande doGet-self-heal).
+  try { _herstelVerlopenTestModus_(PropertiesService.getScriptProperties()); } catch (_) {}
   klantnaam  = String(klantnaam  || '').trim();
   klantEmail = String(klantEmail || '').trim().toLowerCase();
   // Sanitiseer ref opnieuw server-side: client kan alles sturen.
@@ -1489,9 +1499,28 @@ function _meldAdminLockoutAanOwner_() {
  * ADMIN_WACHTWOORD + bekend wachtwoord-veld; rate-limit 30/u globaal.
  */
 function _adminAuthOk_(e) {
+  // F-RED-330: deel ÉÉN brute-force-teller met de dashboard-login
+  // (adminLogin → CacheService 'admin_login_pogingen'). Voorheen had elk
+  // POST-endpoint (admin-zet-prijs/admin-test-modus) een eigen 30/u-bucket →
+  // een aanvaller verdeelde z'n pogingen over de buckets (~80/u totaal op
+  // hetzelfde ADMIN_WACHTWOORD) en die twee POST-paden vuurden de owner-
+  // lockout-alert NOOIT. Nu telt élke ADMIN_WACHTWOORD-validatie tegen
+  // dezelfde teller (20/u), die bij een geslaagde login reset zodat legitiem
+  // beheer niet zichzelf buitensluit. (Auto-seeden zoals ADMIN_REVOKE_TOKEN
+  // kan hier NIET: dit is een door Sam getypt wachtwoord, geen machine-secret.)
+  const cache = CacheService.getScriptCache();
+  const teller = parseInt(cache.get('admin_login_pogingen') || '0', 10);
+  if (teller >= 20) {
+    try { _meldAdminLockoutAanOwner_(); } catch (_) {}
+    return false;
+  }
   const ww = String(PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '').trim();
   const input = String((e.parameter && e.parameter.ww) || '').trim();
-  if (!ww || !input || !veiligVergelijk_(ww, input)) return false;
+  if (!ww || !input || !veiligVergelijk_(ww, input)) {
+    cache.put('admin_login_pogingen', String(teller + 1), 3600);
+    return false;
+  }
+  try { cache.remove('admin_login_pogingen'); } catch (_) {}  // geslaagd → reset (zelfde semantiek als adminLogin)
   return true;
 }
 
@@ -1536,13 +1565,37 @@ function adminTestModusEndpoint_(e) {
   if (aan) {
     props.setProperty('PRODUCT_PRIJS', '0.01');
     props.setProperty('REF_KORTING', '0');
-    try { schrijfAuditLog_('Test-modus AAN', 'prijs=0.01 ref-korting=0'); } catch (_) {}
-    return jsonResp_({ ok: true, modus: 'test', prijs: '0.01', refKorting: '0' });
+    // F-RED-331: test-modus verloopt automatisch na 24u. Een vergeten stand is
+    // een omzet-lek (iedereen koopt voor €0,01) — _herstelVerlopenTestModus_
+    // zet de live-prijs terug zodra dit moment voorbij is.
+    props.setProperty('TEST_MODUS_VERLOOPT', String(Date.now() + 24 * 3600 * 1000));
+    try { schrijfAuditLog_('Test-modus AAN', 'prijs=0.01 ref-korting=0 verloopt=+24u'); } catch (_) {}
+    return jsonResp_({ ok: true, modus: 'test', prijs: '0.01', refKorting: '0', verloopt: '24u' });
   }
   props.setProperty('PRODUCT_PRIJS', '49.00');
   props.deleteProperty('REF_KORTING');
+  props.deleteProperty('TEST_MODUS_VERLOOPT');
   try { schrijfAuditLog_('Test-modus UIT', 'prijs=49.00 ref-korting=default(5)'); } catch (_) {}
   return jsonResp_({ ok: true, modus: 'live', prijs: '49.00', refKorting: '5 (default)' });
+}
+
+/**
+ * F-RED-331: herstelt de live-prijs zodra een vergeten test-modus (PRODUCT_PRIJS
+ * =0.01 + TEST_MODUS_VERLOOPT) z'n 24u-venster voorbij is. Idempotent. Wordt
+ * aangeroepen op elke doGet (zelfHerstelProductConfig_) ÉN vóór elke betaling
+ * (maakBetaling), zodat een vergeten stand nooit een echte €0,01-verkoop geeft.
+ * @returns {boolean} true als er hersteld is.
+ */
+function _herstelVerlopenTestModus_(props) {
+  try {
+    const verloopt = parseInt(props.getProperty('TEST_MODUS_VERLOOPT') || '0', 10);
+    if (!verloopt || Date.now() <= verloopt) return false;   // niet actief of nog geldig
+    props.setProperty('PRODUCT_PRIJS', '49.00');
+    props.deleteProperty('REF_KORTING');
+    props.deleteProperty('TEST_MODUS_VERLOOPT');
+    try { schrijfAuditLog_('Test-modus automatisch verlopen', 'prijs hersteld naar 49.00 na 24u'); } catch (_) {}
+    return true;
+  } catch (_) { return false; }
 }
 
 /**
@@ -1578,14 +1631,13 @@ function _adminPostBevestiging_(resp, e) {
 }
 
 function adminPaneel_(e) {
-  // .trim() op BEIDE kanten: een in Script Properties geplakt wachtwoord
-  // krijgt makkelijk een trailing spatie/newline. Zonder trim verschillen
-  // de lengtes → veiligVergelijk_ faalt → eeuwig login-formulier ondanks
-  // correct wachtwoord (Sam's "wit scherm na invullen"-bug).
-  const ww    = String(PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '').trim();
-  const input = String((e.parameter.ww || '')).trim();
+  // F-RED-330: valideer via _adminAuthOk_ zodat dit legacy-paneel dezelfde
+  // gedeelde brute-force-teller ('admin_login_pogingen') gebruikt als de
+  // dashboard-login en de POST-endpoints — niet langer een losse teller.
+  // _adminAuthOk_ doet zelf de .trim() op beide kanten (geplakte-spatie-bug).
+  const input = String((e.parameter.ww || '')).trim();  // alleen voor de UI-foutmelding
 
-  if (!ww || !veiligVergelijk_(ww, input)) {
+  if (!_adminAuthOk_(e)) {
     // Apps Script HtmlService draait in een sandbox-iframe. Een gewoon
     // <form> zonder action/target submit naar de sandbox-URL i.p.v. naar
     // /exec → wit scherm. Fix: expliciete action naar de exec-URL +
@@ -1611,6 +1663,17 @@ function adminPaneel_(e) {
   const brevoReady    = !!props.getProperty('BREVO_API_KEY');
 
   let banners = '';
+  // F-RED-331: rode banner zolang test-modus actief is (PRODUCT_PRIJS<=0.01).
+  // Maakt een vergeten "koop voor €0,01"-stand onmogelijk over het hoofd te zien.
+  const prijsNu = parseFloat(props.getProperty('PRODUCT_PRIJS') || '49.00');
+  if (Number.isFinite(prijsNu) && prijsNu <= 0.01) {
+    const verlooptTs = parseInt(props.getProperty('TEST_MODUS_VERLOOPT') || '0', 10);
+    const restUur = verlooptTs ? Math.max(0, Math.round((verlooptTs - Date.now()) / 3600000)) : null;
+    banners += '<div class="banner err"><strong>⚠ TEST-MODUS ACTIEF — prijs €0,01.</strong> ' +
+               'Iedereen koopt nu een echte licentie voor 1 cent. ' +
+               (restUur != null ? 'Verloopt automatisch over ~' + restUur + ' uur. ' : '') +
+               'Zet uit via <code>admin-test-modus aan=nee</code> zodra je klaar bent met testen.</div>';
+  }
   if (!templateReady) {
     banners += '<div class="banner err"><strong>⚠ TEMPLATE_SS_ID ontbreekt.</strong> ' +
                'De copy-link in de klant-e-mail is dan leeg. Vul Script Properties → ' +
