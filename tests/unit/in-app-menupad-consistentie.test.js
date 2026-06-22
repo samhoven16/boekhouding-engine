@@ -36,6 +36,7 @@ const VERBODEN = [
   { token: /Nieuwe boeking → Inkomsten/, uitleg: 'geen submenu onder Nieuwe boeking (het is één dialoog met tabs)' },
   { token: /Nieuwe boeking → Uitgaven/, uitleg: 'geen submenu onder Nieuwe boeking (het is één dialoog met tabs)' },
   { token: /Instellingen → Herinstalleer/, uitleg: 'geen "Herinstalleer"-item (nu "Eerste keer instellen (setup)")' },
+  { token: /→ Diagnostiek →/, uitleg: 'geen "Diagnostiek"-submenu (diagnose zit onder Controle & Export → Voor support)' },
 ];
 
 describe('in-app menu-pad-consistentie (src/*.gs ↔ echte menu-namen)', () => {

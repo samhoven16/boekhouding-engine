@@ -620,7 +620,7 @@ function _geminiFoutNl_(err) {
 
 function scanDocumentMetAI(base64Data, mimeType) {
   const apiKey = ontsleutelString_(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY'));
-  if (!apiKey) return { fout: 'Gemini API-sleutel niet ingesteld (Boekhoudbaar → Instellingen → 🤖 Gemini API-key voor bon-scan).' };
+  if (!apiKey) return { fout: 'Gemini API-sleutel niet ingesteld (Boekhoudbaar → Instellingen → 🤖 Eigen Gemini API-key).' };
 
   // OWASP LLM10 mitigatie: rate-limit op AI-calls. Zonder limiet kan klant
   // (per ongeluk of malicious) 1000× scannen → Gemini-quota uitputten + kosten.

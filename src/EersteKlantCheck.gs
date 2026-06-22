@@ -127,7 +127,7 @@ function _ekrCheckTriggers_() {
     }
     return { naam: 'Triggers geïnstalleerd', status: 'FOUT',
       bericht: 'Ontbrekende handlers: ' + ontbrekend.join(', '),
-      fix: 'Boekhoudbaar → Diagnostiek → Triggers herinstalleren' };
+      fix: 'Heropen het bestand — ontbrekende triggers herstellen zichzelf automatisch bij openen. Blijft de melding na heropenen? Mail support@boekhoudbaar.nl' };
   } catch (e) {
     return { naam: 'Triggers geïnstalleerd', status: 'WAARSCHUWING',
       bericht: 'Trigger-API gaf fout: ' + e.message,
