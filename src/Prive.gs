@@ -352,7 +352,7 @@ function openIbAangifteHelper() {
       .info{font-size:10px;color:#5A6478;margin-top:2px}
     </style>
     <h3>IB aangifte-schatting ${_jaar}</h3>
-    <p style="font-size:11px;color:#5A6478">Snelle schatting — niet voor officiële aangifte. Raadpleeg een belastingadviseur voor definitieve berekening.</p>
+    <p style="font-size:11px;color:#5A6478">Snelle schatting — niet voor officiële aangifte. De heffingskorting is hier vereenvoudigd (zonder inkomensafhankelijke afbouw); het Fiscaal overzicht rekent de afbouw wél mee. Raadpleeg een belastingadviseur voor de definitieve berekening.</p>
 
     <div class="box">
       <h4>Box 1 — inkomen uit werk en woning</h4>
