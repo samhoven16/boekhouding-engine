@@ -31,15 +31,27 @@ terugtrekken.
 
 ## Stap 2 — Clients de standby-URL geven
 Clients lezen de standby uit ScriptProperty `LICENTIE_SERVER_URL_FALLBACK`
-(`src/Licentie.gs`). **F-SCALE-141b is geïmplementeerd**: zet
-`licentieServerUrlFallback` in de **centrale config-payload** (de JSON die het
-`?actie=config`-endpoint teruggeeft). De client-config-refresh (`haalConfigOp_`,
-draait o.a. op onOpen) synct die waarde via `_syncStandbyUrlUitConfig_` naar de
-ScriptProperty — dus **óók de honderden al-gedeployde kopieën** krijgen de
-standby, zonder per-kopie handwerk. Eén veld in de config, klaar.
+(`src/Licentie.gs`). **F-SCALE-141b/c is geïmplementeerd én end-to-end geborgd**:
+
+1. **Op de PRIMAIRE licentieserver** (Project Settings → Script Properties): zet
+   `STANDBY_SERVER_URL` = de **/exec**-URL van de standby (uit stap 1.3). Het
+   `?actie=config`-endpoint (`configEndpoint_`) emit die waarde als veld
+   `licentieServerUrlFallback` in de config-payload. **Zonder deze property is de
+   hele push inert** (het veld is dan leeg → clients schrijven niets) — dat was de
+   F-SCALE-141c-bug; de regressietest `f-scale-141-...` draait nu de échte
+   server→client-route, niet een handgemaakt payload-object.
+2. De client-config-refresh (`haalConfigOp_`, draait o.a. op onOpen) synct die
+   waarde via `_syncStandbyUrlUitConfig_` naar de lokale `LICENTIE_SERVER_URL_FALLBACK`-
+   property — dus **óók de honderden al-gedeployde kopieën** krijgen de standby,
+   zonder per-kopie handwerk.
+
+- Leeg laten van `STANDBY_SERVER_URL` = geen push; een client die al een fallback
+  heeft, behoudt 'm (de sync wist niet bij een lege waarde).
 - Nieuwe kopieën erven 'm sowieso (via dezelfde config-route).
 - Cache: `haalConfigOp_` cachet 24u, dus de standby-URL is doorgaans al lokaal
   bekend vóór een primaire-uitval; tijdens een uitval levert de cache 'm alsnog.
+- Let op: zodra `STANDBY_SERVER_URL` gezet is, is de centrale config **leidend** —
+  hij overschrijft elke 24u een handmatig per-kopie gezette `LICENTIE_SERVER_URL_FALLBACK`.
 
 ## Stap 3 — Uptime-monitoring (beide servers)
 Zet een externe monitor (UptimeRobot / Healthchecks.io / Cloudflare Worker-cron)

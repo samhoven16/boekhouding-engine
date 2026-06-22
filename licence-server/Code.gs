@@ -1099,6 +1099,8 @@ function configEndpoint_(e) {
     features:             flags,           // alias voor isFeatureIngeschakeld_
     featureMeldingen:     featureMeldingen,
     belastingTarieven:    belastingTarieven,  // null = client gebruikt lokale fallback
+    // F-SCALE-141b: warme-standby-URL → client synct 'm naar LICENTIE_SERVER_URL_FALLBACK (leeg = geen push).
+    licentieServerUrlFallback: props.getProperty('STANDBY_SERVER_URL') || '',
   });
 }
 

@@ -116,3 +116,60 @@ describe('F-SCALE-141 — warme-standby licentieserver (client-helft)', () => {
     expect(r.geldig).toBe(false);                         // offline-grace zonder eerdere OK
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+//  F-SCALE-141b — END-TO-END server→client-route.
+//  De client-helft-tests hierboven voedden _syncStandbyUrlUitConfig_ met een
+//  HANDGEBOUWD {licentieServerUrlFallback: ...}-object. Dat verhulde een naad:
+//  de SERVER (configEndpoint_) zette dat veld aanvankelijk NIET in de payload,
+//  dus op een echte client was cfg.licentieServerUrlFallback altijd undefined
+//  → de sync deed niets → de standby bereikte de honderden al-gedeployde
+//  kopieën nooit. Deze tests draaien de ECHTE configEndpoint_ en sturen díe
+//  payload door de client-sync — ze falen zodra het veld weer uit de payload
+//  verdwijnt.
+// ─────────────────────────────────────────────────────────────────────────
+const CODE_GS = path.resolve(__dirname, '../../licence-server/Code.gs');
+
+function serverConfigPayload(scriptProps) {
+  const store = scriptProps || {};
+  const ctx = createGasRuntime([CODE_GS], {
+    PropertiesService: {
+      getScriptProperties: () => ({
+        getProperty: (k) => (k in store ? store[k] : null),
+        setProperty: () => {},
+        deleteProperty: () => {},
+      }),
+    },
+    ContentService: {
+      createTextOutput: (txt) => ({ _txt: txt, setMimeType() { return this; } }),
+      MimeType: { JSON: 'json' },
+    },
+  });
+  return JSON.parse(ctx.configEndpoint_({})._txt);
+}
+
+describe('F-SCALE-141b — server→client standby-route end-to-end', () => {
+  test('server zet licentieServerUrlFallback uit STANDBY_SERVER_URL in de payload', () => {
+    const payload = serverConfigPayload({ STANDBY_SERVER_URL: 'https://standby.example/exec' });
+    expect(payload.licentieServerUrlFallback).toBe('https://standby.example/exec');
+  });
+
+  test('zonder STANDBY_SERVER_URL → leeg veld (geen standby gepusht)', () => {
+    const payload = serverConfigPayload({});
+    expect(payload.licentieServerUrlFallback).toBe('');
+  });
+
+  test('ECHTE server-payload → _syncStandbyUrlUitConfig_ → client-property geschreven', () => {
+    const payload = serverConfigPayload({ STANDBY_SERVER_URL: 'https://standby.example/exec' });
+    const { ctx, propStore } = maakCtx({ props: {} });   // al-gedeployde kopie, geen lokale fallback
+    ctx._syncStandbyUrlUitConfig_(payload);
+    expect(propStore.LICENTIE_SERVER_URL_FALLBACK).toBe('https://standby.example/exec');
+  });
+
+  test('lege server-payload wist een bestaande client-fallback NIET', () => {
+    const payload = serverConfigPayload({});             // STANDBY_SERVER_URL niet gezet
+    const { ctx, propStore } = maakCtx({ props: { LICENTIE_SERVER_URL_FALLBACK: 'https://bestaand.example/l' } });
+    ctx._syncStandbyUrlUitConfig_(payload);
+    expect(propStore.LICENTIE_SERVER_URL_FALLBACK).toBe('https://bestaand.example/l');
+  });
+});

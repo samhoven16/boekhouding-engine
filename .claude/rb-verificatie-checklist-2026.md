@@ -30,7 +30,7 @@
 ## 🔧 Gecorrigeerd deze verificatie (code was fout/voorlopig → nu juist)
 | Constante | Was | Nu | Reden |
 |-----------|-----|-----|-------|
-| `BOX3_FORFAIT_BELEGGING` | 0,0778 | **0,06** | Kabinetsvoorstel 7,78% TERUGGEDRAAID → definitief 6,00%. **Significant** (~30% overschatting box-3-rendement). |
+| `BOX3_FORFAIT_BELEGGING` | 0,0778 | **0,06** | Kabinetsvoorstel 7,78% TERUGGEDRAAID → definitief 6,00%. **Significant**: forfait lag ~30% bóven juist (1,78pp); de box-3-heffing zelf daalt ~23% — bij €200k beleggingsvermogen €3.935 → €3.038. |
 | `BOX3_HEFFINGSVRIJ` | 59500 | **59357** | Definitief €59.357 p.p. (was "indicatief"). |
 | `BOX3_FORFAIT_SPAAR` | 0,0144 | **0,0128** | 2026 voorlopig; 0,0144 was de 2025-waarde. |
 | `HEFFINGSKORTING_AFBOUW_VAN` | 29739 | **29736** | belastingdienst-tabel + Deloitte. |

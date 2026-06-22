@@ -463,7 +463,7 @@ const BELASTING_OVERRIDE_VELDEN = [
   { sleutel: 'BOX3_TARIEF',          label: 'Tarief: Box 3 belastingtarief (%)', type: 'percentage', min: 0,    max: 0.60,
     hint: 'Box 3 tarief over fictief rendement. 2024-2026: 36%.' },
   { sleutel: 'BOX3_FORFAIT_BELEGGING', label: 'Tarief: Box 3 forfait beleggingen (%)', type: 'percentage', min: 0, max: 0.20,
-    hint: 'Fictief rendement beleggingen. 2025: 5,88%. 2026: 7,78% (voorstel).' },
+    hint: 'Fictief rendement beleggingen. 2025: 5,88%. 2026: 6,00% (definitief; 7,78%-voorstel is teruggedraaid).' },
   { sleutel: 'URENCRITERIUM',        label: 'Grens: Urencriterium (uur/jr)',     type: 'getal',      min: 100,  max: 5000,
     hint: 'Minimum uren voor zelfstandigenaftrek. Stabiel: 1.225 uur.' },
   { sleutel: 'ZVW_PCT',              label: 'Tarief: Zvw inkomensafh. bijdrage (%)', type: 'percentage', min: 0, max: 0.15,

@@ -25,6 +25,8 @@
  */
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const { createGasRuntime } = require('../__helpers__/gas-runtime');
 
 /** Date-vervanger die new Date().getFullYear() forceert maar verder echt is. */
@@ -85,6 +87,16 @@ describe('LAAG 1 — 2026-tarieven gepind op Belastingdienst (oracle-anker)', ()
     expect(B.ZELFSTANDIGENAFTREK).toBe(1200);   // verlaagd per 2026
     expect(B.MKB_WINSTVRIJSTELLING).toBe(0.1270);
   });
+  test('Box 3 forfaits + heffingsvrij + tarief (F-TAX-110 RB-verificatie 2026-06-21)', () => {
+    // De fiscaal-zwaarste correctie deze verificatie: het beleggings-forfait ging
+    // van het teruggedraaide 7,78%-kabinetsvoorstel terug naar 6,00% definitief.
+    // Zonder deze pin glipt een her-introductie van 0,0778 ongemerkt door CI.
+    expect(B.BOX3_FORFAIT_BELEGGING).toBe(0.06);
+    expect(B.BOX3_FORFAIT_BELEGGING).not.toBe(0.0778);  // het teruggedraaide voorstel
+    expect(B.BOX3_FORFAIT_SPAAR).toBe(0.0128);          // 2026 voorlopig; definitief begin 2027
+    expect(B.BOX3_HEFFINGSVRIJ).toBe(59357);
+    expect(B.BOX3_TARIEF).toBe(0.36);
+  });
 });
 
 describe('LAAG 2 — golden-master berekeningen (hand-afgeleid uit de tarieven)', () => {
@@ -125,6 +137,16 @@ describe('LAAG 2 — golden-master berekeningen (hand-afgeleid uit de tarieven)'
   });
   test('Arbeidskorting €60.000 → €4.747,10 (5685 − 14407×0,0651)', () => {
     expect(ctx.berekenArbeidskorting_(60000, B)).toBeCloseTo(4747.10, 2);
+  });
+
+  test('Box 3 €200.000 beleggingsvermogen → €3.037,89 heffing (na F-TAX-110)', () => {
+    // grondslag = vermogen − heffingsvrij; rendement = grondslag × forfait;
+    // heffing = rendement × tarief — de keten uit Prive.gs, gevoed door B.
+    // Anker 3037,89 valt zodra één van de 3 box-3-inputs drift. (Met het oude
+    // 0,0778/59500 was dit €3.935,12 → de correctie scheelt ~23% / ~€897.)
+    const grondslag = 200000 - B.BOX3_HEFFINGSVRIJ;          // 140.643
+    const rendement = grondslag * B.BOX3_FORFAIT_BELEGGING;  // 8.438,58
+    expect(ct(rendement * B.BOX3_TARIEF)).toBeCloseTo(3037.89, 2);
   });
 
   test('KIA €10.000 → €2.800,00 (28% in opbouwzone)', () => {
@@ -170,5 +192,24 @@ describe('LAAG 3 — rate-source consistentie: CustomFunctions-fallback == 2026'
     expect(fb.ZVW_PCT).toBe(B.ZVW_PCT);
     expect(fb.ZVW_MAX_INKOMEN).toBe(B.ZVW_MAX_INKOMEN);
     expect(fb.ZELFSTANDIGENAFTREK).toBe(B.ZELFSTANDIGENAFTREK);
+  });
+});
+
+describe('LAAG 4 — UI-hint ↔ constante sync (F-TAX-136)', () => {
+  // De Instellingen-editor toont per tarief een hint. Die mag niet stil
+  // achterlopen op de constante: een hint die nog "2026: 7,78%" zegt terwijl de
+  // constante 6,00% is, verleidt een klant om 'm "terug te corrigeren" naar de
+  // foute waarde → box-3-overschatting van ~€900 bij €200k. Ratel op de drift.
+  const src = fs.readFileSync(path.resolve(__dirname, '../../src/Belastingadvies.gs'), 'utf8');
+  const hintVan = (sleutel) => {
+    const i = src.indexOf("sleutel: '" + sleutel + "'");
+    return i >= 0 ? src.slice(i, src.indexOf('}', i)) : '';
+  };
+
+  test('box-3-forfait-hint noemt 6,00% (definitief), niet 7,78% als huidige waarde', () => {
+    const hint = hintVan('BOX3_FORFAIT_BELEGGING');
+    expect(hint).toMatch(/2026: 6,00%/);
+    // 7,78 mag alleen nog voorkomen als het expliciet "teruggedraaid/voorstel" is.
+    if (/7,78/.test(hint)) expect(hint).toMatch(/teruggedraaid|voorstel/i);
   });
 });
