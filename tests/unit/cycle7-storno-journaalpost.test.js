@@ -15,14 +15,10 @@ describe('CYCLE 7: maakStornoJournaalpost_', () => {
     const HEADER = new Array(20).fill('');
     const all = [HEADER, ...rows];
     const appendCalls = [];
-    const setValueCalls = [];
     const jpSheet = {
       appendRow: (rij) => { appendCalls.push(rij); all.push(rij); },
       getLastRow: () => all.length,
-      getRange: (row, col) => ({
-        setValue: (v) => { setValueCalls.push({ row, col, v }); if (row && col) all[row - 1][col - 1] = v; },
-        getValue: () => '',
-      }),
+      getRange: () => ({ setValue: () => {}, getValue: () => '' }),
       getDataRange: () => ({ getValues: () => all }),
     };
     const ctx = createGasRuntime(
@@ -37,7 +33,7 @@ describe('CYCLE 7: maakStornoJournaalpost_', () => {
     ctx.schrijfAuditLog_ = jest.fn();
     ctx.noodLog_ = jest.fn();
     ctx.meldFataalAanOwner_ = jest.fn();
-    return { ctx, appendCalls, setValueCalls };
+    return { ctx, appendCalls };
   }
 
   // Maakt een journaalpost-rij volgens JOURNAALPOSTEN-schema
@@ -61,16 +57,6 @@ describe('CYCLE 7: maakStornoJournaalpost_', () => {
     expect(stornoRij[8]).toBe(100);     // zelfde bedrag
     expect(stornoRij[2]).toMatch(/STORNO BK000007/);
     expect(stornoRij[2]).toMatch(/Correctie/);
-  });
-
-  test('F-ACC-165: originele JP-rij wordt op GESTORNEERD gezet (audit-trail op journaalpost-niveau)', () => {
-    const orig = jpRij('BK000007', new Date('2026-02-15'), 'Test', '7990', '1200', 100, '');
-    const { ctx, setValueCalls } = maakCtx([orig]);
-    ctx.maakStornoJournaalpost_(ctx._mockSs, 'BK000007', 'Correctie reden');
-    // origineel = data-index 1 → sheet-rij 2; status-kolom = KOL.JP.status(16)+1 = 17
-    const statusSet = setValueCalls.find((c) => c.row === 2 && c.col === 17);
-    expect(statusSet).toBeTruthy();
-    expect(statusSet.v).toBe('GESTORNEERD');
   });
 
   test('Saldi worden teruggedraaid via updateGrootboekSaldo_', () => {

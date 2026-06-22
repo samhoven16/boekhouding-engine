@@ -95,6 +95,33 @@ describe('I₂ — Grootboeksaldo consistent (echte verifier)', () => {
       expect(res.tegenvoorbeeld.some((d) => d.rek === kapot)).toBe(true);
     }
   });
+
+  // REGRESSIE (F-ACC-165, gevonden door cross-pr-regressie): een storno is een
+  // origineel + een aparte tegenrij die elkaar in het grootboek opheffen (netto
+  // 0). I2 telt journaalposten op tot `verwacht` en vergelijkt met het
+  // grootboeksaldo, MAAR skipt status==='GESTORNEERD' (FormeelBewijs.gs:196).
+  // Stempel je het origineel GESTORNEERD (de teruggedraaide fix) terwijl de
+  // tegenrij 'Gevalideerd' blijft, dan valt het origineel uit `verwacht` maar
+  // niet uit het grootboeksaldo → I2 wijkt af → "formeel bewijs geschonden" bij
+  // ÉLKE storno. Deze test zou die regressie hebben gevangen.
+  describe('storno-paar breekt I2 niet (regressie F-ACC-165)', () => {
+    const paar = (origStatus) => [JP_H,
+      jpRow({ id: 'BK7', debet: '1100', credit: '1300', bedrag: 100, status: origStatus }),
+      jpRow({ id: 'BK8', debet: '1300', credit: '1100', bedrag: 100, status: 'Gevalideerd' }), // storno-tegenrij
+    ];
+    // Grootboek telt beide rijen (geen status-filter) → netto 0 op beide.
+    const gbNul = [GB_H, gbRow({ code: '1100', saldo: 0 }), gbRow({ code: '1300', saldo: 0 })];
+
+    test('origineel met normale status → I2 geldig (origineel + storno netto 0)', () => {
+      const res = ctx._bewijs_I2_grootboekConsistent_(mockSs({ Journaalposten: paar('Gevalideerd'), Grootboekschema: gbNul }));
+      expect(res.geldig).toBe(true);
+    });
+
+    test('RATEL: origineel GESTORNEERD-gestempeld → I2 faalt (waarom F-ACC-165 is teruggedraaid)', () => {
+      const res = ctx._bewijs_I2_grootboekConsistent_(mockSs({ Journaalposten: paar('GESTORNEERD'), Grootboekschema: gbNul }));
+      expect(res.geldig).toBe(false);   // origineel geskipt, tegenrij niet → verwacht ≠ grootboek
+    });
+  });
 });
 
 describe('I₃ — Balans-wet Activa = Passiva (echte verifier)', () => {
