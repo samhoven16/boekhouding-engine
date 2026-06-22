@@ -1561,20 +1561,13 @@ function adminTestModusEndpoint_(e) {
   const aanRaw = String((e.parameter && e.parameter.aan) || '').toLowerCase().trim();
   const aan = (aanRaw === 'ja' || aanRaw === 'true' || aanRaw === '1');
 
-  const props = PropertiesService.getScriptProperties();
+  // F-RED-331: alle test-modus-mutaties via de gedeelde chokepoint (zet óók
+  // TEST_MODUS_VERLOOPT zodat de 24u-auto-revert werkt).
+  _zetTestModusPreset_(aan);
   if (aan) {
-    props.setProperty('PRODUCT_PRIJS', '0.01');
-    props.setProperty('REF_KORTING', '0');
-    // F-RED-331: test-modus verloopt automatisch na 24u. Een vergeten stand is
-    // een omzet-lek (iedereen koopt voor €0,01) — _herstelVerlopenTestModus_
-    // zet de live-prijs terug zodra dit moment voorbij is.
-    props.setProperty('TEST_MODUS_VERLOOPT', String(Date.now() + 24 * 3600 * 1000));
     try { schrijfAuditLog_('Test-modus AAN', 'prijs=0.01 ref-korting=0 verloopt=+24u'); } catch (_) {}
     return jsonResp_({ ok: true, modus: 'test', prijs: '0.01', refKorting: '0', verloopt: '24u' });
   }
-  props.setProperty('PRODUCT_PRIJS', '49.00');
-  props.deleteProperty('REF_KORTING');
-  props.deleteProperty('TEST_MODUS_VERLOOPT');
   try { schrijfAuditLog_('Test-modus UIT', 'prijs=49.00 ref-korting=default(5)'); } catch (_) {}
   return jsonResp_({ ok: true, modus: 'live', prijs: '49.00', refKorting: '5 (default)' });
 }
@@ -1596,6 +1589,28 @@ function _herstelVerlopenTestModus_(props) {
     try { schrijfAuditLog_('Test-modus automatisch verlopen', 'prijs hersteld naar 49.00 na 24u'); } catch (_) {}
     return true;
   } catch (_) { return false; }
+}
+
+/**
+ * F-RED-331 (2e ronde): centrale test-modus-toggle. ÉLKE test-modus-knop MOET
+ * hierlangs zodat PRODUCT_PRIJS + REF_KORTING + TEST_MODUS_VERLOOPT altijd
+ * consistent gezet/gewist worden. De dashboard-toggle (adminZetTestModus) sloeg
+ * TEST_MODUS_VERLOOPT over → de 24u-auto-revert was inert voor de primair-
+ * gebruikte UI-route → onbeperkt €0,01-verkoop-lek. Eén chokepoint voorkomt dat
+ * een toekomstige derde knop opnieuw afdrijft (vgl. _adminAuthOk_-unificatie).
+ * @param {boolean} aan
+ */
+function _zetTestModusPreset_(aan) {
+  const props = PropertiesService.getScriptProperties();
+  if (aan) {
+    props.setProperty('PRODUCT_PRIJS', '0.01');
+    props.setProperty('REF_KORTING', '0');
+    props.setProperty('TEST_MODUS_VERLOOPT', String(Date.now() + 24 * 3600 * 1000));
+  } else {
+    props.setProperty('PRODUCT_PRIJS', '49.00');
+    props.deleteProperty('REF_KORTING');
+    props.deleteProperty('TEST_MODUS_VERLOOPT');
+  }
 }
 
 /**

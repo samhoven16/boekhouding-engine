@@ -71,8 +71,8 @@ describe('F-RED-331 — test-modus verloopt automatisch', () => {
 });
 
 describe('F-RED-331 — wiring (de auto-revert is op de juiste plekken ingehaakt)', () => {
-  test('test-modus AAN zet TEST_MODUS_VERLOOPT; UIT wist het', () => {
-    const fn = functieBron('adminTestModusEndpoint_');
+  test('de chokepoint _zetTestModusPreset_ zet TEST_MODUS_VERLOOPT (AAN) en wist het (UIT)', () => {
+    const fn = functieBron('_zetTestModusPreset_');
     expect(fn).toMatch(/setProperty\(\s*'TEST_MODUS_VERLOOPT'/);
     expect(fn).toMatch(/deleteProperty\(\s*'TEST_MODUS_VERLOOPT'\s*\)/);
   });
@@ -86,5 +86,32 @@ describe('F-RED-331 — wiring (de auto-revert is op de juiste plekken ingehaakt
     const fn = functieBron('adminPaneel_');
     expect(fn).toMatch(/prijsNu\s*<=\s*0\.01/);
     expect(fn).toContain('TEST-MODUS ACTIEF');
+  });
+
+  // CONTRACT (2e ronde) — sluit de parallel-pad-drift-klasse: de red-team vond
+  // dat het dashboard-pad adminZetTestModus de €0,01-preset zette zónder
+  // TEST_MODUS_VERLOOPT → auto-revert inert. Élke functie (Code.gs +
+  // AdminDashboard.gs) die PRODUCT_PRIJS op '0.01' zet MOET via de chokepoint
+  // _zetTestModusPreset_ lopen. Een nieuwe toggle die het overslaat faalt CI.
+  test('CONTRACT: elke €0,01-test-modus-toggle loopt via _zetTestModusPreset_', () => {
+    const LS = path.resolve(__dirname, '../../licence-server');
+    const bestanden = ['Code.gs', 'AdminDashboard.gs'];
+    const overtreders = [];
+    bestanden.forEach((f) => {
+      const txt = fs.readFileSync(path.join(LS, f), 'utf8');
+      const fnRe = /function\s+(\w+)\s*\([^)]*\)\s*\{/g;
+      const starts = [];
+      let m;
+      while ((m = fnRe.exec(txt)) !== null) starts.push({ naam: m[1], i: m.index });
+      starts.forEach((s, idx) => {
+        const eind = idx + 1 < starts.length ? starts[idx + 1].i : txt.length;
+        const body = txt.slice(s.i, eind);
+        if (s.naam === '_zetTestModusPreset_') return; // de chokepoint zelf
+        if (/setProperty\(\s*'PRODUCT_PRIJS'\s*,\s*'0\.01'\s*\)/.test(body)) {
+          if (body.indexOf('_zetTestModusPreset_(') < 0) overtreders.push(f + ':' + s.naam);
+        }
+      });
+    });
+    expect(overtreders).toEqual([]); // leeg = geen toggle die de chokepoint omzeilt
   });
 });

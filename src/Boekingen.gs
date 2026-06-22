@@ -266,7 +266,9 @@ function maakStornoJournaalpost_(ss, origineelBoekingId, reden) {
   // INKOOPFACTUREN-rijen, niet uit journaalposten. Zonder factuur-update
   // zou de voorbelasting OF de verschuldigde BTW dubbel meetellen → te
   // veel teruggevraagd of te weinig afgedragen → naheffing + 30% boete.
-  // Daarom: markeer matched factuur als 'Gestorneerd' + nul BTW-bedrag.
+  // Daarom: markeer matched factuur als 'Gestorneerd'. De aangifte (BTW.gs) en
+  // I4 slaan een 'gestorneerd'-rij status-gedreven over (F-ACC-332) — de
+  // bedragen blijven intact zodat de rij excl+btw=incl consistent blijft.
   try {
     const origRef = String(origineel[11] || '').trim();
     if (origRef) {

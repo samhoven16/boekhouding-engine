@@ -42,11 +42,22 @@ describe('F-TAX-330 — investeringsgrondslag-afbakening (klasse 10)', () => {
     expect(isInvestering(' 0200 ')).toBe(true);
   });
 
-  test('de KIA- én EIA-grondslagscan gebruiken de chokepoint (geen kale startsWith meer)', () => {
-    // Geen bare `startsWith('02')`-grondslagscan meer in de advies-berekening.
-    const scans = (src.match(/startsWith\('02'\)\s*&&\s*parseFloat/g) || []);
-    expect(scans).toHaveLength(0);
+  test('de KIA- én EIA-grondslagscan gebruiken de chokepoint', () => {
     expect(src).toContain('_isInvesteringsRekening02_(r[0])');
     expect(src).toContain('_isInvesteringsRekening02_(code)');
+  });
+
+  test('CODEBASE-BREED: geen enkele kale `startsWith(\'02\') && parseFloat`-grondslagscan in src/', () => {
+    // F-TAX-330-lek (2e ronde): de ban was eerst file-scoped (alleen
+    // Belastingadvies.gs) → een 4e instantie in Notificaties.gs ontsnapte. De
+    // ban scant nu ÉLK src/*.gs-bestand (omgekeerd, zoals klasse 1) zodat een
+    // nieuwe kale 02xx-grondslagscan in welk bestand dan ook in CI faalt.
+    const SRC_DIR = path.resolve(__dirname, '../../src');
+    const overtreders = [];
+    fs.readdirSync(SRC_DIR).filter((f) => f.endsWith('.gs')).forEach((f) => {
+      const txt = fs.readFileSync(path.join(SRC_DIR, f), 'utf8');
+      if (/startsWith\(\s*'02'\s*\)\s*&&\s*parseFloat/.test(txt)) overtreders.push(f);
+    });
+    expect(overtreders).toEqual([]); // leeg = klasse-10-ban codebase-breed dicht
   });
 });

@@ -191,9 +191,9 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     if (!datum || isNaN(datum.getTime()) || datum < vanDatum || datum > totDatum) continue;
 
     // Skip GESTORNEERD facturen (criticus-rapport Accountant): bij storno
-    // wordt status [14] = 'Gestorneerd' en BTW [11] = 0 gezet door
-    // _markeerFactuurGestorneerd_. Skip hier expliciet zodat ook bij
-    // legacy-rijen zonder bedragsupdate geen dubbeltelling optreedt.
+    // wordt status [14] = 'Gestorneerd' gezet. De skip is PUUR status-gedreven
+    // (F-ACC-332) — werkt zowel voor nieuwe rijen (bedragen intact, excl+btw=incl)
+    // als legacy-rijen (historisch BTW=0) zonder dubbeltelling.
     if (String(vfData[i][KOL.VF.status] || '').toLowerCase() === 'gestorneerd') continue;
 
     // Creditnota: maakCreditnota zet het origineel op 'Gecrediteerd' ÉN voegt
@@ -301,9 +301,9 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     const datum = parseDatum_(ifData[i][KOL.IF.factuurdatumLeverancier]);
     if (!datum || isNaN(datum.getTime()) || datum < vanDatum || datum > totDatum) continue;
 
-    // Skip GESTORNEERD inkoopfacturen (criticus-rapport Accountant): bij
-    // storno via maakStornoJournaalpost_ wordt status [12] = 'Gestorneerd'
-    // en BTW [10] = 0. Tweede gate hier voor legacy-rijen.
+    // Skip GESTORNEERD inkoopfacturen (criticus-rapport Accountant): bij storno
+    // wordt status [12] = 'Gestorneerd' gezet. Skip puur status-gedreven
+    // (F-ACC-332) — bedragen blijven intact (nieuw) of zijn historisch 0 (legacy).
     if (String(ifData[i][KOL.IF.status] || '').toLowerCase() === 'gestorneerd') continue;
 
     const btwBedrag = parseFloat(ifData[i][KOL.IF.btwBedrag]) || 0;

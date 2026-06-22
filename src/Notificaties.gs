@@ -146,7 +146,10 @@ function genereerNotificaties_() {
       let inv = 0;
       const data = gbSheet.getDataRange().getValues();
       data.slice(1).forEach(function(r) {
-        if (r[0] && String(r[0]).startsWith('02') && parseFloat(r[5]) > 0) inv += parseFloat(r[5]);
+        // F-TAX-330 (klasse 10): via de chokepoint zodat 0290 cumulatieve
+        // afschrijving niet meetelt (anders zou de KIA-nudge onterecht
+        // onderdrukt worden). Identiek aan de KIA-callsite in Belastingadvies.gs.
+        if (r[0] && _isInvesteringsRekening02_(r[0]) && parseFloat(r[5]) > 0) inv += parseFloat(r[5]);
       });
       if (inv > 0 && inv < B.KIA_MIN) {
         const tekort = B.KIA_MIN - inv;
