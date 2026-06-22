@@ -12,7 +12,7 @@ function vernieuwDashboard() {
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.DASHBOARD);
   if (!sheet) {
-    try { SpreadsheetApp.getUi().alert('Tabblad "Dashboard" ontbreekt. Run setup() via Boekhoudbaar → Instellingen → Herinstalleer.'); } catch (_) {}
+    try { SpreadsheetApp.getUi().alert('Tabblad "Dashboard" ontbreekt. Run de setup via Boekhoudbaar → Instellingen → Eerste keer instellen (setup).'); } catch (_) {}
     return;
   }
   // Progressie-indicator (verdwijnt na 30s als code vastloopt)
@@ -860,8 +860,8 @@ function zetStatusColorRules_(ss) {
  */
 function schrijfEmptyStateHints_(ss) {
   const tabs = [
-    { naam: SHEETS.VERKOOPFACTUREN, tekst: '→ Nog geen verkoopfacturen — Menu: Boekhoudbaar → Nieuwe boeking → Inkomsten' },
-    { naam: SHEETS.INKOOPFACTUREN,  tekst: '→ Nog geen inkoopfacturen — Menu: Boekhoudbaar → Nieuwe boeking → Uitgaven' },
+    { naam: SHEETS.VERKOOPFACTUREN, tekst: '→ Nog geen verkoopfacturen — Menu: Boekhoudbaar → Nieuwe boeking — factuur, kosten of declaratie (tab Factuur)' },
+    { naam: SHEETS.INKOOPFACTUREN,  tekst: '→ Nog geen inkoopfacturen — Menu: Boekhoudbaar → Nieuwe boeking — factuur, kosten of declaratie (tab Kosten)' },
     { naam: SHEETS.BANKTRANSACTIES, tekst: '→ Nog geen banktransacties — Menu: Boekhoudbaar → Bank → Bankafschrift importeren' },
   ];
   tabs.forEach(function(t) {

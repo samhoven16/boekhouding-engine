@@ -7,7 +7,7 @@
  *  - #2 Silent triggers: trigger geïnstalleerd maar gefaald
  *  - #6 Quota / executions: klant ziet geen errors
  *
- * Run via menu: Boekhoudbaar → Controle & Export → Diagnostiek uitvoeren.
+ * Run via menu: Boekhoudbaar → Controle & Export → Voor support (geavanceerd) → 🔍 Installatie diagnoseren.
  * Tests elke gebruikte service en geeft per-service status.
  */
 

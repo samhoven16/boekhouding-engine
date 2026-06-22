@@ -610,7 +610,7 @@ function valideerTransactieFormeel_(ss, regels, datum) {
         throw new InvariantSchending('REKENING_ONBEKEND',
           'Rekening ' + code + ' bestaat niet in het grootboekschema. ' +
           'De boeking is NIET uitgevoerd — zo blijft de balans kloppend. ' +
-          'Herstel het schema via Boekhoudbaar → Onderhoud → Tabbladen controleren, ' +
+          'Herstel het schema via Boekhoudbaar → Instellingen → Rekeningschema opnieuw laden, ' +
           'of kies een bestaande rekening.',
           { rekening: code });
       }

@@ -166,7 +166,7 @@ function voerJaarafsluitingResultaatUit_(ss, jaar) {
       'Ontbrekende rekening(en) in Grootboekschema: ' + ontbreken.join(', '));
     throw new Error(
       'Standaardrekeningen ' + ontbreken.join(' en ') + ' ontbreken in het Grootboekschema. ' +
-      'Open Boekhoudbaar → Setup → Rekeningschema herladen, en probeer het opnieuw.'
+      'Open Boekhoudbaar → Instellingen → Rekeningschema opnieuw laden, en probeer het opnieuw.'
     );
   }
 

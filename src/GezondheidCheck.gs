@@ -32,7 +32,7 @@
 // hulp bij "het doet het niet" — output is plain-text die klant in
 // support-mail kan plakken.
 //
-// Menu: Boekhoudbaar → Installatie diagnoseren
+// Menu: Boekhoudbaar → Controle & Export → Voor support (geavanceerd) → 🔍 Installatie diagnoseren
 
 function diagnoseInstallatie() {
   const ui = SpreadsheetApp.getUi();

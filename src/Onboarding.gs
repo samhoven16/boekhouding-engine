@@ -108,7 +108,7 @@ function toonWelkomstWizard() {
     'Je boekhouding is ingesteld.\n\n' +
     'Wat kun je nu doen?\n\n' +
     '  📋 Factuur maken → Boekhoudbaar → Nieuwe boeking\n' +
-    '  📸 Bon uploaden → Boekhoudbaar → Bon of factuur uploaden\n' +
+    '  📸 Bon uploaden → Boekhoudbaar → Nieuwe boeking (Upload-tab)\n' +
     '  💬 Hulp nodig? → Boekhoudbaar → Hulp & uitleg\n\n' +
     'Succes met je boekhouding!',
     ui.ButtonSet.OK
@@ -253,7 +253,7 @@ function opslaan() {
   google.script.run
     .withSuccessHandler(function(){
       s.className = 'status success';
-      s.textContent = '✓ Profiel opgeslagen — open Boekhoudbaar → Belastingtips voor je advies.';
+      s.textContent = '✓ Profiel opgeslagen — open Boekhoudbaar → 💡 Fiscaal & besparingstips → Fiscaal overzicht & besparingstips voor je advies.';
       setTimeout(function(){ google.script.host.close(); }, 1800);
     })
     .withFailureHandler(function(e){

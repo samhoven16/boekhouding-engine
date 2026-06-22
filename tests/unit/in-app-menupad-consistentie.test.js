@@ -30,6 +30,12 @@ const VERBODEN = [
   { token: /→ Facturen →/, uitleg: 'oude submenu-naam (nu "Facturen & Betalingen")' },
   { token: /→ Overzichten →/, uitleg: 'oude submenu-naam (nu "Overzichten & Rapporten")' },
   { token: /→ Nieuw invoeren/, uitleg: 'oud item (nu "Nieuwe boeking — factuur, kosten of declaratie")' },
+  // F-OND-338: tail-drift — verwijzingen naar niet-bestaande submenu's/items.
+  { token: /→ Belastingtips/, uitleg: 'bestaat niet (nu "💡 Fiscaal & besparingstips → Fiscaal overzicht & besparingstips")' },
+  { token: /→ Onderhoud →/, uitleg: 'geen "Onderhoud"-submenu (rekeningschema zit onder Instellingen)' },
+  { token: /Nieuwe boeking → Inkomsten/, uitleg: 'geen submenu onder Nieuwe boeking (het is één dialoog met tabs)' },
+  { token: /Nieuwe boeking → Uitgaven/, uitleg: 'geen submenu onder Nieuwe boeking (het is één dialoog met tabs)' },
+  { token: /Instellingen → Herinstalleer/, uitleg: 'geen "Herinstalleer"-item (nu "Eerste keer instellen (setup)")' },
 ];
 
 describe('in-app menu-pad-consistentie (src/*.gs ↔ echte menu-namen)', () => {

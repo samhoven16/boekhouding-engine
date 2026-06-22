@@ -42,7 +42,7 @@ function openAssistent() {
         { v: 'Hoe stuur ik een betalingsherinnering?',
           a: 'Het systeem stuurt automatisch herinneringen na 1, 7 en 14 dagen na de vervaldatum. Wilt u het nu doen? Ga naar <b>Boekhoudbaar → Facturen & Betalingen → Betalingsherinneringen versturen</b>.' },
         { v: 'Hoe upload ik een foto van een bon?',
-          a: 'Klik op <b>Boekhoudbaar → Bon of factuur uploaden (foto)</b>. Upload een foto van de bon en vul een korte omschrijving in. Het bestand wordt opgeslagen in Google Drive.' },
+          a: 'Klik op <b>Boekhoudbaar → Nieuwe boeking — factuur, kosten of declaratie</b> en kies de Upload-tab. Upload een foto van de bon en vul een korte omschrijving in. Het bestand wordt opgeslagen in Google Drive.' },
       ],
     },
     {
@@ -53,7 +53,7 @@ function openAssistent() {
         { v: 'Wat is de Kleineondernemersregeling (KOR)?',
           a: 'Als uw jaaromzet onder €20.000 blijft, bent u vrijgesteld van BTW-aangifte. U hoeft dan geen BTW te berekenen aan klanten. Uw systeem detecteert dit automatisch. Zie <b>Boekhoudbaar → BTW → KOR check</b>.' },
         { v: 'Wat is de zelfstandigenaftrek?',
-          a: `Als u meer dan 1.225 uur per jaar aan uw bedrijf besteedt, mag u een vast bedrag aftrekken van uw winst. Dit verlaagt uw inkomstenbelasting. Zie <b>Boekhoudbaar → Belastingtips</b> voor het exacte bedrag.` },
+          a: `Als u meer dan 1.225 uur per jaar aan uw bedrijf besteedt, mag u een vast bedrag aftrekken van uw winst. Dit verlaagt uw inkomstenbelasting. Zie <b>Boekhoudbaar → 💡 Fiscaal & besparingstips → Fiscaal overzicht & besparingstips</b> voor het exacte bedrag.` },
         { v: 'Wat is de MKB-winstvrijstelling?',
           a: 'U betaalt inkomstenbelasting over 86% van uw winst — 14% is belastingvrij. Dit wordt automatisch berekend in uw belastingadvies.' },
         { v: 'Wat zijn representatiekosten?',

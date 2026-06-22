@@ -129,7 +129,7 @@ function getSeizoensTip_() {
         `De IB-aangifte deadline is 1 mei ${jaar}. Begin nu met verzamelen: ` +
         `loonbonus van werkgever (jaaropgave), zorgnota's, hypotheek-rente-overzicht, ` +
         `bewijs zelfstandigenaftrek (urenadministratie ≥ 1.225 uur). ` +
-        `Boekhoudbaar → Belastingadvies geeft een schatting van uw IB-aanslag.`,
+        `Boekhoudbaar → 💡 Fiscaal & besparingstips → Fiscaal overzicht & besparingstips geeft een schatting van uw IB-aanslag.`,
       deadline: '1 mei',
       urgent: false,
     };
@@ -149,7 +149,7 @@ function getSeizoensTip_() {
         // jaar-correcte bedragen via getBelasting_().
         `zelfstandigenaftrek, startersaftrek (eerste 3 jaar), ` +
         `MKB-winstvrijstelling, KIA, MIA/VAMIL, EIA, AOV-premie, lijfrente. ` +
-        `Open Boekhoudbaar → Belastingadvies voor de exacte bedragen van dat jaar.`,
+        `Open Boekhoudbaar → 💡 Fiscaal & besparingstips → Fiscaal overzicht & besparingstips voor de exacte bedragen van dat jaar.`,
       deadline: '1 mei',
       urgent: false,
     };

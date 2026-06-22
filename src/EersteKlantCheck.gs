@@ -145,7 +145,7 @@ function _ekrCheckLicentie_() {
     if (ok) return { naam: 'Licentie geldig', status: 'OK', bericht: 'Licentie actief.' };
     return { naam: 'Licentie geldig', status: 'FOUT',
       bericht: 'Geen geldige licentie — klant kan systeem niet gebruiken.',
-      fix: 'Boekhoudbaar → Licentie → Activeer licentie' };
+      fix: 'Boekhoudbaar → Instellingen → Licentie activeren' };
   } catch (e) {
     return { naam: 'Licentie geldig', status: 'WAARSCHUWING',
       bericht: 'Kon niet valideren: ' + e.message };
