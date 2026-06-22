@@ -235,6 +235,16 @@ function zelfHerstelProductConfig_() {
     try { props.setProperty('DRIP_UNSUB_SECRET', Utilities.getUuid() + Utilities.getUuid()); } catch (_) {}
   }
 
+  // 0b. ADMIN_REVOKE_TOKEN — seed één random 256-bit token bij eerste run, net als
+  //     DRIP_UNSUB_SECRET. revoke heeft BEWUST geen rate-limit (cycle14: het token
+  //     is de gate, constant-time vergeleken) — dat is alleen veilig als het token
+  //     hoge entropie heeft. Niet-geseed liet de sterkte aan een handmatige keuze
+  //     over → een zwak token was te brute-forcen (F-RED-164). Alleen-indien-leeg,
+  //     zodat een bewust gezet token nooit wordt overschreven.
+  if (!props.getProperty('ADMIN_REVOKE_TOKEN')) {
+    try { props.setProperty('ADMIN_REVOKE_TOKEN', Utilities.getUuid() + Utilities.getUuid()); } catch (_) {}
+  }
+
   // 1. Prijs — als waarde parseet als geheel getal >= 100, is het waarschijnlijk
   //    in centen opgeslagen door een oude deploy. Converteer naar euro's.
   const huidigePrijs = props.getProperty('PRODUCT_PRIJS');
