@@ -377,12 +377,12 @@ function controleerBewaarplichtAlert_() {
   const dagenSinds = Math.floor((Date.now() - oudsteDatum.getTime()) / (24 * 60 * 60 * 1000));
   if (dagenSinds < 6.5 * 365) return;  // bewaarplicht nog ruim binnen termijn
 
-  // Idempotent: 1× per kalenderjaar
+  // Idempotent: 1× per kalenderjaar via de TTL-chokepoint (klasse 3).
+  // F-SCALE-330: voorheen een losse idemKey-ScriptProperty die de sweep + ban
+  // ontweek. 365d-TTL → na een jaar verloopt-ie en kan de volgende jaarmelding.
   const huidigJaar = new Date().getFullYear();
-  const idemKey = 'BEWAARPLICHT_GEMELD_' + huidigJaar;
-  const props = PropertiesService.getScriptProperties();
-  if (props.getProperty(idemKey)) return;
-  try { props.setProperty(idemKey, String(Date.now())); } catch (_) {}
+  if (leesVluchtigeKey_('BEWAARPLICHT_GEMELD_', String(huidigJaar))) return;
+  zetVluchtigeKey_('BEWAARPLICHT_GEMELD_', String(huidigJaar), Date.now(), 365);
 
   const jaren = Math.round(dagenSinds / 365 * 10) / 10;
   try {

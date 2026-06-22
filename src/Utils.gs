@@ -1686,7 +1686,9 @@ function clearCheckpoint_(taak) {
 //
 // eslint-disable-next-line no-unused-vars
 const VLUCHTIGE_PREFIXES = Object.freeze([
-  'SUPPLETIE_GEMELD_',   // BTW-suppletie-cooldown per periode (TTL = cooldown)
+  'SUPPLETIE_GEMELD_',     // BTW-suppletie-cooldown per periode (TTL = cooldown)
+  'KIA_MISSER_GEMELD_',    // KIA-misser-mail cooldown per kwartaal (90d-TTL) — F-SCALE-330
+  'BEWAARPLICHT_GEMELD_',  // bewaarplicht-jaarmelding (365d-TTL) — F-SCALE-330
 ]);
 
 /**

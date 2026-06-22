@@ -1882,18 +1882,16 @@ function controleerKiaMisserProactief_() {
     ? berekenKiaAftrek_(totaalPotMisser, B) : 0;
   if (kiaGeschat < 100) return;  // <€100 KIA-impact is geen mail waard
 
-  // Idempotency per kwartaal — 90 dgn cooldown per kwartaal-bucket
+  // Idempotency per kwartaal — 90d cooldown via de TTL-chokepoint (klasse 3).
+  // F-SCALE-330: voorheen een losse idemKey-ScriptProperty (variabele-key) die
+  // zowel de dagelijkse sweep als de ban-test ontweek → onbeheerde groei (~4/jr)
+  // en een lek in klasse 3. Nu beheerd: zolang de key leeft is deze kwartaal-
+  // bucket al gemaild; na 90d (= de cooldown) verloopt-ie vanzelf.
   const kwartaal = Math.floor(new Date().getMonth() / 3) + 1;
-  const idemKey  = 'KIA_MISSER_GEMELD_' + huidigJaar + '_Q' + kwartaal;
-  const props    = PropertiesService.getScriptProperties();
-  const eerderRaw = props.getProperty(idemKey);
-  const nuMs     = Date.now();
-  if (eerderRaw) {
-    const eerder = parseInt(eerderRaw, 10);
-    if (eerder && (nuMs - eerder) < 90 * 24 * 60 * 60 * 1000) return;
-  }
+  const kiaBucket = huidigJaar + '_Q' + kwartaal;
+  if (leesVluchtigeKey_('KIA_MISSER_GEMELD_', kiaBucket)) return;
   // Markeer VÓÓR mail — voorkomt mail-storm bij retry-loop
-  try { props.setProperty(idemKey, String(nuMs)); } catch (_) {}
+  zetVluchtigeKey_('KIA_MISSER_GEMELD_', kiaBucket, Date.now(), 90);
 
   try {
     schrijfAuditLog_('KIA MISSER kandidaten',

@@ -8,9 +8,11 @@
  * / permanent-by-design). Een NIEUWE onbeheerde prefix faalt deze test → de
  * 500KB-cliff kan niet stil terugkeren.
  *
- * Eerlijke grens: deze regex vangt de DOMINANTE vorm (`.setProperty('p_' + x)`).
- * Een exotische computed-prefix kan 'm ontwijken — daarom is de chokepoint de
- * sanctie-route en niet enkel deze enumeratie.
+ * Eerlijke grens: deze regex vangt de DOMINANTE vorm (`.setProperty('p_' + x)`)
+ * ÉN — sinds F-SCALE-330 — de variabele-vorm (`idemKey = 'P_' + x;
+ * setProperty(idemKey)`) die KIA_MISSER_GEMELD_/BEWAARPLICHT_GEMELD_ eerder lieten
+ * ontsnappen. Een exotische computed-prefix kan 'm nog ontwijken — daarom blijft
+ * de chokepoint de sanctie-route en niet enkel deze enumeratie.
  */
 'use strict';
 
@@ -34,6 +36,12 @@ const TOEGESTAAN = {
   'otp_pogingen_':       'gesweept: cleanupVerlopenOtpKeys_',
   'serverFout_':         'gebonden: capped ring-buffer (max 5, schuift)',
   'dripuit_':            'permanent by design: wettelijke opt-out — moet blijven bestaan',
+  // ── F-SCALE-330: variabele-vorm-prefixes die de oude regex ontweken; na
+  //    verscherping zichtbaar. Elk geverifieerd bounded/permanent/negligible: ──
+  'TARIEF_VEROUDERD_GEZIEN_':  '1/jaar, ~25 bytes — seen-flag per boekjaar (mag niet binnen \'t jaar herhalen); verwaarloosbaar',
+  'DRIVE_HOOFDMAP_':           'permanent by design: 1/jaar Drive-map-ID per boekjaar — mag NIET verlopen (anders documenten onvindbaar)',
+  'CIRCUIT_':                  'gebonden: vaste set service-namen (circuit-breaker-state, ResilientExecutor)',
+  'GESLOTEN_PERIODES_CORRUPT_': 'zeldzame periode-corruptie-backup (forensisch, vóór self-heal-delete) — handmatig op te ruimen na herstel',
 };
 
 function gsBestanden(dir) {
@@ -41,10 +49,20 @@ function gsBestanden(dir) {
 }
 function prefixenIn(file) {
   const src = fs.readFileSync(file, 'utf8');
-  const re = /\.(?:set|delete)Property\(\s*['"]([A-Za-z0-9_]+_)['"]\s*\+/g;
   const out = [];
   let m;
-  while ((m = re.exec(src)) !== null) out.push(m[1]);
+  // Vorm A — directe literal-prefix in set/deleteProperty.
+  const reDirect = /\.(?:set|delete)Property\(\s*['"]([A-Za-z0-9_]+_)['"]\s*\+/g;
+  while ((m = reDirect.exec(src)) !== null) out.push(m[1]);
+  // Vorm B (F-SCALE-330-lek) — UPPER_SNAKE-prefix toegekend aan een variabele die
+  // elders als set/deleteProperty-key wordt gebruikt. Deze vorm (idemKey) ontweek
+  // vorm A volledig.
+  const reVar = /\b(\w+)\s*=\s*['"]([A-Z][A-Za-z0-9_]*_)['"]\s*\+/g;
+  while ((m = reVar.exec(src)) !== null) {
+    const naam = m[1];
+    const prefix = m[2];
+    if (new RegExp('\\.(?:set|delete)Property\\(\\s*' + naam + '\\b').test(src)) out.push(prefix);
+  }
   return out;
 }
 
@@ -64,6 +82,11 @@ describe('CONTRACT — geen onbeheerde dynamische ScriptProperty-prefix (klasse 
 
   test('SUPPLETIE_GEMELD_ is gemigreerd: geen raw set/deleteProperty meer', () => {
     expect(gevonden['SUPPLETIE_GEMELD_']).toBeUndefined();
+  });
+
+  test('F-SCALE-330: KIA_MISSER_GEMELD_ + BEWAARPLICHT_GEMELD_ zijn gemigreerd (geen raw/variabele-vorm meer)', () => {
+    expect(gevonden['KIA_MISSER_GEMELD_']).toBeUndefined();
+    expect(gevonden['BEWAARPLICHT_GEMELD_']).toBeUndefined();
   });
 
   test('de geclaimde opruim-mechanismen bestaan ÉN zijn gewired (geen rubber-stamp)', () => {
