@@ -1918,8 +1918,8 @@ function _runTaak_(naam, fn, opt) {
 
 /**
  * Verborgen tabblad 'Taakstatus' toont per achtergrond-taak: laatste run,
- * duur, status, eventueel laatste fout. Klant-vriendelijk overzicht via
- * Boekhoudbaar → Controle & Export → Taakstatus tonen.
+ * duur, status, eventueel laatste fout. Wordt uitgelezen door de installatie-
+ * diagnose (Controle & Export → Voor support (geavanceerd) → 🔍 Installatie diagnoseren).
  */
 function _updateTaakStatus_(naam, status, durMs, fout) {
   const ss = getSpreadsheet_();

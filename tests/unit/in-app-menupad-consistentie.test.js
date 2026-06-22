@@ -37,6 +37,9 @@ const VERBODEN = [
   { token: /Nieuwe boeking → Uitgaven/, uitleg: 'geen submenu onder Nieuwe boeking (het is één dialoog met tabs)' },
   { token: /Instellingen → Herinstalleer/, uitleg: 'geen "Herinstalleer"-item (nu "Eerste keer instellen (setup)")' },
   { token: /→ Diagnostiek →/, uitleg: 'geen "Diagnostiek"-submenu (diagnose zit onder Controle & Export → Voor support)' },
+  { token: /→ Jaarafsluiting ongedaan maken/, uitleg: 'geen zo\'n item (een afgesloten jaar ontsluit je via "Gesloten periodes beheren")' },
+  { token: /→ Koppeling Zapier/, uitleg: 'geen "Koppeling Zapier"-item (nu "Website / webshop koppelen (API)")' },
+  { token: /→ Taakstatus tonen/, uitleg: 'geen zo\'n item (Taakstatus wordt uitgelezen door de installatie-diagnose)' },
 ];
 
 describe('in-app menu-pad-consistentie (src/*.gs ↔ echte menu-namen)', () => {

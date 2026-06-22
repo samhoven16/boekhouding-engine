@@ -45,7 +45,7 @@ function maakJournaalpost_(ss, opt) {
         `Een boeking met datum in een afgesloten jaar zou de gearchiveerde ` +
         `balans uit sync brengen met de actieve grootboek-saldi. ` +
         `Boek de correctie in het huidige jaar, of ontsluit ${boekJaar} eerst ` +
-        `via Boekhoudbaar → Geavanceerd → Jaarafsluiting ongedaan maken.`
+        `via Boekhoudbaar → Controle & Export → Gesloten periodes beheren.`
       );
     }
   }
