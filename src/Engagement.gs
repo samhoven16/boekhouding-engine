@@ -397,6 +397,9 @@ function _berekenJaarStats_(ss, jaar) {
  */
 function checkJaaroverzichtTrigger_() {
   try {
+    // Verse kopie: SETUP_DONE reist niet mee; anders toont deze modal de omzet/
+    // top-klantnaam van de GEËRFDE master-facturen (lekt bovendien master-data).
+    if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) !== 'true') return;
     const nu = new Date();
     if (nu.getMonth() !== 0 || nu.getDate() > 15) return;
     const props = PropertiesService.getUserProperties();

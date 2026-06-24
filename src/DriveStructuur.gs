@@ -506,6 +506,10 @@ function sluitJaarAf() {
  */
 function checkJaarwisselingNodig_() {
   try {
+    // Verse kopie: SETUP_DONE reist niet mee. Zonder deze gate kan een YES-klik
+    // sluitJaarAf() draaien op de GEËRFDE master-data van een kopie die nooit
+    // zelf setupte (archief + prefix-herschrijving + teller-reset = dataverlies).
+    if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) !== 'true') return;
     const huidigJaar = new Date().getFullYear();
     // Alleen waarschuwen in januari–februari (vroeg in nieuw jaar) en bij
     // mismatch — voorkomt onnodige paniek midden in jaar bij prefix-typo.
