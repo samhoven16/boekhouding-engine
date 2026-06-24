@@ -207,9 +207,12 @@ describe('setup() idempotency guard (Setup.gs)', () => {
   test('voert setup wél uit als SETUP_DONE niet gezet is', () => {
     const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Licentie.gs', 'Setup.gs']);
 
-    // SETUP_DONE en LICENTIE_SERVER_URL niet aanwezig → licentiecheck slaat over
+    // SETUP_DONE afwezig (→ setup mag draaien); LICENTIE_SERVER_URL expliciet
+    // leeg ('') → licentie-gate (Setup.gs) slaat over, zodat deze test puur de
+    // idempotentie-guard isoleert. (Een AFWEZIGE URL valt nu terug op de
+    // hardcoded default — apart gedekt in koude-kopie-licentie-activatie.test.js.)
     ctx.PropertiesService.getScriptProperties().getProperty
-      .mockImplementation(() => null);
+      .mockImplementation((k) => (k === 'LICENTIE_SERVER_URL' ? '' : null));
 
     ctx.alertOfLog_ = jest.fn();
     ctx.maakTabbladen_              = jest.fn();

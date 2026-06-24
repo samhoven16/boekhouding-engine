@@ -59,9 +59,23 @@ function _licentieGraceDagen_() {
 const LICENTIE_OFFLINE_GRACE_DAGEN = LICENTIE_OFFLINE_GRACE_DAGEN_DEFAULT;
 const LICENTIE_OFFLINE_BANNER_KEY = 'licentieOfflineBannerLaatst'; // UserProp
 
+// Go-live keuring (onboarding): de activatie-URL MOET als code-default, niet als
+// Script Property. Bij "Maak een kopie" reizen Script Properties NIET mee (dat
+// is juist de kopieerbeveiliging) → op een verse klant-kopie is de property
+// AFWEZIG en kon de klant nooit een OTP aanvragen ("Licentieserver niet
+// geconfigureerd") → muurvast vóór de eerste factuur. Code reist wél mee met de
+// kopie, dus een hardcoded default (zelfde publieke exec-URL als website/start
+// en /bedankt) herstelt de activatie. De property blijft een override voor
+// staging/rotatie. KRITISCH: onderscheid AFWEZIG (null → default) van EXPLICIET
+// leeg ('' → laten staan: bewuste config / graceful-degradatie-tests), zodat de
+// fix de verse-kopie-flow opent zonder bestaande "niet geconfigureerd"-paden te
+// breken.
+const LICENTIE_SERVER_URL_DEFAULT =
+  'https://script.google.com/macros/s/AKfycbzvBpQx7ghYNblvBVtCraH4KRKJo3C4f3lWYJDJPRd-ByS7lg0G2AfHm0JQ-g_LOjWI/exec';
+
 function getLicentieServerUrl_() {
-  return PropertiesService.getScriptProperties()
-    .getProperty('LICENTIE_SERVER_URL') || '';
+  const prop = PropertiesService.getScriptProperties().getProperty('LICENTIE_SERVER_URL');
+  return prop != null ? prop : LICENTIE_SERVER_URL_DEFAULT;
 }
 
 /**

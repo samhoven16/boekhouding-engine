@@ -295,9 +295,30 @@ function parseDatumStrict_(ruw, veldnaam) {
     if (isNaN(ruw.getTime())) throw new Error(label + ' is een ongeldig Date-object.');
     return ruw;
   }
-  const d = parseDatum_(ruw);
-  if (!d || isNaN(d.getTime())) {
-    throw new Error(label + " is geen geldige datum: '" + String(ruw).slice(0, 40) + "'. Gebruik formaat dd-mm-jjjj.");
+  const str = String(ruw).trim();
+  let d;
+  // Strikte kalender-validatie. parseDatum_ rolt een onmogelijke datum
+  // (29-02-2027, 31-04) STIL terug op vandaag — die maskering mag een
+  // 'strikte' check niet overnemen, anders schuift een typo ongemerkt de
+  // BTW-periode op. Dus valideren we de twee bekende formaten hier zelf.
+  const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const nl = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (iso || nl) {
+    const pJaar  = parseInt(iso ? iso[1] : nl[3], 10);
+    const pMaand = parseInt(iso ? iso[2] : nl[2], 10);
+    const pDag   = parseInt(iso ? iso[3] : nl[1], 10);
+    d = new Date(pJaar, pMaand - 1, pDag);
+    if (pMaand < 1 || pMaand > 12 || pDag < 1 || pDag > 31 ||
+        isNaN(d.getTime()) || d.getMonth() !== pMaand - 1 || d.getDate() !== pDag) {
+      throw new Error(label + " is geen bestaande kalenderdatum: '" + str.slice(0, 40) +
+        "'. Controleer dag/maand (bv. 28-02-2027 i.p.v. 29-02-2027).");
+    }
+  } else {
+    // Onbekend formaat: native parsing, maar zónder stille today-fallback.
+    d = new Date(str);
+    if (isNaN(d.getTime())) {
+      throw new Error(label + " is geen geldige datum: '" + str.slice(0, 40) + "'. Gebruik formaat dd-mm-jjjj.");
+    }
   }
   // Extra sanity: jaar tussen 1990 en huidig+10 — waarschuwt bij typo's
   const jaar = d.getFullYear();
