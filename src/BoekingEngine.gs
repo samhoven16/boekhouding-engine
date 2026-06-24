@@ -407,6 +407,10 @@ function _verwerkFactuur_(ss, s) {
 // ─── KOSTEN HANDLER ───────────────────────────
 function _verwerkKosten_(ss, s, raw) {
   const bedragIncl = saniteerGetal_(raw.bedragIncl);
+  if (bedragIncl < 0) {  // berekenBtw nult een negatief stil → kosten kwijt; weiger expliciet
+    throw new Error('Bedrag mag niet negatief zijn. Voor een terugbetaling of ' +
+      'leverancierskrediet: boek een aparte correctie/creditnota.');
+  }
   const btwCalc    = berekenBtw(s.btw, 0, bedragIncl);
 
   // Veldnamen MOETEN overeenkomen met wat verwerkUitgavenUitHoofdformulier_ leest
@@ -444,6 +448,10 @@ function _verwerkDeclaratie_(ss, s, raw) {
   // raw.bedrag is always the total (incl. BTW) the user or AI provided — same as bedragIncl in kosten.
   // Back-calculate excl like _verwerkKosten_ does; never treat as excl directly.
   const bedragIncl = saniteerGetal_(raw.bedrag);
+  if (bedragIncl < 0) {  // berekenBtw nult een negatief stil → declaratie kwijt; weiger expliciet
+    throw new Error('Bedrag mag niet negatief zijn. Voor een terugbetaling of ' +
+      'correctie: boek een aparte correctie/creditnota.');
+  }
   const btwCalc    = berekenBtw(s.btw, 0, bedragIncl);
 
   // Veldnamen MOETEN overeenkomen met wat verwerkDeclaratieUitHoofdformulier_ leest
