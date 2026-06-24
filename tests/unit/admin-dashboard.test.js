@@ -126,8 +126,8 @@ describe('adminData — overzicht + maskering', () => {
     const { ctx } = maakCtx({
       props: { ADMIN_WACHTWOORD: 'geheim123', MOLLIE_API_KEY: 'live_abcd1234XYZ', PRODUCT_PRIJS: '49.00' },
       rows: [
-        ['BKHB-1', 'Jan', 'jan@x.nl', 'Std', 'Actief', '', 'ss1', new Date(), 'tr_1', new Date(), new Date(), ''],
-        ['BKHB-2', 'Piet', 'piet@x.nl', 'Std', 'wacht op TEMPLATE', '', '', new Date(), '', '', '', ''],
+        ['BKHE-AB23-CD45-EF67', 'Jan', 'jan@x.nl', 'Std', 'Actief', '', 'ss1', new Date(), 'tr_1', new Date(), new Date(), ''],
+        ['BKHE-GH67-JK89-LM23', 'Piet', 'piet@x.nl', 'Std', 'wacht op TEMPLATE', '', '', new Date(), '', '', '', ''],
       ],
     });
     const token = login(ctx);

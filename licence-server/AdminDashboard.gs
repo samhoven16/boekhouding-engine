@@ -154,6 +154,62 @@ function _adminVereisSessie_(token) {
 // ─────────────────────────────────────────────
 //  DASHBOARD-DATA (één call vult de hele UI)
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  KLANT-RIJ FILTERING (robuust tegen ghost-/foutrijen)
+// ─────────────────────────────────────────────
+// Een kapotte Dashboard-formule lekt anders als '#REF!'-klant in het admin-
+// overzicht en blaast de '#klanten'-teller op (gezien: 12 i.p.v. 1).
+const _SHEET_FOUTWAARDEN_ = ['#REF!', '#N/A', '#VALUE!', '#DIV/0!', '#NAME?', '#NULL!', '#NUM!', '#ERROR!'];
+
+function _isSheetFout_(v) {
+  return _SHEET_FOUTWAARDEN_.indexOf(String(v == null ? '' : v).trim().toUpperCase()) !== -1;
+}
+
+// Enige bron van waarheid: een echte licentie heeft exact het formaat
+// BKHE-XXXX-XXXX-XXXX (zie genereerSleutel_). Alles daarbuiten (#REF!, '1',
+// leeg, KPI-labels uit een Dashboard-blad) is GEEN klant.
+function _isGeldigeLicentieSleutel_(s) {
+  return /^BKHE-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(String(s == null ? '' : s).trim());
+}
+
+function _schoonCel_(v) {
+  const s = String(v == null ? '' : v).trim();
+  return _isSheetFout_(s) ? '' : s;
+}
+
+function _veiligeDatum_(v) {
+  if (!v) return '';
+  try { const d = new Date(v); return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10); }
+  catch (_) { return ''; }
+}
+
+// Pure kern: KPI's + klantenlijst uit ruwe sheet-rijen (data[0] = header).
+// Filtert hard op een geldige sleutel zodat ghost-/foutrijen nooit als klant
+// meetellen. Getest in tests/unit/admin-klanten-ghostrijen.test.js.
+function _telKlantenUitRijen_(data) {
+  const kpis = { totaal: 0, actief: 0, onboarded: 0, wachtTemplate: 0 };
+  const klanten = [];
+  for (let i = 1; i < (data ? data.length : 0); i++) {
+    const sleutel = String(data[i][0] == null ? '' : data[i][0]).trim();
+    if (!_isGeldigeLicentieSleutel_(sleutel)) continue;
+    const statusRaw = _schoonCel_(data[i][4]);
+    const statusL = statusRaw.toLowerCase();
+    kpis.totaal++;
+    if (statusL.indexOf('actief') === 0) kpis.actief++;
+    if (data[i][10]) kpis.onboarded++;
+    if (statusRaw.indexOf('wacht op TEMPLATE') !== -1) kpis.wachtTemplate++;
+    klanten.push({
+      sleutel: sleutel,
+      naam: _schoonCel_(data[i][1]),
+      email: _schoonCel_(data[i][2]),
+      status: statusRaw,
+      onboarded: _veiligeDatum_(data[i][10]),
+      laatsteValidatie: _veiligeDatum_(data[i][9]),
+    });
+  }
+  return { kpis: kpis, klanten: klanten };
+}
+
 /**
  * google.script.run target: alle data voor de UI in één keer.
  * Secrets worden gemaskeerd (alleen ingesteld-ja/nee + laatste 4 tekens).
@@ -198,29 +254,9 @@ function adminData(token) {
   let klanten = [];
   try {
     const sheet = getLicentieSheet_();
-    const data = sheet.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      const sleutel = String(data[i][0] || '');
-      const email = String(data[i][2] || '');
-      // Skip ghost-rijen: alleen rijen met een echte sleutel (BKHE-...) of
-      // tenminste een email tellen als klant. Voorkomt dat KPI-labels uit
-      // een verkeerd geconfigureerd Dashboard-blad als klanten verschijnen.
-      if (!/^BKHE-/.test(sleutel) && !email) continue;
-      const statusRaw = String(data[i][4] || '');
-      const statusL = statusRaw.toLowerCase();
-      kpis.totaal++;
-      if (statusL.indexOf('actief') === 0) kpis.actief++;
-      if (data[i][10]) kpis.onboarded++;
-      if (statusRaw.indexOf('wacht op TEMPLATE') !== -1) kpis.wachtTemplate++;
-      klanten.push({
-        sleutel: sleutel,
-        naam: String(data[i][1] || ''),
-        email: email,
-        status: statusRaw,
-        onboarded: data[i][10] ? new Date(data[i][10]).toISOString().slice(0, 10) : '',
-        laatsteValidatie: data[i][9] ? new Date(data[i][9]).toISOString().slice(0, 10) : '',
-      });
-    }
+    const telling = _telKlantenUitRijen_(sheet.getDataRange().getValues());
+    kpis = telling.kpis;
+    klanten = telling.klanten;
   } catch (e) {
     return { ok: true, config: config, health: health, testModusAan: testModusAan,
       kpis: kpis, klanten: [], klantenFout: 'Licentie-sheet niet leesbaar: ' + e.message,
