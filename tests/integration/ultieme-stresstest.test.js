@@ -269,9 +269,24 @@ describe('B. Race-Condition Storm — concurrent flows', () => {
   test('B1. Sequential rapid-fire factuurnummers via volgendBoekingId_', () => {
     // Single-user GAS: geen multi-thread, maar wel triggers + form-submit tegelijk.
     // Genereer 100 IDs in snelle volgorde, check uniqueness.
+    // PERSISTENTE property-store: volgendBoekingId_ leunt op een monotone teller
+    // in ScriptProperties (onder LockService). De default-runtime-mock persisteert
+    // niet, waardoor elke call de teller als '1' las → vals-positieve "dubbele IDs".
+    // Met een echte store meten we wat productie daadwerkelijk doet.
+    const store = {};
+    const ctxB1 = buildCtx({
+      PropertiesService: {
+        getScriptProperties: () => ({
+          getProperty: (k) => (k in store ? store[k] : null),
+          setProperty: (k, v) => { store[k] = String(v); },
+          deleteProperty: (k) => { delete store[k]; },
+          setProperties: (o) => Object.assign(store, o),
+        }),
+      },
+    });
     const ids = new Set();
     for (let i = 0; i < 100; i++) {
-      const id = ctx.volgendBoekingId_ ? ctx.volgendBoekingId_() : null;
+      const id = ctxB1.volgendBoekingId_ ? ctxB1.volgendBoekingId_() : null;
       if (id == null) {
         registerFinding('B', '💡 KANS', 'volgendBoekingId_ niet bereikbaar in test',
           'Kan B1 niet meten; voeg test toe in unit-suite zodra functie geïsoleerd is.');

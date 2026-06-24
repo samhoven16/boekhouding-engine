@@ -12,7 +12,7 @@ function vernieuwDashboard() {
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(SHEETS.DASHBOARD);
   if (!sheet) {
-    try { SpreadsheetApp.getUi().alert('Tabblad "Dashboard" ontbreekt. Run setup() via Boekhouding → Instellingen → Herinstalleer.'); } catch (_) {}
+    try { SpreadsheetApp.getUi().alert('Tabblad "Dashboard" ontbreekt. Run de setup via Boekhoudbaar → Instellingen → Eerste keer instellen (setup).'); } catch (_) {}
     return;
   }
   // Progressie-indicator (verdwijnt na 30s als code vastloopt)
@@ -159,13 +159,13 @@ function vernieuwDashboard() {
       const emoji = gez.score >= 90 ? '✅' : gez.score >= 70 ? '⚠️' : '❌';
       const bg    = gez.score >= 90 ? '#E8F5E9' : gez.score >= 70 ? '#FFF8E1' : '#FFEBEE';
       const fg    = gez.score >= 90 ? '#1B5E20' : gez.score >= 70 ? '#E65100' : '#B71C1C';
-      const tekst = `${emoji} Gezondheid: ${gez.score}/100  (${gez.fouten} fout · ${gez.waarsch} let op · gecheckt ${versheid})  —  Menu: Boekhouding → Gezondheidscheck`;
+      const tekst = `${emoji} Gezondheid: ${gez.score}/100  (${gez.fouten} fout · ${gez.waarsch} let op · gecheckt ${versheid})  —  Menu: Boekhoudbaar → Gezondheidscheck`;
       sheet.getRange(6, 1, 1, 9).merge().setValue(tekst)
         .setBackground(bg).setFontColor(fg).setFontWeight('bold').setFontSize(10)
         .setHorizontalAlignment('center');
       sheet.setRowHeight(6, 22);
     } else {
-      const tekst = 'ℹ️ Nog geen gezondheidscheck uitgevoerd.  Menu: Boekhouding → Gezondheidscheck uitvoeren';
+      const tekst = 'ℹ️ Nog geen gezondheidscheck uitgevoerd.  Menu: Boekhoudbaar → Gezondheidscheck uitvoeren';
       sheet.getRange(6, 1, 1, 9).merge().setValue(tekst)
         .setBackground('#F7F9FC').setFontColor('#455A64').setFontSize(10)
         .setHorizontalAlignment('center');
@@ -285,7 +285,7 @@ function vernieuwDashboard() {
       sheet.getRange(rij, 1, 1, 8).merge()
         .setValue('💡 BELASTINGADVIES  |  Totaal aftrekposten: ' + formatBedrag_(advies.totaalAftrek) +
                   '  |  Geschatte IB: ' + formatBedrag_(advies.geschatteIB) +
-                  '  →  Klik: Boekhouding → Belastingadvies voor details')
+                  '  →  Klik: Boekhoudbaar → Belastingadvies voor details')
         .setBackground('#FFF8E1').setFontWeight('bold').setFontSize(10);
       rij++;
       topAdviezen.forEach(a => {
@@ -721,26 +721,26 @@ function berekenRoiData_(ss, kpi) {
   // Omzet geïnd = incl-bedrag van betaalde facturen in boekjaar
   let omzetGeind = 0;
   for (let i = 1; i < vfData.length; i++) {
-    if (vfData[i][14] !== FACTUUR_STATUS.BETAALD) continue;
-    const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
+    if (vfData[i][KOL.VF.status] !== FACTUUR_STATUS.BETAALD) continue;
+    const datum = vfData[i][KOL.VF.datum] ? parseDatum_(vfData[i][KOL.VF.datum]) : null;
     if (datum && !isNaN(datum.getTime()) && datum.getFullYear() !== boekjaar) continue;
-    omzetGeind += parseFloat(vfData[i][12]) || 0; // incl. BTW bedrag
+    omzetGeind += parseFloat(vfData[i][KOL.VF.bedragIncl]) || 0; // incl. BTW bedrag
   }
 
   // BTW correct verwerkt = som van BTW-bedragen op facturen in boekjaar
   let btwVerwerkt = 0;
   for (let i = 1; i < vfData.length; i++) {
-    const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
+    const datum = vfData[i][KOL.VF.datum] ? parseDatum_(vfData[i][KOL.VF.datum]) : null;
     if (datum && !isNaN(datum.getTime()) && datum.getFullYear() !== boekjaar) continue;
-    const incl = parseFloat(vfData[i][12]) || 0;
-    const excl = parseFloat(vfData[i][9]) || 0;
+    const incl = parseFloat(vfData[i][KOL.VF.bedragIncl]) || 0;
+    const excl = parseFloat(vfData[i][KOL.VF.bedragExcl]) || 0;
     btwVerwerkt += rondBedrag_(incl - excl);
   }
 
   // Boekingen gefilterd op boekjaar
   let aantalBoekingen = 0;
   for (let i = 1; i < jrData.length; i++) {
-    const datum = jrData[i][1] ? parseDatum_(jrData[i][1]) : null;
+    const datum = jrData[i][KOL.JP.datum] ? parseDatum_(jrData[i][KOL.JP.datum]) : null;
     if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== boekjaar) continue;
     aantalBoekingen++;
   }
@@ -769,10 +769,10 @@ function berekenRoiData_(ss, kpi) {
 function schoonPlaceholderwaarden_(ss) {
   const sheet = ss.getSheetByName(SHEETS.INSTELLINGEN);
   if (!sheet || sheet.getLastRow() < 2) return;
-  const data = sheet.getRange(1, 2, sheet.getLastRow(), 1).getValues();
+  const waarden = sheet.getRange(1, 2, sheet.getLastRow(), 1).getValues().map(function (r) { return r[0]; });
   let opgeschoond = 0;
-  for (let i = 0; i < data.length; i++) {
-    const v = String(data[i][0] || '');
+  for (let i = 0; i < waarden.length; i++) {
+    const v = String(waarden[i] || '');
     if (/^←/.test(v) || /^Vul hier/i.test(v) || /^uw\s/i.test(v)) {
       sheet.getRange(i + 1, 2).setValue('');
       opgeschoond++;
@@ -860,8 +860,8 @@ function zetStatusColorRules_(ss) {
  */
 function schrijfEmptyStateHints_(ss) {
   const tabs = [
-    { naam: SHEETS.VERKOOPFACTUREN, tekst: '→ Nog geen verkoopfacturen — Menu: Boekhoudbaar → Nieuwe boeking → Inkomsten' },
-    { naam: SHEETS.INKOOPFACTUREN,  tekst: '→ Nog geen inkoopfacturen — Menu: Boekhoudbaar → Nieuwe boeking → Uitgaven' },
+    { naam: SHEETS.VERKOOPFACTUREN, tekst: '→ Nog geen verkoopfacturen — Menu: Boekhoudbaar → Nieuwe boeking — factuur, kosten of declaratie (tab Factuur)' },
+    { naam: SHEETS.INKOOPFACTUREN,  tekst: '→ Nog geen inkoopfacturen — Menu: Boekhoudbaar → Nieuwe boeking — factuur, kosten of declaratie (tab Kosten)' },
     { naam: SHEETS.BANKTRANSACTIES, tekst: '→ Nog geen banktransacties — Menu: Boekhoudbaar → Bank → Bankafschrift importeren' },
   ];
   tabs.forEach(function(t) {
@@ -911,7 +911,7 @@ function bepaalStatusNu_(ss, kpi) {
       if (dagenTot >= 0 && dagenTot <= 14) {
         return {
           tekst: '🔴  BTW-aangifte ' + kw.kw + ' over ' + dagenTot + (dagenTot === 1 ? ' dag' : ' dagen') +
-                 ' — Menu: Boekhouding → BTW → BTW-aangifte assistent',
+                 ' — Menu: Boekhoudbaar → BTW → BTW-aangifte assistent',
           bg: '#FEE4E2', fg: '#7A1A1A', border: '#DC2626',
         };
       }
@@ -922,7 +922,7 @@ function bepaalStatusNu_(ss, kpi) {
   if ((kpi.aantalVervallenFacturen || 0) > 0) {
     return {
       tekst: '⚠  ' + kpi.aantalVervallenFacturen + ' factu(u)r(en) vervallen — ' +
-             'Menu: Boekhouding → Facturen → Betalingsherinneringen versturen',
+             'Menu: Boekhoudbaar → Facturen & Betalingen → Betalingsherinneringen versturen',
       bg: '#FFE8C7', fg: '#7A4A00', border: '#F5A623',
     };
   }
@@ -943,7 +943,7 @@ function bepaalStatusNu_(ss, kpi) {
   // 4. Lege boekhouding
   if (!kpi.omzet && !kpi.kosten && !kpi.banksaldo) {
     return {
-      tekst: '🚀  Klaar om te starten — boek je eerste factuur of kostenpost via Menu: Boekhouding → Nieuwe boeking',
+      tekst: '🚀  Klaar om te starten — boek je eerste factuur of kostenpost via Menu: Boekhoudbaar → Nieuwe boeking',
       bg: '#E6F7F4', fg: '#0E5E54', border: '#2EC4B6',
     };
   }
@@ -977,13 +977,13 @@ function detecteerAfwijkingen_(ss) {
       let aantal21 = 0, aantal0 = 0;
       const nul21Refs = [];
       for (let i = 1; i < data.length; i++) {
-        const datum = data[i][2] ? parseDatum_(data[i][2]) : null;
+        const datum = data[i][KOL.VF.datum] ? parseDatum_(data[i][KOL.VF.datum]) : null;
         if (!datum || isNaN(datum.getTime()) || datum < dertigDagen) continue;
-        const tarief = String(data[i][10] || '');
+        const tarief = String(data[i][KOL.VF.btwLabel] || '');
         if (tarief.indexOf('21%') !== -1 || /\bhoog\b/i.test(tarief)) aantal21++;
         else if (tarief.indexOf('0%') !== -1 || tarief.indexOf('0 ') === 0) {
           aantal0++;
-          nul21Refs.push(data[i][1]);
+          nul21Refs.push(data[i][KOL.VF.factuurnummer]);
         }
       }
       // Als ≥3 facturen 21% en 1+ factuur 0% (zonder reden) → flag
@@ -1001,11 +1001,8 @@ function detecteerAfwijkingen_(ss) {
       const data = ifSheet.getDataRange().getValues();
       let zonderCat = 0;
       for (let i = 1; i < data.length; i++) {
-        // Inkoopfacturen-headers (0-indexed):
-        // 0=Inkoop ID, 1=Intern nr, 2=Datum ontvangst, 3=Factuurdatum lev, 4=Factuurref,
-        // 5=Lev ID, 6=Lev naam, 7=Omschr, 8=Excl, 9=BTW%, 10=BTW€, 11=Incl,
-        // 12=Status, 13=Betaaldatum, 14=Betaalrekening, 15=Kostenrekening
-        if (data[i][0] && !data[i][15]) zonderCat++;
+        // Inkoopfacturen-kolommen via KOL.IF (zie src/SheetKolom.gs)
+        if (data[i][KOL.IF.inkoopId] && !data[i][KOL.IF.kostenrekening]) zonderCat++;
       }
       if (zonderCat >= 3) {
         afwijkingen.push({
@@ -1198,19 +1195,19 @@ function _berekenKpiDataRaw_(ss) {
 
   let aantalVervallenFacturen = 0;
   for (let i = 1; i < vfData.length; i++) {
-    const status = vfData[i][14];
+    const status = vfData[i][KOL.VF.status];
     if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
-    const incl = parseFloat(vfData[i][12]) || 0;
-    const betaald = parseFloat(vfData[i][13]) || 0;
+    const incl = parseFloat(vfData[i][KOL.VF.bedragIncl]) || 0;
+    const betaald = parseFloat(vfData[i][KOL.VF.betaaldBedrag]) || 0;
     const open = rondBedrag_(incl - betaald);
     if (open <= 0) continue;
     debiteurenOpen += open;
     aantalOpenFacturen++;
     if (status === FACTUUR_STATUS.VERVALLEN) aantalVervallenFacturen++;
-    const datum = vfData[i][2] ? (parseDatum_(vfData[i][2]) || vandaag) : vandaag;
+    const datum = vfData[i][KOL.VF.datum] ? (parseDatum_(vfData[i][KOL.VF.datum]) || vandaag) : vandaag;
     totaalDagenOpen += Math.floor((vandaag - datum) / (1000 * 60 * 60 * 24));
     // Verwacht binnen 30 dagen: vervaldatum (col 3) valt op of vóór 30d grens
-    const verval = vfData[i][3] ? parseDatum_(vfData[i][3]) : null;
+    const verval = vfData[i][KOL.VF.vervaldatum] ? parseDatum_(vfData[i][KOL.VF.vervaldatum]) : null;
     if (verval && !isNaN(verval.getTime()) && verval <= over30d) verwachtIn30d += open;
   }
 
@@ -1219,11 +1216,11 @@ function _berekenKpiDataRaw_(ss) {
   const ifData = _ifSheet ? _ifSheet.getDataRange().getValues() : [[]];
   let crediteurenOpen = 0;
   for (let i = 1; i < ifData.length; i++) {
-    const ifStatus = ifData[i][12];
+    const ifStatus = ifData[i][KOL.IF.status];
     // Skip BETAALD én GECREDITEERD — voorheen werden gecrediteerde inkopen
     // ten onrechte als open crediteuren geteld.
     if (ifStatus === FACTUUR_STATUS.BETAALD || ifStatus === FACTUUR_STATUS.GECREDITEERD) continue;
-    crediteurenOpen += parseFloat(ifData[i][11]) || 0;
+    crediteurenOpen += parseFloat(ifData[i][KOL.IF.bedragIncl]) || 0;
   }
 
   // BTW saldo
@@ -1283,7 +1280,7 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
   ];
   const btwDeadline = btwDeadlines.find(d => d.warnMaand === maand && dag >= d.warnVanaf);
   if (btwDeadline) {
-    waarschuwingen.push(['LET OP', `BTW aangifte ${btwDeadline.kwartaal} — deadline einde deze maand! Genereer via Boekhouding → BTW.`, '#FFF3E0']);
+    waarschuwingen.push(['LET OP', `BTW aangifte ${btwDeadline.kwartaal} — deadline einde deze maand! Genereer via Boekhoudbaar → BTW.`, '#FFF3E0']);
   }
 
   // Cash runway waarschuwing (nieuw: Fractional CFO / startup pijnpunt)
@@ -1297,9 +1294,9 @@ function schrijfWaarschuwingen_(sheet, ss, kpi, startRij, komendHerhalend) {
   let vervallenCrediteuren = 0;
   const vandaag30 = nu;
   for (let i = 1; i < ifData.length; i++) {
-    const ifSt = ifData[i][12];
+    const ifSt = ifData[i][KOL.IF.status];
     if (ifSt === FACTUUR_STATUS.BETAALD || ifSt === FACTUUR_STATUS.GECREDITEERD) continue;
-    const factDatum = ifData[i][3] ? parseDatum_(ifData[i][3]) : null;
+    const factDatum = ifData[i][KOL.IF.factuurdatumLeverancier] ? parseDatum_(ifData[i][KOL.IF.factuurdatumLeverancier]) : null;
     if (!factDatum || isNaN(factDatum.getTime())) continue;
     const vervaldatum = new Date(factDatum.getTime() + 30 * 24 * 60 * 60 * 1000);
     if (vandaag30 > vervaldatum) vervallenCrediteuren++;
@@ -1375,7 +1372,7 @@ function diagnoseDashboard() {
 
 /**
  * Opent het interactieve dashboard als HTML dialog.
- * Menu: Boekhouding → Dashboard openen
+ * Menu: Boekhoudbaar → Dashboard openen
  */
 function openDashboard() {
   const html = HtmlService.createHtmlOutput(_bouwDashboardHtml_())
@@ -1422,16 +1419,16 @@ function getDashboardData() {
     if (vfSheet) {
       const vfData = vfSheet.getDataRange().getValues();
       for (let i = 1; i < vfData.length; i++) {
-        const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
-        const status = String(vfData[i][14] || '');
+        const datum = vfData[i][KOL.VF.datum] ? parseDatum_(vfData[i][KOL.VF.datum]) : null;
+        const status = String(vfData[i][KOL.VF.status] || '');
         if (datum && !isNaN(datum.getTime()) && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
-          omzetMaand += parseFloat(vfData[i][12]) || 0;
+          omzetMaand += parseFloat(vfData[i][KOL.VF.bedragIncl]) || 0;
         }
         if (status === FACTUUR_STATUS.VERVALLEN) {
           vervallenFacturen.push({
-            nr:     String(vfData[i][1] || ''),
-            klant:  String(vfData[i][5] || '–'),
-            bedrag: parseFloat(vfData[i][12]) || 0,
+            nr:     String(vfData[i][KOL.VF.factuurnummer] || ''),
+            klant:  String(vfData[i][KOL.VF.klantnaam] || '–'),
+            bedrag: parseFloat(vfData[i][KOL.VF.bedragIncl]) || 0,
             datum:  datum && !isNaN(datum) ? formatDatum_(datum) : '–',
           });
         }
@@ -1446,9 +1443,9 @@ function getDashboardData() {
     if (ifSheet) {
       const ifData = ifSheet.getDataRange().getValues();
       for (let i = 1; i < ifData.length; i++) {
-        const datum = ifData[i][3] ? parseDatum_(ifData[i][3]) : null;
+        const datum = ifData[i][KOL.IF.factuurdatumLeverancier] ? parseDatum_(ifData[i][KOL.IF.factuurdatumLeverancier]) : null;
         if (datum && !isNaN(datum.getTime()) && datum.getMonth() === huidigeM && datum.getFullYear() === huidigeJ) {
-          kostenMaand += parseFloat(ifData[i][11]) || 0;
+          kostenMaand += parseFloat(ifData[i][KOL.IF.bedragIncl]) || 0;
         }
       }
     }

@@ -52,6 +52,7 @@ function doGet(e) {
   if (actie === 'config')        return rateLimit_(e, { actie: 'config', globaal: 6000, windowMin: 60 }) || configEndpoint_(e);
   if (actie === 'update-bundle') return rateLimit_(e, { actie: 'update-bundle', perEmail: 10, globaal: 500, windowMin: 60 }) || updateBundleEndpoint_(e);
   if (actie === 'telemetry')     return rateLimit_(e, { actie: 'telemetry', globaal: 2000, windowMin: 60 }) || telemetryEndpoint_(e);
+  if (actie === 'drip-uit')      return rateLimit_(e, { actie: 'drip-uit', globaal: 2000, windowMin: 60 }) || dripUitEndpoint_(e);
   if (actie === 'bedankt')       return bedanktPagina_(e);
   // CYCLE-41: rate-limit admin-login om brute-force op ADMIN_WACHTWOORD
   // te voorkomen. Voorheen kon attacker onbeperkt wachtwoorden proberen
@@ -117,6 +118,10 @@ function doPost(e) {
   const isAdminWrite = adminActie && adminActie.indexOf('admin-') === 0;
 
   try {
+    // RFC 8058 One-Click unsubscribe: Gmail/Outlook POSTen naar de List-Unsubscribe-
+    // URL (?actie=drip-uit&e=…&t=…). Honoreer dat net als de zichtbare GET-link,
+    // anders zegt de mailclient "afgemeld" terwijl de server niets registreert.
+    if (adminActie === 'drip-uit') return dripUitEndpoint_(e);
     if (isAdminWrite) {
       // Forward naar doGet's dispatcher (zelfde actie-routing).
       // Return is HtmlService HTML met JSON-body — bevestiging in browser.
@@ -221,6 +226,29 @@ function veiligVergelijk_(a, b) {
  */
 function zelfHerstelProductConfig_() {
   const props = PropertiesService.getScriptProperties();
+
+  // 0. DRIP_UNSUB_SECRET — seed één random secret bij eerste run. Zonder dit valt
+  //    _dripToken_ terug op een PUBLIEKE hardcoded string uit de open-source repo,
+  //    waarmee iedereen afmeld-tokens voor elk adres kan vervalsen (red-team).
+  //    Eénmalig random → tokens zijn niet meer te forgen.
+  if (!props.getProperty('DRIP_UNSUB_SECRET')) {
+    try { props.setProperty('DRIP_UNSUB_SECRET', Utilities.getUuid() + Utilities.getUuid()); } catch (_) {}
+  }
+
+  // 0b. ADMIN_REVOKE_TOKEN — seed één random 256-bit token bij eerste run, net als
+  //     DRIP_UNSUB_SECRET. revoke heeft BEWUST geen rate-limit (cycle14: het token
+  //     is de gate, constant-time vergeleken) — dat is alleen veilig als het token
+  //     hoge entropie heeft. Niet-geseed liet de sterkte aan een handmatige keuze
+  //     over → een zwak token was te brute-forcen (F-RED-164). Alleen-indien-leeg,
+  //     zodat een bewust gezet token nooit wordt overschreven.
+  if (!props.getProperty('ADMIN_REVOKE_TOKEN')) {
+    try { props.setProperty('ADMIN_REVOKE_TOKEN', Utilities.getUuid() + Utilities.getUuid()); } catch (_) {}
+  }
+
+  // 0c. Test-modus auto-verloop (F-RED-331) — herstel de live-prijs vóór de
+  //     prijs-normalisatie hieronder, zodat een vergeten "koop voor €0,01"-
+  //     stand niet stil blijft staan. Draait op elke doGet (idempotent).
+  _herstelVerlopenTestModus_(props);
 
   // 1. Prijs — als waarde parseet als geheel getal >= 100, is het waarschijnlijk
   //    in centen opgeslagen door een oude deploy. Converteer naar euro's.
@@ -485,6 +513,11 @@ function _isGeldigeRefCode_(ref, koperEmail) {
 //  BETAALPAGINA: BETALING AANMAKEN (Mollie)
 // ─────────────────────────────────────────────
 function maakBetaling(klantnaam, klantEmail, refCode) {
+  // F-RED-331: laatste vangnet — herstel een verlopen test-modus vóór we de
+  // prijs lezen, zodat een echte klant nooit voor €0,01 afrekent omdat Sam de
+  // teststand vergat uit te zetten (maakBetaling kan via google.script.run
+  // worden geraakt zonder voorafgaande doGet-self-heal).
+  try { _herstelVerlopenTestModus_(PropertiesService.getScriptProperties()); } catch (_) {}
   klantnaam  = String(klantnaam  || '').trim();
   klantEmail = String(klantEmail || '').trim().toLowerCase();
   // Sanitiseer ref opnieuw server-side: client kan alles sturen.
@@ -936,7 +969,7 @@ function stuurOtpMail_(email, otp) {
           sender: { name: vanNaam, email: vanEmail },
           replyTo: { email: replyTo, name: vanNaam },
           to: [{ email }],
-          subject: 'Je activeringscode Boekhoudbaar: ' + otp,
+          subject: 'Je activeringscode: ' + otp + ' (15 min geldig) — Boekhoudbaar',
           htmlContent: html,
           textContent: textBody,
           headers: {
@@ -955,7 +988,7 @@ function stuurOtpMail_(email, otp) {
   // Fallback: MailApp via Google Workspace (lager limiet maar reliable).
   MailApp.sendEmail({
     to: email,
-    subject: 'Activeringscode Boekhoudbaar: ' + otp,
+    subject: 'Je activeringscode: ' + otp + ' (15 min geldig) — Boekhoudbaar',
     body: textBody,
     htmlBody: html,
     replyTo: replyTo,
@@ -999,8 +1032,13 @@ function valideerEndpoint_(e) {
       // kon de spreadsheet blijven gebruiken. Plus bounce-status werd niet
       // gecheckt → klant met onbereikbare email kon door zonder dat wij hen
       // konden bereiken voor support.
-      if (status.startsWith('ingetrokken')) return jsonResp_({ geldig: false, fout: 'Licentie is ingetrokken.' });
-      if (status === 'bounce') return jsonResp_({ geldig: false, fout: 'E-mailadres ontvangt geen post. Neem contact op via support@boekhoudbaar.nl.' });
+      if (status.startsWith('ingetrokken')) return jsonResp_({ geldig: false, permanent: true, fout: 'Licentie is ingetrokken.' });
+      // F-RED-162: GEEN permanent:true. Een hard-bounce (mogelijk via een gelekt/
+      // gespooft Brevo-webhooktoken) mag een BETALENDE klant niet instant bricken
+      // + z'n 90-daagse offline-grace-anker wissen. Zonder permanent rijdt de klant
+      // de grace uit (tijd om de mail te herstellen / support te mailen) i.p.v. een
+      // directe lockout — analoog aan F-RED-161 (transiente fout wist anker niet).
+      if (status === 'bounce') return jsonResp_({ geldig: false, fout: 'Je product is gepauzeerd omdat e-mails naar je adres blijven bouncen. Mail support@boekhoudbaar.nl vanaf een adres dat post ontvangt — dan zetten we hem direct weer aan.' });
 
       // CYCLE 79: grace-period bij verlopen licentie. Een harde cut-off op
       // de exacte vervaldatum drukt klanten midden in hun werkflow eruit
@@ -1013,7 +1051,7 @@ function valideerEndpoint_(e) {
       if (vervaldat && vervaldat < new Date()) {
         const dagenVerlopen = Math.floor((new Date() - vervaldat) / 86400000);
         if (dagenVerlopen > GRACE_DAGEN) {
-          return jsonResp_({ geldig: false, fout: 'Licentie is verlopen.' });
+          return jsonResp_({ geldig: false, permanent: true, fout: 'Licentie is verlopen.' });
         }
         const dagenResterend = GRACE_DAGEN - dagenVerlopen;
         graceWaarschuwing = 'Je licentie is verlopen. Je hebt nog ' + dagenResterend +
@@ -1025,7 +1063,7 @@ function valideerEndpoint_(e) {
       if (installatieId && !huidigInstId) {
         sheet.getRange(i + 1, 7).setValue(installatieId);
       } else if (huidigInstId && installatieId && huidigInstId !== installatieId) {
-        return jsonResp_({ geldig: false, fout: 'Licentie is al actief op een andere installatie.' });
+        return jsonResp_({ geldig: false, permanent: true, fout: 'Licentie is al actief op een andere installatie.' });
       }
 
       // Update laatste validatie
@@ -1035,6 +1073,13 @@ function valideerEndpoint_(e) {
       if (graceWaarschuwing) resp.waarschuwing = graceWaarschuwing;
       return jsonResp_(resp);
     }
+    // N-M1-1: BEWUST géén permanent:true. "Niet gevonden" is óók precies wat een
+    // lege/verkeerd-geconfigureerde licentie-sheet (bv. een standby met foute
+    // LICENTIE_SHEET_ID) voor ÉLKE sleutel teruggeeft. Zou dit het grace-anker
+    // wissen, dan ligt bij zo'n ops-fout de hele betalende basis eruit zodra de
+    // server even onbereikbaar wordt. Een echt-verwijderde sleutel is zeldzaam
+    // (revokes zetten status='ingetrokken', ze verwijderen de rij niet); die
+    // klant rijdt hooguit de grace-periode uit. Veiligheid > die randcase.
     return jsonResp_({ geldig: false, fout: 'Licentiesleutel niet gevonden.' });
   } catch (err) {
     // Geen err.message naar buiten — kan sheet-id's/interne paden lekken
@@ -1079,6 +1124,10 @@ function configEndpoint_(e) {
     features:             flags,           // alias voor isFeatureIngeschakeld_
     featureMeldingen:     featureMeldingen,
     belastingTarieven:    belastingTarieven,  // null = client gebruikt lokale fallback
+    // F-SCALE-141b: warme-standby-URL → client synct 'm naar LICENTIE_SERVER_URL_FALLBACK (leeg = geen push).
+    licentieServerUrlFallback: props.getProperty('STANDBY_SERVER_URL') || '',
+    // F-SCALE-332: centraal Gemini-model → _geminiModel_ gebruikt 'm bij model-EOL ZONDER code-push (leeg = lokale property/default wint).
+    geminiModel:          props.getProperty('GEMINI_MODEL_CENTRAAL') || '',
   });
 }
 
@@ -1292,6 +1341,11 @@ function ensureOnboardedKolom_(sheet) {
 // ─────────────────────────────────────────────
 //  BEDANKT-PAGINA (na Mollie redirect)
 // ─────────────────────────────────────────────
+// DRIFT-LET-OP (F-OND-330): de LIVE Mollie-redirect gaat naar de website
+// `/bedankt/` (zie de redirect-URL bij _bouwBetaalRespons_), NIET hierheen.
+// Deze ?actie=bedankt-pagina is een OFF-PATH fallback (oude links / handmatige
+// URL). Houd 'm consistent met website/bedankt/index.html bij elke wijziging —
+// de website is de single source of truth voor de onboarding-flow-copy.
 function bedanktPagina_(e) {
   const html = `<!DOCTYPE html><html lang="nl"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1328,10 +1382,10 @@ function bedanktPagina_(e) {
   <div class="heads-up">
     <strong>Wat gebeurt er zo:</strong>
     <ol>
-      <li>Je klikt op de activatielink in de mail.</li>
-      <li>Google vraagt je toestemming om een kopie in <strong>jouw Drive</strong> te zetten en <strong>namens jou mail te sturen</strong> (voor facturen).</li>
+      <li>Open de mail <em>"Je Boekhoudbaar is klaar — activeer nu 🚀"</em> en klik <strong>"Open mijn boekhouding"</strong>. Google toont dan <strong>"Een kopie maken"</strong> — daarmee zet je jouw eigen kopie in <strong>jouw Drive</strong>.</li>
+      <li>De eerste keer dat je die kopie gebruikt (het <strong>Boekhoudbaar</strong>-menu opent of activeert) vraagt Google toegang tot jouw Drive en om <strong>namens jou mail te sturen</strong> (voor facturen). Klik <strong>Doorgaan</strong> — dit komt vóór je eerste factuur, niet erna.</li>
       <li>Je ziet mogelijk <em>"Deze app is niet geverifieerd door Google"</em> — dat klopt, Boekhoudbaar is een éénpersoonszaak. Klik op <strong>Geavanceerd → Ga naar Boekhoudbaar (onveilig)</strong>.</li>
-      <li>Je boekhoudbestand opent. Vul je e-mail in, ontvang een 6-cijferige code, voer 'm in, klaar.</li>
+      <li>Vul je e-mail in, ontvang een 6-cijferige code (15 minuten geldig), voer 'm in — klaar.</li>
     </ol>
     <p class="google-note" style="margin:10px 0 0">Je data blijft 100% op jouw eigen Drive. Wij hebben er geen toegang toe.</p>
   </div>
@@ -1445,9 +1499,28 @@ function _meldAdminLockoutAanOwner_() {
  * ADMIN_WACHTWOORD + bekend wachtwoord-veld; rate-limit 30/u globaal.
  */
 function _adminAuthOk_(e) {
+  // F-RED-330: deel ÉÉN brute-force-teller met de dashboard-login
+  // (adminLogin → CacheService 'admin_login_pogingen'). Voorheen had elk
+  // POST-endpoint (admin-zet-prijs/admin-test-modus) een eigen 30/u-bucket →
+  // een aanvaller verdeelde z'n pogingen over de buckets (~80/u totaal op
+  // hetzelfde ADMIN_WACHTWOORD) en die twee POST-paden vuurden de owner-
+  // lockout-alert NOOIT. Nu telt élke ADMIN_WACHTWOORD-validatie tegen
+  // dezelfde teller (20/u), die bij een geslaagde login reset zodat legitiem
+  // beheer niet zichzelf buitensluit. (Auto-seeden zoals ADMIN_REVOKE_TOKEN
+  // kan hier NIET: dit is een door Sam getypt wachtwoord, geen machine-secret.)
+  const cache = CacheService.getScriptCache();
+  const teller = parseInt(cache.get('admin_login_pogingen') || '0', 10);
+  if (teller >= 20) {
+    try { _meldAdminLockoutAanOwner_(); } catch (_) {}
+    return false;
+  }
   const ww = String(PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '').trim();
   const input = String((e.parameter && e.parameter.ww) || '').trim();
-  if (!ww || !input || !veiligVergelijk_(ww, input)) return false;
+  if (!ww || !input || !veiligVergelijk_(ww, input)) {
+    cache.put('admin_login_pogingen', String(teller + 1), 3600);
+    return false;
+  }
+  try { cache.remove('admin_login_pogingen'); } catch (_) {}  // geslaagd → reset (zelfde semantiek als adminLogin)
   return true;
 }
 
@@ -1488,17 +1561,65 @@ function adminTestModusEndpoint_(e) {
   const aanRaw = String((e.parameter && e.parameter.aan) || '').toLowerCase().trim();
   const aan = (aanRaw === 'ja' || aanRaw === 'true' || aanRaw === '1');
 
+  // F-RED-331: alle test-modus-mutaties via de gedeelde chokepoint (zet óók
+  // TEST_MODUS_VERLOOPT zodat de 24u-auto-revert werkt).
+  _zetTestModusPreset_(aan);
+  if (aan) {
+    try { schrijfAuditLog_('Test-modus AAN', 'prijs=0.01 ref-korting=0 verloopt=+24u'); } catch (_) {}
+    return jsonResp_({ ok: true, modus: 'test', prijs: '0.01', refKorting: '0', verloopt: '24u' });
+  }
+  try { schrijfAuditLog_('Test-modus UIT', 'prijs=49.00 ref-korting=default(5)'); } catch (_) {}
+  return jsonResp_({ ok: true, modus: 'live', prijs: '49.00', refKorting: '5 (default)' });
+}
+
+/**
+ * F-RED-331: herstelt de live-prijs zodra een vergeten test-modus (PRODUCT_PRIJS
+ * =0.01 + TEST_MODUS_VERLOOPT) z'n 24u-venster voorbij is. Idempotent. Wordt
+ * aangeroepen op elke doGet (zelfHerstelProductConfig_) ÉN vóór elke betaling
+ * (maakBetaling), zodat een vergeten stand nooit een echte €0,01-verkoop geeft.
+ * @returns {boolean} true als er hersteld is.
+ */
+function _herstelVerlopenTestModus_(props) {
+  try {
+    const prijs = parseFloat(props.getProperty('PRODUCT_PRIJS') || '49');
+    const verloopt = parseInt(props.getProperty('TEST_MODUS_VERLOOPT') || '0', 10);
+    // F-RED-332 (3e ronde): start de 24u-klok zodra de prijs ≤€0,01 staat zónder
+    // vervalmoment — bv. gezet via de generieke prijs-knop (adminZetPrijs) of welk
+    // toekomstig pad dan ook. €0,01 is nooit een legitieme permanente prijs, dus
+    // élk pad ernaartoe valt nu onder de auto-revert (niet enkel de test-toggle).
+    if (prijs <= 0.01 && !verloopt) {
+      props.setProperty('TEST_MODUS_VERLOOPT', String(Date.now() + 24 * 3600 * 1000));
+      return false;
+    }
+    if (!verloopt || Date.now() <= verloopt) return false;   // niet actief of nog geldig
+    props.setProperty('PRODUCT_PRIJS', '49.00');
+    props.deleteProperty('REF_KORTING');
+    props.deleteProperty('TEST_MODUS_VERLOOPT');
+    try { schrijfAuditLog_('Test-modus automatisch verlopen', 'prijs hersteld naar 49.00 na 24u'); } catch (_) {}
+    return true;
+  } catch (_) { return false; }
+}
+
+/**
+ * F-RED-331 (2e ronde): centrale test-modus-toggle. ÉLKE test-modus-knop MOET
+ * hierlangs zodat PRODUCT_PRIJS + REF_KORTING + TEST_MODUS_VERLOOPT altijd
+ * consistent gezet/gewist worden. De dashboard-toggle (adminZetTestModus) sloeg
+ * TEST_MODUS_VERLOOPT over → de 24u-auto-revert was inert voor de primair-
+ * gebruikte UI-route → onbeperkt €0,01-verkoop-lek. Eén chokepoint voorkomt dat
+ * een toekomstige derde knop opnieuw afdrijft (vgl. _adminAuthOk_-unificatie).
+ * @param {boolean} aan
+ */
+function _zetTestModusPreset_(aan) {
   const props = PropertiesService.getScriptProperties();
   if (aan) {
     props.setProperty('PRODUCT_PRIJS', '0.01');
     props.setProperty('REF_KORTING', '0');
-    try { schrijfAuditLog_('Test-modus AAN', 'prijs=0.01 ref-korting=0'); } catch (_) {}
-    return jsonResp_({ ok: true, modus: 'test', prijs: '0.01', refKorting: '0' });
+    props.setProperty('TEST_MODUS_VERLOOPT', String(Date.now() + 24 * 3600 * 1000));
+  } else {
+    props.setProperty('PRODUCT_PRIJS', '49.00');
+    props.deleteProperty('REF_KORTING');
+    props.deleteProperty('TEST_MODUS_VERLOOPT');
   }
-  props.setProperty('PRODUCT_PRIJS', '49.00');
-  props.deleteProperty('REF_KORTING');
-  try { schrijfAuditLog_('Test-modus UIT', 'prijs=49.00 ref-korting=default(5)'); } catch (_) {}
-  return jsonResp_({ ok: true, modus: 'live', prijs: '49.00', refKorting: '5 (default)' });
 }
 
 /**
@@ -1534,14 +1655,13 @@ function _adminPostBevestiging_(resp, e) {
 }
 
 function adminPaneel_(e) {
-  // .trim() op BEIDE kanten: een in Script Properties geplakt wachtwoord
-  // krijgt makkelijk een trailing spatie/newline. Zonder trim verschillen
-  // de lengtes → veiligVergelijk_ faalt → eeuwig login-formulier ondanks
-  // correct wachtwoord (Sam's "wit scherm na invullen"-bug).
-  const ww    = String(PropertiesService.getScriptProperties().getProperty('ADMIN_WACHTWOORD') || '').trim();
-  const input = String((e.parameter.ww || '')).trim();
+  // F-RED-330: valideer via _adminAuthOk_ zodat dit legacy-paneel dezelfde
+  // gedeelde brute-force-teller ('admin_login_pogingen') gebruikt als de
+  // dashboard-login en de POST-endpoints — niet langer een losse teller.
+  // _adminAuthOk_ doet zelf de .trim() op beide kanten (geplakte-spatie-bug).
+  const input = String((e.parameter.ww || '')).trim();  // alleen voor de UI-foutmelding
 
-  if (!ww || !veiligVergelijk_(ww, input)) {
+  if (!_adminAuthOk_(e)) {
     // Apps Script HtmlService draait in een sandbox-iframe. Een gewoon
     // <form> zonder action/target submit naar de sandbox-URL i.p.v. naar
     // /exec → wit scherm. Fix: expliciete action naar de exec-URL +
@@ -1567,6 +1687,17 @@ function adminPaneel_(e) {
   const brevoReady    = !!props.getProperty('BREVO_API_KEY');
 
   let banners = '';
+  // F-RED-331: rode banner zolang test-modus actief is (PRODUCT_PRIJS<=0.01).
+  // Maakt een vergeten "koop voor €0,01"-stand onmogelijk over het hoofd te zien.
+  const prijsNu = parseFloat(props.getProperty('PRODUCT_PRIJS') || '49.00');
+  if (Number.isFinite(prijsNu) && prijsNu <= 0.01) {
+    const verlooptTs = parseInt(props.getProperty('TEST_MODUS_VERLOOPT') || '0', 10);
+    const restUur = verlooptTs ? Math.max(0, Math.round((verlooptTs - Date.now()) / 3600000)) : null;
+    banners += '<div class="banner err"><strong>⚠ TEST-MODUS ACTIEF — prijs €0,01.</strong> ' +
+               'Iedereen koopt nu een echte licentie voor 1 cent. ' +
+               (restUur != null ? 'Verloopt automatisch over ~' + restUur + ' uur. ' : '') +
+               'Zet uit via <code>admin-test-modus aan=nee</code> zodra je klaar bent met testen.</div>';
+  }
   if (!templateReady) {
     banners += '<div class="banner err"><strong>⚠ TEMPLATE_SS_ID ontbreekt.</strong> ' +
                'De copy-link in de klant-e-mail is dan leeg. Vul Script Properties → ' +
@@ -2983,6 +3114,20 @@ function verstuurDripsDagelijks_() {
     const nu = Date.now();
     let verstuurd = 0;
 
+    // F-SCALE-142: ruim verlopen OTP-keys op VÓÓR de zware drip-loop, zodat een
+    // eventuele drip-timeout deze opruiming niet overslaat. Voorkomt dat de
+    // server-ScriptProperties richting het 500KB-quotum groeien door leads die
+    // wel een activeringscode aanvroegen maar nooit activeerden (otp_/otp_ts_).
+    try { cleanupVerlopenOtpKeys_(); } catch (e) { Logger.log('OTP-cleanup fout: ' + e.message); }
+
+    // Globale aan/uit-knop voor de onboarding-drips. Eén ScriptProperty
+    // DRIPS_ACTIEF='false' zet ALLE klant-drips uit (Sam wil z'n klanten niet
+    // met mails bestoken). Afwezig/elke andere waarde = aan (huidig gedrag).
+    // De OTP-cleanup hierboven draait sowieso door — die is geen klant-mail.
+    if (String(props.getProperty('DRIPS_ACTIEF') || 'true').toLowerCase() === 'false') {
+      return;
+    }
+
     // Kolom-indices op basis van setupLicentieSheet (0-based):
     // [0]=Sleutel [1]=Naam [2]=Email [3]=Versie [4]=Status [5]=Vervaldatum
     // [6]=Installatie-ID [7]=Aangemaakt op [8]=Mollie betaling ID
@@ -2994,6 +3139,11 @@ function verstuurDripsDagelijks_() {
       const aanmaakDatum  = data[i][7];
 
       if (!email || !sleutel) continue;
+      // Per-klant afmelding (één-klik-unsubscribe uit de drip-mail). Licentie-
+      // mails (activeringscode etc.) lopen via aparte functies en blijven komen.
+      // E-mail lowercasen: dripUitEndpoint_ slaat de vlag óók lowercased op, dus
+      // een hoofdletter-adres (John.Doe@…) moet hier dezelfde hash krijgen.
+      if (props.getProperty('dripuit_' + _rlHash_(email.toLowerCase())) === '1') continue;
       const statusLow = status.toLowerCase();
       // CYCLE-30: startsWith('actief') ipv `=== 'actief' || indexOf('actief —')`.
       // Vorige check miste varianten 'Actief (handmatig)', 'Actief - trial'
@@ -3045,6 +3195,102 @@ function verstuurDripsDagelijks_() {
   }
 }
 
+/**
+ * F-SCALE-142 — sweep verlopen OTP-keys uit ScriptProperties.
+ *
+ * Bij elke code-aanvraag schrijft aanvraagOtpEndpoint_ twee keys: otp_<email>
+ * (code + 15-min-expiry) en otp_ts_<email> (rate-limit-stempel). Die worden bij
+ * succesvolle activatie gewist — maar een lead die een code aanvraagt en NOOIT
+ * activeert (conversie < 100%) laat ze voor altijd staan. Bij honderden/
+ * duizenden leads tikt dat richting het 500KB-ScriptProperties-quotum, waarna
+ * de server geen nieuwe licenties/OTP's meer kan wegschrijven → verkoop staat
+ * stil terwijl betalingen binnenkomen.
+ *
+ * Verwijdert otp_<email> zodra de 15-min-expiry (+5 min marge) voorbij is en de
+ * losse otp_ts_<email>-stempel zodra die >1u oud is. Idempotent + fail-safe.
+ * Aangeroepen aan het begin van de dagelijkse drip-trigger.
+ *
+ * @returns {number} aantal verwijderde keys
+ */
+function cleanupVerlopenOtpKeys_() {
+  const props = PropertiesService.getScriptProperties();
+  let alle;
+  try { alle = props.getProperties(); }
+  catch (e) { Logger.log('::error:: otp-cleanup getProperties: ' + e.message); return 0; }
+  const nu = Date.now();
+  let verwijderd = 0;
+  Object.keys(alle).forEach(function(key) {
+    try {
+      // otp_ts_ eerst checken — die begint óók met 'otp_'.
+      if (key.indexOf('otp_ts_') === 0) {
+        const ts = parseInt(alle[key] || '0', 10);
+        if (!ts || (nu - ts) > 3600000) { props.deleteProperty(key); verwijderd++; }  // >1u
+        return;
+      }
+      if (key.indexOf('otp_') === 0) {
+        let expiry = 0;
+        try { expiry = (JSON.parse(alle[key] || '{}').expiry) || 0; } catch (_) { expiry = 0; }
+        // expiry 0/corrupt of voorbij (5 min marge op de 15-min-geldigheid) → weg.
+        if (!expiry || nu > (expiry + 300000)) { props.deleteProperty(key); verwijderd++; }
+      }
+    } catch (_) { /* één kapotte key mag de sweep niet stoppen */ }
+  });
+  if (verwijderd > 0) Logger.log('OTP-cleanup: ' + verwijderd + ' verlopen keys verwijderd.');
+  return verwijderd;
+}
+
+/**
+ * Niet-raadbaar afmeld-token voor de één-klik-unsubscribe. Zonder secret zou
+ * iemand massaal andermans adressen kunnen afmelden (Sam's onboarding saboteren).
+ */
+function _dripToken_(email) {
+  const secret = PropertiesService.getScriptProperties().getProperty('DRIP_UNSUB_SECRET') || 'boekhoudbaar-drip-v1';
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.MD5,
+    String(email).trim().toLowerCase() + '|' + secret)
+    .map(function(b) { return (b < 0 ? b + 256 : b).toString(16).padStart(2, '0'); })
+    .join('').slice(0, 16);
+}
+
+/**
+ * Eén-klik-afmelding uit de onboarding-drips. De klant klikt de link in de
+ * mail (token-gevalideerd) en wordt direct afgemeld — geen support-mail nodig.
+ * Licentie-/activeringsmails lopen via aparte functies en blijven komen.
+ */
+function dripUitEndpoint_(e) {
+  const email = String(((e && e.parameter && (e.parameter.e || e.parameter.email)) || '')).trim().toLowerCase();
+  const token = String(((e && e.parameter && e.parameter.t) || '')).trim();
+  const klaar = function(titel, tekst) {
+    return HtmlService.createHtmlOutput(
+      '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;max-width:460px;' +
+      'margin:48px auto;text-align:center;color:#1a1a2e;line-height:1.6">' +
+      '<h2 style="color:#0D1B4E;margin:0 0 10px">' + titel + '</h2><p>' + tekst + '</p></div>'
+    ).setTitle(titel + ' — Boekhoudbaar');
+  };
+  if (!email || !token || token !== _dripToken_(email)) {
+    return klaar('Afmeldlink ongeldig',
+      'Deze link klopt niet of is verlopen. Mail support@boekhoudbaar.nl en we melden je handmatig af.');
+  }
+  // E3 (red-team): schrijf de afmeld-vlag ALLEEN voor een adres dat écht in de
+  // licentie-sheet staat. Zo kunnen er (zelfs als de secret ooit zou lekken)
+  // geen onbegrensde keys voor verzonnen adressen ontstaan → géén 500KB-DoS.
+  let bestaatKlant = false;
+  try {
+    const sheet = getLicentieSheet_();
+    const data = sheet ? sheet.getDataRange().getValues() : [];
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][2] || '').trim().toLowerCase() === email) { bestaatKlant = true; break; }
+    }
+  } catch (_) {}
+  if (bestaatKlant) {
+    try { PropertiesService.getScriptProperties().setProperty('dripuit_' + _rlHash_(email), '1'); } catch (_) {}
+  }
+  // Altijd dezelfde bevestiging (anti-enumeration): de bezoeker leert niet of
+  // het adres een klant is.
+  return klaar('Afgemeld ✓',
+    'Je ontvangt geen onboarding-mails meer van Boekhoudbaar. ' +
+    'Belangrijke licentie-mails (zoals je activeringscode) blijven wél komen.');
+}
+
 function verstuurDripMail_(naam, email, sleutel, drip) {
   const props        = PropertiesService.getScriptProperties();
   const brevoKey     = props.getProperty('BREVO_API_KEY')   || '';
@@ -3055,6 +3301,14 @@ function verstuurDripMail_(naam, email, sleutel, drip) {
   const kvk          = props.getProperty('KVK_NUMMER')      || '';
   const btw          = props.getProperty('BTW_NUMMER')      || '';
   const privacyUrl   = props.getProperty('PRIVACY_URL')     || 'https://www.boekhoudbaar.nl/privacy';
+
+  // Eén-klik-afmeldlink (geen mailto meer): de klant klikt en is direct af.
+  let webappUrl = '';
+  try { webappUrl = (typeof ScriptApp !== 'undefined') ? (ScriptApp.getService().getUrl() || '') : ''; } catch (_) {}
+  if (!webappUrl) webappUrl = props.getProperty('WEBAPP_URL') || '';
+  const unsubLink = webappUrl
+    ? webappUrl + '?actie=drip-uit&e=' + encodeURIComponent(email) + '&t=' + _dripToken_(email)
+    : ('mailto:' + supportEmail + '?subject=Unsubscribe%20drip');
 
   const inhoud = dripInhoud_(drip.dag, naam, productnm);
   const html = `<!DOCTYPE html><html lang="nl"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;padding:20px;color:#1a1a2e;background:#f8fafc">
@@ -3072,7 +3326,7 @@ function verstuurDripMail_(naam, email, sleutel, drip) {
       <a href="mailto:${supportEmail}" style="color:#0D1B4E">${supportEmail}</a><br>
       Hoven Strategy &amp; Solutions${kvk ? ' · KvK ' + kvk : ''}${btw ? ' · BTW ' + btw : ''}<br>
       <a href="${privacyUrl}" style="color:#94a3b8">Privacy</a> ·
-      <a href="mailto:${supportEmail}?subject=Unsubscribe%20drip" style="color:#94a3b8">Geen drip-mails meer</a>
+      <a href="${unsubLink}" style="color:#94a3b8">Afmelden voor deze mails</a>
     </p>
   </div>
 </body></html>`;
@@ -3083,7 +3337,7 @@ function verstuurDripMail_(naam, email, sleutel, drip) {
     '---\n' +
     'Reageer op deze mail of: ' + supportEmail + '\n' +
     'Hoven Strategy & Solutions' + (kvk ? ' · KvK ' + kvk : '') + (btw ? ' · BTW ' + btw : '') + '\n' +
-    'Geen drip-mails meer? mail: ' + supportEmail + ' subject: Unsubscribe drip\n';
+    'Afmelden voor deze mails (één klik): ' + unsubLink + '\n';
 
   if (brevoKey) {
     try {
@@ -3098,7 +3352,10 @@ function verstuurDripMail_(naam, email, sleutel, drip) {
           htmlContent: html,
           textContent: text,
           tags: ['drip', drip.vlag],
-          headers: { 'List-Unsubscribe': '<mailto:' + supportEmail + '?subject=Unsubscribe drip>' },
+          headers: {
+            'List-Unsubscribe': '<' + unsubLink + '>',
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
         }),
         muteHttpExceptions: true,
       });
@@ -3121,11 +3378,11 @@ function dripInhoud_(dag, naam, productnm) {
       body:
         '<p>Drie dagen geleden activeerde je ' + escHtml_(productnm) + ' — hopelijk loopt alles soepel.</p>' +
         '<p><strong>Tip voor je eerste factuur:</strong> houd het simpel. Eén regel, juiste BTW (21% standaard, 9% voor specifieke diensten zoals catering of fysiotherapie). De PDF wordt automatisch opgemaakt — geen Word nodig.</p>' +
-        '<p>Vastgelopen? Open Boekhouding → Controle → ✅ Werkt-alles-test (12 punts gezondheidscheck).</p>',
+        '<p>Vastgelopen? Open het <strong>Boekhoudbaar</strong>-menu → <strong>Controle &amp; Export</strong> → <strong>Alles werkt-check</strong> (controleert je installatie).</p>',
       bodyTekst:
         'Drie dagen geleden activeerde je ' + productnm + ' — hopelijk loopt alles soepel.\n\n' +
         'Tip voor je eerste factuur: houd het simpel. Eén regel, juiste BTW (21% standaard, 9% specifiek). De PDF wordt automatisch opgemaakt.\n\n' +
-        'Vastgelopen? Open Boekhouding → Controle → ✅ Werkt-alles-test.',
+        'Vastgelopen? Open het Boekhoudbaar-menu → Controle & Export → Alles werkt-check.',
     };
   }
   if (dag === 7) {
@@ -3135,11 +3392,11 @@ function dripInhoud_(dag, naam, productnm) {
         '<p>Een week ' + escHtml_(productnm) + ' achter de rug. Goede gewoonte ingebouwd?</p>' +
         '<p><strong>BTW-aangifte:</strong> NL-ZZP\'ers doen kwartaalaangifte. Deadlines:<br>' +
         '<strong>Q1</strong>: vóór 30 april · <strong>Q2</strong>: vóór 31 juli · <strong>Q3</strong>: vóór 31 oktober · <strong>Q4</strong>: vóór 31 januari.</p>' +
-        '<p>Boekhoudbaar berekent automatisch — open <strong>Boekhouding → BTW → BTW-aangifte (kwartaal)</strong> en je hebt de cijfers in 30 seconden.</p>',
+        '<p>Boekhoudbaar berekent automatisch — open het <strong>Boekhoudbaar</strong>-menu en kies de <strong>BTW-aangifte</strong>; je hebt de cijfers in 30 seconden.</p>',
       bodyTekst:
         'Een week ' + productnm + ' achter de rug.\n\n' +
         'BTW-aangifte deadlines: Q1=30/4, Q2=31/7, Q3=31/10, Q4=31/1.\n' +
-        'Boekhoudbaar berekent automatisch via Boekhouding → BTW.',
+        'Boekhoudbaar berekent automatisch — open het Boekhoudbaar-menu en kies de BTW-aangifte.',
     };
   }
   if (dag === 14) {
@@ -3148,11 +3405,11 @@ function dripInhoud_(dag, naam, productnm) {
       body:
         '<p>Twee weken ' + escHtml_(productnm) + '. Heb je al gedacht aan je accountant?</p>' +
         '<p><strong>Boekhouder mee laten kijken:</strong> in Google Sheets klik je op <strong>Delen</strong> rechtsboven, typ je het mailadres, en kies je rechten (alleen-lezen of bewerken). Geen extra licentie, geen tweede account.</p>' +
-        '<p>Of: <strong>Boekhouding → Accountantspakket exporteren</strong> maakt een ZIP met PDF + XLSX + JSONL die je accountant kan inlezen in elk pakket (Snelstart, Exact, Twinfield).</p>',
+        '<p>Of: het <strong>Boekhoudbaar</strong>-menu → <strong>Controle &amp; Export → Accountantspakket exporteren</strong> maakt een map in je eigen Drive met CSV-bestanden én het XAF-auditfile — dat XAF leest je accountant in de meeste pakketten (Exact, Twinfield, AFAS) in.</p>',
       bodyTekst:
         'Twee weken ' + productnm + '.\n\n' +
         'Boekhouder mee laten kijken: klik Delen in Google Sheets en typ mailadres.\n' +
-        'Of: Boekhouding → Accountantspakket exporteren = ZIP voor elk pakket.',
+        'Of: Boekhoudbaar-menu → Controle & Export → Accountantspakket exporteren = map in je Drive met CSV + XAF-auditfile.',
     };
   }
   if (dag === 30) {
@@ -3241,9 +3498,12 @@ function kolomIndex_(sheet, naam) {
  * (URL wordt alleen aan Brevo gegeven via hun dashboard, niet publiek).
  *
  * Side-effects:
- *  - hard_bounce / invalid_email / spam → markeer email als ongeldig
+ *  - hard_bounce / invalid_email / blocked → markeer email als ongeldig
  *    (Bouncestatus = 'hard') en zet Status van actieve licenties op
  *    'Bounce' zodat verdere drips niet versturen.
+ *  - unsubscribed / spam → afmelding/klacht op marketing, GEEN bezorgfout:
+ *    zet alleen de drip-uit-vlag. De Status (= de betaalde licentie) blijft
+ *    intact — een marketing-afmelding mag het product nooit breken.
  *  - soft_bounce → noteer als 'soft' (info-only, geen Status-wijziging).
  */
 function verwerkBrevoBounce_(e) {
@@ -3273,7 +3533,41 @@ function verwerkBrevoBounce_(e) {
   const reden = String(payload.reason || payload['delivery_status'] || '').substring(0, 240);
   if (!event || !email) return;
 
-  const hardBounceEvents = ['hard_bounce', 'invalid_email', 'spam', 'blocked', 'unsubscribed'];
+  // 'unsubscribed' (afmelding) en 'spam' (spamklacht) zijn GEEN bezorgfouten:
+  // de mailbox werkt prima, de ontvanger wil alleen geen onboarding-/marketing-
+  // mail meer. Ze als hard-bounce behandelen zou Status op 'Bounce' zetten,
+  // waarna valideerEndpoint_ (regel ~1016) geldig:false teruggeeft → de
+  // BETAALDE licentie van die klant ligt eruit louter omdat-ie zich op marketing
+  // afmeldde (of, vaker, de spamknop pakte i.p.v. de afmeldlink). Dat mag nooit.
+  // Behandel het exact als de één-klik-afmeldlink: zet de drip-uit-vlag (stopt
+  // de drips) en laat zowel Status als Bouncestatus ongemoeid.
+  if (event === 'unsubscribed' || event === 'spam') {
+    // N-M2-1 / F-SCALE-143: schrijf de drip-uit-vlag ALLEEN voor een adres dat
+    // écht in de licentie-sheet staat — net als dripUitEndpoint_ (kolom [2] =
+    // Email). Zonder deze existence-check kan een geflood (token-geverifieerd)
+    // webhook onbegrensde dripuit_<hash>-keys maken — cleanupVerlopenOtpKeys_
+    // veegt alleen otp_-keys, nooit dripuit_ → 500KB-ScriptProperties-cliff →
+    // server-helft sterft voor de hele basis (de klasse die F-SCALE-143 sloot).
+    let bestaatKlant = false;
+    try {
+      const sheet = getLicentieSheet_();
+      const rows = sheet ? sheet.getDataRange().getValues() : [];
+      const eCol = rows.length ? rows[0].indexOf('Email') : -1;   // robuust t.o.v. kolom-positie
+      if (eCol !== -1) {
+        for (let i = 1; i < rows.length; i++) {
+          if (String(rows[i][eCol] || '').trim().toLowerCase() === email) { bestaatKlant = true; break; }
+        }
+      }
+    } catch (_) {}
+    if (bestaatKlant) {
+      try { PropertiesService.getScriptProperties().setProperty('dripuit_' + _rlHash_(email), '1'); } catch (_) {}
+    }
+    Logger.log('Brevo ' + event + ' → drip-uit voor ' + email +
+      (bestaatKlant ? ' (licentie ongemoeid)' : ' (genegeerd: geen klant)'));
+    return;
+  }
+
+  const hardBounceEvents = ['hard_bounce', 'invalid_email', 'blocked'];
   const softBounceEvents = ['soft_bounce', 'deferred'];
   let bounceStatus = '';
   if (hardBounceEvents.indexOf(event) !== -1) bounceStatus = 'hard';
@@ -3427,6 +3721,47 @@ function controleerKritiekeConfig_() {
   return { ok: crit.length === 0, crit: crit, warn: warn };
 }
 
+/**
+ * F-TAX-115: 3e dinsdag van september (Prinsjesdag) van `jaar`.
+ */
+function _prinsjesdag_(jaar) {
+  const d = new Date(jaar, 8, 1);   // 1 september
+  let n = 0;
+  while (n < 3) {
+    if (d.getDay() === 2) n++;       // dinsdag = 2
+    if (n < 3) d.setDate(d.getDate() + 1);
+  }
+  return d;
+}
+
+/**
+ * F-TAX-115: review-herinnering voor de tarieven van het VOLGENDE jaar. Actief
+ * vanaf Prinsjesdag t/m 31 dec, zolang de centrale config (BELASTING_TARIEVEN)
+ * nog géén tabel voor dat jaar heeft. Zo wordt Sam elk najaar geattendeerd de
+ * nieuwe tarieven/voordelen in te voeren vóór 1 januari — anders valt elke
+ * klant-kopie vanaf 1-1 terug op het oude jaar (met "verouderd"-waarschuwing,
+ * F-OND-024). De tarieven zijn centraal pushbaar via de BELASTING_TARIEVEN-
+ * ScriptProperty (JSON) ZÓNDER code-push; idealiter ná RB-aftekening.
+ */
+function _tariefReviewHerinnering_(nu, props) {
+  try {
+    const jaar = nu.getFullYear();
+    const volgendJaar = jaar + 1;
+    if (nu < _prinsjesdag_(jaar)) return null;     // vóór Prinsjesdag: nog niets bekend
+    let tarieven = null;
+    try { tarieven = JSON.parse(props.getProperty('BELASTING_TARIEVEN') || 'null'); } catch (_) {}
+    if (tarieven && tarieven[volgendJaar]) return null;   // al ingevoerd → klaar
+    return {
+      jaar: volgendJaar,
+      tekst: 'Prinsjesdag is geweest. Zet de ' + volgendJaar + '-tarieven en ' +
+        '-voordelen klaar in de centrale config (ScriptProperty BELASTING_TARIEVEN, ' +
+        'JSON) — clients halen ze automatisch op, zónder code-push. Toets tegen ' +
+        'belastingdienst.nl + de RB-verificatie-checklist. Zonder dit valt elke ' +
+        'kopie vanaf 1-1-' + volgendJaar + ' terug op de ' + jaar + '-tarieven.',
+    };
+  } catch (_) { return null; }
+}
+
 function verstuurDagelijkseStatusmail_() {
   const props = PropertiesService.getScriptProperties();
   const ontvanger = props.getProperty('OWNER_STATUS_EMAIL') ||
@@ -3469,7 +3804,19 @@ function verstuurDagelijkseStatusmail_() {
     html = wb + html;
   }
 
-  const prefix = !config.ok ? '[CRIT] ' : '';
+  // F-TAX-115: tarief-review-banner — na Prinsjesdag tot de volgend-jaar-tarieven
+  // centraal klaarstaan. Boven de config-warnings, onder de CRIT-banner.
+  const review = _tariefReviewHerinnering_(new Date(), props);
+  if (review) {
+    const rb =
+      '<div style="background:#FEF3C7;border:2px solid #F59E0B;border-radius:8px;padding:16px 20px;margin-bottom:20px">' +
+      '<div style="font-size:17px;font-weight:700;color:#92400E;margin-bottom:8px">' +
+      '📋 Fiscale tarieven ' + review.jaar + ' — review vereist</div>' +
+      '<div style="font-size:14px;color:#78350F;line-height:1.55">' + review.tekst + '</div></div>';
+    html = rb + html;
+  }
+
+  const prefix = !config.ok ? '[CRIT] ' : (review ? '[TARIEF-REVIEW] ' : '');
   const onderwerp = prefix + '📊 Boekhoudbaar status — ' +
     Utilities.formatDate(new Date(), 'Europe/Amsterdam', 'd MMM') +
     ' · ' + stats.nieuw24u + ' nieuw, ' + stats.totaalActief + ' actief';

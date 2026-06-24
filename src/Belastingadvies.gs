@@ -139,16 +139,24 @@ const BELASTING_PER_JAAR = {
     AOW_FRANCHISE:          14540,
     AOW_LEEFTIJD:           67,
     BOX3_GROEN_VRIJSTELLING: 67000,
-    BOX3_HEFFINGSVRIJ:      59500,    // Indicatief; bevestigen na Prinsjesdag
-    BOX3_FORFAIT_BELEGGING: 0.0778,   // Voorstel kabinet (was 5,88% in 2025)
-    BOX3_FORFAIT_SPAAR:     0.0144,
+    BOX3_HEFFINGSVRIJ:      59357,    // F-TAX-110 RB-verificatie 2026-06-21 (def.)
+    BOX3_FORFAIT_BELEGGING: 0.06,     // F-TAX-110: 6,00% DEFINITIEF — het kabinets-
+                                      // voorstel 7,78% is TERUGGEDRAAID (was 0,0778;
+                                      // 5,88% in 2025). Bron: belastingdienst.nl/
+                                      // MKB Servicedesk box 3 2026.
+    BOX3_FORFAIT_SPAAR:     0.0128,   // 2026 VOORLOPIG (~1,28%); definitief begin 2027
+                                      // o.b.v. werkelijke spaarrente (was 0,0144 = 2025).
     BOX3_TARIEF:            0.36,
     IB_SCHIJF_1_MAX:        78426,   // bovengrens schijf 2 (= IB_SCHIJVEN[1].tot; was 79137 — drift uit 2025-snapshot, audit F-TAX-101)
-    IB_SCHIJF_1_PCT:        0.357,   // schijf 1: 35,7%
+    IB_SCHIJF_1_PCT:        0.3575,  // schijf 1: 35,75% — MOET gelijk zijn aan
+                                     // IB_SCHIJVEN[0].pct (verlegd-fallback +
+                                     // marginaal-tarief lezen deze scalar). Stond
+                                     // op 0,357 → fallback-IB week af van de
+                                     // array-gedreven hoofdberekening (F-TAX-133).
     IB_SCHIJF_2_PCT:        0.495,   // schijf 3: 49,5% (legacy naam)
     HEFFINGSKORTING_MAX:    3115,    // 2026: max algemene heffingskorting
-    HEFFINGSKORTING_AFBOUW_VAN: 29739,
-    HEFFINGSKORTING_AFBOUW_PCT: 0.0640,
+    HEFFINGSKORTING_AFBOUW_VAN: 29736,  // F-TAX-110 RB-verificatie (was 29739)
+    HEFFINGSKORTING_AFBOUW_PCT: 0.06398, // F-TAX-110: 6,398% (was 0,0640)
     HEFFINGSKORTING_NUL_VAN:    78426,
     ARBEIDSKORTING_MAX:     5685,    // 2026: tot inkomen €45.592
     ARBEIDSKORTING_TOP_TOT: 45592,
@@ -261,9 +269,14 @@ function getBelasting_() {
     .filter(function(j) { return isFinite(j); })
     .sort(function(a, b) { return b - a; });  // descending
   const laatstBekendJaar = beschikbareJaren[0] || 2026;
-  const tarieven = serverTarieven
-    || BELASTING_PER_JAAR[jaar]
-    || BELASTING_PER_JAAR[laatstBekendJaar];
+  // F-SCALE-333: ondiepe kopie zodat de TARIEF_VEROUDERD-flags hieronder NIET op
+  // het gedeelde BELASTING_PER_JAAR-const-object plakken (aliasing). Anders kan
+  // een fallback-aanroep voor een toekomstig jaar het laatst-bekende-jaar-object
+  // vervuilen, waarna een latere legitieme aanroep voor dat jaar binnen dezelfde
+  // sessie ten onrechte 'verouderd' rapporteert. (Geneste IB_SCHIJVEN-array wordt
+  // hier nooit gemuteerd, dus ondiep volstaat.)
+  const tarieven = Object.assign({},
+    serverTarieven || BELASTING_PER_JAAR[jaar] || BELASTING_PER_JAAR[laatstBekendJaar]);
   // Hebben we échte tarieven voor het lopende jaar (server-override of lokale
   // tabel)? Zo niet, dan vielen we terug op de laatst-bekende-jaar-snapshot.
   // Belangrijk: serverTarieven is een ANDER object dan BELASTING_PER_JAAR[jaar],
@@ -274,7 +287,17 @@ function getBelasting_() {
   // Belastingplan 2027 op Prinsjesdag) hebben placeholder:true gemarkeerd
   // en horen óók TARIEF_VEROUDERD-flag te triggeren. Was: alleen bij
   // ontbrekend jaar → stil-verkeerd risico voor heel 2027 als Sam stopt.
-  const isPlaceholderJaar = !!(BELASTING_PER_JAAR[jaar] && BELASTING_PER_JAAR[jaar].placeholder);
+  // F-TAX-340: de placeholder/bevestigd-status staat op BELASTING_META, NIET op
+  // BELASTING_PER_JAAR. Voorheen keek deze check alleen naar
+  // BELASTING_PER_JAAR[jaar].placeholder (= undefined) → 2027 rekende stil met
+  // preliminaire tarieven ZONDER verouderd-waarschuwing. Nu: een jaar telt als
+  // placeholder als z'n tarieven nog niet bevestigd zijn (bevestigd === null) of
+  // expliciet placeholder zijn — in BELASTING_META óf BELASTING_PER_JAAR.
+  const _meta = (typeof BELASTING_META === 'object' && BELASTING_META) ? BELASTING_META[jaar] : null;
+  const isPlaceholderJaar = !!(
+    (BELASTING_PER_JAAR[jaar] && BELASTING_PER_JAAR[jaar].placeholder) ||
+    (_meta && (_meta.placeholder || _meta.bevestigd === null))
+  );
   // Markeer dat klant een fallback OF placeholder ziet — UI moet expliciet waarschuwen.
   if ((!heeftJaarTarieven || isPlaceholderJaar) && tarieven && typeof tarieven === 'object') {
     tarieven.TARIEF_VEROUDERD = true;
@@ -440,7 +463,7 @@ const BELASTING_OVERRIDE_VELDEN = [
   { sleutel: 'BOX3_TARIEF',          label: 'Tarief: Box 3 belastingtarief (%)', type: 'percentage', min: 0,    max: 0.60,
     hint: 'Box 3 tarief over fictief rendement. 2024-2026: 36%.' },
   { sleutel: 'BOX3_FORFAIT_BELEGGING', label: 'Tarief: Box 3 forfait beleggingen (%)', type: 'percentage', min: 0, max: 0.20,
-    hint: 'Fictief rendement beleggingen. 2025: 5,88%. 2026: 7,78% (voorstel).' },
+    hint: 'Fictief rendement beleggingen. 2025: 5,88%. 2026: 6,00% (definitief; 7,78%-voorstel is teruggedraaid).' },
   { sleutel: 'URENCRITERIUM',        label: 'Grens: Urencriterium (uur/jr)',     type: 'getal',      min: 100,  max: 5000,
     hint: 'Minimum uren voor zelfstandigenaftrek. Stabiel: 1.225 uur.' },
   { sleutel: 'ZVW_PCT',              label: 'Tarief: Zvw inkomensafh. bijdrage (%)', type: 'percentage', min: 0, max: 0.15,
@@ -571,7 +594,7 @@ function voegBelastingOverridesToeAanInstellingen_() {
   const MARKER = 'BELASTING-TARIEVEN (aanpasbaar bij Prinsjesdag-update)';
   const data = sheet.getDataRange().getValues();
   for (let i = 0; i < data.length; i++) {
-    if (String(data[i][0]).indexOf(MARKER) === 0) return;
+    if (String(data[i][KOL.INST.sleutel]).indexOf(MARKER) === 0) return;
   }
 
   const startRij = sheet.getLastRow() + 2;
@@ -612,12 +635,18 @@ function voegBelastingOverridesToeAanInstellingen_() {
 function berekenKiaAftrek_(investering, B) {
   const inv = parseFloat(investering) || 0;
   if (inv < B.KIA_MIN || inv > B.KIA_MAX) return 0;
-  if (inv <= B.KIA_VAST_VAN)         return rondBedrag_(inv * B.KIA_PCT);
-  if (inv <= B.KIA_AFBOUW_START)     return rondBedrag_(B.KIA_VAST_BEDRAG);
-  // Afbouwzone: vast bedrag − afbouwpct × overschrijding
-  const overschrijding = inv - B.KIA_AFBOUW_START;
-  const aftrek = B.KIA_VAST_BEDRAG - B.KIA_AFBOUW_PCT * overschrijding;
-  return rondBedrag_(Math.max(0, aftrek));
+  // klasse 9 (precisie): tarief-floats (0.28 / 0.0756) zijn niet exact in
+  // IEEE-754 → `rondBedrag_(bedrag * tarief)` wijkt in ~2000 gevallen 1 cent af
+  // van de wiskundig-exacte waarde (bv. overschrijding €87,50 → €20.065,38
+  // i.p.v. €20.065,39). Reken daarom volledig in INTEGER-centen, half-up.
+  if (inv <= B.KIA_VAST_VAN)     return rondTariefCent_(inv, B.KIA_PCT);   // inv × 28%
+  if (inv <= B.KIA_AFBOUW_START) return rondBedrag_(B.KIA_VAST_BEDRAG);
+  // Afbouwzone: vast − 7,56% × overschrijding (round-final, exact integer-cent):
+  //   aftrek_cent = round( (vast_cent × 10000 − tariefE4 × overschr_cent) / 10000 )
+  const afbouwE4 = Math.round(B.KIA_AFBOUW_PCT * 10000);            // 0.0756 → 756
+  const oc = Math.round((inv - B.KIA_AFBOUW_START) * 100);          // overschrijding in centen
+  const N = Math.round(B.KIA_VAST_BEDRAG * 100) * 10000 - afbouwE4 * oc;
+  return (N > 0 ? Math.floor((N + 5000) / 10000) : 0) / 100;        // half-up, ≥ 0
 }
 
 /**
@@ -668,7 +697,7 @@ function berekenIBProgressief_(belastbaarInkomen, B, isAowGerechtigd) {
  * @param {number} inkomen          Belastbaar inkomen Box 1
  * @param {Object} B                BELASTING-config met IB_SCHIJVEN array
  * @param {boolean} [isAowGerechtigd]
- * @return {number} Marginale tarief (0.357, 0.3756, 0.495 voor 2026)
+ * @return {number} Marginale tarief (scalar-paden: 0.3575 of 0.495 voor 2026)
  */
 function marginaalIbTarief_(inkomen, B, isAowGerechtigd) {
   const i = parseFloat(inkomen) || 0;
@@ -677,7 +706,7 @@ function marginaalIbTarief_(inkomen, B, isAowGerechtigd) {
     : B.IB_SCHIJVEN;
   if (!Array.isArray(schijven)) {
     // Legacy fallback
-    return i <= (B.IB_SCHIJF_1_MAX || 38883) ? (B.IB_SCHIJF_1_PCT || 0.357) : (B.IB_SCHIJF_2_PCT || 0.495);
+    return i <= (B.IB_SCHIJF_1_MAX || 38883) ? (B.IB_SCHIJF_1_PCT || 0.3575) : (B.IB_SCHIJF_2_PCT || 0.495);
   }
   for (const schijf of schijven) {
     if (i <= schijf.tot) return schijf.pct;
@@ -700,7 +729,8 @@ function berekenZvw_(winst, B) {
   const w = parseFloat(winst) || 0;
   if (w <= 0) return 0;
   const grondslag = Math.min(w, B.ZVW_MAX_INKOMEN || 75864);
-  return rondBedrag_(grondslag * (B.ZVW_PCT || 0.0526));
+  // klasse 9 (precisie): float-tarief → cent-drift; exact via integer-centen.
+  return rondTariefCent_(grondslag, (B.ZVW_PCT || 0.0526));
 }
 
 /**
@@ -777,6 +807,37 @@ function berekenBelastingadvies_(ss) {
   const jaar = new Date().getFullYear();
   const cacheKey = 'advies_' + jaar + '_v' + cacheVersie_('advies');
   return cacheBerekening_(cacheKey, 600, function() { return _berekenBelastingadviesRaw_(ss); });
+}
+
+/**
+ * F-TAX-330 (klasse 10 — grondslag-afbakening uit grootboek-prefix): centrale
+ * test of een grootboekrekening een KIA/EIA-kwalificerend materieel
+ * bedrijfsmiddel is. Sluit de 0x90-afschrijvings/contra-rekeningen uit — anders
+ * inflateert een positief afschrijvingssaldo (bv. na een desinvestering-
+ * correctie of terugboeking) de investeringsgrondslag → te hoog KIA/EIA-advies
+ * → naheffing. Voorheen leunde dat alleen op het saldo-teken (parseFloat > 0),
+ * wat fragiel is. De wettelijke afbakening van immateriële activa (01xx
+ * software) en de €450-per-bedrijfsmiddel-ondergrens vereisen RB en zijn nog
+ * NIET ingebakken — zie bug-class-register klasse 10 (F-TAX-111-stijl RB-item).
+ * @param {*} code grootboekrekening-code
+ * @returns {boolean}
+ */
+function _isInvesteringsRekening02_(code) {
+  const c = String(code || '').trim();
+  return c.startsWith('02') && !c.endsWith('90');
+}
+
+/**
+ * F-TAX-335 (klasse 10): MIA/VAMIL-variant — milieu-investeringen staan op
+ * 026x/027x. Zelfde 0x90-contra/afschrijving-exclusie als _isInvesteringsRekening02_
+ * zodat een positief afschrijvings/contra-saldo de MIA-grondslag (45,5% aftrek)
+ * niet opblaast → geen te hoog advies → geen naheffing.
+ * @param {*} code grootboekrekening-code
+ * @returns {boolean}
+ */
+function _isMilieuInvesteringsRekening_(code) {
+  const c = String(code || '').trim();
+  return /^02[67]/.test(c) && !c.endsWith('90');
 }
 
 function _berekenBelastingadviesRaw_(ss) {
@@ -944,7 +1005,7 @@ function _berekenBelastingadviesRaw_(ss) {
   const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);   // CYCLE-51
   let investeringen = 0;
   gbData.slice(1).forEach(r => {
-    if (r[0] && String(r[0]).startsWith('02') && parseFloat(r[5]) > 0) {
+    if (r[0] && _isInvesteringsRekening02_(r[0]) && parseFloat(r[5]) > 0) {
       investeringen += parseFloat(r[5]);
     }
   });
@@ -1004,7 +1065,9 @@ function _berekenBelastingadviesRaw_(ss) {
   // klant onderbetaalde IB. Fix-audit 2026-06-12.
   if (isZzp && winst > 0) {
     const winstNaAftrekken = Math.max(0, winst - totaalAftrek);
-    const mkbAftrek = rondBedrag_(winstNaAftrekken * BELASTING.MKB_WINSTVRIJSTELLING);
+    // klasse 9 (precisie): 0.1270-float gaf 578 cent-afwijkingen (1 cent te laag,
+    // bv. €155 → €19,68 i.p.v. €19,69). Exact via integer-centen.
+    const mkbAftrek = rondTariefCent_(winstNaAftrekken, BELASTING.MKB_WINSTVRIJSTELLING);
     aftrekken.push({
       naam: `MKB-winstvrijstelling (${(BELASTING.MKB_WINSTVRIJSTELLING * 100).toFixed(2).replace('.', ',')}%)`,
       bedrag: mkbAftrek,
@@ -1031,7 +1094,7 @@ function _berekenBelastingadviesRaw_(ss) {
   gbData.slice(1).forEach(r => {
     const code = String(r[0] || '');
     const naam = String(r[1] || '').toLowerCase();
-    if (code.startsWith('02') && parseFloat(r[5]) > 0) {
+    if (_isInvesteringsRekening02_(code) && parseFloat(r[5]) > 0) {
       if (/energie|zonn?epaneel|zonn?epanelen|warmtepomp|isolat|led|elektr.?aut|laadpaal|warmteterugwinning/i.test(naam)) {
         eiaInv += parseFloat(r[5]);
       }
@@ -1087,10 +1150,10 @@ function _berekenBelastingadviesRaw_(ss) {
   if (aovInJp && isZzp) {
     const jpData = aovInJp.getDataRange().getValues();
     for (let i = 1; i < jpData.length; i++) {
-      const omschrJp = String(jpData[i][2] || '').toLowerCase();
+      const omschrJp = String(jpData[i][KOL.JP.omschrijving] || '').toLowerCase();
       if (/aov|arbeidsongeschikt/i.test(omschrJp)) {
         heeftAov = true;
-        aovBetaald += parseFloat(jpData[i][8]) || 0;
+        aovBetaald += parseFloat(jpData[i][KOL.JP.bedrag]) || 0;
       }
     }
   }
@@ -1148,7 +1211,11 @@ function _berekenBelastingadviesRaw_(ss) {
   // Bron: belastingdienst.nl/wps/wcm/connect/.../btw-logies (officieel)
   const bedrijfsActiviteit = String(getInstelling_('Bedrijfsactiviteit') || '').toLowerCase();
   const isLogiesBedrijf = /logies|hotel|b\s*&\s*b|vakantie|airbnb|kamerverhuur|gastenverblijf/i.test(bedrijfsActiviteit);
-  if (isLogiesBedrijf && jaar >= 2026) {
+  // F-SCALE-334: alleen in het overgangsjaar 2026 tonen. `>= 2026` liet deze
+  // eenmalige-transitie-waarschuwing ("per 1-1-2026 verhoogd … update template")
+  // eeuwig staan (2027, 2028, …) alsof het nieuws is. Vanaf 2027 is 21% gewoon
+  // het normale tarief; geen waarschuwing meer nodig.
+  if (isLogiesBedrijf && jaar === 2026) {
     adviezen.push({
       type: 'WAARSCHUWING',
       titel: '⚠️ BTW-tarief logies verhoogd naar 21% per 1-1-2026',
@@ -1197,7 +1264,7 @@ function _berekenBelastingadviesRaw_(ss) {
       type: 'ACTIE',
       titel: '📅 BTW aangifte: ' + kwartaalDeadlines[maand] + ' deadline nadert',
       tekst: `De BTW aangifte voor ${kwartaalDeadlines[maand]} moet voor eind ${maandNamen[maand]} worden ingediend. ` +
-             `Genereer uw aangifte via: Boekhouding → BTW.`,
+             `Genereer uw aangifte via: Boekhoudbaar → BTW.`,
       besparing: null,
     });
   }
@@ -1225,7 +1292,7 @@ function _berekenBelastingadviesRaw_(ss) {
   const gbDataMia = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);   // CYCLE-51
   let milieu = 0;
   gbDataMia.slice(1).forEach(r => {
-    if (r[0] && /^02[67]/.test(String(r[0])) && parseFloat(r[5]) > 0) milieu += parseFloat(r[5]);
+    if (r[0] && _isMilieuInvesteringsRekening_(r[0]) && parseFloat(r[5]) > 0) milieu += parseFloat(r[5]);
   });
   if (milieu >= BELASTING.MIA_MIN) {
     const miaAftrek = rondBedrag_(milieu * BELASTING.MIA_PCT);
@@ -1498,13 +1565,13 @@ function genereerBelastingadvies() {
       .setHorizontalAlignment('center').setVerticalAlignment('middle');
     sheet.setRowHeight(4, 38);
     sheet.getRange(5, 1, 1, 3).merge()
-      .setValue('Voer eerst een paar facturen of kostenposten in via Boekhouding → "Nieuwe boeking". ' +
+      .setValue('Voer eerst een paar facturen of kostenposten in via Boekhoudbaar → "Nieuwe boeking". ' +
         'Zodra er omzet of kosten staan, krijg je hier een persoonlijke fiscale signalering met:\n\n' +
         '• Geschatte IB + Zvw voor dit jaar (informatief)\n' +
         '• Aftrekposten waar je mogelijk recht op hebt (KIA, MIA, EIA)\n' +
         '• Reiskosten, lijfrente-jaarruimte, BTW-spaarpot\n' +
         '• Signaleringen op basis van je boekjaar\n\n' +
-        'Je kunt ook eerst je fiscaal profiel invullen: Boekhouding → "Vul je profiel in voor persoonlijke berekening".\n\n' +
+        'Je kunt ook eerst je fiscaal profiel invullen: Boekhoudbaar → "Vul je profiel in voor persoonlijke berekening".\n\n' +
         '⚠️ Boekhoudbaar geeft informatieve berekeningen, geen formeel belastingadvies. Bron: Belastingdienst.nl.')
       .setBackground('#FFFFFF').setFontColor('#5F6B7A')
       .setFontSize(11).setWrap(true)
@@ -1578,7 +1645,7 @@ function genereerBelastingadvies() {
     sheet.setRowHeight(rij, 36);
     rij++;
     sheet.getRange(rij, 1, 1, 3).merge()
-      .setValue('→ Open via menu: Boekhouding → Persoonlijk fiscaal profiel invullen')
+      .setValue('→ Open via menu: Boekhoudbaar → Persoonlijk fiscaal profiel invullen')
       .setBackground('#FFF8E1').setFontColor('#5A3F00')
       .setFontSize(10).setHorizontalAlignment('center');
     rij += 2;
@@ -1819,23 +1886,23 @@ function controleerKiaMisserProactief_() {
   let totaalPotMisser = 0;
   const kandidaten = [];
   for (let i = 1; i < data.length; i++) {
-    if (!data[i][3]) continue;
-    const datum = parseDatum_(data[i][3]);  // [3] Factuurdatum
+    if (!data[i][KOL.IF.factuurdatumLeverancier]) continue;
+    const datum = parseDatum_(data[i][KOL.IF.factuurdatumLeverancier]);  // [3] Factuurdatum
     if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== huidigJaar) continue;
-    const status = String(data[i][12] || '');
+    const status = String(data[i][KOL.IF.status] || '');
     if (status === FACTUUR_STATUS.GECREDITEERD) continue;
-    const bedragExcl = parseFloat(data[i][8]) || 0;
+    const bedragExcl = parseFloat(data[i][KOL.IF.bedragExcl]) || 0;
     if (bedragExcl < grens) continue;
-    const kostenRek = String(data[i][15] || '').trim();
+    const kostenRek = String(data[i][KOL.IF.kostenrekening] || '').trim();
     // Skip als al op activa (0xxx) geboekt — dan is KIA al van toepassing
     if (!kostenRek || kostenRek.charAt(0) === '0') continue;
     totaalPotMisser += bedragExcl;
     kandidaten.push({
       datum:       Utilities.formatDate(datum, 'Europe/Amsterdam', 'yyyy-MM-dd'),
-      leverancier: String(data[i][6] || ''),
+      leverancier: String(data[i][KOL.IF.leveranciernaam] || ''),
       bedrag:      bedragExcl,
       rek:         kostenRek,
-      omschr:      String(data[i][7] || ''),
+      omschr:      String(data[i][KOL.IF.omschrijving] || ''),
     });
   }
 
@@ -1846,18 +1913,16 @@ function controleerKiaMisserProactief_() {
     ? berekenKiaAftrek_(totaalPotMisser, B) : 0;
   if (kiaGeschat < 100) return;  // <€100 KIA-impact is geen mail waard
 
-  // Idempotency per kwartaal — 90 dgn cooldown per kwartaal-bucket
+  // Idempotency per kwartaal — 90d cooldown via de TTL-chokepoint (klasse 3).
+  // F-SCALE-330: voorheen een losse idemKey-ScriptProperty (variabele-key) die
+  // zowel de dagelijkse sweep als de ban-test ontweek → onbeheerde groei (~4/jr)
+  // en een lek in klasse 3. Nu beheerd: zolang de key leeft is deze kwartaal-
+  // bucket al gemaild; na 90d (= de cooldown) verloopt-ie vanzelf.
   const kwartaal = Math.floor(new Date().getMonth() / 3) + 1;
-  const idemKey  = 'KIA_MISSER_GEMELD_' + huidigJaar + '_Q' + kwartaal;
-  const props    = PropertiesService.getScriptProperties();
-  const eerderRaw = props.getProperty(idemKey);
-  const nuMs     = Date.now();
-  if (eerderRaw) {
-    const eerder = parseInt(eerderRaw, 10);
-    if (eerder && (nuMs - eerder) < 90 * 24 * 60 * 60 * 1000) return;
-  }
+  const kiaBucket = huidigJaar + '_Q' + kwartaal;
+  if (leesVluchtigeKey_('KIA_MISSER_GEMELD_', kiaBucket)) return;
   // Markeer VÓÓR mail — voorkomt mail-storm bij retry-loop
-  try { props.setProperty(idemKey, String(nuMs)); } catch (_) {}
+  zetVluchtigeKey_('KIA_MISSER_GEMELD_', kiaBucket, Date.now(), 90);
 
   try {
     schrijfAuditLog_('KIA MISSER kandidaten',
@@ -1892,9 +1957,8 @@ function controleerKiaMisserProactief_() {
     '31 december van dit jaar om KIA te claimen.\n\n' +
     'Boekhoudbaar';
 
-  if (typeof stuurMailMetDlq_ === 'function') {
-    stuurMailMetDlq_(ontvanger, '💰 KIA-aftrek mogelijk gemist (~€' + Math.round(kiaGeschat) + ')', body);
-  }
+  // klasse 4: via notificatie-gate (detectie + audit-log draaiden hierboven al).
+  stuurKlantNotificatie_(ontvanger, '💰 KIA-aftrek mogelijk gemist (~€' + Math.round(kiaGeschat) + ')', body);
 }
 
 // ─────────────────────────────────────────────
@@ -1957,7 +2021,7 @@ function berekenPriveBelastingvoordelen_(winst) {
   // in config (= laagste schijf-tarief).
   const _eersteSchijfPct = (BELASTING.IB_SCHIJVEN && BELASTING.IB_SCHIJVEN[0])
     ? BELASTING.IB_SCHIJVEN[0].pct
-    : (BELASTING.IB_SCHIJF_1_PCT || 0.357);
+    : (BELASTING.IB_SCHIJF_1_PCT || 0.3575);
   const _eersteSchijfTekst = (_eersteSchijfPct * 100).toFixed(2).replace('.', ',') + '%';
   adviezen.push({
     type: 'TIP',

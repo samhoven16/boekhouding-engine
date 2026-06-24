@@ -79,7 +79,7 @@ function exporteerAlleData() {
       const eventsPerJaar = {};   // {2024: [...], 2025: [...], ...}
       let totaalEvents = 0;
       for (let i = 1; i < data.length; i++) {
-        const ts = data[i][0];
+        const ts = data[i][KOL.AUDIT.tijdstip];
         const jaar = ts instanceof Date ? ts.getFullYear() : 'onbekend';
         const event = {};
         headers.forEach(function(h, idx) {
@@ -119,9 +119,9 @@ function exporteerAlleData() {
     if (instSheet && instSheet.getLastRow() > 1) {
       const data = instSheet.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
-        const k = String(data[i][0] || '').trim();
+        const k = String(data[i][KOL.INST.sleutel] || '').trim();
         if (k && !/wachtwoord|password|key|secret|token/i.test(k)) {
-          instellingen[k] = String(data[i][1] || '');
+          instellingen[k] = String(data[i][KOL.INST.waarde] || '');
         }
       }
     }
@@ -156,9 +156,9 @@ function exporteerAlleData() {
       const pdfs = [];
       let ontbrekend = 0;
       for (let i = 1; i < data.length; i++) {
-        const url = String(data[i][19] || '').trim();
+        const url = String(data[i][KOL.VF.pdfUrl] || '').trim();
         if (!url) continue;
-        const factuurnr = String(data[i][1] || '');
+        const factuurnr = String(data[i][KOL.VF.factuurnummer] || '');
         const fileId = (typeof extractFileId_ === 'function') ? extractFileId_(url) : '';
         let status = 'onbekend';
         let verseUrl = url;
@@ -176,7 +176,7 @@ function exporteerAlleData() {
         }
         pdfs.push({
           factuurnummer: factuurnr,
-          datum: data[i][2],
+          datum: data[i][KOL.VF.datum],
           fileId: fileId,
           pdfUrl: verseUrl,
           originelePdfUrl: url,

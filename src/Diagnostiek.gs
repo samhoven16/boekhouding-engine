@@ -7,7 +7,7 @@
  *  - #2 Silent triggers: trigger geïnstalleerd maar gefaald
  *  - #6 Quota / executions: klant ziet geen errors
  *
- * Run via menu: Boekhouding → Controle & Export → Diagnostiek uitvoeren.
+ * Run via menu: Boekhoudbaar → Controle & Export → Voor support (geavanceerd) → 🔍 Installatie diagnoseren.
  * Tests elke gebruikte service en geeft per-service status.
  */
 
@@ -132,7 +132,7 @@ function controleerTriggerWatchdog_() {
     const data = sheet.getDataRange().getValues();
     let laatsteRun = null;
     for (let i = 1; i < data.length; i++) {
-      const ts = data[i][1];  // kolom 1 = Laatste run
+      const ts = data[i][KOL.TAAK.laatsteRun];  // kolom 1 = Laatste run
       if (ts instanceof Date) {
         if (!laatsteRun || ts > laatsteRun) laatsteRun = ts;
       }
@@ -151,7 +151,7 @@ function controleerTriggerWatchdog_() {
 
     try {
       ss.toast(
-        'Dagelijkse taken hebben ' + Math.round(urenTerug) + 'u niet gedraaid. Open Boekhouding → Diagnostiek voor check.',
+        'Dagelijkse taken hebben ' + Math.round(urenTerug) + 'u niet gedraaid. Open Boekhoudbaar → Diagnostiek voor check.',
         '⚠️ Triggers stilgevallen?',
         15
       );

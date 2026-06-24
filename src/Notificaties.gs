@@ -67,7 +67,7 @@ function genereerNotificaties_() {
         prioriteit: dagenTot <= 7 ? 100 : 80,
         titel: '⏰ BTW-aangifte ' + d.kw + ': nog ' + dagenTot + ' dag' + (dagenTot === 1 ? '' : 'en'),
         tekst: 'De BTW-aangifte voor ' + d.kw + ' moet uiterlijk ' + formatDatum_(d.datum) + ' worden ingediend.',
-        actie: 'Open Boekhouding → BTW → BTW-aangifte ' + d.kw,
+        actie: 'Open Boekhoudbaar → BTW → BTW-aangifte ' + d.kw,
         euros: null,
         urgent: dagenTot <= 7,
         deadline: formatDatum_(d.datum),
@@ -84,7 +84,7 @@ function genereerNotificaties_() {
       titel: '⚠️ KOR-grens binnen handbereik',
       tekst: 'Je hebt nog ' + formatBedrag_(ruimte) + ' ruimte voor de KOR (€20.000 omzet/jaar). ' +
              'Bij overschrijding moet je BTW gaan rekenen — plan resterende facturen slim.',
-      actie: 'Open Boekhouding → BTW → KOR-check',
+      actie: 'Open Boekhoudbaar → BTW → KOR-check',
       euros: null,
       urgent: ruimte < 1000,
       bron: 'kor-grens',
@@ -146,7 +146,10 @@ function genereerNotificaties_() {
       let inv = 0;
       const data = gbSheet.getDataRange().getValues();
       data.slice(1).forEach(function(r) {
-        if (r[0] && String(r[0]).startsWith('02') && parseFloat(r[5]) > 0) inv += parseFloat(r[5]);
+        // F-TAX-330 (klasse 10): via de chokepoint zodat 0290 cumulatieve
+        // afschrijving niet meetelt (anders zou de KIA-nudge onterecht
+        // onderdrukt worden). Identiek aan de KIA-callsite in Belastingadvies.gs.
+        if (r[0] && _isInvesteringsRekening02_(r[0]) && parseFloat(r[5]) > 0) inv += parseFloat(r[5]);
       });
       if (inv > 0 && inv < B.KIA_MIN) {
         const tekort = B.KIA_MIN - inv;
@@ -159,7 +162,7 @@ function genereerNotificaties_() {
           tekst: 'Je hebt ' + formatBedrag_(inv) + ' geïnvesteerd. Bij ' + formatBedrag_(B.KIA_MIN) +
                  '+ krijg je ' + Math.round(kiaPct * 100) + '% extra aftrek (KIA) — dat is ~' +
                  formatBedrag_(kiaAftrekExtra) + ' belastingvoordeel. Investeer dit jaar nog?',
-          actie: 'Boekhouding → Wat-als-rekenmachine om effect te zien',
+          actie: 'Boekhoudbaar → Wat-als-rekenmachine om effect te zien',
           euros: kiaAftrekExtra * ibPct1Kia,
           urgent: dag >= 20,
           bron: 'kia-deadline',
@@ -195,7 +198,7 @@ function genereerNotificaties_() {
       titel: '⏰ ' + kpi.aantalVervallenFacturen +
              ' vervallen factu' + (kpi.aantalVervallenFacturen === 1 ? 'ur' : 'ren'),
       tekst: 'Klanten zijn te laat met betalen — automatische herinneringen draaien al, maar je kunt nu zelf een nudge sturen voor de echt-vervallenen.',
-      actie: 'Boekhoudbaar → Facturen → Betalingsherinneringen',
+      actie: 'Boekhoudbaar → Facturen & Betalingen → Betalingsherinneringen',
       euros: null,
       urgent: kpi.aantalVervallenFacturen >= 3,
       bron: 'vervallen-facturen',
@@ -213,7 +216,7 @@ function genereerNotificaties_() {
       titel: '📋 Vul je profiel aan voor persoonlijk advies',
       tekst: 'Ontbrekend: ' + ontbrekend.join(', ') + '. Met deze info kunnen we ' +
              'de juiste aftrekposten voor je vinden (kost 1 minuut).',
-      actie: 'Boekhouding → Vul je profiel in voor persoonlijk advies',
+      actie: 'Boekhoudbaar → Vul je profiel in voor persoonlijk advies',
       euros: null,
       urgent: false,
       bron: 'profiel-onvolledig',

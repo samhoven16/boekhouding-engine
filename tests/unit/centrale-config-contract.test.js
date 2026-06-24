@@ -20,7 +20,7 @@ const client = fs.readFileSync(path.resolve(__dirname, '../../src/Belastingadvie
 
 describe('Centrale config-endpoint levert het volledige delivery-contract', () => {
   const fnStart = code.indexOf('function configEndpoint_(');
-  const fn = fnStart >= 0 ? code.slice(fnStart, fnStart + 1600) : '';
+  const fn = fnStart >= 0 ? code.slice(fnStart, fnStart + 2200) : '';
 
   test('configEndpoint_ bestaat en is gerouteerd', () => {
     expect(fnStart).toBeGreaterThan(-1);
@@ -43,6 +43,18 @@ describe('Centrale config-endpoint levert het volledige delivery-contract', () =
   test('serveert centrale flags + global broadcast', () => {
     expect(fn).toMatch(/flags:/);
     expect(fn).toMatch(/bericht:/);
+  });
+
+  test('serveert de warme-standby-URL uit STANDBY_SERVER_URL (F-SCALE-141b)', () => {
+    // Zonder dit veld is de standby-push inert: clients lezen cfg.licentieServerUrlFallback.
+    expect(fn).toMatch(/licentieServerUrlFallback:/);
+    expect(fn).toMatch(/STANDBY_SERVER_URL/);
+  });
+
+  test('serveert het centrale Gemini-model uit GEMINI_MODEL_CENTRAAL (F-SCALE-332)', () => {
+    // Zonder dit veld is de model-EOL-recovery inert: _geminiModel_ leest cfg.geminiModel.
+    expect(fn).toMatch(/geminiModel:/);
+    expect(fn).toMatch(/GEMINI_MODEL_CENTRAAL/);
   });
 
   test('client (getBelasting_) geeft server-tarieven voorrang op de lokale tabel', () => {

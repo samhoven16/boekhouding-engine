@@ -39,7 +39,7 @@ function fortressModeAan() {
   if (status.aan) {
     ui.alert('Fortress Mode is al aan',
       'Sinds: ' + (status.sinds || 'onbekend') +
-      '\n\nZet uit via Boekhoudbaar → Geavanceerd → Fortress Mode uit',
+      '\n\nZet uit via Boekhoudbaar → Instellingen → 🔓 Beveiligde modus UIT',
       ui.ButtonSet.OK);
     return;
   }

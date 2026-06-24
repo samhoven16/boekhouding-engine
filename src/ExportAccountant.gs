@@ -61,7 +61,19 @@ function exporteerAccountantsPakket() {
     gemaakteFiles.push('📄 Samenvatting');
 
     // ── 2. Journaalposten CSV ────────────────────────────────────────────
-    const jpCsv = exporteerAlsCsv_(ss, SHEETS.JOURNAALPOSTEN);
+    // F-ACC-162 + F-ACC-340: sluit CORRUPT-rijen uit (half-geboekt, saldo atomair
+    // teruggedraaid) ÉN filter op het exportjaar — exact zoals _xaf40Transactions_.
+    // Anders telt de accountant in deze jaar-gelabelde CSV een ander journaal-
+    // totaal dan in de XAF-auditfile (#7): F-ACC-162 dichtte de CORRUPT-as, maar
+    // het journaal loopt continu over jaren terwijl de XAF per jaar is — zonder
+    // jaarfilter bevat `2_Journaalposten_2026.csv` óók 2024/2025. Concept/
+    // Gestorneerd blijven (zitten ook in grootboeksaldo + XAF).
+    const jpCsv = exporteerAlsCsv_(ss, SHEETS.JOURNAALPOSTEN, function(rij) {
+      if ((rij.length > KOL.JP.status ? String(rij[KOL.JP.status] || '').trim().toUpperCase() : '') === 'CORRUPT') return false;
+      const d = rij[KOL.JP.datum];
+      const dObj = d instanceof Date ? d : (typeof parseDatum_ === 'function' ? parseDatum_(d) : null);
+      return !!dObj && !isNaN(dObj.getTime()) && dObj.getFullYear() === jaar;
+    });
     folder.createFile(`2_Journaalposten_${jaar}.csv`, jpCsv, 'text/csv');
     gemaakteFiles.push('📊 Journaalposten');
 
@@ -198,7 +210,7 @@ function verstuurSamenvattingAccountant(emailAccountant, persoonlijkBericht) {
   const jaar    = getBoekjaar_();
   const kg      = berekenKengetallen_(ss);
 
-  MailApp.sendEmail(emailAccountant, `Financieel overzicht ${bedrijf} — ${jaar}`, '', {
+  MailApp.sendEmail(emailAccountant, `Financieel overzicht ${bedrijf} — ${jaar}`, '', {  // klant-mail-ok: door gebruiker getriggerde accountant-export
     htmlBody: `
       <html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;max-width:600px;color:#1A1A1A;margin:0;padding:0;background:#F7F9FC">
         <div style="background:#0D1B4E;padding:22px 24px;border-radius:10px 10px 0 0">
@@ -294,16 +306,37 @@ In deze map vindt u de volledige boekhouding van ${bedrijf} voor ${jaar}.
 INHOUD:
   0_LEESMIJ_accountant.txt    — Dit bestand
   1_Samenvatting_${jaar}.txt  — Beknopt overzicht winst/verlies en balans
-  2_Journaalposten_${jaar}.csv — Alle boekingen (dubbel boekhouden)
-  3_Verkoopfacturen_${jaar}.csv — Alle uitgestuurde facturen
-  4_Inkoopfacturen_${jaar}.csv  — Alle ontvangen facturen/kosten
+  2_Journaalposten_${jaar}.csv — Boekingen van ${jaar} (dubbel boekhouden)
+  3_Verkoopfacturen_${jaar}.csv — Verkoopfacturen-register (volledig)
+  4_Inkoopfacturen_${jaar}.csv  — Inkoopfacturen-register (volledig)
   5_BTW_aangifte_${jaar}.txt    — BTW overzicht per kwartaal
-  6_Grootboeksaldi_${jaar}.csv  — Eindstanden per grootboekrekening
+  6_Grootboeksaldi_${jaar}.csv  — Huidige standen per grootboekrekening (cumulatief)
   7_Auditfile_*_${jaar}.xaf     — XAF 4.0 auditfile (direct importeerbaar)
 
+AANSLUITING & CONVENTIES (lees dit vóór u optelt):
+  • De administratie loopt door over jaren in één bestand. Het journaal (2) en
+    de XAF (7) zijn daarom op boekjaar ${jaar} gefilterd en sluiten 1-op-1 op
+    elkaar aan (zelfde totaal-debet/-credit). De facturen-registers (3,4) en de
+    grootboeksaldi (6) tonen de VOLLEDIGE administratie, niet alleen ${jaar}.
+  • De XAF bevat een openingsbalans (1-1-${jaar}); openingsbalans + transacties
+    = de eindstand. Daarmee staat de XAF op zichzelf, ook voor jaar 2 en later.
+  • Tekenconventie: in 6_Grootboeksaldi staat het boekhoudkundige type-saldo
+    (passiva/eigen vermogen/opbrengsten positief aan hun eigen zijde); de XAF
+    gebruikt rauwe debet/credit (D/C). Voor passief/EV/omzet is het bedrag dus
+    economisch gelijk maar tegengesteld van teken — geen fout.
+  • Jaarresultaat: bij de jaarovergang verschuift het resultaat op 1-1 van
+    rekening 2500 (Resultaat boekjaar) naar 2600 (Onverdeelde winst). In de
+    openingsbalans kan het resultaat dus nog op 2500 staan; de eerste boeking
+    van het jaar verplaatst het naar 2600.
+  • Dit pakket betreft boekjaar ${jaar}. Voor een eerder afgesloten jaar:
+    gebruik het archief-bestand van dat jaar of exporteer de XAF per jaar via
+    het menu Controle & Export.
+
 GEBRUIKTE GROOTBOEKSCHEMA:
-  Conform Nederlands RGS (Referentie Grootboekschema).
-  Codes zijn compatibel met Exact Online en Twinfield.
+  Gebaseerd op het Nederlandse RGS (Referentie Grootboekschema).
+  RGS-codes zijn toegevoegd voor de meest-gebruikte rekeningen; eigen of
+  zelden-gebruikte rekeningen koppel je zo nodig handmatig. De XAF-import
+  hieronder is de leidende route.
 
 IMPORT IN BOEKHOUDPAKKET:
   Gebruik bij voorkeur het XAF-bestand (7) — dat is het standaard
@@ -779,11 +812,17 @@ function maakNoahArkSnapshot_() {
 //  HELPER: SHEET → CSV
 // ─────────────────────────────────────────────
 
-function exporteerAlsCsv_(ss, sheetNaam) {
+function exporteerAlsCsv_(ss, sheetNaam, rijFilter) {
   const sheet = ss.getSheetByName(sheetNaam);
   if (!sheet) return '';
 
-  const data = sheet.getDataRange().getValues();
+  let data = sheet.getDataRange().getValues();
+  // Optionele rij-filter (alleen de databody, header blijft altijd staan).
+  // Gebruikt om CORRUPT-journaalposten uit te sluiten zodat de CSV hetzelfde
+  // journaal toont als de XAF-auditfile in hetzelfde pakket (F-ACC-162).
+  if (typeof rijFilter === 'function' && data.length > 1) {
+    data = [data[0]].concat(data.slice(1).filter(function(rij) { return rijFilter(rij); }));
+  }
   return data.map(rij =>
     rij.map(cel => {
       let waarde = '';
@@ -863,7 +902,7 @@ function mailMaandrapport() {
     }
 
     const opties = bijlagen.length > 0 ? { attachments: bijlagen, htmlBody: body.html } : { htmlBody: body.html };
-    MailApp.sendEmail(ontvangers.join(','), onderwerp, body.tekst, opties);
+    MailApp.sendEmail(ontvangers.join(','), onderwerp, body.tekst, opties);  // klant-mail-ok: door gebruiker getriggerde accountant-export
 
     schrijfAuditLog_('Maandrapport verzonden', `${maandNaam} ${jaar} → ${ontvangers.join(', ')}`);
     Logger.log('Maandrapport verstuurd naar: ' + ontvangers.join(', '));

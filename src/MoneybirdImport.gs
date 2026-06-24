@@ -118,7 +118,7 @@ function verwerkXafBestand(xafTekst) {
   const bestaandeNamen = {};
   const huidigeData = relatiesSheet.getDataRange().getValues();
   for (let i = 1; i < huidigeData.length; i++) {
-    const naam = String(huidigeData[i][1] || '').trim().toLowerCase();
+    const naam = String(huidigeData[i][KOL.REL.naam] || '').trim().toLowerCase();
     if (naam) bestaandeNamen[naam] = true;
   }
 
@@ -137,20 +137,27 @@ function verwerkXafBestand(xafTekst) {
         // FIX F-RED-304: XAF-velden zijn aanvaller-bestuurbaar; saniteer_ blokkeert
         // formule-injectie (leading =+-@) vóór ze als live cel in de sheet belanden
         // en later via XLSX/CSV-export bij de accountant worden geopend.
-        relatiesSheet.appendRow([
-          id, saniteer_(naam),
-          saniteer_(_xafTekst_(klant, 'streetAddress', ns) || ''),
-          saniteer_(_xafTekst_(klant, 'postalCode', ns) || ''),
-          saniteer_(_xafTekst_(klant, 'city', ns) || ''),
-          saniteer_(_xafTekst_(klant, 'country', ns) || 'NL'),
-          saniteer_(_xafTekst_(klant, 'taxRegistrationCountry', ns) || ''),
-          saniteer_(_xafTekst_(klant, 'taxRegIdent', ns) || ''),  // BTW-nummer
-          '', // KvK — XAF heeft geen veld, klant vult later in
-          saniteer_(_xafTekst_(klant, 'email', ns) || ''),
-          saniteer_(_xafTekst_(klant, 'telephone', ns) || ''),
-          'Klant',  // type
-          new Date(),
-        ]);
+        // F-IMP-310: de vorige appendRow gebruikte een eigen 13-koloms layout
+        // (naam→[1], email→[9], type→[11]) die NIET overeenkwam met het canonieke
+        // RELATIES-schema ([1]=Type, [2]=Naam, [10]=Email; Setup.gs:542 / KOL.REL).
+        // Gevolg: élke uit Moneybird geïmporteerde klant kwam corrupt binnen —
+        // de factuur-mail las dan [10]=telefoon i.p.v. e-mail, naam-lookup las
+        // het adres. Nu via KOL.REL op exact dezelfde kolommen als de rest van
+        // de app (één bron van waarheid, geen drift mogelijk).
+        const rij = new Array(KOL.REL.aangemaaktOp + 1).fill('');
+        rij[KOL.REL.relatieId]    = id;
+        rij[KOL.REL.type]         = 'Klant';
+        rij[KOL.REL.naam]         = saniteer_(naam);
+        rij[KOL.REL.adres]        = saniteer_(_xafTekst_(klant, 'streetAddress', ns) || '');
+        rij[KOL.REL.postcode]     = saniteer_(_xafTekst_(klant, 'postalCode', ns) || '');
+        rij[KOL.REL.plaats]       = saniteer_(_xafTekst_(klant, 'city', ns) || '');
+        rij[KOL.REL.land]         = saniteer_(_xafTekst_(klant, 'country', ns) || 'NL');
+        rij[KOL.REL.btwNummer]    = saniteer_(_xafTekst_(klant, 'taxRegIdent', ns) || '');
+        rij[KOL.REL.email]        = saniteer_(_xafTekst_(klant, 'email', ns) || '');
+        rij[KOL.REL.telefoon]     = saniteer_(_xafTekst_(klant, 'telephone', ns) || '');
+        rij[KOL.REL.actief]       = 'Ja';
+        rij[KOL.REL.aangemaaktOp] = new Date();
+        relatiesSheet.appendRow(rij);
         nieuweRelaties++;
         bestaandeNamen[naam.toLowerCase()] = true;
       });

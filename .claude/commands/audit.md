@@ -69,8 +69,33 @@ Consolideer naar `.claude/go-live-audit-<datum>.md` (zoals het protocol vraagt)
 en werk de ledger-statussen bij. Eindig met de eerlijkheidsclausule: dit vindt
 wat vandaag kenbaar is; het vervangt geen jaarlijkse wetscheck of echte klachten.
 
+## Stap 6 — Sluit de KLASSE, niet de instantie (anti-whack-a-mole)
+
+Dit is de stap die voorkomt dat elke ronde dezelfde soort bug opnieuw vindt.
+Voor élke bevinding: bepaal de **bug-klasse** (het wortel-patroon, niet de regel)
+en werk `.claude/bug-class-register.md` bij:
+
+- Bestaat de klasse al? → voeg de instantie toe; check of de bestaande sluiting
+  hem had moeten vangen (zo nee: de sluiting is lek — repareer de guard, niet
+  alleen de code).
+- Nieuwe klasse? → registreer 'm + kies de sluiting:
+  - **Uniforme syntax** (bv. router-acties) → schrijf een **contract-test** die
+    exhaustief over de codebase enumereert en faalt op elke nieuwe overtreder.
+  - **Heterogene syntax** (bv. sheet-kolommen, ScriptProperty-keys, klant-mails)
+    → een enumeratie-test geeft **vals vertrouwen**; de echte sluiting is een
+    **chokepoint + ban** (één accessor/helper, en een lint/test die het patroon
+    erbuiten verbiedt). Registreer 'm als 🔴 OPEN tot de chokepoint er is.
+- Een bevinding is pas écht klaar als de klasse op 🟢 CLOSED staat óf in het
+  register staat met het benodigde structurele werk (🟠 PARTIAL / 🔴 OPEN).
+
 ## Exit-criteria (wanneer is een ronde "af")
 
 - 0 BLOCKER open; alle HOOG gefixt of schriftelijk uitgesteld;
 - elke gesloten BLOCKER/HOOG heeft een regressietest (`GEBORGD`/`GESLOTEN`);
+- **elke bevinding heeft een klasse in `bug-class-register.md`** (instantie ≠ klasse);
 - ledger en dated rapport bijgewerkt; CI groen (Jest + lint + truth-check).
+
+> **"100% af" =** alle klassen in `bug-class-register.md` op 🟢 CLOSED. Dán — en
+> alleen dán — is een audit-herhaling zinvol-leeg (hij kan nog een *nieuwe*
+> klasse vinden, niet opnieuw een oude). Eerder is "af" een illusie.
+

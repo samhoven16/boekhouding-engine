@@ -18,7 +18,7 @@ function setup() {
     alertOfLog_(ui, 'Setup is al klaar',
       'Je boekhouding draait al — niks meer te doen hier.\n\n' +
       'Wil je toch helemaal opnieuw beginnen? Ga naar:\n' +
-      'Boekhouding → Instellingen → Setup opnieuw uitvoeren (reset)');
+      'Boekhoudbaar → Instellingen → Setup opnieuw uitvoeren (reset)');
     return;
   }
   // ──────────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ function setup() {
         if (!isLicentieGeldig_()) {
           alertOfLog_(ui, 'Licentie vereist',
             'U heeft een geldige licentiesleutel nodig om de setup te starten.\n\n' +
-            'Ga naar Boekhouding → Licentie activeren en voer uw sleutel in.');
+            'Ga naar Boekhoudbaar → Licentie activeren en voer uw sleutel in.');
           return;
         }
       } else {
@@ -130,8 +130,7 @@ function setup() {
     try { ss.toast('Even geduld — eerste setup duurt ~1-3 minuten', 'Boekhoudbaar — Setup gestart', 6); } catch (_) {}
 
     for (let i = 0; i < stappen.length; i++) {
-      const label = stappen[i][0];
-      const fn    = stappen[i][1];
+      const [label, fn] = stappen[i];  // [label, fn]-tuple, geen sheet-kolom
       try {
         Logger.log('Setup-stap ' + (i + 1) + '/' + stappen.length + ': ' + label);
         // UX: live progress-toast per stap. Klant ziet exact wat gebeurt
@@ -516,7 +515,7 @@ function zetJournaalpostenHeaders_(sheet) {
   // 19 kolommen: 16 originele + 3 HITL-validatie (Human-in-the-Loop):
   // Q=Status (Concept/Gevalideerd), R=Gevalideerd door (email), S=Gevalideerd op (datum).
   // Default voor nieuwe boekingen: Status='Concept'. Klant valideert via menu
-  // "Boekhouding → Geavanceerd → Boekingen valideren". Pas dan officieel "afgesloten".
+  // "Boekhoudbaar → Geavanceerd → Boekingen valideren". Pas dan officieel "afgesloten".
   const headers = [
     'Boeking ID', 'Datum', 'Omschrijving', 'Dagboek', 'Debet rekening',
     'Debet omschrijving', 'Credit rekening', 'Credit omschrijving',
@@ -567,21 +566,21 @@ function vulGrootboekschema_(ss) {
   try {
     const bestaande = sheet.getDataRange().getValues();
     for (let i = 1; i < bestaande.length; i++) {
-      const code = String(bestaande[i][0] || '').trim();
+      const code = String(bestaande[i][KOL.GB.code] || '').trim();
       if (!code) continue;
       if (standaardCodes.has(code)) {
-        const saldoRaw = bestaande[i][5];
+        const saldoRaw = bestaande[i][KOL.GB.saldo];
         const saldo = parseFloat(saldoRaw);
         if (isFinite(saldo) && saldo !== 0) bestaandeSaldi[code] = saldo;
       } else {
         // Klant-rij: bewaar exact zoals ingevoerd (6 kolommen)
         klantRijen.push([
           code,
-          String(bestaande[i][1] || ''),
-          String(bestaande[i][2] || ''),
-          String(bestaande[i][3] || ''),
-          String(bestaande[i][4] || ''),
-          parseFloat(bestaande[i][5]) || 0,
+          String(bestaande[i][KOL.GB.naam] || ''),
+          String(bestaande[i][KOL.GB.type] || ''),
+          String(bestaande[i][KOL.GB.categorie] || ''),
+          String(bestaande[i][KOL.GB.balansWenv] || ''),
+          parseFloat(bestaande[i][KOL.GB.saldo]) || 0,
         ]);
       }
     }
@@ -691,6 +690,7 @@ function zetInstellingen_(ss) {
     ['Dashboard vernieuwen bij openen', 'Ja'],
     ['Email rapporten naar', 'eigenaar@mijnbedrijf.nl'],
     ['BTW aangifte herinnering', 'Ja'],
+    ['E-mailnotificaties', 'Ja'],
     ['Gewerkte uren dit jaar', '0'],
     ['Thuiswerk dagen per jaar', '0'],
     ['', ''],
@@ -705,9 +705,9 @@ function zetInstellingen_(ss) {
   // van de default, terwijl nieuwe default-rijen wél worden toegevoegd.
   let aantalBehouden = 0;
   for (let i = 0; i < data.length; i++) {
-    const label = String(data[i][0] || '').trim();
+    const label = String(data[i][KOL.INST.sleutel] || '').trim();
     if (label && Object.prototype.hasOwnProperty.call(bestaandeWaarden, label)) {
-      data[i][1] = bestaandeWaarden[label];
+      data[i][KOL.INST.waarde] = bestaandeWaarden[label];
       aantalBehouden++;
     }
   }
@@ -732,7 +732,7 @@ function zetInstellingen_(ss) {
     [15, 'Uw telefoonnummer (bijv. 06-12345678)'],
     [16, 'Uw website (optioneel, bijv. www.uwbedrijf.nl)'],
     [32, 'Kies een sterk wachtwoord voor de API-koppeling (bijv. mijnbedrijf-2026-geheim)'],
-    [33, 'Vul hier de Web App URL in na publicatie — zie Boekhouding → Koppeling Zapier'],
+    [33, 'Vul hier de Web App URL in na publicatie — zie Boekhoudbaar → Instellingen → Website / webshop koppelen (API)'],
   ];
   notities.forEach(function(n) {
     sheet.getRange(n[0], 2).setNote(n[1]);
@@ -751,7 +751,7 @@ function zetInstellingen_(ss) {
     'Betalingstermijn (dagen)': 'Aantal dagen dat een klant heeft om te betalen. Gangbaar: 14 of 30.',
   };
   for (let i = 0; i < data.length; i++) {
-    const lbl = String(data[i][0] || '').trim();
+    const lbl = String(data[i][KOL.INST.sleutel] || '').trim();
     if (Object.prototype.hasOwnProperty.call(veldNotities, lbl)) {
       try { sheet.getRange(i + 1, 2).setNote(veldNotities[lbl]); } catch (_) {}
     }
@@ -1264,10 +1264,10 @@ function getInstelling_(sleutel) {
     const data = sheet.getDataRange().getValues();
     _instellingenCache = {};
     for (let i = 0; i < data.length; i++) {
-      if (data[i][0]) {
-        const val = String(data[i][1] != null ? data[i][1] : '');
+      if (data[i][KOL.INST.sleutel]) {
+        const val = String(data[i][KOL.INST.waarde] != null ? data[i][KOL.INST.waarde] : '');
         // Verouderde placeholder-tekst (begint met ←) behandelen als leeg
-        _instellingenCache[String(data[i][0])] = val.startsWith('←') ? '' : val;
+        _instellingenCache[String(data[i][KOL.INST.sleutel])] = val.startsWith('←') ? '' : val;
       }
     }
   }
@@ -1289,7 +1289,7 @@ function setInstelling_(sleutel, waarde) {
   if (!sheet) throw new Error('Tabblad Instellingen niet gevonden');
   const data = sheet.getDataRange().getValues();
   for (let i = 0; i < data.length; i++) {
-    if (String(data[i][0] || '') === String(sleutel)) {
+    if (String(data[i][KOL.INST.sleutel] || '') === String(sleutel)) {
       sheet.getRange(i + 1, 2).setValue(waarde);
       wisInstellingenCache_(); // Invalideert ook belasting-overrides cache
       return;
@@ -1327,6 +1327,6 @@ function resetSetup() {
 
   ui.alert('Klaar! ✓',
     'Reset gelukt. Run nu opnieuw setup via:\n' +
-    'Boekhouding → Instellingen → Eerste keer instellen (setup)',
+    'Boekhoudbaar → Instellingen → Eerste keer instellen (setup)',
     ui.ButtonSet.OK);
 }

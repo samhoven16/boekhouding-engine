@@ -30,11 +30,12 @@ function mockSheet(rows) {
 function mockSs(sheets) {
   return { getSheetByName: (naam) => (sheets[naam] ? mockSheet(sheets[naam]) : null) };
 }
-// Journaalpost-rij: [0]=id [1]=datum [4]=debet [6]=credit [8]=bedrag [14]=aangemaakt [16]=status
+// Journaalpost-rij: [0]=id [1]=datum [4]=debet [6]=credit [8]=bedrag [15]=aangemaakt-op [16]=status
+// ([14]=Notities; aangemaakt-op staat op [15] — F-FB-340: I8 las voorheen abusievelijk [14].)
 function jpRow(o) {
-  const r = new Array(17).fill('');
+  const r = new Array(19).fill('');
   r[0] = o.id || 'J'; r[1] = o.datum || ''; r[4] = o.debet || ''; r[6] = o.credit || '';
-  r[8] = (o.bedrag != null ? o.bedrag : 0); r[14] = o.aangemaakt || ''; r[16] = o.status || '';
+  r[8] = (o.bedrag != null ? o.bedrag : 0); r[15] = o.aangemaakt || ''; r[16] = o.status || '';
   return r;
 }
 // Grootboek-rij: [0]=code [2]=type(Actief/Passief) [4]=bw(Balans/WenV) [5]=saldo
@@ -93,6 +94,33 @@ describe('I₂ — Grootboeksaldo consistent (echte verifier)', () => {
       expect(res.code).toBe('I2');
       expect(res.tegenvoorbeeld.some((d) => d.rek === kapot)).toBe(true);
     }
+  });
+
+  // REGRESSIE (F-ACC-165, gevonden door cross-pr-regressie): een storno is een
+  // origineel + een aparte tegenrij die elkaar in het grootboek opheffen (netto
+  // 0). I2 telt journaalposten op tot `verwacht` en vergelijkt met het
+  // grootboeksaldo, MAAR skipt status==='GESTORNEERD' (FormeelBewijs.gs:196).
+  // Stempel je het origineel GESTORNEERD (de teruggedraaide fix) terwijl de
+  // tegenrij 'Gevalideerd' blijft, dan valt het origineel uit `verwacht` maar
+  // niet uit het grootboeksaldo → I2 wijkt af → "formeel bewijs geschonden" bij
+  // ÉLKE storno. Deze test zou die regressie hebben gevangen.
+  describe('storno-paar breekt I2 niet (regressie F-ACC-165)', () => {
+    const paar = (origStatus) => [JP_H,
+      jpRow({ id: 'BK7', debet: '1100', credit: '1300', bedrag: 100, status: origStatus }),
+      jpRow({ id: 'BK8', debet: '1300', credit: '1100', bedrag: 100, status: 'Gevalideerd' }), // storno-tegenrij
+    ];
+    // Grootboek telt beide rijen (geen status-filter) → netto 0 op beide.
+    const gbNul = [GB_H, gbRow({ code: '1100', saldo: 0 }), gbRow({ code: '1300', saldo: 0 })];
+
+    test('origineel met normale status → I2 geldig (origineel + storno netto 0)', () => {
+      const res = ctx._bewijs_I2_grootboekConsistent_(mockSs({ Journaalposten: paar('Gevalideerd'), Grootboekschema: gbNul }));
+      expect(res.geldig).toBe(true);
+    });
+
+    test('RATEL: origineel GESTORNEERD-gestempeld → I2 faalt (waarom F-ACC-165 is teruggedraaid)', () => {
+      const res = ctx._bewijs_I2_grootboekConsistent_(mockSs({ Journaalposten: paar('GESTORNEERD'), Grootboekschema: gbNul }));
+      expect(res.geldig).toBe(false);   // origineel geskipt, tegenrij niet → verwacht ≠ grootboek
+    });
   });
 });
 
@@ -168,19 +196,57 @@ describe('I₈ — Afgesloten periode immutability (echte verifier)', () => {
 });
 
 describe('I₉ — Leaf-only boekingen (echte verifier)', () => {
-  // '1000' is parent (kinderen 1100/1300); 1100,1300,8000 zijn leaves.
-  const gb = [GB_H, gbRow({ code: '1000' }), gbRow({ code: '1100' }), gbRow({ code: '1300' }), gbRow({ code: '8000' })];
-  test('boekingen alleen op leaf-rekeningen → geldig', () => {
+  // F-ACC-330: I₉ spiegelt nu valideerJournaalpostBalans_.purePArents
+  // (0100/0200/0300) i.p.v. een numerieke "eindigt-op-000"-heuristiek. De oude
+  // test borgde de bug: ze claimde dat boeken op 1000 (Voorraden — een gewone
+  // leaf) een schending was. Dat is fout; alleen de categorie-headers zijn dat.
+  const gb = [GB_H, gbRow({ code: '1000' }), gbRow({ code: '1100' }), gbRow({ code: '4000' }),
+    gbRow({ code: '4100' }), gbRow({ code: '4110' }), gbRow({ code: '8000' })];
+
+  test('boekingen op gewone leaves (incl. 1000, 8000) → geldig', () => {
     const jp = [JP_H,
-      jpRow({ debet: '1100', credit: '8000', bedrag: 100 }),
-      jpRow({ debet: '1300', credit: '8000', bedrag: 50 }),
+      jpRow({ debet: '1000', credit: '8000', bedrag: 100 }),
+      jpRow({ debet: '1100', credit: '8000', bedrag: 50 }),
     ];
     expect(ctx._bewijs_I9_leafOnlyBoekingen_(mockSs({ Grootboekschema: gb, Journaalposten: jp })).geldig).toBe(true);
   });
-  test('boeking op parent-rekening (1000) → schending I9', () => {
-    const jp = [JP_H, jpRow({ debet: '1000', credit: '8000', bedrag: 100 })];
+
+  test('RATEL F-ACC-330: boeking op 4000 (Crediteuren-leaf) → geldig (was vals-rood)', () => {
+    // 4000 wordt op élke inkoopfactuur geboekt; de oude heuristiek vlagde 'm als
+    // "parent" van 4100/4110 → I₉ vals-rood op een correcte administratie.
+    const jp = [JP_H, jpRow({ debet: '7990', credit: '4000', bedrag: 100 })];
+    expect(ctx._bewijs_I9_leafOnlyBoekingen_(mockSs({ Grootboekschema: gb, Journaalposten: jp })).geldig).toBe(true);
+  });
+
+  test('ambigue-maar-postbare parents (1400/4100) → geldig (consistent met validator)', () => {
+    const jp = [JP_H, jpRow({ debet: '1400', credit: '1100', bedrag: 21 }),
+      jpRow({ debet: '1100', credit: '4100', bedrag: 21 })];
+    expect(ctx._bewijs_I9_leafOnlyBoekingen_(mockSs({ Grootboekschema: gb, Journaalposten: jp })).geldig).toBe(true);
+  });
+
+  test('boeking op echte categorie-header (0100) → schending I9', () => {
+    const jp = [JP_H, jpRow({ debet: '0100', credit: '8000', bedrag: 100 })];
     const res = ctx._bewijs_I9_leafOnlyBoekingen_(mockSs({ Grootboekschema: gb, Journaalposten: jp }));
     expect(res.geldig).toBe(false); expect(res.code).toBe('I9');
+  });
+});
+
+// ── Drift-guard: I9 spiegelt de validator; de twee hardcoded lijsten mogen
+//    niet stil uiteenlopen (cross-pr LAAG: het is een COPY, geen shared const) ──
+describe('I₉ — pureParents == valideerJournaalpostBalans_.purePArents (geen drift)', () => {
+  const codesUit = (src, naam) => {
+    const m = src.match(new RegExp(naam + "\\s*=\\s*\\[([^\\]]*)\\]"));
+    return m ? (m[1].match(/'[^']+'/g) || []).map((s) => s.replace(/'/g, '')).sort() : null;
+  };
+  const i9 = codesUit(fs.readFileSync(path.resolve(__dirname, '../../src/FormeelBewijs.gs'), 'utf8'), 'pureParents');
+  const val = codesUit(fs.readFileSync(path.resolve(__dirname, '../../src/Invariants.gs'), 'utf8'), 'purePArents');
+
+  test('beide lijsten zijn vindbaar', () => {
+    expect(i9).not.toBeNull();
+    expect(val).not.toBeNull();
+  });
+  test('I9 en de validator hanteren exact dezelfde niet-postbare parents', () => {
+    expect(i9).toEqual(val);   // breidt iemand de validator uit, dan faalt dit tot I9 meegaat
   });
 });
 

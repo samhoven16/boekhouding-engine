@@ -16,7 +16,7 @@
  * Dit IS zelfverbeterend — maar via menselijke iteratie + telemetrie,
  * niet via runtime-AI-learning. Veel realistischer + privacy-vriendelijk.
  *
- * Menu: Boekhouding → Hulp → "💬 Fout melden / suggestie"
+ * Menu: Boekhoudbaar → Hulp → "💬 Fout melden / suggestie"
  */
 
 'use strict';

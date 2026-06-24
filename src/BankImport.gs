@@ -192,16 +192,16 @@ function matchTransactiesMetFacturen_(ss, transacties) {
   if (vfSheet) {
     const vfData = vfSheet.getDataRange().getValues();
     for (let i = 1; i < vfData.length; i++) {
-      const status = vfData[i][14];
+      const status = vfData[i][KOL.VF.status];
       if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
-      const incl = parseFloat(vfData[i][12]) || 0;
-      const betaald = parseFloat(vfData[i][13]) || 0;
+      const incl = parseFloat(vfData[i][KOL.VF.bedragIncl]) || 0;
+      const betaald = parseFloat(vfData[i][KOL.VF.betaaldBedrag]) || 0;
       const open = rondBedrag_(incl - betaald);
       if (open <= 0) continue;
       openFacturen.push({
-        rij: i + 1, nr: String(vfData[i][1] || ''),
-        datum: vfData[i][2] ? (vfData[i][2] instanceof Date ? vfData[i][2] : parseDatum_(vfData[i][2])) : null,
-        klant: String(vfData[i][5] || ''), openBedrag: open,
+        rij: i + 1, nr: String(vfData[i][KOL.VF.factuurnummer] || ''),
+        datum: vfData[i][KOL.VF.datum] ? (vfData[i][KOL.VF.datum] instanceof Date ? vfData[i][KOL.VF.datum] : parseDatum_(vfData[i][KOL.VF.datum])) : null,
+        klant: String(vfData[i][KOL.VF.klantnaam] || ''), openBedrag: open,
       });
     }
   }
@@ -212,15 +212,15 @@ function matchTransactiesMetFacturen_(ss, transacties) {
   if (ifSheet) {
     const ifData = ifSheet.getDataRange().getValues();
     for (let i = 1; i < ifData.length; i++) {
-      if (ifData[i][12] === FACTUUR_STATUS.BETAALD) continue;
-      const incl = parseFloat(ifData[i][11]) || 0;
+      if (ifData[i][KOL.IF.status] === FACTUUR_STATUS.BETAALD) continue;
+      const incl = parseFloat(ifData[i][KOL.IF.bedragIncl]) || 0;
       if (incl <= 0) continue;
       openInkoop.push({
-        rij: i + 1, nr: String(ifData[i][1] || ''),
+        rij: i + 1, nr: String(ifData[i][KOL.IF.internNummer] || ''),
         // CYCLE-60: parseDatum_ voor string-tolerance (CSV-import datum)
-        datum: ifData[i][3] ? ((ifData[i][3] instanceof Date) ? ifData[i][3] : parseDatum_(ifData[i][3])) : null,
-        leverancier: String(ifData[i][6] || ''),
-        ref: String(ifData[i][4] || ''),
+        datum: ifData[i][KOL.IF.factuurdatumLeverancier] ? ((ifData[i][KOL.IF.factuurdatumLeverancier] instanceof Date) ? ifData[i][KOL.IF.factuurdatumLeverancier] : parseDatum_(ifData[i][KOL.IF.factuurdatumLeverancier])) : null,
+        leverancier: String(ifData[i][KOL.IF.leveranciernaam] || ''),
+        ref: String(ifData[i][KOL.IF.factuurrefLeverancier] || ''),
         openBedrag: rondBedrag_(incl),
       });
     }
@@ -304,8 +304,8 @@ function verwerkBankImport_(ss, transacties) {
   try {
     const btData = btSheet.getDataRange().getValues();
     for (let i = 1; i < btData.length; i++) {
-      const dt = btData[i][1] instanceof Date ? Utilities.formatDate(btData[i][1], 'Europe/Amsterdam', 'yyyy-MM-dd') : String(btData[i][1] || '');
-      const key = dt + '|' + (parseFloat(btData[i][3]) || 0).toFixed(2) + '|' + String(btData[i][2] || '').slice(0, 30);
+      const dt = btData[i][KOL.BT.datum] instanceof Date ? Utilities.formatDate(btData[i][KOL.BT.datum], 'Europe/Amsterdam', 'yyyy-MM-dd') : String(btData[i][KOL.BT.datum] || '');
+      const key = dt + '|' + (parseFloat(btData[i][KOL.BT.bedrag]) || 0).toFixed(2) + '|' + String(btData[i][KOL.BT.omschrijving] || '').slice(0, 30);
       bestaandeKeys.add(key);
     }
   } catch (e) { Logger.log('BankImport dedup-set fout: ' + e.message); }
@@ -361,17 +361,22 @@ function verwerkBankImport_(ss, transacties) {
       }
       const status = t.match ? 'Gekoppeld' : (grootboek ? 'Auto-gecategoriseerd' : 'Ongekoppeld');
 
-      // Push naar accumulator ipv appendRow (10× sneller bij volume)
+      // Push naar accumulator ipv appendRow (10× sneller bij volume).
+      // FIX (sibling van F-RED-304): de vrije-tekstvelden uit het bankafschrift
+      // (omschr/tegenrekening/tegenpartij/referentie) zijn door een DERDE (de
+      // betaler) bestuurbaar → saniteer_ blokkeert formule-injectie (=+-@) vóór
+      // ze als live cel in de sheet belanden en later via XLSX bij de accountant
+      // openen. MoneybirdImport doet dit al; BankImport was vergeten.
       teSchrijvenRijen.push([
         transactieId,
         t.datum,
-        t.omschr,
+        saniteer_(t.omschr),
         t.bedrag,
         t.bedrag > 0 ? 'Ontvangst' : 'Betaling',
         '1200',
-        t.tegenrekening,
-        t.tegenpartij,
-        t.referentie,
+        saniteer_(t.tegenrekening),
+        saniteer_(t.tegenpartij),
+        saniteer_(t.referentie),
         grootboek,
         '',
         gekoppeldFactuur,

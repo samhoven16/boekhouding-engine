@@ -84,7 +84,7 @@ DTSTAMP:20260507T000000Z
 DTSTART;VALUE=DATE:20260501
 DTEND;VALUE=DATE:20260502
 SUMMARY:📊 IB-aangifte 2025 deadline (zonder uitstel)
-DESCRIPTION:Inkomstenbelasting + ZVW-aangifte 2025 moet vóór 1 mei 2026 bij de Belastingdienst zijn — TENZIJ je vóór 1 mei uitstel hebt aangevraagd (max 1 september).\n\nIn Boekhoudbaar: Boekhoudbaar → Belastingadvies voor schatting van te betalen IB.
+DESCRIPTION:Inkomstenbelasting + ZVW-aangifte 2025 moet vóór 1 mei 2026 bij de Belastingdienst zijn — TENZIJ je vóór 1 mei uitstel hebt aangevraagd (max 1 september).\n\nIn Boekhoudbaar: Boekhoudbaar → Fiscaal & besparingstips → Fiscaal overzicht & besparingstips.
 URL:https://www.boekhoudbaar.nl/gids/btw-aangifte-zzp/
 CATEGORIES:Belasting,IB
 BEGIN:VALARM
@@ -100,7 +100,7 @@ DTSTAMP:20260507T000000Z
 DTSTART;VALUE=DATE:20261231
 DTEND;VALUE=DATE:20270101
 SUMMARY:🎄 Jaarafsluiting 2026 — boekhouding klaarmaken
-DESCRIPTION:Eind boekjaar. Tijd om: 1) laatste facturen ingediend\, 2) bankafschrift ingelezen tot 31 dec\, 3) jaarafsluiting uitvoeren in Boekhoudbaar (Boekhoudbaar → Instellingen → Sluit jaar af). Dit archiveert 2026 + zet factuurnummering klaar voor 2027.
+DESCRIPTION:Eind boekjaar. Tijd om: 1) laatste facturen ingediend\, 2) bankafschrift ingelezen tot 31 dec\, 3) jaarafsluiting uitvoeren in Boekhoudbaar (Boekhoudbaar → Instellingen → Jaarafsluiting wizard). Dit archiveert 2026 + zet factuurnummering klaar voor 2027.
 URL:https://www.boekhoudbaar.nl/gids/
 CATEGORIES:Boekhouding
 BEGIN:VALARM

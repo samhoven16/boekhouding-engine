@@ -152,6 +152,32 @@ function _viesCacheSet_(key, data) {
 }
 
 /**
+ * F-DUR-150: ruimt verlopen VIES_-cache-keys op. De 30-dagen-TTL was lees-tijd-
+ * only (een verlopen entry werd genegeerd maar NOOIT verwijderd) → onbegrensde
+ * ScriptProperty-groei bij veel distinct EU-btw-nummers richting de harde
+ * 500KB-cliff (zelfde klasse als F-SCALE-142/143). Verlopen entries worden tóch
+ * opnieuw opgehaald, dus verwijderen is veilig. Draait dagelijks via
+ * dagelijkseTaken, zelfde getProperties()-sweep als cleanupEmailIdem.
+ * @returns {number} aantal verwijderde keys
+ */
+function cleanupViesCache_() {
+  const props = PropertiesService.getScriptProperties();
+  const alle = props.getProperties();
+  const cutoffMs = Date.now() - VIES_CACHE_TTL_DAGEN * 24 * 60 * 60 * 1000;
+  let verwijderd = 0;
+  Object.keys(alle).forEach(function(k) {
+    if (k.indexOf('VIES_') !== 0) return;
+    let ts = 0;
+    try { ts = parseInt((JSON.parse(alle[k] || '{}') || {}).ts, 10) || 0; } catch (_) { ts = 0; }
+    // Geen/onleesbare ts (corrupt/legacy) of ouder dan de TTL → weg.
+    if (!ts || ts < cutoffMs) {
+      try { props.deleteProperty(k); verwijderd++; } catch (_) {}
+    }
+  });
+  return verwijderd;
+}
+
+/**
  * OSS-monitor: berekent cumulatieve EU-B2C-omzet huidig kalenderjaar.
  * Returns { totaalEuB2c, drempelOverschreden, perLand: {DE: 1234, FR: 567} }
  */
@@ -167,20 +193,20 @@ function controleerOssDrempel_() {
   let totaal = 0;
 
   // We hebben factuur-rij maar niet altijd EU-flag. Heuristiek:
-  // Klant-BTW-nr (kolom 21) of land-veld in adres parseren.
+  // Klant-BTW-nr (KOL.VF.btwNrKlant) of land-veld in adres parseren.
   for (let i = 1; i < data.length; i++) {
     // CYCLE-38: string-dated invoices (CSV-import) werden silent geskipped
     // doordat alleen `instanceof Date` werd geaccepteerd. Gevolg: klant
     // overschreed €10k OSS-drempel zonder waarschuwing → BTW-aangifte
     // mismatch. Nu: parseDatum_ accepteert string én Date.
-    const ruwDatum = data[i][2];
+    const ruwDatum = data[i][KOL.VF.datum];
     const datum = (ruwDatum instanceof Date) ? ruwDatum
                 : ruwDatum ? parseDatum_(ruwDatum) : null;
     if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== huidigJaar) continue;
-    const status = String(data[i][14] || '');
+    const status = String(data[i][KOL.VF.status] || '');
     if (status === 'Gecrediteerd') continue;
-    const btwNrKlant = String(data[i][21] || '').trim();
-    const klantAdres = String(data[i][6] || '');
+    const btwNrKlant = String(data[i][KOL.VF.btwNrKlant] || '').trim();   // [7] = BTW-nr klant (NIET [21] = Aangemaakt op)
+    const klantAdres = String(data[i][KOL.VF.kvkKlant] || '');
     // Detecteer EU-land
     let euLand = detecteerEULand_(btwNrKlant, '');
     if (!euLand) {
@@ -191,7 +217,7 @@ function controleerOssDrempel_() {
     if (!euLand) continue;
     // B2B (BTW-nr) → niet OSS, maar ICP. Alleen B2C telt voor OSS-drempel.
     if (btwNrKlant && btwNrKlant.length > 5) continue;
-    const omzet = parseFloat(data[i][9]) || 0;
+    const omzet = parseFloat(data[i][KOL.VF.bedragExcl]) || 0;
     perLand[euLand] = (perLand[euLand] || 0) + omzet;
     totaal += omzet;
   }
@@ -247,17 +273,17 @@ function genereerIcpRapport() {
     // CYCLE-38: parseDatum_ voor string-tolerance (zie controleerOssDrempel_).
     // ICP-rapport is legaal verplicht per kwartaal — incompleet rapport door
     // string-skip = onjuiste Belastingdienst-rapportage.
-    const ruwDatum = data[i][2];
+    const ruwDatum = data[i][KOL.VF.datum];
     const datum = (ruwDatum instanceof Date) ? ruwDatum
                 : ruwDatum ? parseDatum_(ruwDatum) : null;
     if (!datum || isNaN(datum.getTime()) || datum < van || datum > tot) continue;
-    const status = String(data[i][14] || '');
+    const status = String(data[i][KOL.VF.status] || '');
     if (status === 'Gecrediteerd') continue;
-    const btwNrKlant = String(data[i][21] || '').trim();
+    const btwNrKlant = String(data[i][KOL.VF.btwNrKlant] || '').trim();   // [7] = BTW-nr klant (NIET [21] = Aangemaakt op)
     const land = detecteerEULand_(btwNrKlant);
     if (!land || !btwNrKlant || btwNrKlant.length <= 5) continue;  // alleen EU B2B
-    const klantnaam = String(data[i][5] || '');
-    const omzet = parseFloat(data[i][9]) || 0;
+    const klantnaam = String(data[i][KOL.VF.klantnaam] || '');
+    const omzet = parseFloat(data[i][KOL.VF.bedragExcl]) || 0;
     const key = btwNrKlant;
     if (!agg[key]) agg[key] = { btwNr: btwNrKlant, naam: klantnaam, land: land, omzet: 0, aantalFacturen: 0 };
     agg[key].omzet += omzet;

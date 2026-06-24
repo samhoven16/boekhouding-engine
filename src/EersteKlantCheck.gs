@@ -3,12 +3,12 @@
  * Smoke-test voor "is dit systeem klaar voor een echte klant?" — één klik
  * en je weet binnen 30 seconden waar het haakt.
  *
- * Aangeroepen vanuit menu: Boekhouding → Controle → ✅ Werkt-alles-test
+ * Aangeroepen vanuit menu: Boekhoudbaar → Controle & Export → ✅ Alles werkt-check
  *
  * Vergeleken met `voerGezondheidCheckUit` (GezondheidCheck.gs):
  *   - Gezondheidscheck = financiële integriteit (balans klopt, geen verweesde
  *     facturen, BTW-rekensommen kloppen)
- *   - Werkt-alles-test = systeem-readiness (kan ik überhaupt facturen maken,
+ *   - Alles werkt-check = systeem-readiness (kan ik überhaupt facturen maken,
  *     emails versturen, integraties bereiken). LEZEND/non-destructief.
  *
  * Strategie:
@@ -67,7 +67,7 @@ function controleerEersteKlantReady() {
   safeAuditLog_('Eerste-klant-check', 'score=' + score + '% ok=' + okN + ' warn=' + warnN + ' fout=' + foutN);
 
   if (ui) {
-    ui.alert(klaar ? '✅ Werkt-alles-test geslaagd' : '⚠️ Werkt-alles-test: actie nodig', samenvatting, ui.ButtonSet.OK);
+    ui.alert(klaar ? '✅ Alles werkt-check geslaagd' : '⚠️ Alles werkt-check: actie nodig', samenvatting, ui.ButtonSet.OK);
   } else {
     Logger.log(samenvatting);
   }
@@ -85,7 +85,7 @@ function _ekrCheckSetup_(ss) {
     if (!setupDone) {
       return { naam: 'Setup voltooid', status: 'FOUT',
         bericht: 'Setup is nog niet uitgevoerd.',
-        fix: 'Boekhouding → 1. Setup' };
+        fix: 'Boekhoudbaar → 1. Setup' };
     }
     if (!ss) {
       return { naam: 'Setup voltooid', status: 'FOUT',
@@ -112,7 +112,7 @@ function _ekrCheckSheetsAanwezig_(ss) {
   }
   return { naam: 'Tabbladen aanwezig', status: 'FOUT',
     bericht: 'Ontbrekend: ' + ontbreken.join(', '),
-    fix: 'Run setup() opnieuw via Boekhouding → 1. Setup' };
+    fix: 'Run setup() opnieuw via Boekhoudbaar → 1. Setup' };
 }
 
 function _ekrCheckTriggers_() {
@@ -127,7 +127,7 @@ function _ekrCheckTriggers_() {
     }
     return { naam: 'Triggers geïnstalleerd', status: 'FOUT',
       bericht: 'Ontbrekende handlers: ' + ontbrekend.join(', '),
-      fix: 'Boekhouding → Diagnostiek → Triggers herinstalleren' };
+      fix: 'Heropen het bestand — ontbrekende triggers herstellen zichzelf automatisch bij openen. Blijft de melding na heropenen? Mail support@boekhoudbaar.nl' };
   } catch (e) {
     return { naam: 'Triggers geïnstalleerd', status: 'WAARSCHUWING',
       bericht: 'Trigger-API gaf fout: ' + e.message,
@@ -145,7 +145,7 @@ function _ekrCheckLicentie_() {
     if (ok) return { naam: 'Licentie geldig', status: 'OK', bericht: 'Licentie actief.' };
     return { naam: 'Licentie geldig', status: 'FOUT',
       bericht: 'Geen geldige licentie — klant kan systeem niet gebruiken.',
-      fix: 'Boekhouding → Licentie → Activeer licentie' };
+      fix: 'Boekhoudbaar → Instellingen → Licentie activeren' };
   } catch (e) {
     return { naam: 'Licentie geldig', status: 'WAARSCHUWING',
       bericht: 'Kon niet valideren: ' + e.message };
@@ -221,7 +221,7 @@ function _ekrCheckBedrijfsgegevens_() {
     }
     return { naam: 'Bedrijfsgegevens compleet', status: 'FOUT',
       bericht: 'Ontbreekt: ' + ontbr.join(', '),
-      fix: 'Tabblad Instellingen invullen of Boekhouding → Instellingen' };
+      fix: 'Tabblad Instellingen invullen of Boekhoudbaar → Instellingen' };
   } catch (e) {
     return { naam: 'Bedrijfsgegevens compleet', status: 'WAARSCHUWING', bericht: e.message };
   }

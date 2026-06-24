@@ -14,9 +14,11 @@
  *
  * Compliance: art. 52 AWR vereist juiste administratie. Auto-boekingen
  * kunnen fouten bevatten (verkeerde categorisatie door AI, typo in BTW%).
- * Dwingt klant tot review-stap. Eens gevalideerd → geldt als "afgesloten".
+ * Dwingt klant tot review-stap. Eens gevalideerd = door de klant nagekeken
+ * (GL/BTW/bijlage); de rij blijft BEWERKBAAR tot de periode wordt afgesloten
+ * (jaarafsluiting via vergrendelPeriode_) — validatie vergrendelt niets.
  *
- * Menu: Boekhouding → Geavanceerd → "✔ Concept-boekingen valideren"
+ * Menu: Boekhoudbaar → Geavanceerd → "✔ Concept-boekingen valideren"
  */
 
 'use strict';
@@ -41,8 +43,8 @@ function openValidatieChecklist() {
   if (concept.length === 0) {
     ui.alert(
       'Alle boekingen gevalideerd ✓',
-      'Geen Concept-boekingen meer. Alle journaalposten zijn handmatig bevestigd ' +
-      'en gelden als "afgesloten" (art. 52 AWR-compliant).',
+      'Geen Concept-boekingen meer. Alle journaalposten zijn door jou nagekeken ' +
+      '(grootboek, BTW, bijlage). Ze blijven bewerkbaar tot je de periode afsluit.',
       ui.ButtonSet.OK
     );
     return;
@@ -87,8 +89,8 @@ function openValidatieChecklist() {
     <div class="uitleg">
       <strong>Human-in-the-Loop validatie</strong>: door deze rij te valideren bevestig je dat
       (1) de <strong>grootboekrekening</strong> correct is, (2) het <strong>BTW-tarief</strong>
-      klopt en (3) er een <strong>bijlage</strong> in Drive staat. Pas na bevestiging telt
-      de boeking als afgesloten voor de Belastingdienst (art. 52 AWR).
+      klopt en (3) er een <strong>bijlage</strong> in Drive staat. Na bevestiging is de
+      boeking door jou nagekeken; ze blijft bewerkbaar tot je de periode afsluit.
     </div>
     <div class="teller" id="teller"><strong>${concept.length}</strong> boekingen wachten op validatie</div>
     <table style="margin-top:8px">
@@ -230,7 +232,7 @@ function _waarschuwOnvalidered_() {
     const aantal = _haalConceptBoekingen_(ss).length;
     if (aantal >= 10) {
       ss.toast(
-        aantal + ' boekingen wachten op validatie. Open Boekhouding → Geavanceerd → ' +
+        aantal + ' boekingen wachten op validatie. Open Boekhoudbaar → Geavanceerd → ' +
         'Concept-boekingen valideren.',
         '✔ HITL-validatie open',
         8

@@ -326,17 +326,16 @@ function adminZetTestModus(token, aan) {
   const sessieFout = _adminVereisSessie_(token);
   if (sessieFout) return sessieFout;
 
-  const props = PropertiesService.getScriptProperties();
-  if (aan === true || aan === 'ja' || aan === 'true') {
-    props.setProperty('PRODUCT_PRIJS', '0.01');
-    props.setProperty('REF_KORTING', '0');
-    try { schrijfAuditLog_('Test-modus AAN (dashboard)', 'prijs=0.01 ref=0'); } catch (_) {}
-    return { ok: true, testModusAan: true };
-  }
-  props.setProperty('PRODUCT_PRIJS', '49.00');
-  props.deleteProperty('REF_KORTING');
-  try { schrijfAuditLog_('Test-modus UIT (dashboard)', 'prijs=49.00'); } catch (_) {}
-  return { ok: true, testModusAan: false };
+  // F-RED-331 (2e ronde): via de gedeelde chokepoint zodat TEST_MODUS_VERLOOPT
+  // óók gezet wordt — anders is de 24u-auto-revert inert voor deze (primaire)
+  // dashboard-route en blijft een vergeten €0,01-stand onbeperkt staan.
+  const isAan = (aan === true || aan === 'ja' || aan === 'true');
+  _zetTestModusPreset_(isAan);
+  try {
+    schrijfAuditLog_('Test-modus ' + (isAan ? 'AAN' : 'UIT') + ' (dashboard)',
+      isAan ? 'prijs=0.01 ref=0 verloopt=+24u' : 'prijs=49.00');
+  } catch (_) {}
+  return { ok: true, testModusAan: isAan };
 }
 
 // ─────────────────────────────────────────────

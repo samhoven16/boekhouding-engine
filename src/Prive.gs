@@ -19,6 +19,16 @@
 
 const PRIVE_TAB    = 'Privé Financiën';
 const VERMOGEN_TAB = 'Vermogensoverzicht';
+// Module-lokale kolom-accessors (zie zetPriveHeaders_ / vermogen-headers);
+// privé aan deze module, zelfde principe als KOL (vgl. UREN_KOL).
+// eslint-disable-next-line no-unused-vars
+const PRIVE_KOL = Object.freeze({
+  datum: 0, omschrijving: 1, categorie: 2, bedrag: 3, type: 4, rekening: 5, notities: 6,
+});
+// eslint-disable-next-line no-unused-vars
+const VERMOGEN_KOL = Object.freeze({
+  categorie: 0, omschrijving: 1, waarde: 2, peildatum: 3, notities: 4,
+});
 
 // ─────────────────────────────────────────────
 //  PRIVÉ DASHBOARD OPENEN
@@ -256,9 +266,9 @@ function vernieuwPriveDashboard_(ss) {
     // parseDatum_ + isNaN-check — voorheen gaf `new Date('corrupt')` een
     // Date-object met NaN getime, en `!datum` was false → loop crashte
     // bij datum.getFullYear().
-    const datum  = data[i][0] ? parseDatum_(data[i][0]) : null;
-    const bedrag = parseFloat(data[i][3]) || 0;
-    const cat    = String(data[i][2] || 'Overig');
+    const datum  = data[i][PRIVE_KOL.datum] ? parseDatum_(data[i][PRIVE_KOL.datum]) : null;
+    const bedrag = parseFloat(data[i][PRIVE_KOL.bedrag]) || 0;
+    const cat    = String(data[i][PRIVE_KOL.categorie] || 'Overig');
     if (!datum || isNaN(datum.getTime())) continue;
 
     if (datum.getFullYear() === huidigeJ) {
@@ -312,8 +322,8 @@ function openIbAangifteHelper() {
   const _box2Pct1 = (_B && _B.BOX2_SCHIJF_1_PCT) || 0.245;
   const _box2Max1 = (_B && _B.BOX2_SCHIJF_1_MAX) || 67000;
   const _box2Pct2 = (_B && _B.BOX2_SCHIJF_2_PCT) || 0.31;
-  const _box3Vrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 57684;
-  const _box3Forf = (_B && _B.BOX3_FORFAIT_BELEGGING) || 0.0588;
+  const _box3Vrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 59357;
+  const _box3Forf = (_B && _B.BOX3_FORFAIT_BELEGGING) || 0.06;   // F-TAX-110: 2026-default, geen 0,0588-restant (dead-fallback, vuurt niet)
   const _box3Tar  = (_B && _B.BOX3_TARIEF) || 0.36;
 
   const html = HtmlService.createHtmlOutput(`
@@ -342,7 +352,7 @@ function openIbAangifteHelper() {
       .info{font-size:10px;color:#5A6478;margin-top:2px}
     </style>
     <h3>IB aangifte-schatting ${_jaar}</h3>
-    <p style="font-size:11px;color:#5A6478">Snelle schatting — niet voor officiële aangifte. Raadpleeg een belastingadviseur voor definitieve berekening.</p>
+    <p style="font-size:11px;color:#5A6478">Snelle schatting — niet voor officiële aangifte. De heffingskorting is hier vereenvoudigd (zonder inkomensafhankelijke afbouw); het Fiscaal overzicht rekent de afbouw wél mee. Raadpleeg een belastingadviseur voor de definitieve berekening.</p>
 
     <div class="box">
       <h4>Box 1 — inkomen uit werk en woning</h4>
@@ -504,12 +514,12 @@ function beheerVermogensoverzicht() {
   const data = sheet.getDataRange().getValues();
   let totaal = 0;
   for (let i = 1; i < data.length; i++) {
-    totaal += parseFloat(data[i][2]) || 0;
+    totaal += parseFloat(data[i][VERMOGEN_KOL.waarde]) || 0;
   }
   // Heffingsvrij vermogen Box 3 — uit BELASTING_PER_JAAR (auto-update bij Prinsjesdag).
   // Bron: belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen
   const _B = (typeof getBelasting_ === 'function') ? getBelasting_() : null;
-  const heffingsvrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 57684;
+  const heffingsvrij = (_B && _B.BOX3_HEFFINGSVRIJ) || 59357;
   const grondslag = Math.max(0, totaal - heffingsvrij);
 
   ss.toast(

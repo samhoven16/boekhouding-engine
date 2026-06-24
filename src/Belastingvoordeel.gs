@@ -114,7 +114,7 @@ function getSeizoensTip_() {
       tekst:
         `BTW-aangifte Q4 ${jaar - 1} moet vóór 31 januari ingediend zijn. ` +
         `Bovendien: begin met het verzamelen van bonnen/facturen voor uw IB-aangifte ${jaar - 1}. ` +
-        `Maak een einde-jaar-overzicht via Boekhouding → BTW → BTW-aangifte Q4.`,
+        `Maak een einde-jaar-overzicht via Boekhoudbaar → BTW → BTW-aangifte Q4.`,
       deadline: '31 januari',
       urgent: dag >= 20,
     };
@@ -129,7 +129,7 @@ function getSeizoensTip_() {
         `De IB-aangifte deadline is 1 mei ${jaar}. Begin nu met verzamelen: ` +
         `loonbonus van werkgever (jaaropgave), zorgnota's, hypotheek-rente-overzicht, ` +
         `bewijs zelfstandigenaftrek (urenadministratie ≥ 1.225 uur). ` +
-        `Boekhouding → Belastingadvies geeft een schatting van uw IB-aanslag.`,
+        `Boekhoudbaar → 💡 Fiscaal & besparingstips → Fiscaal overzicht & besparingstips geeft een schatting van uw IB-aanslag.`,
       deadline: '1 mei',
       urgent: false,
     };
@@ -149,7 +149,7 @@ function getSeizoensTip_() {
         // jaar-correcte bedragen via getBelasting_().
         `zelfstandigenaftrek, startersaftrek (eerste 3 jaar), ` +
         `MKB-winstvrijstelling, KIA, MIA/VAMIL, EIA, AOV-premie, lijfrente. ` +
-        `Open Boekhouding → Belastingadvies voor de exacte bedragen van dat jaar.`,
+        `Open Boekhoudbaar → 💡 Fiscaal & besparingstips → Fiscaal overzicht & besparingstips voor de exacte bedragen van dat jaar.`,
       deadline: '1 mei',
       urgent: false,
     };
@@ -180,7 +180,7 @@ function getSeizoensTip_() {
       titel: `📅 ${maand === 5 ? 'Mei' : maand === 7 ? 'Juli' : 'Oktober'}: BTW-aangifte ${kwLabel}`,
       tekst:
         `BTW-aangifte ${kwLabel} ${jaar} moet vóór ${deadlineMaand} ingediend. ` +
-        `Boekhouding → BTW → BTW-aangifte ${kwLabel} genereert het overzicht. ` +
+        `Boekhoudbaar → BTW → BTW-aangifte ${kwLabel} genereert het overzicht. ` +
         `Tip: zet BTW direct na ontvangst van facturen apart op een spaarrekening — ` +
         `voorkomt verrassingen bij aangifte.`,
       deadline: deadlineMaand,
@@ -233,7 +233,7 @@ function getSeizoensTip_() {
     tekst:
       `Tip: registreer wekelijks uw zakelijke kilometers (€0,23/km aftrekbaar) ` +
       `en thuiswerkdagen (€2,40/dag aftrekbaar). Vele ZZP'ers vergeten dit en ` +
-      `missen €500-€1.500 aftrek per jaar. Voer in via Boekhouding → Nieuwe boeking.`,
+      `missen €500-€1.500 aftrek per jaar. Voer in via Boekhoudbaar → Nieuwe boeking.`,
     deadline: null,
     urgent: false,
   };
@@ -474,12 +474,12 @@ function toonReiskostenTracker() {
       const data = jpSheet.getDataRange().getValues();
       const jaar = (typeof getBoekjaar_ === 'function') ? getBoekjaar_() : new Date().getFullYear();
       for (let i = 1; i < data.length; i++) {
-        const datum = data[i][1] ? parseDatum_(data[i][1]) : null;
+        const datum = data[i][KOL.JP.datum] ? parseDatum_(data[i][KOL.JP.datum]) : null;
         if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
-        const debet = String(data[i][4] || '');
-        const omschr = String(data[i][2] || '').toLowerCase();
+        const debet = String(data[i][KOL.JP.debetRekening] || '');
+        const omschr = String(data[i][KOL.JP.omschrijving] || '').toLowerCase();
         if (debet === '7350' || /reiskosten|kilometer/i.test(omschr)) {
-          bedragYTD += parseFloat(data[i][8]) || 0;
+          bedragYTD += parseFloat(data[i][KOL.JP.bedrag]) || 0;
           // Probeer km te extraheren uit omschrijving "X km × €0,23"
           const m = omschr.match(/(\d+)\s*km/);
           if (m) kmYTD += parseInt(m[1], 10);
@@ -977,8 +977,8 @@ function toonBtwSpaarpot() {
       const data = sheet.getDataRange().getValues();
       // Standaard rekening voor BTW-spaarpot: 1205 of 1220 (spaarrekening zakelijk)
       for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0]) === '1205' || String(data[i][0]) === '1220') {
-          return parseFloat(data[i][5]) || 0;
+        if (String(data[i][KOL.GB.code]) === '1205' || String(data[i][KOL.GB.code]) === '1220') {
+          return parseFloat(data[i][KOL.GB.saldo]) || 0;
         }
       }
     } catch (_) {}

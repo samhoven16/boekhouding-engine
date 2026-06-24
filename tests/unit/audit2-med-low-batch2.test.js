@@ -151,7 +151,9 @@ describe('Fix #4 — Top-3 ontbrekende FAQ-items', () => {
   test('FAQ "balans" noemt Gezondheidscheck als troubleshoot-pad', () => {
     const start = home.indexOf('id="balans-klopt-niet"');
     const blok = home.slice(start, start + 3000);
-    expect(blok).toMatch(/Gezondheidscheck administratie/);
+    // F-OND-330: het echte menu-item heet "Gezondheidscheck uitvoeren"
+    // (onder Controle & Export), niet "… administratie".
+    expect(blok).toMatch(/Gezondheidscheck uitvoeren/);
   });
 
   test('FAQ "boeking-corrigeren" toegevoegd met 3 scenarios', () => {

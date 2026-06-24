@@ -105,7 +105,7 @@ describe('V5: KIA-misser proactieve detectie', () => {
       deleteProperty(k) { delete this._store[k]; },
     };
     const mailCalls = [];
-    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Belastingadvies.gs'], {
+    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Belastingadvies.gs', 'Triggers.gs'], {
       PropertiesService: {
         getScriptProperties: () => props,
         getUserProperties: () => props,
@@ -243,7 +243,7 @@ describe('V6: bewaarplicht pre-alert', () => {
       deleteProperty(k) { delete this._store[k]; },
     };
     const mailCalls = [];
-    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Invariants.gs'], {
+    const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Invariants.gs', 'Triggers.gs'], {
       PropertiesService: {
         getScriptProperties: () => props,
         getUserProperties: () => props,
@@ -396,7 +396,7 @@ describe('Integratie: dagelijkseTaken roept V5 + V6 aan', () => {
 describe('V8: bestaande mail-callsites gebruiken DLQ-helper', () => {
   test('BTWReminder.gs gebruikt stuurMailMetDlq_', () => {
     const src = fs.readFileSync(path.join(SRC, 'BTWReminder.gs'), 'utf8');
-    expect(src).toMatch(/stuurMailMetDlq_/);
+    expect(src).toMatch(/stuurKlantNotificatie_|stuurMailMetDlq_/);
   });
 
   test('Fiscaal.gs:controleerSuppletieProactief_ gebruikt stuurMailMetDlq_', () => {
@@ -406,7 +406,7 @@ describe('V8: bestaande mail-callsites gebruiken DLQ-helper', () => {
     const fnEnd = src.indexOf('function genereerSuppletieRapport');
     expect(fnStart).toBeGreaterThan(-1);
     const fn = src.slice(fnStart, fnEnd);
-    expect(fn).toMatch(/stuurMailMetDlq_/);
+    expect(fn).toMatch(/stuurKlantNotificatie_|stuurMailMetDlq_/);
   });
 
   test('Belastingadvies.gs:controleerKiaMisserProactief_ gebruikt stuurMailMetDlq_', () => {
@@ -414,7 +414,7 @@ describe('V8: bestaande mail-callsites gebruiken DLQ-helper', () => {
     const fnStart = src.indexOf('function controleerKiaMisserProactief_');
     expect(fnStart).toBeGreaterThan(-1);
     const fn = src.slice(fnStart);
-    expect(fn).toMatch(/stuurMailMetDlq_/);
+    expect(fn).toMatch(/stuurKlantNotificatie_|stuurMailMetDlq_/);
   });
 
   test('Invariants.gs:controleerBewaarplichtAlert_ gebruikt stuurMailMetDlq_', () => {
@@ -422,6 +422,6 @@ describe('V8: bestaande mail-callsites gebruiken DLQ-helper', () => {
     const fnStart = src.indexOf('function controleerBewaarplichtAlert_');
     expect(fnStart).toBeGreaterThan(-1);
     const fn = src.slice(fnStart);
-    expect(fn).toMatch(/stuurMailMetDlq_/);
+    expect(fn).toMatch(/stuurKlantNotificatie_|stuurMailMetDlq_/);
   });
 });

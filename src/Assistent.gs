@@ -32,28 +32,28 @@ function openAssistent() {
       categorie: 'Hoe gebruik ik dit programma?',
       items: [
         { v: 'Hoe maak ik een factuur?',
-          a: 'Klik bovenin op <b>Boekhouding → Nieuw invoeren</b>. Kies "Inkomsten (factuur maken)", vul de gegevens in en klik op verzenden. De factuur (PDF) wordt automatisch aangemaakt en per e-mail naar uw klant gestuurd.' },
+          a: 'Klik bovenin op <b>Boekhoudbaar → Nieuwe boeking — factuur, kosten of declaratie</b>. Kies "Inkomsten (factuur maken)", vul de gegevens in en klik op verzenden. De factuur (PDF) wordt automatisch aangemaakt en per e-mail naar uw klant gestuurd.' },
         { v: 'Hoe boek ik een kostenpost?',
           a: 'Open hetzelfde formulier en kies "Uitgaven (kosten boeken)". Vul leverancier, bedrag en categorie in. De boeking wordt direct verwerkt in uw administratie en BTW-overzicht.' },
         { v: 'Hoe dien ik een declaratie in?',
           a: 'Heeft u iets zakelijks betaald met uw privérekening? Open het formulier, kies "Declaratie" en vul het bedrag en de omschrijving in. Het systeem houdt bij dat u dit geld nog terugkrijgt.' },
         { v: 'Hoe importeer ik mijn bankafschrift?',
-          a: 'Ga naar <b>Boekhouding → Bank → Bankafschrift importeren</b>. Download eerst uw bankafschrift als CSV bij uw bank (bijv. via internetbankieren), en plak de inhoud in het importvenster.' },
+          a: 'Ga naar <b>Boekhoudbaar → Bank → Bankafschrift importeren</b>. Download eerst uw bankafschrift als CSV bij uw bank (bijv. via internetbankieren), en plak de inhoud in het importvenster.' },
         { v: 'Hoe stuur ik een betalingsherinnering?',
-          a: 'Het systeem stuurt automatisch herinneringen na 1, 7 en 14 dagen na de vervaldatum. Wilt u het nu doen? Ga naar <b>Boekhouding → Facturen → Betalingsherinneringen versturen</b>.' },
+          a: 'Het systeem stuurt automatisch herinneringen na 1, 7 en 14 dagen na de vervaldatum. Wilt u het nu doen? Ga naar <b>Boekhoudbaar → Facturen & Betalingen → Betalingsherinneringen versturen</b>.' },
         { v: 'Hoe upload ik een foto van een bon?',
-          a: 'Klik op <b>Boekhouding → Bon of factuur uploaden (foto)</b>. Upload een foto van de bon en vul een korte omschrijving in. Het bestand wordt opgeslagen in Google Drive.' },
+          a: 'Klik op <b>Boekhoudbaar → Nieuwe boeking — factuur, kosten of declaratie</b> en kies de Upload-tab. Upload een foto van de bon en vul een korte omschrijving in. Het bestand wordt opgeslagen in Google Drive.' },
       ],
     },
     {
       categorie: 'BTW en belastingen',
       items: [
         { v: 'Wanneer moet ik BTW-aangifte doen?',
-          a: `U doet ${btwPeriode === 'Kwartaal' ? 'elk kwartaal (elke 3 maanden)' : 'maandelijks'} BTW-aangifte.<br><b>Deadlines:</b> Q1 → 30 april | Q2 → 31 juli | Q3 → 31 oktober | Q4 → 31 januari.<br>Ga naar <b>Boekhouding → BTW</b> om uw aangifte klaar te zetten.` },
+          a: `U doet ${btwPeriode === 'Kwartaal' ? 'elk kwartaal (elke 3 maanden)' : 'maandelijks'} BTW-aangifte.<br><b>Deadlines:</b> Q1 → 30 april | Q2 → 31 juli | Q3 → 31 oktober | Q4 → 31 januari.<br>Ga naar <b>Boekhoudbaar → BTW</b> om uw aangifte klaar te zetten.` },
         { v: 'Wat is de Kleineondernemersregeling (KOR)?',
-          a: 'Als uw jaaromzet onder €20.000 blijft, bent u vrijgesteld van BTW-aangifte. U hoeft dan geen BTW te berekenen aan klanten. Uw systeem detecteert dit automatisch. Zie <b>Boekhouding → BTW → KOR check</b>.' },
+          a: 'Als uw jaaromzet onder €20.000 blijft, bent u vrijgesteld van BTW-aangifte. U hoeft dan geen BTW te berekenen aan klanten. Uw systeem detecteert dit automatisch. Zie <b>Boekhoudbaar → BTW → KOR check</b>.' },
         { v: 'Wat is de zelfstandigenaftrek?',
-          a: `Als u meer dan 1.225 uur per jaar aan uw bedrijf besteedt, mag u een vast bedrag aftrekken van uw winst. Dit verlaagt uw inkomstenbelasting. Zie <b>Boekhouding → Belastingtips</b> voor het exacte bedrag.` },
+          a: `Als u meer dan 1.225 uur per jaar aan uw bedrijf besteedt, mag u een vast bedrag aftrekken van uw winst. Dit verlaagt uw inkomstenbelasting. Zie <b>Boekhoudbaar → 💡 Fiscaal & besparingstips → Fiscaal overzicht & besparingstips</b> voor het exacte bedrag.` },
         { v: 'Wat is de MKB-winstvrijstelling?',
           a: 'U betaalt inkomstenbelasting over 86% van uw winst — 14% is belastingvrij. Dit wordt automatisch berekend in uw belastingadvies.' },
         { v: 'Wat zijn representatiekosten?',
@@ -77,11 +77,11 @@ function openAssistent() {
       categorie: 'Overzichten & rapporten',
       items: [
         { v: 'Hoe maak ik een balans?',
-          a: 'Ga naar <b>Boekhouding → Overzichten → Balans</b>. U ziet dan een overzicht van uw bezittingen (activa) en schulden (passiva).' },
+          a: 'Ga naar <b>Boekhoudbaar → Overzichten & Rapporten → Balans</b>. U ziet dan een overzicht van uw bezittingen (activa) en schulden (passiva).' },
         { v: 'Wat is het verschil tussen balans en winst & verlies?',
           a: 'De <b>balans</b> laat zien wat u bezit en wat u schuldig bent (op een bepaald moment). De <b>winst & verlies</b> laat zien hoeveel u verdiend en uitgegeven heeft (over een periode).' },
         { v: 'Hoe deel ik mijn administratie met mijn accountant?',
-          a: 'Ga naar <b>Boekhouding → Overzichten → Jaarrekening</b>. Dit genereert een compleet rapport dat u kunt delen.' },
+          a: 'Ga naar <b>Boekhoudbaar → Overzichten & Rapporten → Jaarrekening</b>. Dit genereert een compleet rapport dat u kunt delen.' },
       ],
     },
     {
@@ -99,9 +99,9 @@ function openAssistent() {
       categorie: 'Er ging iets mis',
       items: [
         { v: 'Mijn balans klopt niet — wat nu?',
-          a: 'Draai eerst de <b>Gezondheidscheck</b> (<b>Boekhouding → Diagnose</b>). Die wijst de oorzaak aan (meestal een ontbrekende tegenboeking of een handmatige wijziging). Zie ook boekhoudbaar.nl/faq voor de 5 meest voorkomende oorzaken.' },
+          a: 'Draai eerst de <b>Gezondheidscheck</b> (<b>Boekhoudbaar → Diagnose</b>). Die wijst de oorzaak aan (meestal een ontbrekende tegenboeking of een handmatige wijziging). Zie ook boekhoudbaar.nl/faq voor de 5 meest voorkomende oorzaken.' },
         { v: 'Hoe maak ik een creditnota (factuur terugdraaien)?',
-          a: 'Ga naar <b>Boekhouding → Facturen → Creditnota maken van factuur</b>. Kies de factuur die je wilt crediteren; het systeem maakt automatisch de tegenboeking.' },
+          a: 'Ga naar <b>Boekhoudbaar → Facturen & Betalingen → Creditnota maken van factuur</b>. Kies de factuur die je wilt crediteren; het systeem maakt automatisch de tegenboeking.' },
         { v: 'Mijn klant betaalt niet, ook na de herinneringen — wat nu?',
           a: 'Na de automatische herinneringen (dag 1/7/14) kun je een aanmaning sturen, een incassobureau inschakelen, of de vordering uiteindelijk als oninbaar afboeken. Zie boekhoudbaar.nl/gids/debiteurenbeheer-zzp/ voor de stappen.' },
       ],
@@ -186,7 +186,7 @@ function openAssistent() {
 <div id="snel" class="sectie actief">
   <p style="color:#666;font-size:11px;margin-bottom:8px">Antwoorden op basis van uw huidige administratie:</p>
   ${snelHtml}
-  <div class="tip">Meer details nodig? Ga naar <b>Boekhouding → Overzichten</b> of <b>Belastingtips</b>.</div>
+  <div class="tip">Meer details nodig? Ga naar <b>Boekhoudbaar → Overzichten</b> of <b>Belastingtips</b>.</div>
   <button class="actie-knop" onclick="google.script.run.genereerBelastingadvies()">
     Belastingtips & besparingen bekijken
   </button>

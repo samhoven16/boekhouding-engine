@@ -79,8 +79,8 @@ function valideerFactuurnummerUniek_(ss, factuurnummer) {
   const target = String(factuurnummer).trim();
   for (let i = 1; i < data.length; i++) {
     // Kolom A = factuurnummer-opgemaakt OF kolom B (afhankelijk van schema-versie)
-    const rij0 = String(data[i][0] || '').trim();
-    const rij1 = String(data[i][1] || '').trim();
+    const rij0 = String(data[i][KOL.VF.factuurId] || '').trim();
+    const rij1 = String(data[i][KOL.VF.factuurnummer] || '').trim();
     if (rij0 === target || rij1 === target) {
       throw new InvariantSchending(
         'FACTUURNR_DUPLICAAT',
@@ -364,11 +364,11 @@ function controleerBewaarplichtAlert_() {
   // genoeg om de oudste te kennen als het een normaal-geordende sheet is.
   // Defense: bij ongeordende sheet doen we volle scan tot eerste 1000 rijen.
   const max = Math.min(jpSheet.getLastRow(), 1001);
-  const data = jpSheet.getRange(2, 2, max - 1, 1).getValues();
+  const data = jpSheet.getRange(2, 2, max - 1, 1).getValues().map(function (r) { return r[0]; });
   let oudsteDatum = null;
   for (let i = 0; i < data.length; i++) {
-    if (!data[i][0]) continue;
-    const d = parseDatum_(data[i][0]);
+    if (!data[i]) continue;
+    const d = parseDatum_(data[i]);
     if (!d || isNaN(d.getTime())) continue;
     if (!oudsteDatum || d < oudsteDatum) oudsteDatum = d;
   }
@@ -377,12 +377,12 @@ function controleerBewaarplichtAlert_() {
   const dagenSinds = Math.floor((Date.now() - oudsteDatum.getTime()) / (24 * 60 * 60 * 1000));
   if (dagenSinds < 6.5 * 365) return;  // bewaarplicht nog ruim binnen termijn
 
-  // Idempotent: 1× per kalenderjaar
+  // Idempotent: 1× per kalenderjaar via de TTL-chokepoint (klasse 3).
+  // F-SCALE-330: voorheen een losse idemKey-ScriptProperty die de sweep + ban
+  // ontweek. 365d-TTL → na een jaar verloopt-ie en kan de volgende jaarmelding.
   const huidigJaar = new Date().getFullYear();
-  const idemKey = 'BEWAARPLICHT_GEMELD_' + huidigJaar;
-  const props = PropertiesService.getScriptProperties();
-  if (props.getProperty(idemKey)) return;
-  try { props.setProperty(idemKey, String(Date.now())); } catch (_) {}
+  if (leesVluchtigeKey_('BEWAARPLICHT_GEMELD_', String(huidigJaar))) return;
+  zetVluchtigeKey_('BEWAARPLICHT_GEMELD_', String(huidigJaar), Date.now(), 365);
 
   const jaren = Math.round(dagenSinds / 365 * 10) / 10;
   try {
@@ -411,6 +411,8 @@ function controleerBewaarplichtAlert_() {
     'verweer als je administratie niet meer compleet is.\n\n' +
     'Boekhoudbaar';
 
+  // COMPLIANCE — NIET achter de notificatie-gate (7-jaars bewaarplicht; de
+  // toggle-toast belooft expliciet dat dit blijft werken). Direct via DLQ-laag.
   if (typeof stuurMailMetDlq_ === 'function') {
     stuurMailMetDlq_(ontvanger, '📦 Bewaarplicht: archiveer je boekhouding nu', body);
   }
@@ -601,14 +603,14 @@ function valideerTransactieFormeel_(ss, regels, datum) {
       } else {
         const codes = gb.getDataRange().getValues();
         for (let j = 1; j < codes.length; j++) {
-          if (String(codes[j][0]) === code) { gevonden = true; break; }
+          if (String(codes[j][KOL.GB.code]) === code) { gevonden = true; break; }
         }
       }
       if (!gevonden) {
         throw new InvariantSchending('REKENING_ONBEKEND',
           'Rekening ' + code + ' bestaat niet in het grootboekschema. ' +
           'De boeking is NIET uitgevoerd — zo blijft de balans kloppend. ' +
-          'Herstel het schema via Boekhoudbaar → Onderhoud → Tabbladen controleren, ' +
+          'Herstel het schema via Boekhoudbaar → Instellingen → Rekeningschema opnieuw laden, ' +
           'of kies een bestaande rekening.',
           { rekening: code });
       }
@@ -744,11 +746,11 @@ function detecteerOngekoppeldeBankuitgaven_(ss) {
   const jpData = jpSheet.getDataRange().getValues();
   const gekoppeldeBankRefs = new Set();
   for (let i = 1; i < jpData.length; i++) {
-    const debet = String(jpData[i][4] || '');
-    const credit = String(jpData[i][6] || '');
+    const debet = String(jpData[i][KOL.JP.debetRekening] || '');
+    const credit = String(jpData[i][KOL.JP.creditRekening] || '');
     // Inkoop-betaling: kostenrekening (4xxx/7xxx) debet, bank credit
     if (credit === '1100' && (debet.startsWith('7') || debet.startsWith('4'))) {
-      const ref = String(jpData[i][11] || '').trim();
+      const ref = String(jpData[i][KOL.JP.referentie] || '').trim();
       if (ref) gekoppeldeBankRefs.add(ref);
     }
   }
@@ -758,7 +760,7 @@ function detecteerOngekoppeldeBankuitgaven_(ss) {
   if (ifSheet) {
     const ifData = ifSheet.getDataRange().getValues();
     for (let i = 1; i < ifData.length; i++) {
-      const ifNr = String(ifData[i][0] || '').trim();
+      const ifNr = String(ifData[i][KOL.IF.inkoopId] || '').trim();
       if (ifNr) inkoopRefs.add(ifNr);
     }
   }
@@ -766,12 +768,15 @@ function detecteerOngekoppeldeBankuitgaven_(ss) {
   // Scan bank-transacties: negatief bedrag = uitgave
   const verdacht = [];
   const bankData = bankSheet.getDataRange().getValues();
-  // Schema bank: datum, omschr, bedrag, tegenrekening, tegenpartij, ref?
+  // Kolommen via KOL.BT (zie src/SheetKolom.gs). F-INV-330: deze functie las
+  // voorheen het verkeerde schema (datum←[0]=transactieId, bedrag←[2]=omschrijving)
+  // → parseFloat(omschrijving)=NaN→0 → `bedrag >= 0` sloeg ELKE rij over → de
+  // controle deed stil niets. (Dead code: geen callers, dus latent.)
   for (let i = 1; i < bankData.length; i++) {
-    const datum = bankData[i][0];
-    const omschr = String(bankData[i][1] || '');
-    const bedrag = parseFloat(bankData[i][2]) || 0;
-    const tegenpartij = String(bankData[i][4] || '');
+    const datum = bankData[i][KOL.BT.datum];
+    const omschr = String(bankData[i][KOL.BT.omschrijving] || '');
+    const bedrag = parseFloat(bankData[i][KOL.BT.bedrag]) || 0;
+    const tegenpartij = String(bankData[i][KOL.BT.tegenpartij] || '');
 
     if (bedrag >= 0) continue;  // alleen uitgaven (negatief)
     if (Math.abs(bedrag) < 5) continue;  // skip kleine bedragen (bankkosten etc)
@@ -790,7 +795,7 @@ function detecteerOngekoppeldeBankuitgaven_(ss) {
       });
     }
     // Of via journaalpost-ref (kolom 6 in bank-schema, optioneel)
-    if (!gekoppeld && gekoppeldeBankRefs.has(String(bankData[i][5] || ''))) gekoppeld = true;
+    if (!gekoppeld && gekoppeldeBankRefs.has(String(bankData[i][KOL.BT.referentie] || ''))) gekoppeld = true;
 
     if (!gekoppeld) {
       verdacht.push({

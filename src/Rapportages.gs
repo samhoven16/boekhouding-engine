@@ -24,10 +24,10 @@ function genereerBalans() {
   const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);
   const saldi = {};
   for (let i = 1; i < gbData.length; i++) {
-    saldi[String(gbData[i][0])] = {
-      naam: gbData[i][1], type: gbData[i][2],
-      cat: gbData[i][3], bw: gbData[i][4],
-      saldo: parseFloat(gbData[i][5]) || 0,
+    saldi[String(gbData[i][KOL.GB.code])] = {
+      naam: gbData[i][KOL.GB.naam], type: gbData[i][KOL.GB.type],
+      cat: gbData[i][KOL.GB.categorie], bw: gbData[i][KOL.GB.balansWenv],
+      saldo: parseFloat(gbData[i][KOL.GB.saldo]) || 0,
     };
   }
 
@@ -71,7 +71,7 @@ function genereerBalans() {
     sheet.setRowHeight(rij, 32);
     rij++;
     sheet.getRange(rij, 1, 1, 4).merge()
-      .setValue('Mogelijke oorzaken: ontbrekende boeking, dubbele journaalpost, of foutieve openingsbalans. Run Boekhouding → Controle → Gezondheidscheck.')
+      .setValue('Mogelijke oorzaken: ontbrekende boeking, dubbele journaalpost, of foutieve openingsbalans. Run Boekhoudbaar → Controle & Export → Gezondheidscheck.')
       .setBackground('#FFEBEE').setFontColor('#B71C1C')
       .setFontStyle('italic').setFontSize(10)
       .setHorizontalAlignment('center').setWrap(true);
@@ -180,10 +180,10 @@ function genereerWvRekening() {
   const gbData = leesSheetVeilig_(ss, SHEETS.GROOTBOEKSCHEMA);
   const saldi = {};
   for (let i = 1; i < gbData.length; i++) {
-    if (gbData[i][4] !== 'W&V') continue;
-    saldi[String(gbData[i][0])] = {
-      naam: gbData[i][1], type: gbData[i][2],
-      cat: gbData[i][3], saldo: parseFloat(gbData[i][5]) || 0,
+    if (gbData[i][KOL.GB.balansWenv] !== 'W&V') continue;
+    saldi[String(gbData[i][KOL.GB.code])] = {
+      naam: gbData[i][KOL.GB.naam], type: gbData[i][KOL.GB.type],
+      cat: gbData[i][KOL.GB.categorie], saldo: parseFloat(gbData[i][KOL.GB.saldo]) || 0,
     };
   }
 
@@ -314,10 +314,10 @@ function genereerCashflow() {
   const betalingenPerMaand = new Array(12).fill(0);
 
   for (let i = 1; i < btData.length; i++) {
-    const datum = btData[i][1] ? parseDatum_(btData[i][1]) : null;
+    const datum = btData[i][KOL.BT.datum] ? parseDatum_(btData[i][KOL.BT.datum]) : null;
     if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
     const m = datum.getMonth();
-    const bedrag = parseFloat(btData[i][3]) || 0;
+    const bedrag = parseFloat(btData[i][KOL.BT.bedrag]) || 0;
     if (bedrag > 0) ontvangstenPerMaand[m] += bedrag;
     else betalingenPerMaand[m] += Math.abs(bedrag);
   }
@@ -459,9 +459,9 @@ function berekenKengetallen_(ss) {
   const gbData = _gbSheet ? _gbSheet.getDataRange().getValues() : [[]];
   const saldi = {};
   for (let i = 1; i < gbData.length; i++) {
-    saldi[String(gbData[i][0])] = {
-      type: gbData[i][2], cat: gbData[i][3], bw: gbData[i][4],
-      saldo: parseFloat(gbData[i][5]) || 0,
+    saldi[String(gbData[i][KOL.GB.code])] = {
+      type: gbData[i][KOL.GB.type], cat: gbData[i][KOL.GB.categorie], bw: gbData[i][KOL.GB.balansWenv],
+      saldo: parseFloat(gbData[i][KOL.GB.saldo]) || 0,
     };
   }
 

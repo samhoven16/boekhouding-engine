@@ -157,4 +157,20 @@ describe('Belastingadvies helpers', () => {
       expect(c).toBeGreaterThan(b);
     });
   });
+
+  describe('Config-consistentie: legacy-scalars == array (F-TAX-133)', () => {
+    // De scalar IB_SCHIJF_1_PCT (backwards-compat fallback + marginaal-tarief)
+    // MOET gelijk zijn aan IB_SCHIJVEN[0].pct van de hoofdberekening. Stond in
+    // 2026 op 0,357 terwijl de geverifieerde array 0,3575 gebruikt → fallback-IB
+    // week ~€19 af van de array-gedreven IB. Deze test borgt dat ze niet weer
+    // uit elkaar lopen voor het lopende jaar.
+    test('IB_SCHIJF_1_PCT == IB_SCHIJVEN[0].pct (schijf-1-tarief één bron)', () => {
+      expect(B.IB_SCHIJF_1_PCT).toBeCloseTo(B.IB_SCHIJVEN[0].pct, 6);
+    });
+
+    test('IB_SCHIJF_2_PCT == hoogste schijf (49,5%) — legacy "schijf 3"-naam', () => {
+      const top = B.IB_SCHIJVEN[B.IB_SCHIJVEN.length - 1].pct;
+      expect(B.IB_SCHIJF_2_PCT).toBeCloseTo(top, 6);
+    });
+  });
 });

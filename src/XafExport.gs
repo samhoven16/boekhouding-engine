@@ -16,7 +16,7 @@
  * Specificatie: XBRL-NL/Auditfile Financieel 3.2 — formele NL-standaard.
  * Schema: http://www.auditfiles.nl/XAF/3.2
  *
- * Menu: Boekhouding → Data → Exporteer als XAF (Auditfile)
+ * Menu: Boekhoudbaar → Controle & Export → Exporteer als XAF (Auditfile)
  */
 
 'use strict';

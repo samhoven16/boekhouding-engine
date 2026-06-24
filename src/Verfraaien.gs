@@ -203,7 +203,7 @@ function _verfraaiVerkoopfacturen_(ss) {
     });
   } else {
     _zetEmptyState_(sheet, lastCol,
-      'Nog geen verkoopfacturen. Open Boekhouding → "Nieuwe boeking" om je eerste factuur te maken.');
+      'Nog geen verkoopfacturen. Open Boekhoudbaar → "Nieuwe boeking" om je eerste factuur te maken.');
   }
   // Status-kolom = O (15)
   _zetStatusKleurRegels_(sheet, 'O', 2);
@@ -226,7 +226,7 @@ function _verfraaiInkoopfacturen_(ss) {
     });
   } else {
     _zetEmptyState_(sheet, lastCol,
-      'Nog geen inkoopfacturen of bonnen. Boekhouding → "Nieuwe boeking" → tabblad "Kosten" of "Upload bon".');
+      'Nog geen inkoopfacturen of bonnen. Boekhoudbaar → "Nieuwe boeking" → tabblad "Kosten" of "Upload bon".');
   }
   // Status-kolom = M (13)
   _zetStatusKleurRegels_(sheet, 'M', 2);

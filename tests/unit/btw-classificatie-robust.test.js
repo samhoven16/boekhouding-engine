@@ -80,19 +80,63 @@ describe('berekenBtwAangifte_ — case-insensitive labels (regressie)', () => {
     expect(Object.keys(r._onbekendeLabels).length).toBe(1);
   });
 
-  test('verlegd-factuur met BTW-bedrag → r1e_btw vult mee (voorheen: btwBedrag verloren)', () => {
+  test('verlegde verkoop met btwBedrag=0 (realistisch) → grondslag in r1e, €0 in r5a', () => {
+    const ss = maakMockSs([
+      vfRij(new Date('2026-02-01'), 1000, 'BTW verlegd', 0),
+    ]);
+    const r = ctx.berekenBtwAangifte_(ss, VAN, TOT);
+    expect(r.r1e_grondslag).toBeCloseTo(1000, 1);
+    expect(r.r1e_btw).toBe(0);
+    expect(r.r5a).toBe(0);
+    expect(r._verlegdMetBtw).toBeUndefined();   // geen anomalie
+  });
+
+  test('F-TAX-134: verlegde verkoop MET btwBedrag (data-fout) → NIET in r5a, wél geflagd', () => {
+    // Rubriek 1e is grondslag-only: de leverancier brengt €0 BTW in rekening.
+    // Een ingevuld btwBedrag mag geen output-BTW afdragen op een verlegde sale.
     const ss = maakMockSs([
       vfRij(new Date('2026-02-01'), 1000, 'BTW verlegd', 210),
     ]);
     const r = ctx.berekenBtwAangifte_(ss, VAN, TOT);
     expect(r.r1e_grondslag).toBeCloseTo(1000, 1);
-    expect(r.r1e_btw).toBeCloseTo(210, 1);
-    expect(r.r5a).toBeCloseTo(210, 1);
+    expect(r.r1e_btw).toBe(0);          // verschuldigde BTW = 0, niet 210
+    expect(r.r5a).toBe(0);              // GEEN over-afdracht in r5a
+    expect(r._verlegdMetBtw).toBeDefined();
+    expect(r._verlegdMetBtw.aantal).toBe(1);
+    expect(r._verlegdMetBtw.bedrag).toBeCloseTo(210, 1);
   });
 
-  test('GECREDITEERD factuur met onbekend label → niet in onbekend-buckets (skip eerst)', () => {
+  test('F-TAX-132 RATEL: "21% verlegd" → r1e (verlegd vóór 21%), NIET r1a', () => {
+    // Reverse-charge verkoop mét onderliggend tarief in het label. 'verlegd'
+    // wordt nu als EERSTE getoetst; voorheen matchte includes('21%') eerst →
+    // de grondslag van een verlegde verkoop belandde in r1a (verkeerde rubriek).
+    const ss = maakMockSs([
+      vfRij(new Date('2026-02-01'), 2000, '21% verlegd', 0),
+    ]);
+    const r = ctx.berekenBtwAangifte_(ss, VAN, TOT);
+    expect(r.r1e_grondslag).toBeCloseTo(2000, 1);
+    expect(r.r1a_grondslag).toBe(0);   // mag NIET in 1a belanden
+  });
+
+  test('F-TAX-132 RATEL: "9% verlegd" → r1e, niet r1b', () => {
+    const ss = maakMockSs([vfRij(new Date('2026-02-01'), 1500, '9% verlegd', 0)]);
+    const r = ctx.berekenBtwAangifte_(ss, VAN, TOT);
+    expect(r.r1e_grondslag).toBeCloseTo(1500, 1);
+    expect(r.r1b_grondslag).toBe(0);
+  });
+
+  test('zuiver "21% hoog"-label blijft r1a (geen valse verlegd-match, geen regressie)', () => {
+    const ss = maakMockSs([vfRij(new Date('2026-02-01'), 1000, '21% hoog', 210)]);
+    const r = ctx.berekenBtwAangifte_(ss, VAN, TOT);
+    expect(r.r1a_grondslag).toBeCloseTo(1000, 1);
+    expect(r.r1e_grondslag).toBe(0);
+  });
+
+  test('gecrediteerd + creditnota met onbekend label → netto €0 in onbekend-omzet', () => {
+    // origineel (Gecrediteerd) + creditnota (negatief) tellen beide; netto 0.
     const ss = maakMockSs([
       vfRij(new Date('2026-02-01'), 500, 'mystery-label', 0, 'Gecrediteerd'),
+      vfRij(new Date('2026-02-02'), -500, 'mystery-label', 0, 'Betaald'),
     ]);
     const r = ctx.berekenBtwAangifte_(ss, VAN, TOT);
     expect(r._onbekendeOmzet || 0).toBe(0);

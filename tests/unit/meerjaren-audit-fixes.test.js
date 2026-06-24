@@ -44,9 +44,10 @@ describe('Boekingen.gs — herberekeningGrootboekSaldi: O(N×M) timeout-bug', ()
 
 describe('licence-server — drip-keys cleanup (2028-quotum-tijdbom)', () => {
   const src = lees('licence-server/Code.gs');
-  const blok = src.slice(
-    src.indexOf('function verstuurDripsDagelijks_'),
-    src.indexOf('function verstuurDripsDagelijks_') + 4000);
+  // Slice tot de VOLGENDE functie i.p.v. een vaste lengte — zo blijft de test
+  // robuust als de functie groeit (OTP-cleanup, kill-switch, afmeld-skip).
+  const _dripStart = src.indexOf('function verstuurDripsDagelijks_');
+  const blok = src.slice(_dripStart, src.indexOf('\nfunction ', _dripStart + 1));
 
   test('verstuurDripsDagelijks_ ruimt drip_*-keys op voor afgeronde klanten', () => {
     expect(blok).toMatch(/Drip-cleanup/);

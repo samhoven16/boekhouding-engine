@@ -2,7 +2,7 @@
  * Mollie.gs
  * Genereert iDEAL/SEPA-betaal-links per factuur via Mollie API.
  *
- * Klant zet API-key éénmalig via Boekhouding → Instellingen → Mollie API-key.
+ * Klant zet API-key éénmalig via Boekhoudbaar → Instellingen → Mollie API-key.
  * Bij factuur-creatie wordt automatisch een payment-link gegenereerd en
  * geëmbed in de email + PDF — afnemer betaalt met 1 klik i.p.v.
  * IBAN handmatig over te tikken.
@@ -335,11 +335,11 @@ function verwerkMollieWebhook_(payload) {
           // uit genereerMolliePaymentLink_ (regel 84). [0] is de NUMERIEKE
           // Factuur-ID en matcht het opgemaakte nummer nooit → voorheen werd
           // ÉLKE iDEAL-betaling stil geweigerd ("factuur onbekend").
-          if (String(_data[i][1]) === String(factuurnummer)) {
+          if (String(_data[i][KOL.VF.factuurnummer]) === String(factuurnummer)) {
             // [12] = Bedrag incl. BTW = het bedrag waarvoor de iDEAL-link is
             // aangemaakt. [6]/[5] waren KvK-nr/klantnaam (tekst) → parseFloat
             // gaf NaN/KvK-getal → de bedrag-check faalde of vergeleek onzin.
-            _factBedrag = parseFloat(_data[i][12]) || null;
+            _factBedrag = parseFloat(_data[i][KOL.VF.bedragIncl]) || null;
             break;
           }
         }

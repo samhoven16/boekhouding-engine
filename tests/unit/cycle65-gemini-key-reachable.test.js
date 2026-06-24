@@ -82,7 +82,7 @@ describe('CYCLE 65: AI bon-scan is bereikbaar (geen valse belofte)', () => {
 
     const res = ctx.scanDocumentMetAI('x', 'image/jpeg');
     expect(res.fout).toMatch(/niet ingesteld/i);
-    expect(res.fout).toMatch(/Gemini API-key voor bon-scan/);  // = exact menu-label
+    expect(res.fout).toMatch(/Eigen Gemini API-key/);  // F-OND-338: prefix van het ECHTE menu-item "🤖 Eigen Gemini API-key (...)"
     expect(res.fout).not.toMatch(/Instellingen → Gemini API-sleutel\b\)/); // oude dode tekst weg
   });
 

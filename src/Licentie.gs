@@ -38,9 +38,13 @@ const LICENTIE_LAATST_GELUKT_KEY = 'licentieLaatstGelukt';
 // bij BTW-deadline. Sam's USP "Wat als Boekhoudbaar morgen stopt" eist
 // een GROTER venster.
 //
-// Nieuwe default = 90 dagen. Klant kan via ScriptProperty
-// 'LICENTIE_GRACE_DAGEN' override doen (bv. 365 voor jaar-onafhankelijk).
-// Sam kan via template-update default verlagen als hij dat ooit wil.
+// Default = 90 dagen (gepubliceerde continuïteits-belofte, audit ronde 2).
+// F-OND-131: dit venster is nu gedekt door een PROACTIEVE banner — de klant
+// wordt vanaf dag 1 dagelijks gewaarschuwd dat de server onbereikbaar is en de
+// grace tikt (ook in het onOpen-pad, zie controleerLicentieEnKopie_), i.p.v.
+// "ineens" buitengesloten te worden. Voor jaar-onafhankelijke dekking kan een
+// klant/Sam 'LICENTIE_GRACE_DAGEN' op bv. 365 zetten (1-3650). De XAF-export
+// werkt sowieso buiten de licentie-gate om.
 const LICENTIE_OFFLINE_GRACE_DAGEN_DEFAULT = 90;
 function _licentieGraceDagen_() {
   try {
@@ -55,9 +59,58 @@ function _licentieGraceDagen_() {
 const LICENTIE_OFFLINE_GRACE_DAGEN = LICENTIE_OFFLINE_GRACE_DAGEN_DEFAULT;
 const LICENTIE_OFFLINE_BANNER_KEY = 'licentieOfflineBannerLaatst'; // UserProp
 
+// Go-live keuring (onboarding): de activatie-URL MOET als code-default, niet als
+// Script Property. Bij "Maak een kopie" reizen Script Properties NIET mee (dat
+// is juist de kopieerbeveiliging) → op een verse klant-kopie is de property
+// AFWEZIG en kon de klant nooit een OTP aanvragen ("Licentieserver niet
+// geconfigureerd") → muurvast vóór de eerste factuur. Code reist wél mee met de
+// kopie, dus een hardcoded default (zelfde publieke exec-URL als website/start
+// en /bedankt) herstelt de activatie. De property blijft een override voor
+// staging/rotatie. KRITISCH: onderscheid AFWEZIG (null → default) van EXPLICIET
+// leeg ('' → laten staan: bewuste config / graceful-degradatie-tests), zodat de
+// fix de verse-kopie-flow opent zonder bestaande "niet geconfigureerd"-paden te
+// breken.
+const LICENTIE_SERVER_URL_DEFAULT =
+  'https://script.google.com/macros/s/AKfycbzvBpQx7ghYNblvBVtCraH4KRKJo3C4f3lWYJDJPRd-ByS7lg0G2AfHm0JQ-g_LOjWI/exec';
+
 function getLicentieServerUrl_() {
+  const prop = PropertiesService.getScriptProperties().getProperty('LICENTIE_SERVER_URL');
+  return prop != null ? prop : LICENTIE_SERVER_URL_DEFAULT;
+}
+
+/**
+ * F-SCALE-141: optionele warme-standby licentieserver. Leeg tenzij Sam een
+ * tweede deployment heeft en deze property zet (handmatig of via de centrale
+ * config). valideerLicentieOpServer_ probeert deze pas ná een falende primaire
+ * server, vóór de offline-grace — zodat één serveruitval niet de hele
+ * klantenbasis raakt.
+ */
+function getLicentieServerUrlFallback_() {
+  // F-SCALE-141b: pure property-read (geen fetch op het validatie-hete-pad). De
+  // centrale config-route vult deze property via _syncStandbyUrlUitConfig_ in de
+  // normale config-refresh-cyclus (onOpen → haalConfigOp_), zodat óók BESTAANDE
+  // kopieën de standby krijgen zonder per-kopie handwerk — zie F-SCALE-332-patroon.
   return PropertiesService.getScriptProperties()
-    .getProperty('LICENTIE_SERVER_URL') || '';
+    .getProperty('LICENTIE_SERVER_URL_FALLBACK') || '';
+}
+
+/**
+ * F-SCALE-141b: synct de centraal-gepushte standby-licentieserver-URL naar de
+ * lokale ScriptProperty die getLicentieServerUrlFallback_ leest. Zo krijgen óók
+ * al-gedeployde kopieën de warme-standby zodra Sam 'm in de config-payload zet —
+ * zonder per-kopie handwerk. Draait in de config-refresh-cyclus (haalConfigOp_),
+ * NIET op het validatie-hete-pad. Idempotent; faalt stil.
+ */
+function _syncStandbyUrlUitConfig_(cfg) {
+  try {
+    const url = (cfg && cfg.licentieServerUrlFallback) ? String(cfg.licentieServerUrlFallback).trim() : '';
+    if (!url) return;
+    if (!/^https:\/\//i.test(url)) return;   // F-RED-163: alleen https — geen plaintext/andere-scheme standby (defense-in-depth op de gepushte URL)
+    const props = PropertiesService.getScriptProperties();
+    if (props.getProperty('LICENTIE_SERVER_URL_FALLBACK') !== url) {
+      props.setProperty('LICENTIE_SERVER_URL_FALLBACK', url);
+    }
+  } catch (_) {}
 }
 
 // ─────────────────────────────────────────────
@@ -168,6 +221,22 @@ function isEigenaarBypass_() {
  *   5. Sluit editor en herlaad spreadsheet
  */
 function activeerEigenaarLicentie() {
+  // F-RED-151: deze bypass zet een permanente 10-jaar-licentie ZONDER server-
+  // binding. Alleen toegestaan voor de beheerder (ADMIN_EMAILS) — anders kan
+  // elke klant of kopie-houder via de "eigenaar-bypass"-knop een gratis,
+  // nooit-vervallende licentie zetten. Echte klanten activeren met hun OTP-code.
+  try {
+    const u = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+    const isAdmin = !!(u && typeof ADMIN_EMAILS !== 'undefined' && ADMIN_EMAILS.indexOf(u) !== -1);
+    if (!isAdmin) {
+      try { SpreadsheetApp.getActiveSpreadsheet().toast(
+        'Eigenaar-bypass is alleen voor de beheerder. Activeer met de code uit je e-mail via Boekhoudbaar → Licentie activeren.',
+        'Boekhoudbaar', 8); } catch (_) {}
+      return { ok: false, fout: 'Niet toegestaan — activeer met je licentiecode.' };
+    }
+  } catch (_) {
+    return { ok: false, fout: 'Kon beheerder niet verifiëren.' };
+  }
   const props = PropertiesService.getScriptProperties();
   props.setProperty(OWNER_BYPASS_KEY, 'true');
 
@@ -255,6 +324,13 @@ function controleerLicentieEnKopie_() {
       const res = valideerLicentieOpServer_(sleutel);
       if (res.geldig) {
         userProps.setProperty('licentieLastCheck', String(Date.now()));
+        // F-OND-131: ook in het onOpen-pad de offline-grace-banner tonen.
+        // Voorheen wist alleen isLicentieGeldig_ dit; een klant die de sheet
+        // gewoon opent kreeg geen waarschuwing dat de server onbereikbaar is
+        // en de grace tikt — en zou na afloop "ineens" buitengesloten worden.
+        if (res.offline) {
+          try { toonOfflineLicentieBannerIndienNieuw_(res.dagenResterend); } catch (_) {}
+        }
       } else if (!res.offline) {
         // Server zegt expliciet ongeldig (niet offline) → nieuwe activatie
         props.deleteProperty(LICENTIE_PROP_KEY);
@@ -331,10 +407,11 @@ function toonActivatieDialog_() {
   let serverGeconfigureerd = false;
   try {
     serverGeconfigureerd = !!getLicentieServerUrl_();
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const ownerEmail = ss.getOwner() ? ss.getOwner().getEmail() : null;
-    const userEmail = Session.getActiveUser().getEmail();
-    isOwner = !!(ownerEmail && userEmail && ownerEmail === userEmail);
+    // F-RED-151: toon de eigenaar-bypass ALLEEN aan een beheerder (ADMIN_EMAILS).
+    // owner==user is op élke klant-kopie waar → dat zou de gratis-licentie-knop
+    // aan iedereen tonen. De bypass-functie weigert 'm nu óók voor niet-admins.
+    const userEmail = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+    isOwner = !!(userEmail && typeof ADMIN_EMAILS !== 'undefined' && ADMIN_EMAILS.indexOf(userEmail) !== -1);
   } catch (_) {}
 
   const ownerBlock = isOwner ? `
@@ -412,7 +489,7 @@ function toonActivatieDialog_() {
 
       <!-- Stap 2: OTP -->
       <div class="stap" id="stap2">
-        <div class="banner"><strong>Code verstuurd.</strong> Check je inbox — en eventueel je spam-map.</div>
+        <div class="banner"><strong>Code verstuurd.</strong> Check je inbox — en eventueel je spam-map. De code is <strong>15 minuten</strong> geldig; vul 'm meteen in.</div>
         <label class="veld">Activeringscode (6 cijfers)</label>
         <input type="text" id="otp" placeholder="000000" maxlength="6"
                inputmode="numeric" autocomplete="one-time-code">
@@ -726,6 +803,7 @@ function haalConfigOp_() {
     const parsed = JSON.parse(resp.getContentText());
     userProps.setProperty('licentieConfig', resp.getContentText());
     userProps.setProperty('licentieConfigTs', String(Date.now()));
+    _syncStandbyUrlUitConfig_(parsed);   // F-SCALE-141b: standby-URL → ScriptProperty
     return parsed;
   } catch (err) {
     Logger.log('haalConfigOp_ fout: ' + err.message);
@@ -839,44 +917,102 @@ function meldOnboardingAanServer_() {
 
 function valideerLicentieOpServer_(sleutel) {
   const serverUrl  = getLicentieServerUrl_();
-  const huidigSsId = PropertiesService.getScriptProperties().getProperty(LICENTIE_SS_ID_KEY) || '';
+  // F-RED-150: bind op de LIVE spreadsheet-ID, niet op de opgeslagen
+  // ScriptProperty. Die property is door een knoeier te wissen/spoofen — dan
+  // stuurt een kopie een lege/oude installatie mee en ontwijkt de server-bind
+  // (1 sleutel → oneindig kopieën). De live-ID is per kopie écht anders en niet
+  // te vervalsen zonder de client-code te herschrijven. Fallback op de property
+  // als er (bv. in een trigger zonder actieve sheet) geen live-ID beschikbaar is;
+  // het onOpen-pad gebruikt dan alsnog de live-ID en blokkeert de kopie.
+  let huidigSsId = PropertiesService.getScriptProperties().getProperty(LICENTIE_SS_ID_KEY) || '';
+  try {
+    const liveSs = SpreadsheetApp.getActiveSpreadsheet();
+    if (liveSs) huidigSsId = liveSs.getId();
+  } catch (_) {}
 
   if (!serverUrl) {
     Logger.log('WAARSCHUWING: Geen licentieserver — licentie geaccepteerd zonder validatie.');
     return { geldig: true, naam: 'Demo', versie: 'Demo' };
   }
 
-  try {
-    const url  = serverUrl
-      + '?actie=valideer&sleutel=' + encodeURIComponent(sleutel)
-      + '&installatie='            + encodeURIComponent(huidigSsId);
-    const resp = UrlFetchApp.fetch(url, {
-      muteHttpExceptions: true, followRedirects: true,
-      headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
-    });
-    if (resp.getResponseCode() === 200) {
-      const json = parseServerJson_(resp.getContentText());
-      // Cycle 82: track laatste succesvolle server-call ALLEEN als de licentie
-      // ook daadwerkelijk geldig is. Een server-200 met geldig=false (revoke,
-      // verlopen, ingetrokken) mag de offline-grace niet verlengen.
-      if (json && json.geldig) {
-        try { PropertiesService.getScriptProperties().setProperty(
-          LICENTIE_LAATST_GELUKT_KEY, String(Date.now())); } catch (_) {}
-      } else if (json && json.geldig === false) {
-        // Expliciete server-revoke (chargeback/refund/ingetrokken): wis de
-        // offline-grace-basis. Anders kan een klant ná een ontvangen revoke
-        // de server blokkeren en via _offlineFallback_ alsnog de volledige
-        // grace-periode op een ingetrokken licentie doorwerken.
-        try { PropertiesService.getScriptProperties().deleteProperty(
-          LICENTIE_LAATST_GELUKT_KEY); } catch (_) {}
+  // F-SCALE-141: probeer na een onbereikbare/falende primaire server een
+  // warme-standby (LICENTIE_SERVER_URL_FALLBACK) vóór we op de offline-grace
+  // terugvallen. Zo overleeft de hele klantenbasis één serveruitval zónder dat
+  // elke kopie opnieuw gedeployd hoeft te worden. Leeg = identiek gedrag aan
+  // voorheen (één server, dan offline-grace). NB: dit is alleen de client-helft;
+  // de standby-deploy + uptime-monitor zijn operationele stappen van Sam.
+  const bases = [serverUrl];
+  const fallbackUrl = (typeof getLicentieServerUrlFallback_ === 'function')
+    ? getLicentieServerUrlFallback_() : '';
+  if (fallbackUrl && fallbackUrl !== serverUrl) bases.push(fallbackUrl);
+
+  let laatsteReden = '';
+  for (let b = 0; b < bases.length; b++) {
+    try {
+      const url  = bases[b]
+        + '?actie=valideer&sleutel=' + encodeURIComponent(sleutel)
+        + '&installatie='            + encodeURIComponent(huidigSsId);
+      const resp = UrlFetchApp.fetch(url, {
+        muteHttpExceptions: true, followRedirects: true,
+        headers: { 'User-Agent': 'Boekhoudbaar/2.1' },
+      });
+      if (resp.getResponseCode() === 200) {
+        const json = parseServerJson_(resp.getContentText());
+        // Cycle 82: track laatste succesvolle server-call ALLEEN als de licentie
+        // ook daadwerkelijk geldig is. Een server-200 met geldig=false (revoke,
+        // verlopen, ingetrokken) mag de offline-grace niet verlengen.
+        if (json && json.geldig) {
+          try { PropertiesService.getScriptProperties().setProperty(
+            LICENTIE_LAATST_GELUKT_KEY, String(Date.now())); } catch (_) {}
+        } else if (_isAuthoritatieveAfwijzing_(json)) {
+          // Expliciete server-revoke (chargeback/refund/ingetrokken/verlopen):
+          // wis de offline-grace-basis. Anders kan een klant ná een ontvangen
+          // revoke de server blokkeren en via _offlineFallback_ alsnog de
+          // volledige grace-periode op een ingetrokken licentie doorwerken.
+          try { PropertiesService.getScriptProperties().deleteProperty(
+            LICENTIE_LAATST_GELUKT_KEY); } catch (_) {}
+        }
+        // F-RED-M1: een TRANSIENTE serverfout (rate-limit / interne fout / geen
+        // sleutel) is GEEN oordeel over de licentie en wist het grace-anker NIET.
+        // Anders cascadeert één serverhik naar een harde lockout zodra de server
+        // even onbereikbaar is — een betalende klant verliest z'n vangnet door
+        // een tijdelijke 200-fout. We geven de geldig:false wél terug (deze call
+        // faalt), maar het anker blijft staan voor echte onbereikbaarheid.
+        return json;
       }
-      return json;
+      laatsteReden = 'HTTP ' + resp.getResponseCode();
+    } catch (err) {
+      Logger.log('Licentievalidatie fout (' + bases[b] + '): ' + err.message);
+      laatsteReden = err.message;
     }
-    return _offlineFallback_(sleutel, 'HTTP ' + resp.getResponseCode());
-  } catch (err) {
-    Logger.log('Licentievalidatie fout: ' + err.message);
-    return _offlineFallback_(sleutel, err.message);
   }
+  return _offlineFallback_(sleutel, laatsteReden);
+}
+
+/**
+ * Onderscheidt een AUTHORITATIEVE licentie-afwijzing (revoke/verlopen/ingetrokken/
+ * andere installatie/niet gevonden/bounce) van een TRANSIENTE serverfout
+ * (rate-limit / interne fout / geen sleutel). Alléén een authoritatieve afwijzing
+ * mag het offline-grace-anker wissen — een tijdelijke serverhik mag een betalende
+ * klant z'n vangnet niet afpakken (F-RED-M1).
+ *
+ * Primair signaal: server-veld `permanent:true` (nieuwe licentieserver, robuust
+ * tegen tekstwijzigingen). Backward-compat voor een nog-niet-geüpdate server:
+ * EXACTE match op de bekende authoritatieve strings — bewust GEEN losse
+ * woord-substrings (N-M1-2): anders zou een toekomstige TRANSIENTE melding met
+ * "verlopen"/"niet gevonden" erin zich per ongeluk als permanent classificeren
+ * en base-breed het grace-anker wissen. 'niet gevonden' staat hier óók niet
+ * tussen (N-M1-1): dat is wat een lege/foute sheet voor élke sleutel produceert.
+ */
+function _isAuthoritatieveAfwijzing_(json) {
+  if (!json || json.geldig !== false) return false;
+  if (json.permanent === true) return true;
+  const f = String(json.fout || '').trim().toLowerCase();
+  if (f === 'licentie is ingetrokken.') return true;
+  if (f === 'licentie is verlopen.') return true;
+  if (f === 'licentie is al actief op een andere installatie.') return true;
+  if (f.indexOf('ontvangt geen post') !== -1) return true;   // bounce (langere melding)
+  return false;
 }
 
 /**

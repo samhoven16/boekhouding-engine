@@ -95,11 +95,19 @@ describe('RED-TEAM: detecteerOngekoppeldeBankuitgaven_', () => {
     };
   }
 
+  // ECHTE BANKTRANSACTIES-layout (Setup.gs:508 / KOL.BT): 15 kolommen met
+  // [1]=Datum, [2]=Omschrijving, [3]=Bedrag, [7]=Tegenpartij. (De oude test
+  // gebruikte een 5-koloms fantasie-layout die toevallig bij de bug paste —
+  // code én test borgden hetzelfde verkeerde schema, F-INV-330.)
+  function btRij(datum, omschr, bedrag, tegenpartij) {
+    const r = new Array(15).fill('');
+    r[1] = datum; r[2] = omschr; r[3] = bedrag; r[7] = tegenpartij;
+    return r;
+  }
+  const BT_HEADER = new Array(15).fill('hdr');
+
   test('ATTACK: bank-uitgave €500 zonder gekoppelde inkoopfactuur → DETECTED', () => {
-    const bank = [
-      ['Datum', 'Omschrijving', 'Bedrag', 'Tegenrekening', 'Tegenpartij'],
-      [new Date(2026, 0, 15), 'Betaling leverancier ABC', -500, 'NL12...', 'ABC BV'],
-    ];
+    const bank = [BT_HEADER, btRij(new Date(2026, 0, 15), 'Betaling leverancier ABC', -500, 'ABC BV')];
     const jp = [['ID']];  // geen kosten-boeking
     const ik = [['IF Nr']];  // geen inkoopfacturen
     const verdacht = ctx.detecteerOngekoppeldeBankuitgaven_(mockSs(bank, jp, ik));
@@ -109,10 +117,8 @@ describe('RED-TEAM: detecteerOngekoppeldeBankuitgaven_', () => {
   });
 
   test('LEGITIEM: bank-uitgave + gekoppelde kostenboeking → niet verdacht', () => {
-    const bank = [
-      ['Datum', 'Omschrijving', 'Bedrag', 'Tegenrekening', 'Tegenpartij'],
-      [new Date(2026, 0, 15), 'Betaling IF-2026-001', -500, 'NL12...', 'ABC BV'],
-    ];
+    // omschrijving bevat de inkoopfactuur-ref → substring-match koppelt 'm
+    const bank = [BT_HEADER, btRij(new Date(2026, 0, 15), 'Betaling IF-2026-001', -500, 'ABC BV')];
     const jp = [
       ['ID', 'Datum', 'Omschr', 'Dagboek', 'Debet', 'DN', 'Credit', 'CN', 'Bedrag', 'BTW%', 'BTW', 'Ref'],
       ['JP1', new Date(2026, 0, 15), 'Inkoop', 'I', '7000', 'Inkoop', '1100', 'Bank', 500, '21%', 105, 'IF-2026-001'],
@@ -123,27 +129,21 @@ describe('RED-TEAM: detecteerOngekoppeldeBankuitgaven_', () => {
   });
 
   test('Kleine bankkosten (<€5) worden geskipt', () => {
-    const bank = [
-      ['Datum', 'Omschrijving', 'Bedrag', 'Tegenrekening', 'Tegenpartij'],
-      [new Date(2026, 0, 15), 'Bankkosten', -3.50, '', 'Bank'],
-    ];
+    const bank = [BT_HEADER, btRij(new Date(2026, 0, 15), 'Bankkosten', -3.50, 'Bank')];
     const verdacht = ctx.detecteerOngekoppeldeBankuitgaven_(mockSs(bank, [['ID']], [['IF']]));
     expect(verdacht.length).toBe(0);
   });
 
   test('Bank-ontvangsten (positief) worden geskipt', () => {
-    const bank = [
-      ['Datum', 'Omschrijving', 'Bedrag', 'Tegenrekening', 'Tegenpartij'],
-      [new Date(2026, 0, 15), 'Klant betaalt', +1000, '', 'Klant A'],
-    ];
+    const bank = [BT_HEADER, btRij(new Date(2026, 0, 15), 'Klant betaalt', +1000, 'Klant A')];
     const verdacht = ctx.detecteerOngekoppeldeBankuitgaven_(mockSs(bank, [['ID']], [['IF']]));
     expect(verdacht.length).toBe(0);
   });
 
   test('Cap bij 20 verdachte uitgaven — performance', () => {
-    const bank = [['Datum', 'Omschrijving', 'Bedrag', 'Tegenrekening', 'Tegenpartij']];
+    const bank = [BT_HEADER];
     for (let i = 0; i < 50; i++) {
-      bank.push([new Date(2026, 0, i + 1), 'Onbekend ' + i, -100 - i, '', 'X']);
+      bank.push(btRij(new Date(2026, 0, i + 1), 'Onbekend ' + i, -100 - i, 'X'));
     }
     const verdacht = ctx.detecteerOngekoppeldeBankuitgaven_(mockSs(bank, [['ID']], [['IF']]));
     expect(verdacht.length).toBeLessThanOrEqual(21);  // cap + 1 due to break

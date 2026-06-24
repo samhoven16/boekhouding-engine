@@ -121,10 +121,75 @@ function maandNaam_(maandNr) {
 // ─────────────────────────────────────────────
 
 /**
- * Rondt een bedrag af op 2 decimalen (bankiersmethode)
+ * Rondt een bedrag rekenkundig af op 2 decimalen: half-up, SYMMETRISCH
+ * (weg-van-nul, ook bij negatieve bedragen). NB: dit is GEEN bankiersmethode
+ * (half-even) — rekenkundig half-up is precies wat de Belastingdienst
+ * voorschrijft. De symmetrie voorkomt dat `Math.round(-0,5)=0` een cent schept
+ * of verliest bij negatieve bedragen (creditnota/storno).
  */
 function rondBedrag_(bedrag) {
-  return Math.round((parseFloat(bedrag) || 0) * 100) / 100;
+  const n = parseFloat(bedrag) || 0;
+  const cents = Math.round(Math.abs(n) * 100);
+  return (n < 0 ? -cents : cents) / 100;
+}
+
+/**
+ * Exact "tarief × bedrag" → euro met cent-afronding (half-up), berekend in
+ * INTEGER-centen i.p.v. via een float-tarief. Tarief-floats als 0.0756 / 0.28 /
+ * 0.1270 zijn niet exact in IEEE-754 → `rondBedrag_(bedrag * tarief)` wijkt in
+ * duizenden gevallen één cent af van de wiskundig-exacte waarde. Hier leiden we
+ * de exacte breuk af (tarief × 10000 = heel getal) en ronden de teller exact.
+ * (bug-klasse 9 — geld-precisie.)
+ *
+ * @param {number} bedragEuro
+ * @param {number} tarief      bv. 0.0756 (= 7,56%)
+ * @returns {number} tarief × bedrag, exact afgerond op centen.
+ */
+function rondTariefCent_(bedragEuro, tarief) {
+  const bc = Math.round((parseFloat(bedragEuro) || 0) * 100);   // bedrag in centen
+  const t = parseFloat(tarief) || 0;
+  // Schaal het tarief naar een EXACTE integer-breuk (tarief × schaal). Standaard
+  // NL-tarieven (≤4 dec: 0.21/0.09/0.0756/…) → schaal 10000, identiek aan eerder.
+  // Een fijner tarief (bv. =BEREKEN_BTW(…;"12,345%")) werd voorheen afgekapt op
+  // 4 decimalen → 1 cent fout; nu schaalt 'm tot de benodigde precisie
+  // (cap 1e7 = overflow-veilig: bc≤1e8 × eN≤1e7 = 1e15 < 2^53).
+  let schaal = 10000;
+  while (schaal < 1e7 && Math.abs(t * schaal - Math.round(t * schaal)) > 1e-9) schaal *= 10;
+  const eN = Math.round(t * schaal);                           // tarief × schaal (heel getal)
+  const N = bc * eN;                                           // = tarief × bedrag × schaal
+  const half = Math.floor(schaal / 2);
+  const cent = N >= 0 ? Math.floor((N + half) / schaal) : -Math.floor((-N + half) / schaal);
+  return cent / 100;
+}
+
+/**
+ * Afschrijvingsbedrag = saldo × pct × factor, exact in integer-centen (half-up).
+ * factor = 1 (jaarafschrijving) of 1/12 (maand) — als breuk (noemer 12) zodat de
+ * dubbel-float `saldo * pct * factor` geen cent-drift geeft (10% van €166,85 =
+ * €16,685 → €16,69, niet €16,68). saldo/pct verondersteld ≥ 0. (bug-klasse 9.)
+ */
+function berekenAfschrijvingCent_(saldo, pct, factor) {
+  const e4 = Math.round((parseFloat(pct) || 0) * 10000);
+  const sc = Math.round((parseFloat(saldo) || 0) * 100);
+  const f = parseFloat(factor) || 1;
+  const noemer = 10000 * Math.round(1 / f);   // 10000 (jaar) of 120000 (maand)
+  if (!(noemer > 0) || sc <= 0 || e4 <= 0) return 0;
+  return Math.floor((e4 * sc + noemer / 2) / noemer) / 100;
+}
+
+/**
+ * Factuurregel-totaal = aantal × prijs, exact afgerond op centen (half-up), in
+ * INTEGER-centen i.p.v. via een float-product. `rondBedrag_(aantal * prijs)`
+ * week in ~3% van de gevallen 1 cent af (€0,25 × €19,90 = €4,975 → €4,98, niet
+ * €4,97) — en die regel-drift vloeit door naar factuurtotaal → BTW → aangifte.
+ * aantal tot 3 decimalen (milli), prijs een geldbedrag. (bug-klasse 9.)
+ */
+function regelTotaalCent_(aantal, prijs) {
+  const aMilli = Math.round((parseFloat(aantal) || 0) * 1000);   // aantal × 1000
+  const pCent = Math.round((parseFloat(prijs) || 0) * 100);      // prijs in centen
+  const N = aMilli * pCent;                                      // aantal×prijs×1e5; /1000 = cent
+  const cent = N >= 0 ? Math.floor((N + 500) / 1000) : -Math.floor((-N + 500) / 1000);
+  return cent / 100;
 }
 
 /**
@@ -138,7 +203,8 @@ function rondBedrag_(bedrag) {
  *   formatBedrag_(0)        → "€ 0,00"
  */
 function formatBedrag_(bedrag) {
-  const b = parseFloat(bedrag) || 0;
+  // Rond + ruim -0 op: rondBedrag_(-0.002) = -0 -> `|| 0` -> 0 -> geen "-EUR 0,00".
+  const b = rondBedrag_(parseFloat(bedrag) || 0) || 0;
   const prefix = b < 0 ? '-€ ' : '€ ';
   return prefix + Math.abs(b).toLocaleString('nl-NL', {
     minimumFractionDigits: 2,
@@ -149,17 +215,38 @@ function formatBedrag_(bedrag) {
 /**
  * Parseert een bedrag uit een string (verwerkt comma's, punten, €-teken)
  */
+/**
+ * Positie-bewuste kern voor bedrag-parsing — DE enige plek waar de NL/US-
+ * separatorlogica leeft (klasse-1 chokepoint tegen format-parse-drift).
+ *
+ * Regel (geld = max 2 decimalen): de LAATSTE separator (`.` of `,`) is de
+ * decimaal ALS er 1-2 cijfers op volgen; alle andere separators zijn duizendtal.
+ * Volgen er ≥3 cijfers, dan is het géén decimaal maar duizendtal ("1.000" =
+ * 1000, NL-conventie). Lost NL ("1.234,56") én US ("1,234.56") correct op;
+ * voorheen mangelde de regex "1,234.56" → 1,23 en stripte "0.999" inconsistent.
+ *
+ * @returns {number} getal, of NaN bij onparsbaar (caller kiest 0-of-throw).
+ */
+function _parseBedragKern_(ruw) {
+  const s = String(ruw).replace(/[€\s]/g, '');
+  if (!s) return NaN;
+  const iKomma = s.lastIndexOf(',');
+  const iPunt  = s.lastIndexOf('.');
+  const iSep   = Math.max(iKomma, iPunt);
+  if (iSep === -1) return parseFloat(s);                     // geen separator
+  const naSep = s.slice(iSep + 1).replace(/\D/g, '');
+  if (naSep.length >= 1 && naSep.length <= 2) {
+    // laatste separator = decimaal; strip de overige separators uit het gehele deel
+    return parseFloat(s.slice(0, iSep).replace(/[.,]/g, '') + '.' + naSep);
+  }
+  return parseFloat(s.replace(/[.,]/g, ''));                 // ≥3 cijfers → alles duizendtal
+}
+
 function parseBedrag_(str) {
   if (!str && str !== 0) return 0;
   if (typeof str === 'number') return rondBedrag_(str);
-
-  const cleaned = String(str)
-    .replace(/[€\s]/g, '')
-    .replace(/\.(?=\d{3})/g, '')  // Verwijder duizendtalpunten
-    .replace(',', '.');           // Komma naar punt
-
-  const waarde = parseFloat(cleaned);
-  return isNaN(waarde) ? 0 : rondBedrag_(waarde);
+  const w = _parseBedragKern_(str);
+  return isNaN(w) ? 0 : rondBedrag_(w);
 }
 
 /**
@@ -187,11 +274,7 @@ function parseBedragStrict_(ruw, veldnaam) {
     if (!isFinite(ruw)) throw new Error(label + ' is geen getal (Infinity/NaN).');
     return rondBedrag_(ruw);
   }
-  const cleaned = String(ruw)
-    .replace(/[€\s]/g, '')
-    .replace(/\.(?=\d{3})/g, '')
-    .replace(',', '.');
-  const w = parseFloat(cleaned);
+  const w = _parseBedragKern_(ruw);
   if (isNaN(w) || !isFinite(w)) {
     throw new Error(label + " is geen geldig bedrag: '" + String(ruw).slice(0, 40) + "'. Gebruik cijfers, bv. 1234,56.");
   }
@@ -212,9 +295,30 @@ function parseDatumStrict_(ruw, veldnaam) {
     if (isNaN(ruw.getTime())) throw new Error(label + ' is een ongeldig Date-object.');
     return ruw;
   }
-  const d = parseDatum_(ruw);
-  if (!d || isNaN(d.getTime())) {
-    throw new Error(label + " is geen geldige datum: '" + String(ruw).slice(0, 40) + "'. Gebruik formaat dd-mm-jjjj.");
+  const str = String(ruw).trim();
+  let d;
+  // Strikte kalender-validatie. parseDatum_ rolt een onmogelijke datum
+  // (29-02-2027, 31-04) STIL terug op vandaag — die maskering mag een
+  // 'strikte' check niet overnemen, anders schuift een typo ongemerkt de
+  // BTW-periode op. Dus valideren we de twee bekende formaten hier zelf.
+  const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const nl = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (iso || nl) {
+    const pJaar  = parseInt(iso ? iso[1] : nl[3], 10);
+    const pMaand = parseInt(iso ? iso[2] : nl[2], 10);
+    const pDag   = parseInt(iso ? iso[3] : nl[1], 10);
+    d = new Date(pJaar, pMaand - 1, pDag);
+    if (pMaand < 1 || pMaand > 12 || pDag < 1 || pDag > 31 ||
+        isNaN(d.getTime()) || d.getMonth() !== pMaand - 1 || d.getDate() !== pDag) {
+      throw new Error(label + " is geen bestaande kalenderdatum: '" + str.slice(0, 40) +
+        "'. Controleer dag/maand (bv. 28-02-2027 i.p.v. 29-02-2027).");
+    }
+  } else {
+    // Onbekend formaat: native parsing, maar zónder stille today-fallback.
+    d = new Date(str);
+    if (isNaN(d.getTime())) {
+      throw new Error(label + " is geen geldige datum: '" + str.slice(0, 40) + "'. Gebruik formaat dd-mm-jjjj.");
+    }
   }
   // Extra sanity: jaar tussen 1990 en huidig+10 — waarschuwt bij typo's
   const jaar = d.getFullYear();
@@ -323,7 +427,7 @@ function exporteerAuditLogJson() {
   const events = [];
   const grens = Date.now() - 90 * 86400000;  // laatste 90 dagen
   for (let i = 1; i < data.length; i++) {
-    const ts = data[i][0] instanceof Date ? data[i][0].getTime() : 0;
+    const ts = data[i][KOL.AUDIT.tijdstip] instanceof Date ? data[i][KOL.AUDIT.tijdstip].getTime() : 0;
     if (ts < grens) continue;
     const event = {};
     headers.forEach(function(h, idx) {
@@ -754,7 +858,7 @@ function controleerSetupGedaan_() {
     SpreadsheetApp.getUi().alert(
       'Instellen vereist',
       'Dit onderdeel is pas beschikbaar nadat het systeem is ingesteld.\n\n' +
-      'Ga naar:\nBoekhouding → Instellingen → Eerste keer instellen (setup)',
+      'Ga naar:\nBoekhoudbaar → Instellingen → Eerste keer instellen (setup)',
       SpreadsheetApp.getUi().ButtonSet.OK
     );
   } catch (e) { Logger.log('controleerSetupGedaan_: UI niet beschikbaar'); }
@@ -1140,7 +1244,7 @@ function stuurMailMetDlq_(ontvanger, onderwerp, tekst) {
   if (!ontvanger) return false;
   if (typeof isGeldigEmail_ === 'function' && !isGeldigEmail_(ontvanger)) return false;
   try {
-    MailApp.sendEmail(ontvanger, onderwerp, tekst);
+    MailApp.sendEmail(ontvanger, onderwerp, tekst);  // klant-mail-ok: laag-niveau DLQ-sender; de aanroeper bepaalt de gate
     return true;
   } catch (mailErr) {
     try {
@@ -1585,6 +1689,90 @@ function getCheckpoint_(taak) {
  */
 function clearCheckpoint_(taak) {
   PropertiesService.getScriptProperties().deleteProperty('CKPT_' + taak);
+}
+
+// ─────────────────────────────────────────────
+//  VLUCHTIGE SCRIPTPROPERTY-KEYS — chokepoint (bug-klasse 3)
+// ─────────────────────────────────────────────
+//
+// Dynamische keys (`prefix_<id>`) zonder opruiming vullen ScriptProperties
+// (limiet: 500KB totaal, 9KB per key) → in een klant-kopie die jaren draait
+// leidt dat tot stille schrijf-fouten (de "500KB-cliff"). Élke TTL-gebonden
+// (vluchtige) key MOET via deze helpers: de waarde wordt met een verloopdatum
+// opgeslagen en de prefix in `VLUCHTIGE_PREFIXES` geregistreerd, zodat een
+// dagelijkse sweep (`ruimVluchtigeKeysOp_`) verlopen keys verwijdert — óók als
+// ze nooit meer gelezen worden. Permanente/gebonden keys (bv. opt-out,
+// vaste taaknamen) horen hier NIET en staan met reden op de allowlist in
+// `tests/unit/contract-vluchtige-keys.test.js`.
+//
+// eslint-disable-next-line no-unused-vars
+const VLUCHTIGE_PREFIXES = Object.freeze([
+  'SUPPLETIE_GEMELD_',     // BTW-suppletie-cooldown per periode (TTL = cooldown)
+  'KIA_MISSER_GEMELD_',    // KIA-misser-mail cooldown per kwartaal (90d-TTL) — F-SCALE-330
+  'BEWAARPLICHT_GEMELD_',  // bewaarplicht-jaarmelding (365d-TTL) — F-SCALE-330
+]);
+
+/**
+ * Schrijf een vluchtige key met TTL. De waarde wordt verpakt als {v, exp}.
+ * @param {string} prefix   bv. 'SUPPLETIE_GEMELD_' (moet in VLUCHTIGE_PREFIXES)
+ * @param {string} id       het dynamische deel (bv. periode)
+ * @param {*}      waarde   JSON-serialiseerbare waarde
+ * @param {number} ttlDagen levensduur in dagen
+ */
+function zetVluchtigeKey_(prefix, id, waarde, ttlDagen) {
+  const exp = Date.now() + (ttlDagen * 86400000);
+  PropertiesService.getScriptProperties()
+    .setProperty(prefix + id, JSON.stringify({ v: waarde, exp: exp }));
+}
+
+/**
+ * Lees een vluchtige key. Verlopen? → verwijder 'm (lazy expiry) en geef null.
+ * @returns {*} de bewaarde waarde, of null als afwezig/verlopen/corrupt.
+ */
+function leesVluchtigeKey_(prefix, id) {
+  const props = PropertiesService.getScriptProperties();
+  const raw = props.getProperty(prefix + id);
+  if (!raw) return null;
+  let o;
+  try { o = JSON.parse(raw); } catch (_) { return null; }
+  if (!o || typeof o.exp !== 'number') return null;
+  if (Date.now() > o.exp) {
+    try { props.deleteProperty(prefix + id); } catch (_) {}
+    return null;
+  }
+  return o.v;
+}
+
+/**
+ * Verwijder een vluchtige key expliciet (bv. bij vroegtijdige voltooiing).
+ */
+function wisVluchtigeKey_(prefix, id) {
+  try { PropertiesService.getScriptProperties().deleteProperty(prefix + id); } catch (_) {}
+}
+
+/**
+ * Dagelijkse sweep: verwijder ALLE verlopen vluchtige keys. Fail-safe — mag
+ * dagelijkseTaken nooit breken. Retourneert het aantal verwijderde keys.
+ */
+function ruimVluchtigeKeysOp_() {
+  const props = PropertiesService.getScriptProperties();
+  let alle;
+  try { alle = props.getProperties(); } catch (_) { return 0; }
+  const nu = Date.now();
+  let opgeruimd = 0;
+  Object.keys(alle).forEach(function (key) {
+    let isVluchtig = false;
+    for (let p = 0; p < VLUCHTIGE_PREFIXES.length; p++) {
+      if (key.indexOf(VLUCHTIGE_PREFIXES[p]) === 0) { isVluchtig = true; break; }
+    }
+    if (!isVluchtig) return;
+    let o;
+    try { o = JSON.parse(alle[key]); } catch (_) { return; }
+    if (o && typeof o.exp === 'number' && nu > o.exp) {
+      try { props.deleteProperty(key); opgeruimd++; } catch (_) {}
+    }
+  });
+  return opgeruimd;
 }
 
 /**

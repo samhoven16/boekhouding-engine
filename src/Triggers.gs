@@ -241,28 +241,27 @@ function _trimAuditLog_(auditSheet) {
   const lastRow = auditSheet.getLastRow();
   if (lastRow <= 1) return;
 
-  const HARD_CAP = 5000;
   const ZEVEN_JAAR_MS = 7 * 365.25 * 24 * 3600 * 1000;
   const cutoffDate = new Date(Date.now() - ZEVEN_JAAR_MS);
 
   // Lees alleen kolom 1 (datum) — efficiënt voor grote logs
-  const datums = auditSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const datums = auditSheet.getRange(2, 1, lastRow - 1, 1).getValues().map(function (r) { return r[0]; });
   let aantalTeOud = 0;
   for (let i = 0; i < datums.length; i++) {
-    const d = datums[i][0];
+    const d = datums[i];
     if (!(d instanceof Date)) break;        // log corrupt? stop trim
     if (d.getTime() >= cutoffDate.getTime()) break;  // alle volgende zijn jonger
     aantalTeOud++;
   }
 
-  // Hard-cap: als totaal nog steeds > HARD_CAP na 7y-trim, verwijder ook oudste
-  // recent-jonge rijen om limit te respecteren.
-  const naCutoffTrim = lastRow - 1 - aantalTeOud;
-  let extraOver = Math.max(0, naCutoffTrim - HARD_CAP);
-
-  const totaalTeVerwijderen = aantalTeOud + extraOver;
-  if (totaalTeVerwijderen > 0) {
-    auditSheet.deleteRows(2, totaalTeVerwijderen);
+  // BEWAARPLICHT (art. 52 AWR): verwijder ALLEEN rijen ouder dan 7 jaar.
+  // Een eerdere harde rij-cap (5000) knipte óók JONGERE rijen weg om de limiet
+  // te respecteren — dat vernietigt wettelijk verplicht audit-bewijs (storno,
+  // jaarafsluiting) vóór de bewaartermijn (accountant-controle-bevinding). Een
+  // Google Sheet houdt het reële 7-jaars-volume moeiteloos aan (10M-cel-limiet);
+  // log-groei is dus geen reden om bewijs te wissen. Alleen de 7-jaar-trim blijft.
+  if (aantalTeOud > 0) {
+    auditSheet.deleteRows(2, aantalTeOud);
   }
 }
 
@@ -385,7 +384,7 @@ function verifieerAuditKeten_(auditSheet) {
   var gecontroleerd = 0;
   for (var i = 0; i < data.length; i++) {
     var rij7 = data[i].slice(0, 7);
-    var stored = data[i][7] ? String(data[i][7]) : '';
+    var stored = data[i][KOL.AUDIT.ketenhash] ? String(data[i][KOL.AUDIT.ketenhash]) : '';
     if (prev !== null && stored !== '') {
       if (_auditKetenHash_(prev, rij7) !== stored) {
         return { ok: false, gebrokenRij: i + 2, gecontroleerd: gecontroleerd };
@@ -404,24 +403,41 @@ function verifieerAuditKeten_(auditSheet) {
 function controleerAuditKetenProactief_() {
   var ss = getSpreadsheet_();
   if (!ss) return;
-  var auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
-  if (!auditSheet) return;
 
-  var r = verifieerAuditKeten_(auditSheet);
-  if (!r.ok) {
+  // F-ACC-330: er zijn DRIE onafhankelijke tamper-detectoren, maar voorheen
+  // draaide alléén de AUDIT_LOG-sheet-keten automatisch — de buffer- en
+  // anchor-keten waren menu-only, dus tampering daarin bleef stil tot iemand
+  // toevallig het menu-item indrukte. Verifieer nu alle drie, elk GEÏSOLEERD:
+  // een fout (of breuk) in de één mag de andere twee niet stoppen.
+  var auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  var ketens = [
+    { naam: 'AUDIT_LOG-sheet', fn: function () { return auditSheet ? verifieerAuditKeten_(auditSheet) : null; } },
+    { naam: 'audit-buffer',    fn: function () { return (typeof verifieerAuditChain_ === 'function') ? verifieerAuditChain_() : null; } },
+    { naam: '_Audit_Anchor',   fn: function () { return (typeof verifieerAuditAnchorSheet_ === 'function') ? verifieerAuditAnchorSheet_(ss) : null; } }
+  ];
+
+  ketens.forEach(function (k) {
+    var r;
+    try { r = k.fn(); } catch (_) { return; }            // verifier-fout isoleren
+    if (!r || r.ok) return;
+    // De drie verifiers gebruiken verschillende veldnamen voor "waar": de
+    // sheet-keten geeft gebrokenRij, buffer/anchor geven gebroken.
+    var waar = (r.gebrokenRij != null) ? r.gebrokenRij : r.gebroken;
+    var reden = r.reden || 'hash-keten wijkt af';
     try {
       schrijfAuditLog_('AUDIT_KETEN_GEBROKEN',
-        'Hash-keten wijkt af op rij ' + r.gebrokenRij + ' — eerdere audit-regel mogelijk achteraf gewijzigd');
+        k.naam + ': ' + reden + (waar != null ? ' (rij ' + waar + ')' : '') +
+        ' — eerder vastgelegde regel mogelijk achteraf gewijzigd');
     } catch (_) {}
     try {
       if (typeof meldFataalAanOwner_ === 'function') {
         meldFataalAanOwner_('AUDIT_KETEN_GEBROKEN',
-          'De hash-keten van het Audit Log is gebroken op rij ' + r.gebrokenRij +
+          'De ' + k.naam + '-hashketen is gebroken: ' + reden +
           '. Een eerder vastgelegde audit-regel is mogelijk achteraf gewijzigd of corrupt geraakt.',
-          { rij: r.gebrokenRij, gecontroleerd: r.gecontroleerd });
+          { keten: k.naam, reden: reden, rij: waar });
       }
     } catch (_) {}
-  }
+  });
 }
 
 /**
@@ -577,7 +593,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
 
     if (aantal <= 0) { overgeslagenRegels.push(`Regel ${i} (${omschr}): aantal moet > 0 zijn`); continue; }
     if (prijs <= 0) { overgeslagenRegels.push(`Regel ${i} (${omschr}): prijs moet > €0 zijn`); continue; }
-    const totaal = rondBedrag_(aantal * prijs);
+    const totaal = regelTotaalCent_(aantal, prijs);
     regels.push({ omschr, aantal, prijs, totaal });
   }
 
@@ -629,7 +645,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
       formatBedrag_(_subtotaal) + '). Een factuur mag niet negatief zijn — maak een correctiefactuur (creditnota) voor terugbetaling.');
   }
   const totalExcl    = rondBedrag_(_subtotaal - korting);
-  const totalBtw   = btwTarief !== null ? rondBedrag_(totalExcl * btwTarief) : 0;
+  const totalBtw   = btwTarief !== null ? rondTariefCent_(totalExcl, btwTarief) : 0;
   const totalIncl  = rondBedrag_(totalExcl + totalBtw);
 
   // Klant opslaan/ophalen (inclusief e-mailadres)
@@ -670,20 +686,20 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
   const datumStr = Utilities.formatDate(datum, 'Europe/Amsterdam', 'yyyy-MM-dd');
   let recenteDuplicate = null;
   for (let i = 1; i < bestaandeRijen.length; i++) {
-    if (bestaandeRijen[i][0] === factuurNr) {
+    if (bestaandeRijen[i][KOL.VF.factuurId] === factuurNr) {
       schrijfAuditLog_('Factuur DUBBEL geblokkeerd', factuurNummerOpgemaakt + ' bestaat al in sheet');
       throw new Error('Factuur ' + factuurNummerOpgemaakt + ' bestaat al — dubbele verwerking geblokkeerd.');
     }
     // Self-healing: detecteer 'gevoelsmatige' duplicate — zelfde klant + zelfde
     // datum + zelfde bedrag binnen 5 minuten = waarschijnlijk dubbel-submit.
     // Geen blokkade (kan legitiem zijn), wél waarschuwing in audit-log.
-    const exDatum = bestaandeRijen[i][2];
-    const exKlant = String(bestaandeRijen[i][5] || '');
-    const exIncl  = parseFloat(bestaandeRijen[i][12]) || 0;
+    const exDatum = bestaandeRijen[i][KOL.VF.datum];
+    const exKlant = String(bestaandeRijen[i][KOL.VF.klantnaam] || '');
+    const exIncl  = parseFloat(bestaandeRijen[i][KOL.VF.bedragIncl]) || 0;
     if (exDatum) {
       const exDatumStr = Utilities.formatDate(new Date(exDatum), 'Europe/Amsterdam', 'yyyy-MM-dd');
       if (exDatumStr === datumStr && exKlant === klantnaam && Math.abs(exIncl - totalIncl) < 0.01) {
-        recenteDuplicate = bestaandeRijen[i][1] || ('rij ' + (i + 1));
+        recenteDuplicate = bestaandeRijen[i][KOL.VF.factuurnummer] || ('rij ' + (i + 1));
       }
     }
   }
@@ -852,7 +868,7 @@ function verwerkInkomstenUitHoofdformulier_(ss, data) {
       }
     }
   } else if (directMailen && !klantEmail) {
-    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen klant e-mailadres bekend. Vul het e-mailadres in bij de klant-relatie en verstuur handmatig via Boekhouding → Verkoopfacturen.');
+    schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – geen klant e-mailadres bekend. Vul het e-mailadres in bij de klant-relatie en verstuur handmatig via Boekhoudbaar → Verkoopfacturen.');
   } else if (directMailen && klantEmail && !pdfUrl) {
     schrijfAuditLog_('Email OVERGESLAGEN', factuurNummerOpgemaakt + ' – PDF niet beschikbaar, email niet verzonden');
   }
@@ -929,7 +945,7 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
   const btwTarief   = parseBtwTarief_(data['BTW tarief uitgave'] || '21% (hoog)');
   let btwBedrag     = parseBedrag_(data['BTW bedrag uitgave'] || '0');
   if (btwBedrag === 0 && btwTarief !== null) {
-    btwBedrag = rondBedrag_(bedragExcl * btwTarief);
+    btwBedrag = rondTariefCent_(bedragExcl, btwTarief);
   }
   // Pro-rata BTW: bij mixed-use (privé+zakelijk) is alleen het zakelijke
   // deel BTW-aftrekbaar. Klant geeft 'Zakelijk %' op (default 100%).
@@ -1099,6 +1115,7 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
  * @param {string} ref       Inkoopnummer / referentie
  */
 function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
+  if (!emailNotificatiesAan_()) return;  // master e-mailnotificatie-schakelaar
   const drempelStr = getInstelling_('Melding hoge uitgave');
   const drempel = drempelStr ? parseBedrag_(drempelStr) : 500;
   if (!isFinite(drempel) || drempel <= 0) return;
@@ -1124,7 +1141,7 @@ function waarschuwBijHogeUitgave_(bedrag, leverancier, categorie, ref) {
     return;
   }
   try {
-    MailApp.sendEmail(ontvanger, onderwerp, body);
+    stuurKlantNotificatie_(ontvanger, onderwerp, body);
     schrijfAuditLog_('Hoge uitgave alert', `${leverancier} ${formatBedrag_(bedrag)} → ${ontvanger}`);
   } catch (e) {
     Logger.log('Hoge-uitgave alert niet verzonden: ' + e.message);
@@ -1152,7 +1169,7 @@ function verwerkDeclaratieUitHoofdformulier_(ss, data) {
   // fall back to computed value for Forms submissions that don't include this field.
   let btwBedrag = parseBedrag_(data['BTW bedrag declaratie'] || '0');
   if (btwBedrag === 0 && btwTarief !== null) {
-    btwBedrag = rondBedrag_(bedragExcl * btwTarief);
+    btwBedrag = rondTariefCent_(bedragExcl, btwTarief);
   }
   const bedragIncl = rondBedrag_(bedragExcl + btwBedrag);
   const categorie  = data['Categorie declaratie'] || 'Overige kosten';
@@ -1277,7 +1294,7 @@ function verwerkVerkoopfactuurFormulier(e) {
       const aantal = parseFloat(data[`Factuurregel ${i} – Aantal`] || '0');
       const prijs = parseBedrag_(data[`Factuurregel ${i} – Prijs per eenheid (excl. BTW)`] || '0');
       if (!omschr || aantal === 0) continue;
-      const regelBedrag = rondBedrag_(aantal * prijs);
+      const regelBedrag = regelTotaalCent_(aantal, prijs);
       regels.push({ omschr, aantal, prijs, totaal: regelBedrag });
       totalExcl += regelBedrag;
     }
@@ -1293,7 +1310,7 @@ function verwerkVerkoopfactuurFormulier(e) {
     // vereist doorlopend nummering — gaten = audit-flag bij controle).
     // Volgorde nu: ALLE validatie eerst, daarna pas nummer claimen.
     const btwTarief = parseBtwTarief_(data['BTW tarief'] || '21% (hoog)');
-    totalBtw = btwTarief !== null ? rondBedrag_(totalExcl * btwTarief) : 0;
+    totalBtw = btwTarief !== null ? rondTariefCent_(totalExcl, btwTarief) : 0;
     const totalIncl = rondBedrag_(totalExcl + totalBtw);
 
     const klantnaam = String(data['Klantnaam'] || '').trim();
@@ -1384,7 +1401,7 @@ function verwerkVerkoopfactuurFormulier(e) {
       const rijen = vfSheet.getDataRange().getValues();
       for (let i = 1; i < rijen.length; i++) {
         // Strict numeric compare — voorkomt cross-type match (bv. '100' == 100)
-        if (parseInt(rijen[i][0], 10) === factuurNr) {
+        if (parseInt(rijen[i][KOL.VF.factuurId], 10) === factuurNr) {
           vfSheet.getRange(i + 1, 20).setValue(pdfUrl);
           break;
         }
@@ -1527,6 +1544,66 @@ function _dagelijksBudget_() {
 var _huidigDagelijksBudgetStart = 0;
 var _huidigDagelijksBudgetOverschreden = false;
 
+/**
+ * Master aan/uit voor klant-gerichte notificatie-mails (BTW-deadline,
+ * suppletie-tip, KIA-misser, bewaarplicht, hoge-uitgave-alert, rapporten).
+ * Eén instelling 'E-mailnotificaties' (Ja/Nee) — standaard AAN (backward-compat).
+ * Raakt NIET de betalingsherinneringen naar de klanten van de gebruiker; die
+ * zijn zakelijk-essentieel en houden hun eigen flow.
+ */
+function emailNotificatiesAan_() {
+  try {
+    const v = getInstelling_('E-mailnotificaties');
+    if (v === null || v === undefined || String(v).trim() === '') return true; // default aan
+    return isJa_(String(v));
+  } catch (_) { return true; }
+}
+
+/**
+ * CHOKEPOINT (bug-klasse 4) — ENIGE sanctie-route voor systeem-notificaties naar
+ * de EIGENAAR (de ZZP'er zelf): BTW-deadline, suppletie, KIA, bewaarplicht,
+ * hoge-uitgave, weekoverzicht, sheet-grootte enz. Respecteert de master-
+ * schakelaar `emailNotificatiesAan_()` zodat "uit" écht álles stopt — geen lek
+ * via een losse trigger of een vergeten `MailApp.sendEmail`.
+ *
+ * BELANGRIJK: zakelijke mail naar DERDEN (facturen, betalingsherinneringen aan
+ * debiteuren) loopt hier NIET langs en blijft altijd versturen — die hoort niet
+ * onder de notificatie-schakelaar.
+ *
+ * De ontvanger wordt door de aanroeper bepaald (geen recipient-wijziging), zodat
+ * dit puur een gate is bovenop de bestaande DLQ-verzendlaag.
+ *
+ * @returns {boolean} true als verstuurd, false als gate uit / ongeldig adres.
+ */
+function stuurKlantNotificatie_(ontvanger, onderwerp, tekst) {
+  if (!emailNotificatiesAan_()) return false;   // master-schakelaar
+  // Een falende notificatie mag de aanroeper (bv. dagelijkseTaken) nooit breken.
+  try {
+    if (typeof stuurMailMetDlq_ === 'function') return stuurMailMetDlq_(ontvanger, onderwerp, tekst);
+    if (!ontvanger) return false;
+    MailApp.sendEmail(ontvanger, onderwerp, tekst);  // klant-mail-ok: chokepoint-fallback (al gegate door stuurKlantNotificatie_)
+    return true;
+  } catch (_) { return false; }
+}
+
+/**
+ * Menu-actie: zet de klant-notificatie-mails in één klik aan of uit.
+ * Schrijft 'E-mailnotificaties' = Ja/Nee in Instellingen en bevestigt met toast.
+ */
+function toggleEmailNotificaties() {
+  const nieuw = emailNotificatiesAan_() ? 'Nee' : 'Ja';
+  try {
+    setInstelling_('E-mailnotificaties', nieuw);
+  } catch (e) {
+    try { SpreadsheetApp.getUi().alert('Kon de instelling niet opslaan: ' + e.message); } catch (_) {}
+    return;
+  }
+  const bericht = nieuw === 'Ja'
+    ? '✓ E-mailnotificaties staan nu AAN — je krijgt o.a. de BTW-deadline-herinnering en hoge-uitgave-alerts per mail.'
+    : '✓ E-mailnotificaties staan nu UIT — geen routine-meldingsmails meer (BTW-deadline, hoge uitgave). Belangrijke compliance-seintjes (suppletie, bewaarplicht) en betalingsherinneringen naar je eigen klanten blijven werken.';
+  try { SpreadsheetApp.getActiveSpreadsheet().toast(bericht, 'Boekhoudbaar', 8); } catch (_) {}
+}
+
 function dagelijkseTaken() {
   const ss = getSpreadsheet_();
   const dagelijksTotaal0 = Date.now();
@@ -1541,28 +1618,37 @@ function dagelijkseTaken() {
   // Wrap in _runTaak_ voor automatische metrics + status-logging.
   _runTaak_('markeerVervallen', function() { markeerVervallenFacturen_(ss); });
   _runTaak_('herinneringen',    function() { stuurAutomatischeBetalingsherinneringen_(ss); });
+  // Master e-mailnotificatie-schakelaar: één 'E-mailnotificaties'=Nee zet alle
+  // klant-gerichte meldingsmails uit (de gebruiker wil niet "elke dag mails").
+  // Standaard aan; betalingsherinneringen naar de eigen klanten blijven buiten.
+  const _mailNotifAan = emailNotificatiesAan_();
   _runTaak_('btwDeadline',      function() {
     // V3-FIX: case-insensitief via isJa_. Strikte === 'Ja' liet 'ja'/'JA'/' Ja '
     // stil falen → BTW-reminder draaide niet → klant miste deadline → €68+ boete.
-    if (isJa_(getInstelling_('BTW aangifte herinnering'))) controleerBtwDeadlines_();
+    if (_mailNotifAan && isJa_(getInstelling_('BTW aangifte herinnering'))) controleerBtwDeadlines_();
   });
   // V3-FIX: proactieve suppletie-check. detecteerSuppletieMogelijk_ bestond
   // al maar zat alleen op een menu-item. Klant die niet handmatig "Controleer
   // afsluiting" runt mist de boete-vrije 8-weken-termijn voor vrijwillige
   // verbetering → bij latere Belastingdienst-ontdekking: 30% boete + rente.
   _runTaak_('suppletieCheck',   function() {
+    // NIET achter de e-mail-gate: deze detectie schrijft óók de durable audit-log
+    // van een wettelijk verplichte suppletie (boete-vrije 8-wkn-termijn). Alleen
+    // het mailtje is "ruis"; de detectie + registratie moeten altijd draaien.
     if (typeof controleerSuppletieProactief_ === 'function') controleerSuppletieProactief_();
   });
   // V5: KIA-misser detectie. Investering verkeerd op kostenrekening = klant
   // mist 28% KIA-aftrek. Aggregeer jaar-totaal, mail bij ≥€2.901 potentieel
   // gemist. Idempotent per kwartaal.
   _runTaak_('kiaMisser', function() {
+    // Detectie + audit-log altijd; alleen het mailtje valt onder de gate (intern).
     if (typeof controleerKiaMisserProactief_ === 'function') controleerKiaMisserProactief_();
   });
   // V6: bewaarplicht pre-alert. Oudste boeking > 6,5 jaar = klant moet XAF +
   // PDF-archief offline opslaan vóór 7-jaars-grens. Voorkomt bewijslast-
   // omkering bij latere Belastingdienst-controle. 1×/kalenderjaar.
   _runTaak_('bewaarplichtAlert', function() {
+    // Detectie + audit-log altijd (7-jaars-bewaarplicht is wettelijk); gate intern.
     if (typeof controleerBewaarplichtAlert_ === 'function') controleerBewaarplichtAlert_();
   });
   // #B4.1 (gas-runtime audit): ScriptProperties-cleanup VÓÓR de dure proof/health-
@@ -1608,6 +1694,14 @@ function dagelijkseTaken() {
           'Verwijderd ' + verwijderd + ' keys ouder dan 180d' +
           (legacy > 0 ? ' + ' + legacy + ' legacy plain-DONE' : ''));
       } catch (_) {}
+    }
+  });
+  _runTaak_('cleanupViesCache', function() {
+    // F-DUR-150: verlopen VIES_-cache-keys opruimen (TTL was lees-tijd-only →
+    // onbegrensde ScriptProperty-groei bij veel distinct EU-btw-nummers).
+    if (typeof cleanupViesCache_ === 'function') {
+      const n = cleanupViesCache_();
+      if (n > 0) safeAuditLog_('cleanupViesCache', 'Verwijderd ' + n + ' verlopen VIES-cache-keys');
     }
   });
   _runTaak_('gezondheidscheck', function() { voerGezondheidCheckStil_(); });
@@ -1730,8 +1824,8 @@ function dagelijkseTaken() {
         // [1] = Factuurnummer ("F000001") — de dunning-keys gebruiken dit
         // formaat. Kolom [0] is het numerieke Factuur ID; dat matcht nooit
         // met een key en zou élke dag alle dunning-state wissen.
-        const fnr = String(data[i][1] || '');
-        const datum = data[i][2];
+        const fnr = String(data[i][KOL.VF.factuurnummer] || '');
+        const datum = data[i][KOL.VF.datum];
         if (!fnr) continue;
         const ts = (datum instanceof Date) ? datum.getTime() : 0;
         if (ts >= cutoff) actieveFacturen[fnr] = true;
@@ -1751,6 +1845,13 @@ function dagelijkseTaken() {
           'Verwijderd ' + verwijderd + ' herinneringsStap-keys voor facturen > 2 jaar oud'); } catch (_) {}
       }
     } catch (_) { /* fail-safe — cleanup mag dagelijkseTaken nooit breken */ }
+  });
+
+  // Bug-klasse 3: generieke sweep van verlopen vluchtige ScriptProperty-keys
+  // (SUPPLETIE_GEMELD_ e.a. via VLUCHTIGE_PREFIXES) — voorkomt de 500KB-cliff
+  // ongeacht of de keys ooit nog gelezen worden.
+  _runTaak_('ruimVluchtigeKeys', function() {
+    try { if (typeof ruimVluchtigeKeysOp_ === 'function') ruimVluchtigeKeysOp_(); } catch (_) {}
   });
 
   // SelfHeal trigger-check: ALLERLAATSTE step in dagelijkseTaken — beperkt
@@ -1834,8 +1935,8 @@ function _runTaak_(naam, fn, opt) {
 
 /**
  * Verborgen tabblad 'Taakstatus' toont per achtergrond-taak: laatste run,
- * duur, status, eventueel laatste fout. Klant-vriendelijk overzicht via
- * Boekhouding → Controle → Taakstatus tonen.
+ * duur, status, eventueel laatste fout. Wordt uitgelezen door de installatie-
+ * diagnose (Controle & Export → Voor support (geavanceerd) → 🔍 Installatie diagnoseren).
  */
 function _updateTaakStatus_(naam, status, durMs, fout) {
   const ss = getSpreadsheet_();
@@ -1855,7 +1956,7 @@ function _updateTaakStatus_(naam, status, durMs, fout) {
   const data = sheet.getDataRange().getValues();
   let rij = -1;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === naam) { rij = i + 1; break; }
+    if (String(data[i][KOL.TAAK.taak]) === naam) { rij = i + 1; break; }
   }
   const waarden = [naam, new Date(), durMs, status, fout || ''];
   if (rij === -1) {
@@ -1994,7 +2095,7 @@ function stuurWeeklySamenvatting_() {
       safeAuditLog_('Weekly summary OVERGESLAGEN', 'Ongeldig e-mailadres: ' + ontvanger);
       return;
     }
-    MailApp.sendEmail(ontvanger, onderwerp, body);
+    stuurKlantNotificatie_(ontvanger, onderwerp, body);
     schrijfAuditLog_('Weekly summary verzonden', `naar ${ontvanger} – omzet ${formatBedrag_(omzetWeek)}`);
   } catch (e) {
     Logger.log('stuurWeeklySamenvatting_ fout: ' + e.message);
@@ -2010,7 +2111,7 @@ function stuurWeeklySamenvatting_() {
  * Drempels:
  *   - VERKOOPFACTUREN + INKOOPFACTUREN samen > 2000 rijen
  *   - JOURNAALPOSTEN > 8000 rijen
- * Dan: adviseer "Boekhouding → Beheer → Nieuw boekjaar starten"
+ * Dan: adviseer "Boekhoudbaar → Beheer → Nieuw boekjaar starten"
  */
 function controleerSheetGrootte_(ss) {
   const nu = Date.now();
@@ -2032,12 +2133,12 @@ function controleerSheetGrootte_(ss) {
   const bericht =
     'De spreadsheet bevat ' + (vfRijen + ifRijen) + ' facturen en ' + jrRijen + ' boekingen. ' +
     'Dit werkt prima, maar het Dashboard-refresh wordt merkbaar trager. ' +
-    'Overweeg om een nieuw boekjaar te starten via Boekhouding → Instellingen → Nieuw boekjaar.';
+    'Overweeg om een nieuw boekjaar te starten via Boekhoudbaar → Instellingen → Nieuw boekjaar.';
 
   safeAuditLog_('Sheet-grootte waarschuwing', bericht);
   if (eigenEmail && isGeldigEmail_(eigenEmail)) {
     try {
-      MailApp.sendEmail(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
+      stuurKlantNotificatie_(eigenEmail, 'Tip: boekhouding wordt groot — overweeg nieuw boekjaar',
         bericht + '\n\n— Boekhoudbaar' + (bedrijf ? ' (' + bedrijf + ')' : ''));
     } catch (_) {}
   }
@@ -2103,29 +2204,29 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       safeAuditLog_('Dunning batch-pauze', 'rij ' + i + ' van ' + data.length);
       return;
     }
-    const status = data[i][14];
+    const status = data[i][KOL.VF.status];
     if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
 
     // CYCLE-59: parseDatum_ — anders skipt dunning string-dated facturen
     // → klant verstuurt nooit herinnering → debiteuren-saldo loopt op.
-    const vervaldatum = data[i][3] ? ((data[i][3] instanceof Date) ? data[i][3] : parseDatum_(data[i][3])) : null;
+    const vervaldatum = data[i][KOL.VF.vervaldatum] ? ((data[i][KOL.VF.vervaldatum] instanceof Date) ? data[i][KOL.VF.vervaldatum] : parseDatum_(data[i][KOL.VF.vervaldatum])) : null;
     if (!vervaldatum || isNaN(vervaldatum.getTime())) continue;
     const dagenOver = Math.floor((vandaag - vervaldatum) / 86400000);
     if (dagenOver < 1) continue;
 
-    const factuurnummer = String(data[i][1]);
+    const factuurnummer = String(data[i][KOL.VF.factuurnummer]);
     const stapKey = 'herinneringsStap_' + factuurnummer;
     const gestuurdeStap = parseInt(props.getProperty(stapKey) || '0');
     const volgendeStap = STAP_DAGEN.filter(d => dagenOver >= d).length;
     if (volgendeStap <= gestuurdeStap) continue;
 
-    const klantId = data[i][4];
+    const klantId = data[i][KOL.VF.klantId];
     const klantEmail = relatieEmailMap[String(klantId)] || null;
     if (!klantEmail) continue;
 
-    const klantnaam   = data[i][5];
-    const bedragOpen  = rondBedrag_((data[i][12] || 0) - (data[i][13] || 0));
-    const pdfUrl      = data[i][19] || '';
+    const klantnaam   = data[i][KOL.VF.klantnaam];
+    const bedragOpen  = rondBedrag_((data[i][KOL.VF.bedragIncl] || 0) - (data[i][KOL.VF.betaaldBedrag] || 0));
+    const pdfUrl      = data[i][KOL.VF.pdfUrl] || '';
 
     // Skip als al volledig betaald (negatief = overbetaling, status nog niet bijgewerkt)
     if (bedragOpen <= 0) continue;
@@ -2161,7 +2262,7 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
           opties.attachments = [DriveApp.getFileById(extractFileId_(pdfUrl)).getAs('application/pdf')];
         } catch (e) { /* PDF optioneel */ }
       }
-      MailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
+      MailApp.sendEmail(klantEmail, onderwerp, tekst, opties);  // klant-mail-ok: betalingsherinnering naar DERDE (debiteur), zakelijk
       props.setProperty(stapKey, String(volgendeStap));
       verwerkt++;  // tel alleen werkelijk verstuurde mails — voorkomt batch-skip bij scrolling
       Logger.log(`Herinnering stap ${volgendeStap}/3 verstuurd voor ${factuurnummer} naar ${klantEmail}`);
@@ -2207,10 +2308,10 @@ function koppelBankTransactieAanFactuur_(ss, transactieId, ref, bedrag, isOntvan
     const sheet = ss.getSheetByName(SHEETS.VERKOOPFACTUREN);
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      const fnr = String(data[i][1]); // Factuurnummer
+      const fnr = String(data[i][KOL.VF.factuurnummer]); // Factuurnummer
       if (!matchFnr(fnr)) continue;
-      const totalIncl = parseFloat(data[i][12]) || 0;
-      const reedsBetaald = parseFloat(data[i][13]) || 0;
+      const totalIncl = parseFloat(data[i][KOL.VF.bedragIncl]) || 0;
+      const reedsBetaald = parseFloat(data[i][KOL.VF.betaaldBedrag]) || 0;
       const openstaand = rondBedrag_(totalIncl - reedsBetaald);
       const tePlaatsen = Math.max(0, Math.min(bedrag, openstaand));
       if (tePlaatsen <= 0) break;
@@ -2250,10 +2351,10 @@ function koppelBankTransactieAanFactuur_(ss, transactieId, ref, bedrag, isOntvan
     const sheet = ss.getSheetByName(SHEETS.INKOOPFACTUREN);
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      const fnr = String(data[i][4]); // Factuurref leverancier
+      const fnr = String(data[i][KOL.IF.factuurrefLeverancier]); // Factuurref leverancier
       if (!matchFnr(fnr)) continue;
       // Idempotency-guard: als al BETAALD, geen tweede journaalpost.
-      const huidigeStatus = String(data[i][12] || '');
+      const huidigeStatus = String(data[i][KOL.IF.status] || '');
       if (huidigeStatus === FACTUUR_STATUS.BETAALD) break;
       sheet.getRange(i + 1, 13).setValue(FACTUUR_STATUS.BETAALD);
       sheet.getRange(i + 1, 14).setValue(datum);
@@ -2291,11 +2392,11 @@ function markeerVervallenFacturen_(ss) {
   // via getRangeList (één sheet-roundtrip). Bij 0 hits = 0 writes.
   const teVervallenRijen = [];
   for (let i = 1; i < data.length; i++) {
-    const status = data[i][14];
+    const status = data[i][KOL.VF.status];
     if (teMarkeren.indexOf(status) === -1) continue;
     // Vervaldatum kan in cell als Date-object OF als string staan (na CSV-import).
     // parseDatum_ accepteert beide. Native new Date(stringNL) zou NaN geven.
-    const ruwVerval = data[i][3];
+    const ruwVerval = data[i][KOL.VF.vervaldatum];
     if (!ruwVerval) continue;
     const verval = (ruwVerval instanceof Date) ? ruwVerval : parseDatum_(ruwVerval);
     if (!verval || isNaN(verval.getTime())) continue;
@@ -2352,10 +2453,10 @@ function controleerBtwDeadlines_() {
     if (dagenTot > 0 && dagenTot <= 14) {
       const kwLabel = 'Q' + d.kw + (d.suffix || '');
       try {
-        MailApp.sendEmail(email,
+        stuurKlantNotificatie_(email,
           `Herinnering: BTW aangifte ${kwLabel} deadline over ${dagenTot} dagen`,
           `Beste,\n\nDe deadline voor uw BTW aangifte ${kwLabel} is ${formatDatum_(d.datum)}.\n\n` +
-          `Genereer uw aangifte via: Boekhouding → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
+          `Genereer uw aangifte via: Boekhoudbaar → BTW → BTW aangifte ${kwLabel.replace(/\s.*/, '')}\n\n` +
           `Met vriendelijke groet,\n— Boekhoudbaar`
         );
       } catch (err) {
@@ -2370,7 +2471,7 @@ function stuurFoutEmail_(context, err) {
   try {
     const email = getInstelling_('Email rapporten naar');
     if (email && isGeldigEmail_(email)) {
-      MailApp.sendEmail(email,
+      MailApp.sendEmail(email,  // klant-mail-ok: fout-email naar eigenaar (safety, event-driven)
         `Fout in boekhoudprogramma: ${context}`,
         `Er is een fout opgetreden bij het verwerken van: ${context}\n\nFoutmelding: ${err.message}\n\nStack: ${err.stack}`
       );
@@ -2393,19 +2494,19 @@ function stuurBetalingsherinneringen() {
   const relatieEmailMap = bouwRelatieEmailMap_(ss);
 
   for (let i = 1; i < data.length; i++) {
-    const status = data[i][14];
-    const klantId = data[i][4];
+    const status = data[i][KOL.VF.status];
+    const klantId = data[i][KOL.VF.klantId];
 
     if (status !== FACTUUR_STATUS.VERVALLEN && status !== FACTUUR_STATUS.VERZONDEN) continue;
 
     const klantEmail = relatieEmailMap[String(klantId)] || null;
     if (!klantEmail) continue;
 
-    const fnr = data[i][1];
+    const fnr = data[i][KOL.VF.factuurnummer];
     // Defensief parsen: als een klant handmatig 'betaald' of een datum in
     // betaald-kolom zet, geven we liever €0 dan NaN in de herinneringsmail.
-    const bedragOpen = rondBedrag_((parseFloat(data[i][12]) || 0) - (parseFloat(data[i][13]) || 0));
-    const vervaldatum = data[i][3];
+    const bedragOpen = rondBedrag_((parseFloat(data[i][KOL.VF.bedragIncl]) || 0) - (parseFloat(data[i][KOL.VF.betaaldBedrag]) || 0));
+    const vervaldatum = data[i][KOL.VF.vervaldatum];
     if (bedragOpen <= 0) continue; // Geen herinnering sturen voor volledig betaalde factuur
 
     const iban = getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '';
@@ -2447,7 +2548,7 @@ function stuurBetalingsherinneringen() {
       continue;
     }
     try {
-      MailApp.sendEmail(klantEmail,
+      MailApp.sendEmail(klantEmail,  // klant-mail-ok: betalingsherinnering naar DERDE (debiteur)
         `Herinnering factuur ${fnr} · ${bedragStr}`,
         tekst,
         { htmlBody: htmlBody, name: bedrijf }
@@ -2481,8 +2582,8 @@ function bouwRelatieEmailMap_(ss) {
   const data = sheet.getDataRange().getValues();
   const map = {};
   for (let i = 1; i < data.length; i++) {
-    const id = String(data[i][0]);
-    if (id && !(id in map)) map[id] = data[i][10]; // E-mailadres kolom
+    const id = String(data[i][KOL.REL.relatieId]);
+    if (id && !(id in map)) map[id] = data[i][KOL.REL.email]; // E-mailadres kolom
   }
   return map;
 }

@@ -25,6 +25,8 @@
  */
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const { createGasRuntime } = require('../__helpers__/gas-runtime');
 
 /** Date-vervanger die new Date().getFullYear() forceert maar verder echt is. */
@@ -62,8 +64,8 @@ describe('LAAG 1 — 2026-tarieven gepind op Belastingdienst (oracle-anker)', ()
   });
   test('Algemene heffingskorting', () => {
     expect(B.HEFFINGSKORTING_MAX).toBe(3115);
-    expect(B.HEFFINGSKORTING_AFBOUW_VAN).toBe(29739);
-    expect(B.HEFFINGSKORTING_AFBOUW_PCT).toBe(0.0640);
+    expect(B.HEFFINGSKORTING_AFBOUW_VAN).toBe(29736);  // F-TAX-110 RB-verificatie 2026-06-21
+    expect(B.HEFFINGSKORTING_AFBOUW_PCT).toBe(0.06398); // (was 29739/0,0640; bron belastingdienst-tabel + Deloitte)
     expect(B.HEFFINGSKORTING_NUL_VAN).toBe(78426);
   });
   test('Arbeidskorting', () => {
@@ -84,6 +86,16 @@ describe('LAAG 1 — 2026-tarieven gepind op Belastingdienst (oracle-anker)', ()
   test('Ondernemersaftrek-kernwaarden', () => {
     expect(B.ZELFSTANDIGENAFTREK).toBe(1200);   // verlaagd per 2026
     expect(B.MKB_WINSTVRIJSTELLING).toBe(0.1270);
+  });
+  test('Box 3 forfaits + heffingsvrij + tarief (F-TAX-110 RB-verificatie 2026-06-21)', () => {
+    // De fiscaal-zwaarste correctie deze verificatie: het beleggings-forfait ging
+    // van het teruggedraaide 7,78%-kabinetsvoorstel terug naar 6,00% definitief.
+    // Zonder deze pin glipt een her-introductie van 0,0778 ongemerkt door CI.
+    expect(B.BOX3_FORFAIT_BELEGGING).toBe(0.06);
+    expect(B.BOX3_FORFAIT_BELEGGING).not.toBe(0.0778);  // het teruggedraaide voorstel
+    expect(B.BOX3_FORFAIT_SPAAR).toBe(0.0128);          // 2026 voorlopig; definitief begin 2027
+    expect(B.BOX3_HEFFINGSVRIJ).toBe(59357);
+    expect(B.BOX3_TARIEF).toBe(0.36);
   });
 });
 
@@ -116,8 +128,8 @@ describe('LAAG 2 — golden-master berekeningen (hand-afgeleid uit de tarieven)'
   test('Heffingskorting €25.000 → €3.115,00 (onder afbouwgrens → max)', () => {
     expect(ctx.berekenHeffingskorting_(25000, B)).toBeCloseTo(3115.00, 2);
   });
-  test('Heffingskorting €30.000 → €3.098,30 (3115 − 261×0,064)', () => {
-    expect(ctx.berekenHeffingskorting_(30000, B)).toBeCloseTo(3098.30, 2);
+  test('Heffingskorting €30.000 → €3.098,11 (3115 − 264×0,06398; F-TAX-110 RB-verificatie)', () => {
+    expect(ctx.berekenHeffingskorting_(30000, B)).toBeCloseTo(3098.11, 2);
   });
 
   test('Arbeidskorting €40.000 → €5.685,00 (onder topgrens → max)', () => {
@@ -125,6 +137,16 @@ describe('LAAG 2 — golden-master berekeningen (hand-afgeleid uit de tarieven)'
   });
   test('Arbeidskorting €60.000 → €4.747,10 (5685 − 14407×0,0651)', () => {
     expect(ctx.berekenArbeidskorting_(60000, B)).toBeCloseTo(4747.10, 2);
+  });
+
+  test('Box 3 €200.000 beleggingsvermogen → €3.037,89 heffing (na F-TAX-110)', () => {
+    // grondslag = vermogen − heffingsvrij; rendement = grondslag × forfait;
+    // heffing = rendement × tarief — de keten uit Prive.gs, gevoed door B.
+    // Anker 3037,89 valt zodra één van de 3 box-3-inputs drift. (Met het oude
+    // 0,0778/59500 was dit €3.935,12 → de correctie scheelt ~23% / ~€897.)
+    const grondslag = 200000 - B.BOX3_HEFFINGSVRIJ;          // 140.643
+    const rendement = grondslag * B.BOX3_FORFAIT_BELEGGING;  // 8.438,58
+    expect(ct(rendement * B.BOX3_TARIEF)).toBeCloseTo(3037.89, 2);
   });
 
   test('KIA €10.000 → €2.800,00 (28% in opbouwzone)', () => {
@@ -159,8 +181,8 @@ describe('LAAG 3 — rate-source consistentie: CustomFunctions-fallback == 2026'
 
   test('F-TAX-102: fallback-kortingen zijn 2026, niet 2025', () => {
     expect(fb.HEFFINGSKORTING_MAX).toBe(3115);
-    expect(fb.HEFFINGSKORTING_AFBOUW_VAN).toBe(29739);
-    expect(fb.HEFFINGSKORTING_AFBOUW_PCT).toBe(0.0640);
+    expect(fb.HEFFINGSKORTING_AFBOUW_VAN).toBe(29736);   // F-TAX-110 RB-verificatie
+    expect(fb.HEFFINGSKORTING_AFBOUW_PCT).toBe(0.06398);
     expect(fb.ARBEIDSKORTING_MAX).toBe(5685);
     expect(fb.ARBEIDSKORTING_TOP_TOT).toBe(45592);
     expect(fb.ARBEIDSKORTING_AFBOUW_VAN).toBe(45593);
@@ -170,5 +192,34 @@ describe('LAAG 3 — rate-source consistentie: CustomFunctions-fallback == 2026'
     expect(fb.ZVW_PCT).toBe(B.ZVW_PCT);
     expect(fb.ZVW_MAX_INKOMEN).toBe(B.ZVW_MAX_INKOMEN);
     expect(fb.ZELFSTANDIGENAFTREK).toBe(B.ZELFSTANDIGENAFTREK);
+  });
+});
+
+describe('LAAG 4 — UI-hint ↔ constante sync (F-TAX-136)', () => {
+  // De Instellingen-editor toont per tarief een hint. Die mag niet stil
+  // achterlopen op de constante: een hint die nog "2026: 7,78%" zegt terwijl de
+  // constante 6,00% is, verleidt een klant om 'm "terug te corrigeren" naar de
+  // foute waarde → box-3-overschatting van ~€900 bij €200k. Ratel op de drift.
+  const src = fs.readFileSync(path.resolve(__dirname, '../../src/Belastingadvies.gs'), 'utf8');
+  const hintVan = (sleutel) => {
+    const i = src.indexOf("sleutel: '" + sleutel + "'");
+    return i >= 0 ? src.slice(i, src.indexOf('}', i)) : '';
+  };
+
+  test('box-3-forfait-hint noemt 6,00% (definitief), niet 7,78% als huidige waarde', () => {
+    const hint = hintVan('BOX3_FORFAIT_BELEGGING');
+    expect(hint).toMatch(/2026: 6,00%/);
+    // 7,78 mag alleen nog voorkomen als het expliciet "teruggedraaid/voorstel" is.
+    if (/7,78/.test(hint)) expect(hint).toMatch(/teruggedraaid|voorstel/i);
+  });
+
+  test('Prive.gs box-3-dead-fallbacks dragen geen 2025-restant meer (F-TAX-110-consistentie)', () => {
+    // Twee onafhankelijke audits flagden de dead-fallbacks 0,0588/57684 als
+    // inconsistent met de 6,00%/59357-correctie. Ze vuren niet (getBelasting_ is
+    // altijd beschikbaar) maar een bron-lezende controleur mag geen 5,88%-restant zien.
+    const prive = fs.readFileSync(path.resolve(__dirname, '../../src/Prive.gs'), 'utf8');
+    expect(prive).not.toMatch(/BOX3_FORFAIT_BELEGGING\) \|\| 0\.0588/);
+    expect(prive).not.toMatch(/BOX3_HEFFINGSVRIJ\) \|\| 57684/);
+    expect(prive).toMatch(/BOX3_FORFAIT_BELEGGING\) \|\| 0\.06/);   // 2026-waarde
   });
 });

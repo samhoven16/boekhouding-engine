@@ -131,7 +131,10 @@ function berekenBtw(tarief, bedragExcl, bedragIncl) {
   let excl, btw, incl;
   if (bedragExcl > 0) {
     excl  = Math.round(bedragExcl * 100) / 100;
-    btw   = Math.round(excl * pct * 100) / 100;
+    // klasse 9 (precisie): float-tarief × bedrag → cent-drift (bv. €21,50 × 21%
+    // = €4,515 → code gaf €4,51 i.p.v. €4,52). Exact via integer-centen — dit is
+    // BINDENDE BTW die in de aangifte landt.
+    btw   = (typeof rondTariefCent_ === 'function') ? rondTariefCent_(excl, pct) : Math.round(excl * pct * 100) / 100;
     incl  = Math.round((excl + btw) * 100) / 100;
   } else if (bedragIncl > 0) {
     incl  = Math.round(bedragIncl * 100) / 100;
@@ -378,7 +381,7 @@ function _verwerkFactuur_(ss, s) {
     emailInfo = ' Let op: PDF kon niet worden gegenereerd \u2014 geen e-mail verstuurd.';
   } else {
     emailInfo = ' E-mail versturen mislukt — de factuur is wél aangemaakt. ' +
-      'Opnieuw versturen kan via Boekhouding → Factuurlijst; het systeem probeert het zelf ook nog 3×.';
+      'Opnieuw versturen kan via Boekhoudbaar → Factuurlijst; het systeem probeert het zelf ook nog 3×.';
   }
   // Financial snapshot suffix for the confirmation message
   let snapshotInfo = '';
@@ -404,6 +407,10 @@ function _verwerkFactuur_(ss, s) {
 // ─── KOSTEN HANDLER ───────────────────────────
 function _verwerkKosten_(ss, s, raw) {
   const bedragIncl = saniteerGetal_(raw.bedragIncl);
+  if (bedragIncl < 0) {  // berekenBtw nult een negatief stil → kosten kwijt; weiger expliciet
+    throw new Error('Bedrag mag niet negatief zijn. Voor een terugbetaling of ' +
+      'leverancierskrediet: boek een aparte correctie/creditnota.');
+  }
   const btwCalc    = berekenBtw(s.btw, 0, bedragIncl);
 
   // Veldnamen MOETEN overeenkomen met wat verwerkUitgavenUitHoofdformulier_ leest
@@ -441,6 +448,10 @@ function _verwerkDeclaratie_(ss, s, raw) {
   // raw.bedrag is always the total (incl. BTW) the user or AI provided — same as bedragIncl in kosten.
   // Back-calculate excl like _verwerkKosten_ does; never treat as excl directly.
   const bedragIncl = saniteerGetal_(raw.bedrag);
+  if (bedragIncl < 0) {  // berekenBtw nult een negatief stil → declaratie kwijt; weiger expliciet
+    throw new Error('Bedrag mag niet negatief zijn. Voor een terugbetaling of ' +
+      'correctie: boek een aparte correctie/creditnota.');
+  }
   const btwCalc    = berekenBtw(s.btw, 0, bedragIncl);
 
   // Veldnamen MOETEN overeenkomen met wat verwerkDeclaratieUitHoofdformulier_ leest
@@ -537,7 +548,19 @@ const _GEMINI_MODEL_DEFAULT = 'gemini-2.5-flash';
 function _geminiModel_() {
   try {
     const v = PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL');
-    if (v && v.trim()) return v.trim();
+    if (v && v.trim()) return v.trim();   // expliciete per-kopie override wint
+  } catch (_) {}
+  // F-SCALE-332: laat Sam het model centraal bijwerken via de config-payload
+  // (net als belastingTarieven), zodat een Gemini-model-EOL basisbreed op te
+  // vangen is ZONDER code-push naar elke kopie. De hardcoded default veroudert
+  // anders stil → AI-scan breekt voor de hele basis tegelijk.
+  try {
+    if (typeof haalConfigOp_ === 'function') {
+      const cfg = haalConfigOp_();
+      if (cfg && cfg.geminiModel && String(cfg.geminiModel).trim()) {
+        return String(cfg.geminiModel).trim();
+      }
+    }
   } catch (_) {}
   return _GEMINI_MODEL_DEFAULT;
 }
@@ -576,9 +599,36 @@ function zetGeminiApiKey() {
   ui.alert('✅ Gemini API-key opgeslagen (versleuteld).', 'Vanaf nu leest de AI bij "Nieuwe boeking → Upload + AI" je bonnen automatisch uit.', ui.ButtonSet.OK);
 }
 
+/**
+ * F-DOC-161: vertaalt een Gemini-API-fout naar een NL, actuabele klantmelding.
+ * Het rauwe (Engelse) bericht is voor de klant onoplosbaar ("API key not valid",
+ * "Resource has been exhausted (e.g. check quota)"). Mapping op de canonieke
+ * status / HTTP-code (met message-substring als vangnet); onbekend → generieke
+ * handmatig-invoeren-hint. Elke tak eindigt op een actie die de klant zélf kan
+ * uitvoeren zonder Sam.
+ */
+function _geminiFoutNl_(err) {
+  const status = String((err && err.status) || '').toUpperCase();
+  const code = parseInt(err && err.code, 10);
+  const msg = String((err && err.message) || '').toLowerCase();
+  if (status === 'UNAUTHENTICATED' || code === 401 || msg.indexOf('api key') !== -1 || msg.indexOf('api-key') !== -1) {
+    return 'De Gemini API-sleutel is ongeldig of ontbreekt — controleer \'m via "AI-bonscan instellen". Of vul de bon handmatig in.';
+  }
+  if (status === 'PERMISSION_DENIED' || code === 403 || msg.indexOf('billing') !== -1 || msg.indexOf('permission') !== -1) {
+    return 'Geen toegang tot de AI-scan — staat facturering (billing) aan voor de API-sleutel? Anders: vul de bon handmatig in.';
+  }
+  if (status === 'RESOURCE_EXHAUSTED' || code === 429 || msg.indexOf('quota') !== -1 || msg.indexOf('exhausted') !== -1 || msg.indexOf('rate limit') !== -1) {
+    return 'De AI-scanlimiet is bereikt — probeer het over een paar minuten opnieuw, of vul de bon handmatig in.';
+  }
+  if (status === 'UNAVAILABLE' || code === 503 || (isFinite(code) && code >= 500) || msg.indexOf('overloaded') !== -1) {
+    return 'De AI-dienst is even overbelast — probeer het zo opnieuw, of vul de bon handmatig in.';
+  }
+  return 'De bonscan lukte niet (AI-fout) — vul de gegevens handmatig in.';
+}
+
 function scanDocumentMetAI(base64Data, mimeType) {
   const apiKey = ontsleutelString_(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY'));
-  if (!apiKey) return { fout: 'Gemini API-sleutel niet ingesteld (Boekhouding → Instellingen → 🤖 Gemini API-key voor bon-scan).' };
+  if (!apiKey) return { fout: 'Gemini API-sleutel niet ingesteld (Boekhoudbaar → Instellingen → 🤖 Eigen Gemini API-key).' };
 
   // OWASP LLM10 mitigatie: rate-limit op AI-calls. Zonder limiet kan klant
   // (per ongeluk of malicious) 1000× scannen → Gemini-quota uitputten + kosten.
@@ -641,8 +691,12 @@ function scanDocumentMetAI(base64Data, mimeType) {
     );
     const json   = JSON.parse(resp.getContentText());
     if (json.error) {
+      // F-DOC-161: log het rauwe (Engelse) Gemini-bericht voor diagnose, maar
+      // geef de klant een NL, actuabele melding i.p.v. "API key not valid" /
+      // "Resource has been exhausted" — onoplosbaar zonder Sam (zoals Mollie.gs
+      // HTTP-codes naar klanttaal vertaalt).
       logAiAanroep_('bon-scan', inputHash, { fout: json.error.message }, 'GEMINI_ERROR', { mimeType: mimeType });
-      return { fout: json.error.message };
+      return { fout: _geminiFoutNl_(json.error) };
     }
     const tekst  = json.candidates[0].content.parts[0].text.trim()
                       .replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/i,'').trim();
@@ -989,6 +1043,11 @@ function verifieerAuditChain_() {
   }
 }
 
+// Module-lokale kolom-accessor (_Audit_Anchor-tab; zie appendRow in
+// schrijfAuditAnchor_). Geen sheet-kolommen van JOURNAALPOSTEN — eigen layout.
+// eslint-disable-next-line no-unused-vars
+const ANCHOR_KOL = Object.freeze({ datum: 0, entryCount: 1, ketenHash: 2, vorigeHash: 3 });
+
 /**
  * Verifieer de continuïteit van de _Audit_Anchor-tab: elke rij z'n
  * 'Vorige-hash' (kolom 4) moet gelijk zijn aan de 'Keten-hash' (kolom 3)
@@ -1009,8 +1068,8 @@ function verifieerAuditAnchorSheet_(ssArg) {
     }
     const rijen = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
     for (let i = 1; i < rijen.length; i++) {
-      const vorigeHash = String(rijen[i - 1][2] || '');
-      const dezePrev = String(rijen[i][3] || '');
+      const vorigeHash = String(rijen[i - 1][ANCHOR_KOL.ketenHash] || '');
+      const dezePrev = String(rijen[i][ANCHOR_KOL.vorigeHash] || '');
       if (dezePrev !== vorigeHash) {
         return { ok: false, totaal: rijen.length, gebroken: i + 1,
           reden: 'Anchor-schakel gebroken op rij ' + (i + 2) + ' — rij verwijderd of gewijzigd' };
@@ -1169,7 +1228,7 @@ function _verstuurAuditAnchorMail_(datum, entryCount, hash, prevHash) {
     'of persoonsgegevens in deze mail.';
 
   try {
-    MailApp.sendEmail({ to: ontvanger, subject: subject, body: body, noReply: true });
+    MailApp.sendEmail({ to: ontvanger, subject: subject, body: body, noReply: true });  // klant-mail-ok: audit-anchor integriteits-alert (zeldzaam)
     return true;
   } catch (mailErr) {
     Logger.log('Audit-anker-mail mislukt: ' + mailErr.message);

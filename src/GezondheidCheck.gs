@@ -32,7 +32,7 @@
 // hulp bij "het doet het niet" — output is plain-text die klant in
 // support-mail kan plakken.
 //
-// Menu: Boekhouding → Installatie diagnoseren
+// Menu: Boekhoudbaar → Controle & Export → Voor support (geavanceerd) → 🔍 Installatie diagnoseren
 
 function diagnoseInstallatie() {
   const ui = SpreadsheetApp.getUi();
@@ -67,7 +67,7 @@ function diagnoseInstallatie() {
                  PropertiesService.getScriptProperties().getProperty('SETUP_DONE') === 'true' ||
                  (typeof PROP === 'object' && PROP && PROP.SETUP_DONE &&
                   PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) === 'true');
-    if (!done) return { ok: false, melding: 'Run Boekhouding → Setup om te installeren.' };
+    if (!done) return { ok: false, melding: 'Run Boekhoudbaar → Setup om te installeren.' };
     return { detail: 'ja' };
   });
 
@@ -126,7 +126,7 @@ function diagnoseInstallatie() {
     try {
       const props = PropertiesService.getScriptProperties();
       const sleutel = props.getProperty('licentiesleutel') || '';
-      if (!sleutel) return { ok: false, melding: 'GEEN sleutel — activeer via Boekhouding → Licentie activeren' };
+      if (!sleutel) return { ok: false, melding: 'GEEN sleutel — activeer via Boekhoudbaar → Licentie activeren' };
       if (typeof valideerLicentieOpServer_ !== 'function') return { detail: 'check overgeslagen (functie ontbreekt)' };
       const r = valideerLicentieOpServer_(sleutel);
       if (r && r.geldig === false) return { ok: false, melding: r.fout || 'Licentie ongeldig' };
@@ -344,9 +344,9 @@ function controleerBalans_(ss) {
     let totaalPassiva = 0;
 
     for (let i = 1; i < gbData.length; i++) {
-      const type  = gbData[i][2];
-      const bw    = gbData[i][4];
-      const saldo = parseFloat(gbData[i][5]) || 0;
+      const type  = gbData[i][KOL.GB.type];
+      const bw    = gbData[i][KOL.GB.balansWenv];
+      const saldo = parseFloat(gbData[i][KOL.GB.saldo]) || 0;
       if (bw !== 'Balans') continue;
 
       if (type === 'Actief')  totaalActiva  += saldo;
@@ -399,33 +399,38 @@ function controleerBalansStrikt_() {
     if (!gb) return { check: 'Balans (strikt)', status: 'INFO', bericht: 'Grootboekschema niet gevonden.' };
 
     const data = gb.getDataRange().getValues();
-    let totaalActiva = 0;
-    let totaalPassiva = 0;
+    // Som in GEHELE CENTEN, niet in euro-float: de jaarrekening-balans moet
+    // bewijsbaar EXACT 0 zijn ("0,000000"), niet "< €0,005". Saldi zijn al op de
+    // cent afgerond, dus Math.round(saldo*100) is exact — geen IEEE754-naad meer.
+    let activaCenten = 0;
+    let passivaCenten = 0;
     for (let i = 1; i < data.length; i++) {
       // FIX F-ACC-001: balans-side zit in kolom [2] (type = Actief/Passief),
       // niet in [4] (bw = Balans/W&V). Oude code maakte deze strikte check
       // een no-op (altijd €0=€0). Spiegelt controleerBalans_.
-      const type = String(data[i][2] || '');
-      const bw = String(data[i][4] || '');
-      const saldo = parseFloat(data[i][5]) || 0;
+      const type = String(data[i][KOL.GB.type] || '');
+      const bw = String(data[i][KOL.GB.balansWenv] || '');
+      const saldoCenten = Math.round((parseFloat(data[i][KOL.GB.saldo]) || 0) * 100);
       if (bw !== 'Balans') continue;
-      if (type === 'Actief')  totaalActiva  += saldo;
-      if (type === 'Passief') totaalPassiva += saldo;
+      if (type === 'Actief')  activaCenten  += saldoCenten;
+      if (type === 'Passief') passivaCenten += saldoCenten;
     }
-    const verschil = Math.abs(totaalActiva - totaalPassiva);
+    const totaalActiva = activaCenten / 100;
+    const totaalPassiva = passivaCenten / 100;
+    const verschil = Math.abs(activaCenten - passivaCenten) / 100;
 
-    if (verschil < 0.005) {
+    if (activaCenten === passivaCenten) {   // EXACT op de cent — geen epsilon
       return {
         check: 'Balans (strikt — jaarrekening)',
         status: 'OK',
-        bericht: `Activa en passiva sluiten exact (${formatBedrag_(totaalActiva)}).`,
+        bericht: `Activa en passiva sluiten EXACT op de cent (${formatBedrag_(totaalActiva)}).`,
       };
     }
     return {
       check: 'Balans (strikt — jaarrekening)',
       status: 'KRITIEK',
       bericht: `Verschil ${formatBedrag_(verschil)} tussen activa (${formatBedrag_(totaalActiva)}) ` +
-               `en passiva (${formatBedrag_(totaalPassiva)}). Voor jaarrekening MOET dit < €0,005 zijn. ` +
+               `en passiva (${formatBedrag_(totaalPassiva)}). Voor de jaarrekening MOET dit exact €0,00 (op de cent) zijn. ` +
                `Loop de journaalposten van december na — er staat ergens een afgerond bedrag scheef. ` +
                `Tip: Boekhoudbaar → Geavanceerd → Saldi herberekenen.`,
     };
@@ -453,7 +458,7 @@ function controleerReferentiele_(ss) {
     const relData = relSheet.getDataRange().getValues();
     const relIds = new Set();
     for (let i = 1; i < relData.length; i++) {
-      const id = String(relData[i][0] || '').trim();
+      const id = String(relData[i][KOL.REL.relatieId] || '').trim();
       if (id) relIds.add(id);
     }
 
@@ -465,20 +470,23 @@ function controleerReferentiele_(ss) {
     if (vfSheet) {
       const vfData = vfSheet.getDataRange().getValues();
       for (let i = 1; i < vfData.length; i++) {
-        const klantId = String(vfData[i][4] || '').trim();
+        const klantId = String(vfData[i][KOL.VF.klantId] || '').trim();
         if (klantId && !relIds.has(klantId)) {
           verweesdVf++;
-          if (voorbeeldVf.length < 3) voorbeeldVf.push(String(vfData[i][1] || '?'));
+          if (voorbeeldVf.length < 3) voorbeeldVf.push(String(vfData[i][KOL.VF.factuurnummer] || '?'));
         }
       }
     }
     if (ifSheet) {
       const ifData = ifSheet.getDataRange().getValues();
       for (let i = 1; i < ifData.length; i++) {
-        const levId = String(ifData[i][4] || '').trim();
+        // Referentiële integriteit op de RELATIE-ID (= leverancierId [5]), niet
+        // op de factuurref [4] (vrije tekst zoals "INV-2023-001"). Voorheen [4]
+        // → vrijwel elke inkoopfactuur vals geflagd als "verwijderde leverancier".
+        const levId = String(ifData[i][KOL.IF.leverancierId] || '').trim();
         if (levId && !relIds.has(levId)) {
           verweesdIf++;
-          if (voorbeeldIf.length < 3) voorbeeldIf.push(String(ifData[i][1] || '?'));
+          if (voorbeeldIf.length < 3) voorbeeldIf.push(String(ifData[i][KOL.IF.internNummer] || '?'));
         }
       }
     }
@@ -526,10 +534,10 @@ function controleerBetalingsIntegriteit_(ss) {
     const jpData = jpSheet.getDataRange().getValues();
     const bankRefs = new Set();
     for (let i = 1; i < jpData.length; i++) {
-      const debet  = String(jpData[i][4] || '');
-      const credit = String(jpData[i][6] || '');
+      const debet  = String(jpData[i][KOL.JP.debetRekening] || '');
+      const credit = String(jpData[i][KOL.JP.creditRekening] || '');
       if (debet === '1200' && credit === '1100') {
-        const ref = String(jpData[i][9] || '').trim();
+        const ref = String(jpData[i][KOL.JP.referentie] || '').trim();
         if (ref) bankRefs.add(ref);
       }
     }
@@ -538,9 +546,9 @@ function controleerBetalingsIntegriteit_(ss) {
     const vfData = vfSheet.getDataRange().getValues();
     const ontbrekend = [];
     for (let i = 1; i < vfData.length; i++) {
-      const status = String(vfData[i][14] || '');
+      const status = String(vfData[i][KOL.VF.status] || '');
       if (status !== FACTUUR_STATUS.BETAALD) continue;
-      const factuurnr = String(vfData[i][1] || '').trim();
+      const factuurnr = String(vfData[i][KOL.VF.factuurnummer] || '').trim();
       if (factuurnr && !bankRefs.has(factuurnr)) {
         ontbrekend.push(factuurnr);
         if (ontbrekend.length > 10) break; // cap voor performance
@@ -582,10 +590,10 @@ function controleerJournaalposten_(ss) {
     const vandaag = new Date();
 
     for (let i = 1; i < data.length; i++) {
-      const debet  = String(data[i][4] || '');
-      const credit = String(data[i][6] || '');
-      const bedrag = parseFloat(data[i][8]) || 0;
-      const datum  = data[i][1] ? parseDatum_(data[i][1]) : null;
+      const debet  = String(data[i][KOL.JP.debetRekening] || '');
+      const credit = String(data[i][KOL.JP.creditRekening] || '');
+      const bedrag = parseFloat(data[i][KOL.JP.bedrag]) || 0;
+      const datum  = data[i][KOL.JP.datum] ? parseDatum_(data[i][KOL.JP.datum]) : null;
 
       // Zelfde rekening op debet én credit = fout
       if (debet && credit && debet === credit) zelfboekingen++;
@@ -638,6 +646,44 @@ function controleerJournaalposten_(ss) {
 //  CHECK 3: VERKOOPFACTUREN
 // ─────────────────────────────────────────────
 
+/**
+ * F-ACC-331: detecteer ontbrekende nummers binnen een doorlopende factuur-
+ * nummerreeks (signaal voor een achteraf verwijderde rij). Groepeert op het
+ * niet-numerieke prefix (zodat verschillende reeksen — bv. 'F' en 'CN' — elkaar
+ * niet vervuilen) en zoekt gaten tussen min en max. Rapporteert ALLEEN bij een
+ * dichte reeks (≥3 nummers én ≥50% bezet) — een dunne reeks is een ander
+ * nummerschema, geen verwijdering. Geeft de ontbrekende nummers als strings.
+ * @param {!Object<string,boolean>} nummerSet  verzameling bestaande nummers
+ * @returns {!Array<string>}
+ */
+function _detecteerFactuurnummerGaten_(nummerSet) {
+  const groepen = {};
+  Object.keys(nummerSet || {}).forEach((nr) => {
+    const m = String(nr).match(/^(.*?)(\d+)$/);   // prefix + trailing cijfers
+    if (!m) return;
+    const num = parseInt(m[2], 10);
+    if (!Number.isFinite(num)) return;
+    const g = (groepen[m[1]] = groepen[m[1]] || { nums: [], len: 0 });
+    g.nums.push(num);
+    g.len = Math.max(g.len, m[2].length);           // breedste zero-padding bewaren
+  });
+  const gaten = [];
+  Object.keys(groepen).forEach((prefix) => {
+    const g = groepen[prefix];
+    if (g.nums.length < 3) return;                   // te weinig om een reeks te zijn
+    const aanwezig = new Set(g.nums);
+    const min = Math.min.apply(null, g.nums);
+    const max = Math.max.apply(null, g.nums);
+    const span = max - min + 1;
+    if (span <= g.nums.length) return;               // volledig aaneengesloten
+    if (g.nums.length < span / 2) return;            // te dun → ander schema, geen gat
+    for (let n = min; n <= max && gaten.length < 50; n++) {
+      if (!aanwezig.has(n)) gaten.push(prefix + String(n).padStart(g.len, '0'));
+    }
+  });
+  return gaten;
+}
+
 function controleerVerkoopfacturen_(ss) {
   const resultaten = [];
 
@@ -654,15 +700,15 @@ function controleerVerkoopfacturen_(ss) {
     for (let i = 1; i < data.length; i++) {
       // Rijen die compleet leeg lijken (geen ID + geen klant + geen bedrag)
       // overslaan — voorkomt false positives op trailing-blanks na rijdelete.
-      const heeftId     = !!String(data[i][0] || '').trim();
-      const klant       = String(data[i][5] || '').trim();
-      const bedragRaw   = parseFloat(data[i][12]);
+      const heeftId     = !!String(data[i][KOL.VF.factuurId] || '').trim();
+      const klant       = String(data[i][KOL.VF.klantnaam] || '').trim();
+      const bedragRaw   = parseFloat(data[i][KOL.VF.bedragIncl]);
       if (!heeftId && !klant && (isNaN(bedragRaw) || bedragRaw === 0)) continue;
 
-      const nr      = String(data[i][1] || '').trim();
+      const nr      = String(data[i][KOL.VF.factuurnummer] || '').trim();
       const bedrag  = bedragRaw || 0;
-      const status  = String(data[i][14] || '');
-      const vervalD = data[i][3] ? parseDatum_(data[i][3]) : null;
+      const status  = String(data[i][KOL.VF.status] || '');
+      const vervalD = data[i][KOL.VF.vervaldatum] ? parseDatum_(data[i][KOL.VF.vervaldatum]) : null;
 
       // CYCLE-26: factuurnummer ontbreken = wettelijk probleem (NL OB-1968
       // art. 35 vereist een doorlopend nummer per factuur). Eerder werd dit
@@ -695,6 +741,20 @@ function controleerVerkoopfacturen_(ss) {
       resultaten.push({ check: 'Facturen – Unieke nummers', status: 'OK', bericht: 'Alle factuurnummers zijn uniek.' });
     }
 
+    // F-ACC-331 (accountant-as): uniciteit + monotonie dekken NIET een GAT in de
+    // reeks na een achteraf verwijderde rij (044 en 046 blijven uniek+oplopend,
+    // 045 ontbreekt geruisloos). Een controleur vraagt "waarom ontbreekt 045?".
+    // Detecteer ontbrekende nummers binnen een dichte reeks; gaten kunnen
+    // legitiem zijn (geannuleerd vóór verzending) maar moeten verklaarbaar zijn.
+    const gaten = _detecteerFactuurnummerGaten_(nummers);
+    if (gaten.length > 0) {
+      const toon = gaten.slice(0, 10).join(', ');
+      resultaten.push({ check: 'Facturen – Gat in nummerreeks', status: 'WAARSCHUWING',
+        bericht: `Ontbrekende factuurnummers in de reeks: ${toon}${gaten.length > 10 ? ` (+${gaten.length - 10} meer)` : ''}. ` +
+          'Een doorlopende nummering mag geen onverklaarde gaten hebben (art. 35 Wet OB). ' +
+          'Is een factuur per ongeluk verwijderd? Storneer of crediteer i.p.v. verwijderen.' });
+    }
+
     if (geenKlant > 0) {
       resultaten.push({ check: 'Facturen – Ontbrekende klant', status: 'WAARSCHUWING',
         bericht: `${geenKlant} factuur/facturen zonder klantnaam. Dit kan problemen geven bij BTW-controle.` });
@@ -707,7 +767,7 @@ function controleerVerkoopfacturen_(ss) {
 
     if (vervallenOpen > 0) {
       resultaten.push({ check: 'Facturen – Vervallen onbetaald', status: 'WAARSCHUWING',
-        bericht: `${vervallenOpen} factuur/facturen zijn vervallen maar nog niet betaald. Stuur een betalingsherinnering via Boekhouding → Facturen & Betalingen.` });
+        bericht: `${vervallenOpen} factuur/facturen zijn vervallen maar nog niet betaald. Stuur een betalingsherinnering via Boekhoudbaar → Facturen & Betalingen.` });
     } else {
       resultaten.push({ check: 'Facturen – Vervallen onbetaald', status: 'OK', bericht: 'Geen vervallen onbetaalde facturen.' });
     }
@@ -729,10 +789,10 @@ function controleerBtwConsistentie_(ss) {
     let btwMismatch = 0;
 
     for (let i = 1; i < vfData.length; i++) {
-      const exclBtw  = parseFloat(vfData[i][9])  || 0;
-      const btwLabel = String(vfData[i][10] || '');
-      const btwBedrag = parseFloat(vfData[i][11]) || 0;
-      const inclBtw  = parseFloat(vfData[i][12]) || 0;
+      const exclBtw  = parseFloat(vfData[i][KOL.VF.bedragExcl])  || 0;
+      const btwLabel = String(vfData[i][KOL.VF.btwLabel] || '');
+      const btwBedrag = parseFloat(vfData[i][KOL.VF.btwBedrag]) || 0;
+      const inclBtw  = parseFloat(vfData[i][KOL.VF.bedragIncl]) || 0;
 
       if (exclBtw <= 0) continue;
 

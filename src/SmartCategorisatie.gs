@@ -193,12 +193,12 @@ function autoCategoriseerTransacties() {
   let nietsGedaan = 0;
 
   for (let i = 1; i < data.length; i++) {
-    const grootboek = String(data[i][9] || '').trim();
+    const grootboek = String(data[i][KOL.BT.grootboekrekening] || '').trim();
     if (grootboek) continue; // Al gecategoriseerd
 
-    const omschrijving = String(data[i][2] || '');
-    const tegenpartij  = String(data[i][7] || '');
-    const bedrag       = parseFloat(data[i][3]) || 0;
+    const omschrijving = String(data[i][KOL.BT.omschrijving] || '');
+    const tegenpartij  = String(data[i][KOL.BT.tegenpartij] || '');
+    const bedrag       = parseFloat(data[i][KOL.BT.bedrag]) || 0;
 
     const suggestie = suggereerCategorie_(omschrijving, tegenpartij, bedrag);
     if (!suggestie) { nietsGedaan++; continue; }
@@ -267,7 +267,7 @@ function slaansFuzzyKoppelTransacties_() {
   // Strikte match-helper voorkomt false-positives ('F100' ⊂ 'F1000').
   const factuurIndex = {};
   for (let i = 1; i < vfData.length; i++) {
-    const nr = String(vfData[i][1] || '').toLowerCase();
+    const nr = String(vfData[i][KOL.VF.factuurnummer] || '').toLowerCase();
     if (nr) factuurIndex[nr] = i;
   }
   const escapeRe_ = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -282,11 +282,11 @@ function slaansFuzzyKoppelTransacties_() {
   let gekoppeld = 0;
 
   for (let i = 1; i < btData.length; i++) {
-    if (btData[i][10]) continue; // Al gekoppeld
-    const ruwBedrag  = parseFloat(btData[i][3]) || 0;
+    if (btData[i][KOL.BT.gekoppeldAan]) continue; // Al gekoppeld
+    const ruwBedrag  = parseFloat(btData[i][KOL.BT.bedrag]) || 0;
     const bedrag     = Math.abs(ruwBedrag);
-    const omschr     = String(btData[i][2] || '').toLowerCase();
-    const tegenpartij = String(btData[i][7] || '').toLowerCase();
+    const omschr     = String(btData[i][KOL.BT.omschrijving] || '').toLowerCase();
+    const tegenpartij = String(btData[i][KOL.BT.tegenpartij] || '').toLowerCase();
     const isOntvangst = ruwBedrag > 0;
 
     if (!isOntvangst || bedrag < 1) continue;
@@ -306,11 +306,11 @@ function slaansFuzzyKoppelTransacties_() {
     // Methode 2: Exact bedrag + klantnaam
     if (!gevondenFactuurRij) {
       for (let j = 1; j < vfData.length; j++) {
-        const vfBedrag = parseFloat(vfData[j][12]) || 0;
-        const status   = vfData[j][14];
+        const vfBedrag = parseFloat(vfData[j][KOL.VF.bedragIncl]) || 0;
+        const status   = vfData[j][KOL.VF.status];
         if (moetSkippen_(status)) continue;
         if (Math.abs(vfBedrag - bedrag) < 0.005) {
-          const klantnaam = String(vfData[j][5] || '').toLowerCase();
+          const klantnaam = String(vfData[j][KOL.VF.klantnaam] || '').toLowerCase();
           const klantW = klantnaam.split(' ')[0];
           const tegW   = tegenpartij.split(' ')[0];
           if (klantW && tegW && (tegenpartij.includes(klantW) || klantnaam.includes(tegW))) {
@@ -327,15 +327,15 @@ function slaansFuzzyKoppelTransacties_() {
       // CYCLE-61: parseDatum_ + isNaN — string-dated rijen (CSV-import van
       // zowel bank als factuur) matchten anders nooit → bank-transacties
       // werden niet auto-gekoppeld → klant koppelt handmatig (frictie).
-      const btRaw = btData[i][1];
+      const btRaw = btData[i][KOL.BT.datum];
       const btDatum = btRaw ? ((btRaw instanceof Date) ? btRaw : parseDatum_(btRaw)) : null;
       const btGeldig = btDatum && !isNaN(btDatum.getTime());
       for (let j = 1; j < vfData.length; j++) {
-        const vfBedrag = parseFloat(vfData[j][12]) || 0;
-        const status   = vfData[j][14];
+        const vfBedrag = parseFloat(vfData[j][KOL.VF.bedragIncl]) || 0;
+        const status   = vfData[j][KOL.VF.status];
         if (moetSkippen_(status)) continue;
         if (Math.abs(vfBedrag - bedrag) < 0.005 && btGeldig) {
-          const vfRaw = vfData[j][2];
+          const vfRaw = vfData[j][KOL.VF.datum];
           const vfDatum = vfRaw ? ((vfRaw instanceof Date) ? vfRaw : parseDatum_(vfRaw)) : null;
           if (vfDatum && !isNaN(vfDatum.getTime())) {
             const dagenVerschil = Math.abs((btDatum - vfDatum) / (1000 * 60 * 60 * 24));
@@ -351,13 +351,13 @@ function slaansFuzzyKoppelTransacties_() {
 
     if (gevondenFactuurRij !== null) {
       // Markeer transactie als gekoppeld
-      btSheet.getRange(i + 1, 11).setValue(vfData[gevondenFactuurRij][1]);
+      btSheet.getRange(i + 1, 11).setValue(vfData[gevondenFactuurRij][KOL.VF.factuurnummer]);
       btSheet.getRange(i + 1, 14).setValue('Auto: ' + koppelMethode);
 
       // Bereken nieuwe betaald + status — respecteer eventuele eerdere
       // deelbetaling i.p.v. blind alles te overschrijven.
-      const huidigBetaald = parseFloat(vfData[gevondenFactuurRij][13]) || 0;
-      const totalIncl = parseFloat(vfData[gevondenFactuurRij][12]) || 0;
+      const huidigBetaald = parseFloat(vfData[gevondenFactuurRij][KOL.VF.betaaldBedrag]) || 0;
+      const totalIncl = parseFloat(vfData[gevondenFactuurRij][KOL.VF.bedragIncl]) || 0;
       const tePlaatsen = Math.max(0, Math.min(bedrag, rondBedrag_(totalIncl - huidigBetaald)));
       if (tePlaatsen <= 0) continue;
       const nieuwBetaald = rondBedrag_(huidigBetaald + tePlaatsen);
@@ -368,7 +368,7 @@ function slaansFuzzyKoppelTransacties_() {
       vfSheet.getRange(gevondenFactuurRij + 1, 14).setValue(nieuwBetaald);
       vfSheet.getRange(gevondenFactuurRij + 1, 15).setValue(nieuwStatus);
       if (nieuwStatus === FACTUUR_STATUS.BETAALD) {
-        const btDatum = btData[i][1] ? new Date(btData[i][1]) : new Date();
+        const btDatum = btData[i][KOL.BT.datum] ? new Date(btData[i][KOL.BT.datum]) : new Date();
         vfSheet.getRange(gevondenFactuurRij + 1, 16).setValue(btDatum);
         // CYCLE-28: zelfde cleanup als cycle 20 — voorkomt accumulatie van
         // herinneringsStap_<fnr> ScriptProperties via dit auto-koppel-pad.
@@ -378,7 +378,7 @@ function slaansFuzzyKoppelTransacties_() {
         // leidt.
         try {
           PropertiesService.getScriptProperties()
-            .deleteProperty('herinneringsStap_' + String(vfData[gevondenFactuurRij][1] || ''));
+            .deleteProperty('herinneringsStap_' + String(vfData[gevondenFactuurRij][KOL.VF.factuurnummer] || ''));
         } catch (_) {}
       }
 
@@ -386,21 +386,21 @@ function slaansFuzzyKoppelTransacties_() {
       // op het grootboek niet in sync met factuurstatus.
       try {
         maakJournaalpost_(ss, {
-          datum: btData[i][1] ? new Date(btData[i][1]) : new Date(),
+          datum: btData[i][KOL.BT.datum] ? new Date(btData[i][KOL.BT.datum]) : new Date(),
           omschr: nieuwStatus === FACTUUR_STATUS.BETAALD
-            ? 'Ontvangst factuur ' + vfData[gevondenFactuurRij][1]
-            : 'Deelbetaling factuur ' + vfData[gevondenFactuurRij][1],
+            ? 'Ontvangst factuur ' + vfData[gevondenFactuurRij][KOL.VF.factuurnummer]
+            : 'Deelbetaling factuur ' + vfData[gevondenFactuurRij][KOL.VF.factuurnummer],
           dagboek: 'Bankboek',
           debet: '1200', credit: '1100',
           bedrag: tePlaatsen,
-          ref: String(vfData[gevondenFactuurRij][1] || ''),
+          ref: String(vfData[gevondenFactuurRij][KOL.VF.factuurnummer] || ''),
           type: BOEKING_TYPE.BANKONTVANGST,
         });
       } catch (e) {
         Logger.log('Auto-koppel journaalpost faalt: ' + e.message);
       }
 
-      Logger.log(`Gekoppeld via ${koppelMethode}: factuur ${vfData[gevondenFactuurRij][1]}`);
+      Logger.log(`Gekoppeld via ${koppelMethode}: factuur ${vfData[gevondenFactuurRij][KOL.VF.factuurnummer]}`);
       gekoppeld++;
     }
   }

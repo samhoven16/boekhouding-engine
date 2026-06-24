@@ -52,7 +52,7 @@ function checkAchievements_() {
       const data = vfSheet.getDataRange().getValues();
       const klanten = new Set();
       for (let i = 1; i < data.length; i++) {
-        const k = String(data[i][4] || '').trim();
+        const k = String(data[i][KOL.VF.klantId] || '').trim();
         if (k) klanten.add(k);
       }
       if (klanten.size >= 10 && !reedsSet.has('TIEN_KLANTEN')) nieuwe.push('TIEN_KLANTEN');
@@ -150,7 +150,7 @@ function checkNpsTrigger_() {
     props.setProperty(NPS_PROP_LAATSTE, String(Date.now()));
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     if (ss && ss.toast) {
-      ss.toast('Klik op Boekhouding → Geef feedback (NPS) om je score te delen.', '📊 1-vraag-survey', 12);
+      ss.toast('Klik op Boekhoudbaar → Geef feedback (NPS) om je score te delen.', '📊 1-vraag-survey', 12);
     }
   } catch (_) {}
 }
@@ -343,15 +343,15 @@ function _berekenJaarStats_(ss, jaar) {
         // CYCLE-39: string-dated invoices (CSV-import) werden silent
         // geskipped → onjuiste jaaroverzicht-omzet getoond aan klant.
         // Zelfde bug-pattern als cycle 38 (EUVerkoop).
-        const ruwDatum = data[i][2];
+        const ruwDatum = data[i][KOL.VF.datum];
         const datum = (ruwDatum instanceof Date) ? ruwDatum
                     : ruwDatum ? parseDatum_(ruwDatum) : null;
         if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
-        if (data[i][14] === 'Gecrediteerd') continue;
-        const omzet = parseFloat(data[i][9]) || 0;
+        if (data[i][KOL.VF.status] === 'Gecrediteerd') continue;
+        const omzet = parseFloat(data[i][KOL.VF.bedragExcl]) || 0;
         stats.omzet += omzet;
         stats.aantalFacturen++;
-        const klantnaam = String(data[i][5] || 'Onbekend');
+        const klantnaam = String(data[i][KOL.VF.klantnaam] || 'Onbekend');
         klantOmzet[klantnaam] = (klantOmzet[klantnaam] || 0) + omzet;
         maandOmzet[datum.getMonth()] += omzet;
       }
@@ -361,11 +361,11 @@ function _berekenJaarStats_(ss, jaar) {
       const data = ifSheet.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
         // CYCLE-39: parseDatum_ voor string-tolerance (zie boven)
-        const ruwDatum = data[i][3];
+        const ruwDatum = data[i][KOL.IF.factuurdatumLeverancier];
         const datum = (ruwDatum instanceof Date) ? ruwDatum
                     : ruwDatum ? parseDatum_(ruwDatum) : null;
         if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
-        stats.kosten += parseFloat(data[i][8]) || 0;
+        stats.kosten += parseFloat(data[i][KOL.IF.bedragExcl]) || 0;
         stats.aantalKosten++;
       }
     }

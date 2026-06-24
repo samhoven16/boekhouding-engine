@@ -1063,7 +1063,7 @@ function startSpraak(type) {
     document.getElementById(statusId).textContent = 'Luisteren...';
   };
   HERKENNER.onresult = function(e) {
-    var tekst = e.results[0][0].transcript;
+    var tekst = e.results[0][0].transcript; // kol-ban-ok: SpeechRecognition-API-resultaat (browser), geen sheet-kolom
     document.getElementById(statusId).textContent = 'Verwerken: \u201c' + tekst + '\u201d';
     google.script.run
       .withSuccessHandler(function(velden) {

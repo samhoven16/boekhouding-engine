@@ -195,6 +195,7 @@ function onOpen() {
       .addItem('Accountantspakket exporteren', 'exporteerAccountantsPakket')
       .addItem('Samenvatting e-mailen naar accountant', 'emailNaarAccountant')
       .addItem('Maandrapport nu versturen', 'mailMaandrapport')
+      .addItem('📧 E-mailnotificaties aan/uit zetten', 'toggleEmailNotificaties')
       .addSeparator()
       .addItem('Audit Log tonen (wie wijzigde wat)', 'toonAuditLog')
       .addItem('🔐 Audit-keten verifiëren (is er niets gewijzigd?)', 'toonAuditKetenVerificatie')
@@ -355,7 +356,7 @@ function openHoofdFormulier() {
   if (!formId) {
     SpreadsheetApp.getUi().alert(
       'Formulier nog niet aangemaakt',
-      'Voer eerst de setup uit:\nBoekhouding → Instellingen → Eerste keer instellen (setup)',
+      'Voer eerst de setup uit:\nBoekhoudbaar → Instellingen → Eerste keer instellen (setup)',
       SpreadsheetApp.getUi().ButtonSet.OK
     );
     return;

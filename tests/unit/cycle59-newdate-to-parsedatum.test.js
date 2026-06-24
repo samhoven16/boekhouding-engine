@@ -38,9 +38,11 @@ describe('CYCLE 59: bare new Date(r[X]) → parseDatum_ batch', () => {
   });
 
   test('Triggers: dunning-vervaldatum gebruikt parseDatum_ + isNaN-guard', () => {
-    const idx = trigSrc.indexOf('const vervaldatum = data[i][3] ?');
-    const block = trigSrc.slice(idx, idx + 300);
-    expect(block).toMatch(/parseDatum_\(data\[i\]\[3\]\)/);
+    // migratie-agnostisch: data[i][3] óf data[i][KOL.VF.vervaldatum] (klasse-1).
+    const idx = trigSrc.indexOf('const vervaldatum = data[i]');
+    expect(idx).toBeGreaterThan(-1);
+    const block = trigSrc.slice(idx, idx + 320);
+    expect(block).toMatch(/parseDatum_\(data\[i\]\[(?:3|KOL\.VF\.vervaldatum)\]\)/);
     expect(block).toMatch(/isNaN\(vervaldatum\.getTime\(\)\)/);
   });
 

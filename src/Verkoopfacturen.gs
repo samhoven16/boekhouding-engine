@@ -290,7 +290,7 @@ function stuurFactuurNaarEmailAdres(factuurnummer, email) {
   let gevonden = null;
   let rij = -1;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][1]) === factuurnummer || String(data[i][0]) === factuurnummer) {
+    if (String(data[i][KOL.VF.factuurnummer]) === factuurnummer || String(data[i][KOL.VF.factuurId]) === factuurnummer) {
       gevonden = data[i];
       rij = i + 1;
       break;
@@ -365,7 +365,7 @@ function maakCreditnota(factuurNummer, reden) {
 
   let origineel = null;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][1]) === factuurNummer) {
+    if (String(data[i][KOL.VF.factuurnummer]) === factuurNummer) {
       origineel = data[i];
       sheet.getRange(i + 1, 15).setValue(FACTUUR_STATUS.GECREDITEERD);
       break;
@@ -730,7 +730,7 @@ function stuurFactuurEmailNaarKlant_(klantEmail, klantnaam, factuurNummer, bedra
     };
     if (eigenEmail) opties.cc = eigenEmail;
 
-    MailApp.sendEmail(klantEmail, onderwerp, tekst, opties);
+    MailApp.sendEmail(klantEmail, onderwerp, tekst, opties);  // klant-mail-ok: factuur naar DERDE (klant) - kernfunctie, geen notificatie
     Logger.log(`Factuur ${factuurNummer} gemaild naar ${klantEmail}`);
     return true;
   } catch (err) {
@@ -908,7 +908,7 @@ function extractFileId_(url) {
 
 /**
  * Opent de factuurlijst als HTML dialog met status-tabs.
- * Menu: Boekhouding → Facturen & Betalingen → Factuurlijst openen
+ * Menu: Boekhoudbaar → Facturen & Betalingen → Factuurlijst openen
  */
 function openFactuurlijst() {
   const html = HtmlService.createHtmlOutput(_bouwFactuurlijstHtml_())
@@ -937,8 +937,8 @@ function getFactuurlijstData() {
   if (relatiesSheet) {
     const relatiesData = relatiesSheet.getDataRange().getValues();
     for (let i = 1; i < relatiesData.length; i++) {
-      const relatieId = String(relatiesData[i][0] || '');
-      if (relatieId) emailPerKlant[relatieId] = String(relatiesData[i][10] || '');
+      const relatieId = String(relatiesData[i][KOL.REL.relatieId] || '');
+      if (relatieId) emailPerKlant[relatieId] = String(relatiesData[i][KOL.REL.email] || '');
     }
   }
 
@@ -1023,22 +1023,22 @@ function markeerVerkoopfactuurBetaald(factuurnr, betaaldatumStr) {
     const datum = betaaldatumStr ? parseDatum_(betaaldatumStr) : new Date();
 
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][1]) !== String(factuurnr)) continue;
+      if (String(data[i][KOL.VF.factuurnummer]) !== String(factuurnr)) continue;
 
       // Idempotentie-check NA lock-acquire — race-vrij
-      const huidigStatus = String(data[i][14] || '');
+      const huidigStatus = String(data[i][KOL.VF.status] || '');
       if (huidigStatus === FACTUUR_STATUS.BETAALD || huidigStatus === FACTUUR_STATUS.GECREDITEERD) {
         return { ok: true, bericht: 'Factuur ' + factuurnr + ' was al gemarkeerd als betaald.' };
       }
 
-      const bedragIncl = parseFloat(data[i][12]) || 0;
+      const bedragIncl = parseFloat(data[i][KOL.VF.bedragIncl]) || 0;
       if (bedragIncl <= 0) throw new Error('Factuur ' + factuurnr + ' heeft geen geldig bedrag');
 
       // Bij DEELS_BETAALD: alleen het RESTERENDE bedrag boeken. Het al
       // betaalde deel heeft al een eigen journaalpost (via bank-import
       // koppelBankTransactieAanFactuur_). Boekten we hier het volle
       // bedragIncl, dan zou debiteurensaldo dubbel afnemen.
-      const huidigBetaald = parseFloat(data[i][13]) || 0;
+      const huidigBetaald = parseFloat(data[i][KOL.VF.betaaldBedrag]) || 0;
       const resterend = rondBedrag_(bedragIncl - huidigBetaald);
 
       sheet.getRange(i + 1, 14).setValue(bedragIncl);              // Betaald bedrag (= totaal)

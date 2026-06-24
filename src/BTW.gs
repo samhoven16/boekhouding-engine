@@ -177,32 +177,55 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
   // bij typo of nieuw label dat we niet kennen.
   const onbekendeLabels = {};
   let onbekendeOmzet = 0;
+  // F-TAX-134: verlegde verkoop hoort €0 verschuldigde BTW te hebben (rubriek 1e
+  // is grondslag-only). Een (handmatig) ingevuld btwBedrag is een anomalie die we
+  // NIET in r5a meetellen maar wél flaggen.
+  let verlegdMetBtwAantal = 0;
+  let verlegdMetBtwBedrag = 0;
   for (let i = 1; i < vfData.length; i++) {
     // Skip lege rijen en rijen zonder datum eerst — voorheen gaf
     // parseDatum_(null) een Date(today) waardoor verwijderde rijen
     // onbedoeld in huidig kwartaal vielen.
-    if (!vfData[i][2]) continue;
-    const datum = parseDatum_(vfData[i][2]);
+    if (!vfData[i][KOL.VF.datum]) continue;
+    const datum = parseDatum_(vfData[i][KOL.VF.datum]);
     if (!datum || isNaN(datum.getTime()) || datum < vanDatum || datum > totDatum) continue;
 
     // Skip GESTORNEERD facturen (criticus-rapport Accountant): bij storno
-    // wordt status [14] = 'Gestorneerd' en BTW [11] = 0 gezet door
-    // _markeerFactuurGestorneerd_. Skip hier expliciet zodat ook bij
-    // legacy-rijen zonder bedragsupdate geen dubbeltelling optreedt.
-    if (String(vfData[i][14] || '').toLowerCase() === 'gestorneerd') continue;
+    // wordt status [14] = 'Gestorneerd' gezet. De skip is PUUR status-gedreven
+    // (F-ACC-332) — werkt zowel voor nieuwe rijen (bedragen intact, excl+btw=incl)
+    // als legacy-rijen (historisch BTW=0) zonder dubbeltelling.
+    if (String(vfData[i][KOL.VF.status] || '').toLowerCase() === 'gestorneerd') continue;
 
-    // Skip GECREDITEERD facturen — de creditnota-rij (negatieve grondslag)
-    // levert al de tegenboeking. Dubbele aftrek voorkomen bij periode-overschrijding.
-    const status = String(vfData[i][14] || '');
-    if (status === FACTUUR_STATUS.GECREDITEERD) continue;
+    // Creditnota: maakCreditnota zet het origineel op 'Gecrediteerd' ÉN voegt
+    // een APARTE negatieve rij toe. We tellen BEIDE: origineel (+) en creditnota
+    // (−) vallen elk op hun eigen datum in hun eigen periode → netto 0 in
+    // dezelfde periode, en een correcte tegenboeking bij periode-overschrijding.
+    // (Voorheen werd het origineel geskipt → dubbele aftrek: skip + negatieve
+    // rij = −origineel i.p.v. 0 → onterechte BTW-teruggaaf.)
 
-    const grondslag = parseFloat(vfData[i][9]) || 0;  // Excl. BTW
-    const btwBedrag = parseFloat(vfData[i][11]) || 0;
-    const btwLabel  = String(vfData[i][10] || '');
+    const grondslag = parseFloat(vfData[i][KOL.VF.bedragExcl]) || 0;  // Excl. BTW
+    const btwBedrag = parseFloat(vfData[i][KOL.VF.btwBedrag]) || 0;
+    const btwLabel  = String(vfData[i][KOL.VF.btwLabel] || '');
 
     // Case-INsensitive tarief-detectie. Voorheen miste 'verlegd' (kleine v)
     // en 'VRIJGESTELD' de buckets → totaal verdween uit r5a.
-    if (btwLabel.includes('21%') || /\bhoog\b/i.test(btwLabel)) {
+    // F-TAX-132: 'verlegd' wordt als EERSTE getoetst — vóór de 21%/9%/0%-buckets.
+    // Een label "21% verlegd" (reverse-charge mét onderliggend tarief) hoort in
+    // r1e, niet r1a; matchte `includes('21%')` eerst, dan belandde de grondslag
+    // van een verlegde verkoop in 1a (legaal-significante mis-rubriek, rubriek
+    // 1e). Consistent met de inkoop-zijde die verlegd ook eerst toetst.
+    if (/verlegd/i.test(btwLabel)) {
+      // Rubriek 1e is grondslag-only: bij verlegde verkoop brengt de leverancier
+      // €0 BTW in rekening (de afnemer verlegt). Een ingevuld btwBedrag is een
+      // data-anomalie en mag NIET in r5a (verschuldigde BTW) belanden — anders
+      // draagt de ZZP'er output-BTW af op een sale waar niets in rekening is
+      // gebracht. Grondslag wél tellen; btwBedrag flaggen (F-TAX-134).
+      aangifte.r1e_grondslag += grondslag;
+      if (btwBedrag !== 0) {
+        verlegdMetBtwAantal++;
+        verlegdMetBtwBedrag += btwBedrag;
+      }
+    } else if (btwLabel.includes('21%') || /\bhoog\b/i.test(btwLabel)) {
       aangifte.r1a_grondslag += grondslag;
       aangifte.r1a_btw += btwBedrag;
     } else if (btwLabel.includes('9%') || /\blaag\b/i.test(btwLabel)) {
@@ -225,25 +248,33 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
       // Niet-NL EU BTW-nummer + nultarief = intracommunautaire levering
       // → r3a-rubriek + ICP-aangifte verplicht (art. 37a Wet OB).
       // Voorheen vergat klant ICP-aangifte = naheffing + boete.
-      const btwNrKlant = String(vfData[i][7] || '');
+      const btwNrKlant = String(vfData[i][KOL.VF.btwNrKlant] || '');
       if (_isEuBuitenNlBtwNr_(btwNrKlant)) {
         aangifte.r3a_grondslag += grondslag;
         aangifte._icpVereist = aangifte._icpVereist || [];
         aangifte._icpVereist.push({
-          factuurnummer: String(vfData[i][1] || ''),
-          klantnaam: String(vfData[i][5] || ''),
+          factuurnummer: String(vfData[i][KOL.VF.factuurnummer] || ''),
+          klantnaam: String(vfData[i][KOL.VF.klantnaam] || ''),
           btwNr: btwNrKlant,
           grondslag: grondslag,
         });
       }
-    } else if (/verlegd/i.test(btwLabel)) {
-      aangifte.r1e_grondslag += grondslag;
-      aangifte.r1e_btw += btwBedrag;
     } else if (grondslag !== 0) {
       // Onbekend label én niet-nul grondslag → kritieke detectie
       onbekendeLabels[btwLabel || '(leeg)'] = (onbekendeLabels[btwLabel || '(leeg)'] || 0) + 1;
       onbekendeOmzet += grondslag;
     }
+  }
+
+  // F-TAX-134: verlegde verkoop met een ingevuld BTW-bedrag (hoort €0) — niet in
+  // r5a, wél flaggen zodat de klant de factuur corrigeert vóór indiening.
+  if (verlegdMetBtwAantal > 0) {
+    aangifte._verlegdMetBtw = { aantal: verlegdMetBtwAantal, bedrag: rondBedrag_(verlegdMetBtwBedrag) };
+    try {
+      schrijfAuditLog_('BTW-aangifte VERLEGDE VERKOOP MET BTW',
+        verlegdMetBtwAantal + ' verlegde verkoop-rij(en) met een BTW-bedrag (€ ' +
+        rondBedrag_(verlegdMetBtwBedrag) + ', hoort €0) — niet meegeteld in r5a; controleer de facturen.');
+    } catch (_) {}
   }
 
   // Onbekende labels altijd loggen — klant moet WETEN dat ze ontbreken
@@ -266,17 +297,17 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
   let r5bZonderBewijsAantal = 0;
   let r5bZonderBewijsBedrag = 0;
   for (let i = 1; i < ifData.length; i++) {
-    if (!ifData[i][3]) continue;
-    const datum = parseDatum_(ifData[i][3]);
+    if (!ifData[i][KOL.IF.factuurdatumLeverancier]) continue;
+    const datum = parseDatum_(ifData[i][KOL.IF.factuurdatumLeverancier]);
     if (!datum || isNaN(datum.getTime()) || datum < vanDatum || datum > totDatum) continue;
 
-    // Skip GESTORNEERD inkoopfacturen (criticus-rapport Accountant): bij
-    // storno via maakStornoJournaalpost_ wordt status [12] = 'Gestorneerd'
-    // en BTW [10] = 0. Tweede gate hier voor legacy-rijen.
-    if (String(ifData[i][12] || '').toLowerCase() === 'gestorneerd') continue;
+    // Skip GESTORNEERD inkoopfacturen (criticus-rapport Accountant): bij storno
+    // wordt status [12] = 'Gestorneerd' gezet. Skip puur status-gedreven
+    // (F-ACC-332) — bedragen blijven intact (nieuw) of zijn historisch 0 (legacy).
+    if (String(ifData[i][KOL.IF.status] || '').toLowerCase() === 'gestorneerd') continue;
 
-    const btwBedrag = parseFloat(ifData[i][10]) || 0;
-    const btwLabel  = String(ifData[i][9] || '');
+    const btwBedrag = parseFloat(ifData[i][KOL.IF.btwBedrag]) || 0;
+    const btwLabel  = String(ifData[i][KOL.IF.btwLabel] || '');
 
     // Reverse-charge inkoop (BTW verlegd) → r4a verschuldigd + r5b aftrek.
     // Case-INSENSITIVE conform de verkoop-zijde (r1e regel 239) zodat één-
@@ -284,7 +315,7 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
     // mis-classificatie: zonder r4a-buchung zou alleen aftrek geclaimd worden
     // zonder afdracht → naheffing bij BTW-controle. Audit 2026-06-12.
     if (/verlegd/i.test(btwLabel)) {
-      const grondslag = parseFloat(ifData[i][8]) || 0;
+      const grondslag = parseFloat(ifData[i][KOL.IF.bedragExcl]) || 0;
       aangifte.r4a_grondslag += grondslag;
       aangifte.r4a_btw += btwBedrag;
       // F-TAX-120: verlegde inkoop-BTW is bij aftrekrecht ÓÓK aftrekbare
@@ -294,14 +325,14 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
       // door de pro-rata-breuk (r5bOrigineel wordt ná deze loop bepaald).
       aangifte.r5b += btwBedrag;
       // Art. 15 Wet OB: ook verlegde voorbelasting vereist een bewijsstuk.
-      if (btwBedrag > 0 && !String(ifData[i][18] || '').trim()) {
+      if (btwBedrag > 0 && !String(ifData[i][KOL.IF.bijlageUrl] || '').trim()) {
         r5bZonderBewijsAantal++;
         r5bZonderBewijsBedrag += btwBedrag;
       }
     } else if (btwBedrag > 0) {
       aangifte.r5b += btwBedrag;  // Aftrekbare voorbelasting
       // F-ACC-005: bewijsstuk-check op kolom [18] Bijlage URL.
-      if (!String(ifData[i][18] || '').trim()) {
+      if (!String(ifData[i][KOL.IF.bijlageUrl] || '').trim()) {
         r5bZonderBewijsAantal++;
         r5bZonderBewijsBedrag += btwBedrag;
       }
@@ -673,6 +704,28 @@ function zetBtwAangifteOpSheet_(ss, aangifte, kwartaal, periode) {
   ss.setActiveSheet(sheet);
 }
 
+/**
+ * F-SCALE-331: begrens BTW_SNAPSHOTS tot de laatste `max` periodes (gesorteerd
+ * op vastgelegdOp). Eén ScriptProperty heeft een 9KB-cap; zonder begrenzing
+ * overschrijdt dit object die cap op termijn (rond jaar 10-11 bij kwartaal,
+ * sneller bij maand) → `props.setProperty` throwt → de snapshot belandt stil in
+ * de catch → `detecteerSuppletieMogelijk_` ziet de nieuwe periode niet → een
+ * klant met een retroactieve correctie >€1.000 krijgt géén suppletie-signaal →
+ * naheffing + boete. De detector leest alleen huidig + vorig jaar (≤8 kwartalen),
+ * dus de recente periodes blijven sowieso behouden; de durende vastlegging zit
+ * bovendien in het AUDIT_LOG-sheet. Patroon gelijk aan de cap op
+ * GESLOTEN_PERIODES_HISTORIE.
+ */
+function _capBtwSnapshots_(snaps, max) {
+  const keys = Object.keys(snaps || {});
+  if (keys.length <= max) return snaps;
+  keys.sort(function(a, b) {
+    return String(snaps[a].vastgelegdOp || '').localeCompare(String(snaps[b].vastgelegdOp || ''));
+  });
+  keys.slice(0, keys.length - max).forEach(function(k) { delete snaps[k]; });
+  return snaps;
+}
+
 // ─────────────────────────────────────────────
 //  BTW PERIODE SLUITEN (JOURNAALPOST)
 // ─────────────────────────────────────────────
@@ -797,6 +850,7 @@ function sluitBtwPeriode() {
       r5b:      aangifte.r5b      || 0,
       vastgelegdOp: new Date().toISOString(),
     };
+    _capBtwSnapshots_(snaps, 30);   // F-SCALE-331: 9KB-property-cap-bescherming
     props.setProperty('BTW_SNAPSHOTS', JSON.stringify(snaps));
     try { schrijfAuditLog_('BTW snapshot vastgelegd',
       kwartaal + ' ' + jaar + ' — saldo ' + formatBedrag_(aangifte.saldo)); } catch (_) {}
@@ -832,16 +886,16 @@ function controleerKor() {
   let totaalOmzet = 0;
 
   for (let i = 1; i < vfData.length; i++) {
-    const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
+    const datum = vfData[i][KOL.VF.datum] ? parseDatum_(vfData[i][KOL.VF.datum]) : null;
     if (!datum || isNaN(datum.getTime()) || datum < periode.van || datum > periode.tot) continue;
     // Skip vrijgestelde leveringen — KOR-grens telt alleen belaste omzet
     // (incl. nultarief en verlegd) per art. 25 Wet OB 1968.
-    const btwLabel = String(vfData[i][10] || '');
+    const btwLabel = String(vfData[i][KOL.VF.btwLabel] || '');
     if (/Vrijgesteld/i.test(btwLabel)) continue;
     // Skip gecrediteerde origineel — creditnota-rij compenseert al.
-    const status = String(vfData[i][14] || '');
+    const status = String(vfData[i][KOL.VF.status] || '');
     if (status === FACTUUR_STATUS.GECREDITEERD) continue;
-    totaalOmzet += parseFloat(vfData[i][9]) || 0;  // Excl. BTW
+    totaalOmzet += parseFloat(vfData[i][KOL.VF.bedragExcl]) || 0;  // Excl. BTW
   }
 
   const korGrens = 20000;
@@ -892,16 +946,16 @@ function getBtwPerMaand_(ss, jaar) {
   const ifData = sheetData_(ss, SHEETS.INKOOPFACTUREN);
 
   for (let i = 1; i < vfData.length; i++) {
-    const datum = vfData[i][2] ? parseDatum_(vfData[i][2]) : null;
+    const datum = vfData[i][KOL.VF.datum] ? parseDatum_(vfData[i][KOL.VF.datum]) : null;
     if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
     // Skip GECREDITEERD originelen — creditnota-rij levert tegenboeking.
-    const status = String(vfData[i][14] || '');
+    const status = String(vfData[i][KOL.VF.status] || '');
     if (status === FACTUUR_STATUS.GECREDITEERD) continue;
 
     const m = datum.getMonth();
-    const grondslag = parseFloat(vfData[i][9]) || 0;
-    const btwBedrag = parseFloat(vfData[i][11]) || 0;
-    const btwLabel = String(vfData[i][10] || '');
+    const grondslag = parseFloat(vfData[i][KOL.VF.bedragExcl]) || 0;
+    const btwBedrag = parseFloat(vfData[i][KOL.VF.btwBedrag]) || 0;
+    const btwLabel = String(vfData[i][KOL.VF.btwLabel] || '');
 
     // Strikte detectie — '21' substring zou '212' of '21.5%' fout matchen
     if (btwLabel.includes('21%') || /\bhoog\b/i.test(btwLabel)) {
@@ -914,10 +968,10 @@ function getBtwPerMaand_(ss, jaar) {
   }
 
   for (let i = 1; i < ifData.length; i++) {
-    const datum = ifData[i][3] ? parseDatum_(ifData[i][3]) : null;
+    const datum = ifData[i][KOL.IF.factuurdatumLeverancier] ? parseDatum_(ifData[i][KOL.IF.factuurdatumLeverancier]) : null;
     if (!datum || isNaN(datum.getTime()) || datum.getFullYear() !== jaar) continue;
     const m = datum.getMonth();
-    const btwBedrag = parseFloat(ifData[i][10]) || 0;
+    const btwBedrag = parseFloat(ifData[i][KOL.IF.btwBedrag]) || 0;
     if (btwBedrag > 0) resultaat[m].voorbelasting += btwBedrag;
   }
 

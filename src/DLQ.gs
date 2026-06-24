@@ -13,6 +13,12 @@
  */
 
 const DLQ_SHEET = 'DLQ';
+// Module-lokale kolom-accessor (DLQ-tab, headers in dlqVoegToe_); zelfde
+// principe als KOL maar privé aan deze module (vgl. UREN_KOL).
+// eslint-disable-next-line no-unused-vars
+const DLQ_KOL = Object.freeze({
+  tijdstip: 0, type: 1, payload: 2, fout: 3, retries: 4, status: 5, volgendeRetry: 6,
+});
 const DLQ_MAX_RIJEN = 1000;
 const DLQ_MAX_RETRIES = 3;
 
@@ -79,16 +85,16 @@ function dlqVerwerkRetries_() {
     let hervatGelukt = 0;
 
     for (let i = 1; i < data.length; i++) {
-      const status = String(data[i][5] || '');
+      const status = String(data[i][DLQ_KOL.status] || '');
       if (status !== 'PENDING') continue;
-      const retries = parseInt(data[i][4]) || 0;
-      const volgende = data[i][6] instanceof Date ? data[i][6] : new Date(data[i][6]);
+      const retries = parseInt(data[i][DLQ_KOL.retries]) || 0;
+      const volgende = data[i][DLQ_KOL.volgendeRetry] instanceof Date ? data[i][DLQ_KOL.volgendeRetry] : new Date(data[i][DLQ_KOL.volgendeRetry]);
       if (isNaN(volgende.getTime()) || volgende > nu) continue;
 
       hervatGeprobeerd++;
-      const type = String(data[i][1] || '');
+      const type = String(data[i][DLQ_KOL.type] || '');
       let payload = {};
-      try { payload = JSON.parse(data[i][2] || '{}'); } catch (_) {}
+      try { payload = JSON.parse(data[i][DLQ_KOL.payload] || '{}'); } catch (_) {}
 
       let success = false;
       let nieuweFout = '';
@@ -142,7 +148,7 @@ function _dlqHandler_(type, payload) {
     case 'EMAIL_HERINNERING':
       // Verwacht payload: { email, onderwerp, tekst, opties }
       try {
-        MailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst, payload.opties || {});
+        MailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst, payload.opties || {});  // klant-mail-ok: DLQ-retry, replay van reeds-besloten bericht
         return true;
       } catch (_) { return false; }
 
@@ -150,7 +156,7 @@ function _dlqHandler_(type, payload) {
       // V8: proactieve checks (BTW-reminder/suppletie/KIA-misser/bewaarplicht)
       // gebruiken stuurMailMetDlq_ → bij MailApp-fail komt het hier terecht.
       try {
-        MailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst);
+        MailApp.sendEmail(payload.email, payload.onderwerp, payload.tekst);  // klant-mail-ok: DLQ-retry, replay van reeds-besloten bericht
         return true;
       } catch (_) { return false; }
 
@@ -190,7 +196,7 @@ function forceerDlqRetry() {
   // Zet alle PENDING op "volgendeRetry = nu" zodat dlqVerwerkRetries_ ze meeneemt
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][5]) === 'PENDING') sheet.getRange(i + 1, 7).setValue(new Date());
+    if (String(data[i][DLQ_KOL.status]) === 'PENDING') sheet.getRange(i + 1, 7).setValue(new Date());
   }
   dlqVerwerkRetries_();
   SpreadsheetApp.getUi().alert('✅ Forced retry voltooid', 'Bekijk DLQ-tab voor resultaten.', SpreadsheetApp.getUi().ButtonSet.OK);
@@ -260,7 +266,7 @@ function telDlqFailed_(sheet) {
   const data = sheet.getDataRange().getValues();
   let n = 0;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][5] || '').toUpperCase() === 'FAILED') n++;
+    if (String(data[i][DLQ_KOL.status] || '').toUpperCase() === 'FAILED') n++;
   }
   return n;
 }

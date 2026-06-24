@@ -295,23 +295,23 @@ function verwerkHerhalendeKosten_() {
     const vandaag = new Date();
 
     for (let i = 1; i < data.length; i++) {
-      const status = String(data[i][8] || '');
+      const status = String(data[i][KOL.HK.status] || '');
       if (status !== 'Actief') continue;
 
       // NB: hier expres new Date() ipv parseDatum_ — parseDatum_ valt terug op
       // 'today' bij ongeldige string, wat hier silent verkeerd zou zijn.
       // Dit veld is een sheet-Date-kolom; non-Date input is een fout om te flaggen.
-      let volgende = data[i][6]
-        ? (data[i][6] instanceof Date ? data[i][6] : new Date(data[i][6]))
+      let volgende = data[i][KOL.HK.volgendeDatum]
+        ? (data[i][KOL.HK.volgendeDatum] instanceof Date ? data[i][KOL.HK.volgendeDatum] : new Date(data[i][KOL.HK.volgendeDatum]))
         : null;
       if (!volgende || isNaN(volgende.getTime())) {
         // Klant ziet "Actief" maar krijgt geen boeking → frustrerend. Maak
         // expliciet zichtbaar: zet status op "FOUT — datum ongeldig" zodat
         // klant in de sheet ziet dat er aandacht nodig is.
         Logger.log('Herhalende kosten rij ' + (i + 1) + ': ongeldige datum, overgeslagen.');
-        safeAuditLog_('Herhalende kost OVERGESLAGEN', 'Rij ' + (i + 1) + ' – ongeldige volgende datum: ' + data[i][6]);
+        safeAuditLog_('Herhalende kost OVERGESLAGEN', 'Rij ' + (i + 1) + ' – ongeldige volgende datum: ' + data[i][KOL.HK.volgendeDatum]);
         try {
-          const huidigeStatus = String(data[i][8] || '');
+          const huidigeStatus = String(data[i][KOL.HK.status] || '');
           if (huidigeStatus.indexOf('FOUT') === -1) {
             sheet.getRange(i + 1, 9).setValue('FOUT — datum ongeldig, corrigeer kolom G');
           }
@@ -320,13 +320,13 @@ function verwerkHerhalendeKosten_() {
         continue;
       }
 
-      const naam     = data[i][1];
-      const bedrag   = parseFloat(data[i][3]) || 0;
-      const freq     = String(data[i][5] || 'Maandelijks');
-      const rekening = String(data[i][7] || '7000').split(' ')[0];
-      const auto     = String(data[i][9] || 'Nee');
-      const splitPct = Math.min(100, Math.max(0, parseFloat(data[i][11] || '100') || 100));
-      const rijId    = String(data[i][0] || ('rij' + i));   // unieke ID voor idempotency
+      const naam     = data[i][KOL.HK.naam];
+      const bedrag   = parseFloat(data[i][KOL.HK.bedragExcl]) || 0;
+      const freq     = String(data[i][KOL.HK.frequentie] || 'Maandelijks');
+      const rekening = String(data[i][KOL.HK.grootboekrekening] || '7000').split(' ')[0];
+      const auto     = String(data[i][KOL.HK.automatischBoeken] || 'Nee');
+      const splitPct = Math.min(100, Math.max(0, parseFloat(data[i][KOL.HK.zakelijkPct] || '100') || 100));
+      const rijId    = String(data[i][KOL.HK.id] || ('rij' + i));   // unieke ID voor idempotency
 
       // Inhaal-loop: boek élke gemiste periode tot vandaag (begrensd).
       let iteratie = 0;
@@ -345,7 +345,9 @@ function verwerkHerhalendeKosten_() {
         // stil falen → herhalende kost werd niet auto-geboekt → klant mist
         // aftrek (huur, abonnement, verzekering) → meer IB.
         if (isJa_(auto) && bedrag > 0) {
-          const zakelijkBedrag = rondBedrag_(bedrag * (splitPct / 100));
+          // klasse 9 (precisie): exact zakelijk-deel via integer-centen; privé-deel
+          // is het restant zodat zakelijk + privé exact = bedrag (geen cent-lek).
+          const zakelijkBedrag = rondTariefCent_(bedrag, splitPct / 100);
           const privaatBedrag  = rondBedrag_(bedrag - zakelijkBedrag);
           if (zakelijkBedrag > 0) {
             maakJournaalpost_(ss, {
@@ -502,9 +504,9 @@ function toonHerhalendeKostenOverzicht() {
   const data = sheet.getDataRange().getValues();
   let jaarTotaal = 0;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][8]) !== 'Actief') continue;
-    const bedrag = parseFloat(data[i][3]) || 0;
-    const freq   = String(data[i][5] || 'Maandelijks');
+    if (String(data[i][KOL.HK.status]) !== 'Actief') continue;
+    const bedrag = parseFloat(data[i][KOL.HK.bedragExcl]) || 0;
+    const freq   = String(data[i][KOL.HK.frequentie] || 'Maandelijks');
     const factor = { 'Wekelijks': 52, 'Maandelijks': 12, 'Kwartaal': 4, 'Halfjaarlijks': 2, 'Jaarlijks': 1 };
     jaarTotaal += bedrag * (factor[freq] || 12);
   }

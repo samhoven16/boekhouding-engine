@@ -37,16 +37,16 @@ function markeerInkoopfactuurBetaald() {
     const data = sheet.getDataRange().getValues();
 
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][1]) !== zoekNr && String(data[i][0]) !== zoekNr) continue;
+      if (String(data[i][KOL.IF.internNummer]) !== zoekNr && String(data[i][KOL.IF.inkoopId]) !== zoekNr) continue;
 
-      const bedrag = parseFloat(data[i][11]) || 0;
+      const bedrag = parseFloat(data[i][KOL.IF.bedragIncl]) || 0;
       if (bedrag <= 0) {
         ui.alert('Inkoopfactuur ' + zoekNr + ' heeft geen geldig bedrag — controleer de rij.');
         return;
       }
-      const leverancier = data[i][6];
+      const leverancier = data[i][KOL.IF.leveranciernaam];
       const datum = new Date();
-      const huidigeStatus = String(data[i][12] || '');
+      const huidigeStatus = String(data[i][KOL.IF.status] || '');
 
       // Idempotency: voorkom dubbel boeken bij dubbel-klik / Mollie-webhook-retry
       if (huidigeStatus === FACTUUR_STATUS.BETAALD) {
@@ -143,15 +143,15 @@ function toonOpenInkoopfacturen() {
 
   let totaal = 0;
   for (let i = 1; i < data.length; i++) {
-    if (data[i][12] === FACTUUR_STATUS.BETAALD) continue;
-    const bedrag = parseFloat(data[i][11]) || 0;
+    if (data[i][KOL.IF.status] === FACTUUR_STATUS.BETAALD) continue;
+    const bedrag = parseFloat(data[i][KOL.IF.bedragIncl]) || 0;
     totaal += bedrag;
     html += `<tr>
-      <td>${formatDatum_(data[i][3])}</td>
-      <td>${escHtml_(String(data[i][6] || ''))}</td>
-      <td>${escHtml_(String(data[i][4] || ''))}</td>
+      <td>${formatDatum_(data[i][KOL.IF.factuurdatumLeverancier])}</td>
+      <td>${escHtml_(String(data[i][KOL.IF.leveranciernaam] || ''))}</td>
+      <td>${escHtml_(String(data[i][KOL.IF.factuurrefLeverancier] || ''))}</td>
       <td>${formatBedrag_(bedrag)}</td>
-      <td>${escHtml_(String(data[i][12] || ''))}</td>
+      <td>${escHtml_(String(data[i][KOL.IF.status] || ''))}</td>
     </tr>`;
   }
 

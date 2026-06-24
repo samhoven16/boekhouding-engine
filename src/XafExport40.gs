@@ -68,7 +68,17 @@ function _bouwXaf40Xml_(ss, jaarArg) {
   xml += _xaf40Grootboek_(ss);
   xml += _xaf40VatCodes_();
   xml += _xaf40Periods_(jaar);
-  xml += _xaf40Transactions_(ss, jaar);
+  // F-SCALE-330: lees JOURNAALPOSTEN ÉÉN keer en deel de array met beide loops.
+  // De openingsbalans (F-ACC-161) en de transacties scannen hetzelfde (continu,
+  // niet-resettende) journaal; bij een meerjarige administratie met tienduizenden
+  // rijen waren dat 2× volledige sheet-read + 2 arrays tegelijk in het heap →
+  // eerste plek die tegen de 6-min-/geheugengrens loopt op de consumer-tier.
+  const jpData = _xaf40JournaalData_(ss);
+  // F-ACC-161: openingsbalans (1-1) zodat een auditfile van jaar-2+ op zichzelf
+  // staat — eindbalans N−1 == openingsbalans N (RJ 160/170). Optioneel in de
+  // XSD; fail-open zodat een fout de auditfile niet sloopt.
+  try { xml += _xaf40OpeningBalance_(ss, jaar, jpData); } catch (e) { Logger.log('XAF4.0: openingsbalans overgeslagen: ' + e.message); }
+  xml += _xaf40Transactions_(ss, jaar, jpData);
   xml += '  </company>\n';
 
   xml += '</auditfile>\n';
@@ -190,19 +200,88 @@ function _xaf40TrLine_(nr, accID, docRef, datum, desc, bedrag, tp) {
 }
 
 /**
+ * openingBalance — saldo per grootboekrekening op 1-1 van het fiscaal jaar.
+ *
+ * Reconstructie uit het continue journaal: de administratie loopt door over
+ * jaren (sluitJaarAf archiveert + boekt resultaat, maar reset het journaal
+ * niet). Het 1-1-saldo van een rekening = de netto-som van ÁLLE niet-CORRUPT
+ * journaalposten met datum < 1-1-jaar (debet +, credit −). Balansrekeningen
+ * dragen zo hun cumulatieve saldo; W&V-rekeningen netten naar 0 doordat de
+ * resultaatverwerking (JA-/JO-boekingen) ze elk jaar afsluit → vallen vanzelf
+ * weg. Gevolg-invariant: openingsbalans + transacties(jaar) = het grootboeksaldo
+ * — afgezien van eventuele openstaande CORRUPT-halfboekingen (triple-fail: debet
+ * geboekt, credit + rollback gefaald). Die raken het grootboeksaldo wél maar
+ * horen in geen enkele auditfile en moeten apart hersteld worden. Σdebet ==
+ * Σcredit blijft sowieso (elke bron-boeking die meetelt is gebalanceerd).
+ *
+ * Jaar 1 (geen historie) → geen obLines → leeg blok weggelaten (XSD: optioneel).
+ */
+function _xaf40JournaalData_(ss) {
+  const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+  return sheet ? sheet.getDataRange().getValues() : [];
+}
+
+function _xaf40OpeningBalance_(ss, jaar, jpData) {
+  const data = jpData || _xaf40JournaalData_(ss);
+  if (!data.length) return '';
+  const startJaar = new Date(jaar, 0, 1);
+  const nettoCent = {};   // accID -> netto centen (debet positief, credit negatief)
+
+  for (let i = 1; i < data.length; i++) {
+    const rij = data[i];
+    // Alleen CORRUPT eruit — exact zoals _xaf40Transactions_ (consistentie).
+    if ((rij.length > 16 ? String(rij[16] || '').trim().toUpperCase() : '') === 'CORRUPT') continue;
+    const datumObj = rij[1] instanceof Date
+      ? rij[1]
+      : ((typeof parseDatum_ === 'function') ? parseDatum_(rij[1]) : new Date(rij[1]));
+    if (!datumObj || isNaN(datumObj.getTime()) || datumObj >= startJaar) continue;  // alleen vóór het jaar
+    const debet = String(rij[4] || '').trim();
+    const credit = String(rij[6] || '').trim();
+    const cent = Math.round((parseFloat(rij[8]) || 0) * 100);
+    if (!debet || !credit || cent <= 0) continue;
+    nettoCent[debet] = (nettoCent[debet] || 0) + cent;
+    nettoCent[credit] = (nettoCent[credit] || 0) - cent;
+  }
+
+  const accIDs = Object.keys(nettoCent).filter(function (a) { return nettoCent[a] !== 0; }).sort();
+  if (accIDs.length === 0) return '';   // geen historie → geen openingsbalans
+
+  let totalDebitCent = 0, totalCreditCent = 0, lines = '';
+  accIDs.forEach(function (acc, idx) {
+    const c = nettoCent[acc];
+    const amntTp = c >= 0 ? 'D' : 'C';
+    const amntCent = Math.abs(c);
+    if (amntTp === 'D') totalDebitCent += amntCent; else totalCreditCent += amntCent;
+    lines += '      <obLine>\n';
+    lines += '        <nr>' + (idx + 1) + '</nr>\n';
+    lines += '        <accID>' + _xafEsc_(String(acc).substring(0, 35)) + '</accID>\n';
+    lines += '        <amnt>' + (amntCent / 100).toFixed(2) + '</amnt>\n';
+    lines += '        <amntTp>' + amntTp + '</amntTp>\n';
+    lines += '      </obLine>\n';
+  });
+
+  let xml = '    <openingBalance>\n';
+  xml += '      <linesCount>' + accIDs.length + '</linesCount>\n';
+  xml += '      <totalDebit>' + (totalDebitCent / 100).toFixed(2) + '</totalDebit>\n';
+  xml += '      <totalCredit>' + (totalCreditCent / 100).toFixed(2) + '</totalCredit>\n';
+  xml += lines;
+  xml += '    </openingBalance>\n';
+  return xml;
+}
+
+/**
  * transactions — controletotalen + journals (gegroepeerd per dagboek). Elke
  * journaalpost-rij = één gebalanceerde transaction (1 debet- + 1 creditregel).
  * Alleen COMMITTED-rijen van het fiscaal jaar.
  */
-function _xaf40Transactions_(ss, jaar) {
-  const sheet = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
+function _xaf40Transactions_(ss, jaar, jpData) {
+  const data = jpData || _xaf40JournaalData_(ss);
   const grouped = {}; // klassId -> { desc, jrnTp, tx }
   let linesCount = 0;
   let debitCents = 0;
   let creditCents = 0;
 
-  if (sheet) {
-    const data = sheet.getDataRange().getValues();
+  if (data.length) {
     for (let i = 1; i < data.length; i++) {
       const rij = data[i];
       // Spiegel het grootboek: élke boeking die het saldo raakt hoort in de
@@ -239,9 +318,18 @@ function _xaf40Transactions_(ss, jaar) {
       const klass = _xafDagboekClassificeer_(dagboek);
       if (!grouped[klass.id]) grouped[klass.id] = { desc: klass.desc, jrnTp: _xaf40Jrntp_(klass.id), tx: '' };
 
+      // F-ACC-330 (accountant-as): markeer nog-niet-gevalideerde (Concept/HITL)
+      // boekingen in de auditfile zelf, zodat een accountant die de XAF
+      // importeert ziet welke regels de klant nog moest bevestigen i.p.v. alles
+      // klakkeloos als definitief over te nemen. <desc> is een vrij tekstveld;
+      // cap op 50 (zoals custSupName) houdt 'm XSD-veilig. Niet-Concept-rijen
+      // blijven exact ongewijzigd.
+      const hitlStatus = (rij.length >= 17 ? String(rij[16] || '').trim() : '');
+      const descTekst = /^concept$/i.test(hitlStatus) ? ('[CONCEPT] ' + omschr).substring(0, 50) : omschr;
+
       let tx = '        <transaction>\n';
       tx += '          <nr>' + _xafEsc_(id.substring(0, 35)) + '</nr>\n';
-      tx += '          <desc>' + _xafEsc_(omschr) + '</desc>\n';
+      tx += '          <desc>' + _xafEsc_(descTekst) + '</desc>\n';
       tx += '          <periodNumber>' + periode + '</periodNumber>\n';
       tx += '          <trDt>' + datum + '</trDt>\n';
       tx += _xaf40TrLine_(1, debet, id, datum, omschr, bedrag, 'D');

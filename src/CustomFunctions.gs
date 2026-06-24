@@ -27,7 +27,9 @@ function BEREKEN_BTW(bedragExcl, tarief) {
   if (pct === null) return 0;
   var n = Number(bedragExcl);
   if (!isFinite(n)) return 0;
-  return Math.round(n * pct * 100) / 100;
+  // klasse 9 (precisie): float-tarief × bedrag → cent-drift (€21,50 × 21% gaf
+  // €4,51 i.p.v. €4,52). Exact via integer-centen.
+  return (typeof rondTariefCent_ === 'function') ? rondTariefCent_(n, pct) : Math.round(n * pct * 100) / 100;
 }
 
 /**
@@ -89,8 +91,8 @@ function _cf_tarievenVoorJaar_(jaar) {
     ZELFSTANDIGENAFTREK: 1200,        // 2026 verlaagd van 2470
     MKB_WINSTVRIJSTELLING: 0.127,     // 12,70%, ongewijzigd
     HEFFINGSKORTING_MAX: 3115,        // 2026 (audit F-TAX-102: was 2025-waarde 3068)
-    HEFFINGSKORTING_AFBOUW_VAN: 29739, // 2026 (was 28406)
-    HEFFINGSKORTING_AFBOUW_PCT: 0.0640, // 2026 (was 0.0634)
+    HEFFINGSKORTING_AFBOUW_VAN: 29736, // 2026 RB-verificatie 2026-06-21 (was 29739)
+    HEFFINGSKORTING_AFBOUW_PCT: 0.06398, // 2026 RB-verificatie (was 0.0640)
     HEFFINGSKORTING_NUL_VAN: 78426,   // 2026 schijf-2-grens
     ARBEIDSKORTING_MAX: 5685,         // 2026 (was 5599)
     ARBEIDSKORTING_TOP_TOT: 45592,    // 2026 (was 43071)

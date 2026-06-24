@@ -45,7 +45,7 @@ function maakJournaalpost_(ss, opt) {
         `Een boeking met datum in een afgesloten jaar zou de gearchiveerde ` +
         `balans uit sync brengen met de actieve grootboek-saldi. ` +
         `Boek de correctie in het huidige jaar, of ontsluit ${boekJaar} eerst ` +
-        `via Boekhoudbaar → Geavanceerd → Jaarafsluiting ongedaan maken.`
+        `via Boekhoudbaar → Controle & Export → Gesloten periodes beheren.`
       );
     }
   }
@@ -215,9 +215,9 @@ function maakStornoJournaalpost_(ss, origineelBoekingId, reden) {
   let origineel = null;
   let alGestorneerd = false;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(origineelBoekingId)) origineel = data[i];
+    if (String(data[i][KOL.JP.boekingId]) === String(origineelBoekingId)) origineel = data[i];
     // Detecteer eerdere storno op deze boeking (ref bevat "STORNO ${id}")
-    const omschr = String(data[i][2] || '');
+    const omschr = String(data[i][KOL.JP.omschrijving] || '');
     if (omschr.indexOf('STORNO ' + origineelBoekingId) !== -1) alGestorneerd = true;
   }
   if (!origineel) throw new Error('Storno: origineel ' + origineelBoekingId + ' niet gevonden.');
@@ -266,7 +266,9 @@ function maakStornoJournaalpost_(ss, origineelBoekingId, reden) {
   // INKOOPFACTUREN-rijen, niet uit journaalposten. Zonder factuur-update
   // zou de voorbelasting OF de verschuldigde BTW dubbel meetellen → te
   // veel teruggevraagd of te weinig afgedragen → naheffing + 30% boete.
-  // Daarom: markeer matched factuur als 'Gestorneerd' + nul BTW-bedrag.
+  // Daarom: markeer matched factuur als 'Gestorneerd'. De aangifte (BTW.gs) en
+  // I4 slaan een 'gestorneerd'-rij status-gedreven over (F-ACC-332) — de
+  // bedragen blijven intact zodat de rij excl+btw=incl consistent blijft.
   try {
     const origRef = String(origineel[11] || '').trim();
     if (origRef) {
@@ -278,6 +280,18 @@ function maakStornoJournaalpost_(ss, origineelBoekingId, reden) {
     safeAuditLog_('STORNO factuur-mark MISLUKT',
       origineelBoekingId + ' ref=' + (origineel[11] || '?') + ': ' + markErr.message);
   }
+
+  // F-ACC-165 TERUGGEDRAAID (cross-pr-regressie): het stempelen van de originele
+  // JOURNAALPOST-rij als 'GESTORNEERD' brak de formeel-bewijs-verifier. I1/I2
+  // (FormeelBewijs.gs:165/196) én de legacy XafExport.gs (:411 via
+  // _journaalpostIsCommitted_) SKIPPEN status==='GESTORNEERD' onvoorwaardelijk —
+  // terwijl de storno-tegenrij 'Gevalideerd' blijft en het grootboeksaldo (geen
+  // status-filter) beide rijen telt. Origineel uit `verwacht` maar wél in het
+  // saldo → I2 wijkt af met het storno-bedrag → "formeel bewijs geschonden" bij
+  // ÉLKE storno. De terugdraai-/audit-trail blijft traceerbaar via de
+  // "STORNO {id}"-omschrijving op de tegenrij + de GESTORNEERD-status op de
+  // bron-factuur (VF/IF). Niet opnieuw op de journaalpost zetten zonder óók de
+  // I1/I2/legacy-XAF-aggregaties consistent te maken.
 
   return stornoId;
 }
@@ -303,10 +317,16 @@ function _markeerFactuurGestorneerd_(ss, ref, stornoId) {
     // suffix uit eerdere flow. Strip dat eerst.
     const schoonRef = ref.replace(/\s*\(storno\)\s*$/i, '').trim();
     for (let i = 1; i < vfData.length; i++) {
-      if (String(vfData[i][1] || '').trim() === schoonRef) {
-        if (String(vfData[i][14] || '').toLowerCase() === 'gestorneerd') return;
+      if (String(vfData[i][KOL.VF.factuurnummer] || '').trim() === schoonRef) {
+        if (String(vfData[i][KOL.VF.status] || '').toLowerCase() === 'gestorneerd') return;
         vfSheet.getRange(i + 1, 15).setValue('Gestorneerd');   // kolom 15 = [14] Status
-        vfSheet.getRange(i + 1, 12).setValue(0);               // kolom 12 = [11] BTW bedrag
+        // F-ACC-330: NIET de BTW op 0 zetten. De aangifte (BTW.gs:197) én I4
+        // (FormeelBewijs:278) slaan een 'gestorneerd'-rij al volledig over, dus
+        // zeroën is overbodig — én het maakte de rij intern inconsistent
+        // (excl + 0 ≠ incl), wat een accountant die de VF-CSV natelt als
+        // rekenfout ziet (en GezondheidCheck als tarief-mismatch flagde). Laat
+        // de originele bedragen staan; de tegenboeking (storno-journaalpost)
+        // draait het saldo terug — dat is de correcte storno-semantiek.
         try { schrijfAuditLog_('VERKOOPFACTUUR gestorneerd',
           'Factuur ' + schoonRef + ' door storno ' + stornoId); } catch (_) {}
         return;
@@ -319,10 +339,12 @@ function _markeerFactuurGestorneerd_(ss, ref, stornoId) {
     const ifData = ifSheet.getDataRange().getValues();
     const schoonRef = ref.replace(/\s*\(storno\)\s*$/i, '').trim();
     for (let i = 1; i < ifData.length; i++) {
-      if (String(ifData[i][1] || '').trim() === schoonRef) {
-        if (String(ifData[i][12] || '').toLowerCase() === 'gestorneerd') return;
+      if (String(ifData[i][KOL.IF.internNummer] || '').trim() === schoonRef) {
+        if (String(ifData[i][KOL.IF.status] || '').toLowerCase() === 'gestorneerd') return;
         ifSheet.getRange(i + 1, 13).setValue('Gestorneerd');   // kolom 13 = [12] Status
-        ifSheet.getRange(i + 1, 11).setValue(0);               // kolom 11 = [10] BTW bedrag
+        // F-ACC-330: NIET de BTW op 0 zetten — zie verkoop-pad hierboven. De
+        // aangifte (BTW.gs:307) en I4 slaan 'gestorneerd' al over; zeroën maakte
+        // de rij alleen intern inconsistent. Originele bedragen blijven staan.
         try { schrijfAuditLog_('INKOOPFACTUUR gestorneerd',
           'Inkoop ' + schoonRef + ' door storno ' + stornoId); } catch (_) {}
         return;
@@ -353,10 +375,12 @@ function _gbVindRij_(sheet, rekeningCode) {
     return (code in _gbRijCache_.map) ? _gbRijCache_.map[code] : null;
   }
   const laatste = sheet.getLastRow();
-  const codes = laatste > 0 ? sheet.getRange(1, 1, laatste, 1).getValues() : [];
+  const codes = laatste > 0
+    ? sheet.getRange(1, 1, laatste, 1).getValues().map(function (r) { return r[0]; })
+    : [];
   const map = {};
   for (let i = 1; i < codes.length; i++) {
-    const c = String(codes[i][0]);
+    const c = String(codes[i]);
     if (c && !(c in map)) map[c] = i + 1; // eerste match wint, zoals de oude lineaire scan
   }
   if (cachebaar) _gbRijCache_ = { sheetId: sheetId, map: map };
@@ -406,18 +430,18 @@ function updateGrootboekSaldo_(ss, rekeningCode, bedrag, zijde) {
         const kandidaat = _gbVindRij_(sheet, rekeningCode);
         if (kandidaat === null) { _gbRijCache_ = null; continue; }
         const rijData = sheet.getRange(kandidaat, 1, 1, 6).getValues()[0];
-        if (String(rijData[0]) !== String(rekeningCode)) { _gbRijCache_ = null; continue; }
+        if (String(rijData[KOL.GB.code]) !== String(rekeningCode)) { _gbRijCache_ = null; continue; }
         rij = kandidaat;
-        type = rijData[2]; // Actief / Passief / Opbrengst / Kosten
-        huidigSaldo = parseFloat(rijData[5]) || 0;
+        type = rijData[KOL.GB.type]; // Actief / Passief / Opbrengst / Kosten
+        huidigSaldo = parseFloat(rijData[KOL.GB.saldo]) || 0;
       }
     } else {
       const data = sheet.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0]) === String(rekeningCode)) {
+        if (String(data[i][KOL.GB.code]) === String(rekeningCode)) {
           rij = i + 1;
-          type = data[i][2];
-          huidigSaldo = parseFloat(data[i][5]) || 0;
+          type = data[i][KOL.GB.type];
+          huidigSaldo = parseFloat(data[i][KOL.GB.saldo]) || 0;
           break;
         }
       }
@@ -477,8 +501,8 @@ function getGrootboekSaldo_(ss, rekeningCode) {
   const sheet = ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(rekeningCode)) {
-      return parseFloat(data[i][5]) || 0;
+    if (String(data[i][KOL.GB.code]) === String(rekeningCode)) {
+      return parseFloat(data[i][KOL.GB.saldo]) || 0;
     }
   }
   return 0;
@@ -517,8 +541,8 @@ function herberekeningGrootboekSaldi() {
     // Bouw lookup van rekeningcode → { idx, type } op basis van het schema.
     const idxPerCode = new Map();
     for (let i = 1; i < gbData.length; i++) {
-      const code = String(gbData[i][0]);
-      if (code) idxPerCode.set(code, { rij: i, type: gbData[i][2] });
+      const code = String(gbData[i][KOL.GB.code]);
+      if (code) idxPerCode.set(code, { rij: i, type: gbData[i][KOL.GB.type] });
     }
 
     // Reset alle saldi in geheugen.
@@ -528,9 +552,9 @@ function herberekeningGrootboekSaldi() {
     // Aggregeer over alle journaalposten.
     const onbekendeRekeningen = new Set();
     for (let i = 1; i < jpData.length; i++) {
-      const debet = String(jpData[i][4] || '');
-      const credit = String(jpData[i][6] || '');
-      const bedrag = parseFloat(jpData[i][8]) || 0;
+      const debet = String(jpData[i][KOL.JP.debetRekening] || '');
+      const credit = String(jpData[i][KOL.JP.creditRekening] || '');
+      const bedrag = parseFloat(jpData[i][KOL.JP.bedrag]) || 0;
       if (bedrag === 0) continue;
 
       for (const z of [{ code: debet, kant: 'debet' }, { code: credit, kant: 'credit' }]) {
@@ -547,8 +571,8 @@ function herberekeningGrootboekSaldi() {
     // Eén batch-write: kolom 6 (saldo) over de hele GB-tab.
     const saldoKolom = [];
     for (let i = 1; i < gbData.length; i++) {
-      const code = String(gbData[i][0] || '');
-      saldoKolom.push([code ? rondBedrag_(nieuweSaldi.get(code) || 0) : gbData[i][5]]);
+      const code = String(gbData[i][KOL.GB.code] || '');
+      saldoKolom.push([code ? rondBedrag_(nieuweSaldi.get(code) || 0) : gbData[i][KOL.GB.saldo]]);
     }
     if (saldoKolom.length > 0) {
       gbSheet.getRange(2, 6, saldoKolom.length, 1).setValues(saldoKolom);
@@ -621,9 +645,9 @@ function genereerGrootboekkaart_(ss, code, naam) {
   let rij = 3;
 
   for (let i = 1; i < data.length; i++) {
-    const debetKode = String(data[i][4]);
-    const creditKode = String(data[i][6]);
-    const bedrag = parseFloat(data[i][8]) || 0;
+    const debetKode = String(data[i][KOL.JP.debetRekening]);
+    const creditKode = String(data[i][KOL.JP.creditRekening]);
+    const bedrag = parseFloat(data[i][KOL.JP.bedrag]) || 0;
 
     let debet = 0, credit = 0;
     if (debetKode === code) debet = bedrag;
@@ -639,10 +663,10 @@ function genereerGrootboekkaart_(ss, code, naam) {
     }
 
     sheet.getRange(rij, 1, 1, 7).setValues([[
-      data[i][1],       // Datum
-      data[i][2],       // Omschrijving
-      data[i][3],       // Dagboek
-      data[i][11],      // Referentie
+      data[i][KOL.JP.datum],       // Datum
+      data[i][KOL.JP.omschrijving],       // Omschrijving
+      data[i][KOL.JP.dagboek],       // Dagboek
+      data[i][KOL.JP.referentie],      // Referentie
       debet || '',
       credit || '',
       rondBedrag_(lopenSaldo),
@@ -776,7 +800,8 @@ function verwerkAfschrijvingen(data) {
     const saldo = getGrootboekSaldo_(ss, code);
     if (saldo <= 0) return;
 
-    const afschrBedrag = rondBedrag_(saldo * pct * factor);
+    // klasse 9 (precisie): exact in integer-centen (raakt W&V → IB, dus bindend).
+    const afschrBedrag = berekenAfschrijvingCent_(saldo, pct, factor);
     const naam = zoekGrootboekNaam_(code);
 
     // Debet afschrijving | Credit gecumuleerde afschrijving
@@ -821,28 +846,28 @@ function vernieuwDebiteurenOverzicht() {
   const open = [];
 
   for (let i = 1; i < vfData.length; i++) {
-    const status = vfData[i][14];
+    const status = vfData[i][KOL.VF.status];
     if (status === FACTUUR_STATUS.BETAALD || status === FACTUUR_STATUS.GECREDITEERD) continue;
 
-    const incl = parseFloat(vfData[i][12]) || 0;
-    const betaald = parseFloat(vfData[i][13]) || 0;
+    const incl = parseFloat(vfData[i][KOL.VF.bedragIncl]) || 0;
+    const betaald = parseFloat(vfData[i][KOL.VF.betaaldBedrag]) || 0;
     const openBedrag = rondBedrag_(incl - betaald);
     if (openBedrag <= 0) continue;
 
     // Sheet-cell kan Date OF DD-MM-YYYY string zijn (na CSV-import). Native
     // new Date('01-04-2026') geeft NaN; parseDatum_ handelt beide formaten af.
-    const vervaldatum = vfData[i][3]
-      ? (vfData[i][3] instanceof Date ? vfData[i][3] : parseDatum_(vfData[i][3]))
+    const vervaldatum = vfData[i][KOL.VF.vervaldatum]
+      ? (vfData[i][KOL.VF.vervaldatum] instanceof Date ? vfData[i][KOL.VF.vervaldatum] : parseDatum_(vfData[i][KOL.VF.vervaldatum]))
       : null;
     const dagenOver = vervaldatum && !isNaN(vervaldatum.getTime())
       ? Math.floor((vandaag - vervaldatum) / (1000 * 60 * 60 * 24))
       : 0;
 
     open.push({
-      factuurnummer: vfData[i][1],
-      datum: vfData[i][2],
+      factuurnummer: vfData[i][KOL.VF.factuurnummer],
+      datum: vfData[i][KOL.VF.datum],
       vervaldatum,
-      klant: vfData[i][5],
+      klant: vfData[i][KOL.VF.klantnaam],
       incl,
       betaald,
       openBedrag,
@@ -946,22 +971,22 @@ function vernieuwCrediteurenOverzicht() {
   let totaalOpen = 0;
 
   for (let i = 1; i < ifData.length; i++) {
-    const status = ifData[i][12];
+    const status = ifData[i][KOL.IF.status];
     if (status === FACTUUR_STATUS.BETAALD) continue;
 
-    const incl = parseFloat(ifData[i][11]) || 0;
-    // ifData[i][13] is Betaaldatum (a date), not a betaald amount — inkoopfacturen
+    const incl = parseFloat(ifData[i][KOL.IF.bedragIncl]) || 0;
+    // ifData[i][KOL.IF.betaaldatum] is Betaaldatum (a date), not a betaald amount — inkoopfacturen
     // use binary paid/unpaid status. Partial payments are not tracked in this schema,
     // so openstaand equals incl for all unpaid rows.
     const betaald = 0;
     const openstaand = rondBedrag_(incl - betaald);
     if (openstaand <= 0) continue;
 
-    // ifData[i][3] is Factuurdatum leverancier (no separate vervaldatum column in schema)
+    // ifData[i][KOL.IF.factuurdatumLeverancier] is Factuurdatum leverancier (no separate vervaldatum column in schema)
     // CYCLE-60: parseDatum_ + isNaN-guard — string-dated inkoopfacturen anders
     // silent geskipped → onjuiste crediteuren-aging in betalings-overzicht.
-    const factuurdatum = ifData[i][3]
-      ? ((ifData[i][3] instanceof Date) ? ifData[i][3] : parseDatum_(ifData[i][3]))
+    const factuurdatum = ifData[i][KOL.IF.factuurdatumLeverancier]
+      ? ((ifData[i][KOL.IF.factuurdatumLeverancier] instanceof Date) ? ifData[i][KOL.IF.factuurdatumLeverancier] : parseDatum_(ifData[i][KOL.IF.factuurdatumLeverancier]))
       : null;
     const factuurdatumGeldig = factuurdatum && !isNaN(factuurdatum.getTime());
     // Approximate vervaldatum: factuurdatum + 30 days (standard payment term)
@@ -971,11 +996,11 @@ function vernieuwCrediteurenOverzicht() {
     totaalOpen += openstaand;
 
     sheet.appendRow([
-      ifData[i][1],  // Intern nummer
+      ifData[i][KOL.IF.internNummer],  // Intern nummer
       factuurdatum,  // Factuurdatum
       vervaldatum,   // Vervaldatum (berekend op basis van factuurdatum + 30 dagen)
-      ifData[i][6],  // Leverancier
-      ifData[i][4],  // Factuurref
+      ifData[i][KOL.IF.leveranciernaam],  // Leverancier
+      ifData[i][KOL.IF.factuurrefLeverancier],  // Factuurref
       incl,
       betaald || '',
       openstaand,
@@ -1005,15 +1030,15 @@ function koppelTransactiesAanFacturen() {
   let gekoppeld = 0;
 
   for (let i = 1; i < btData.length; i++) {
-    if (btData[i][10]) continue; // Al gekoppeld
-    const ref = String(btData[i][8] || '');
-    const bedrag = Math.abs(parseFloat(btData[i][3]) || 0);
-    const isOntvangst = parseFloat(btData[i][3]) > 0;
+    if (btData[i][KOL.BT.gekoppeldAan]) continue; // Al gekoppeld
+    const ref = String(btData[i][KOL.BT.referentie] || '');
+    const bedrag = Math.abs(parseFloat(btData[i][KOL.BT.bedrag]) || 0);
+    const isOntvangst = parseFloat(btData[i][KOL.BT.bedrag]) > 0;
 
     if (!ref) continue;
 
-    const datum = btData[i][1] ? new Date(btData[i][1]) : new Date();
-    koppelBankTransactieAanFactuur_(ss, btData[i][0], ref, bedrag, isOntvangst, datum);
+    const datum = btData[i][KOL.BT.datum] ? new Date(btData[i][KOL.BT.datum]) : new Date();
+    koppelBankTransactieAanFactuur_(ss, btData[i][KOL.BT.transactieId], ref, bedrag, isOntvangst, datum);
     gekoppeld++;
   }
 
@@ -1122,12 +1147,12 @@ function zoekOfMaakRelatie_(ss, naam, type, email) {
     if (!sheet) throw new Error('Tabblad Relaties ontbreekt — run setup opnieuw');
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][2] || '').trim().toLowerCase() === naamNorm) {
+      if (String(data[i][KOL.REL.naam] || '').trim().toLowerCase() === naamNorm) {
         // Sla e-mail op als die nog niet bekend was (kolom 11 = index 10)
-        if (emailNorm && !data[i][10]) {
+        if (emailNorm && !data[i][KOL.REL.email]) {
           sheet.getRange(i + 1, 11).setValue(emailNorm);
         }
-        return data[i][0]; // Relatie ID
+        return data[i][KOL.REL.relatieId]; // Relatie ID
       }
     }
     // Maak nieuwe relatie aan — ID inline gegenereerd (geen geneste lock)
@@ -1345,7 +1370,7 @@ function beheerGeslotenPeriodes() {
     ui.alert(
       'Geannuleerd',
       'De periode-naam kwam niet exact overeen — uit veiligheid is de actie afgebroken. ' +
-      'Probeer opnieuw via Boekhouding → Boekjaar → Gesloten periodes.',
+      'Probeer opnieuw via Boekhoudbaar → Boekjaar → Gesloten periodes.',
       ui.ButtonSet.OK
     );
     return;

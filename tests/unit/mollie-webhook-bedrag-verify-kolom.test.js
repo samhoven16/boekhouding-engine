@@ -40,7 +40,8 @@ function maakWebhookCtx(opts) {
   };
   const markeerSpy = opts.markeerSpy || jest.fn(() => ({ ok: true, bericht: 'betaald' }));
 
-  const ctx = createGasRuntime(['Mollie.gs'], {
+  // SheetKolom.gs eerst: Mollie's verify-block leest nu via KOL.VF.* (klasse-1-migratie).
+  const ctx = createGasRuntime(['SheetKolom.gs', 'Mollie.gs'], {
     CacheService: {
       getScriptCache: () => ({
         get: (k) => (k in cacheStore ? cacheStore[k] : null),

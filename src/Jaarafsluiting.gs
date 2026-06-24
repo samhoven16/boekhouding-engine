@@ -110,11 +110,11 @@ function leesGrootboekSaldi_(ss) {
   const data = sheet.getDataRange().getValues();
   const saldi = {};
   for (let i = 1; i < data.length; i++) {
-    const code = String(data[i][0] || '').trim();
+    const code = String(data[i][KOL.GB.code] || '').trim();
     if (!code) continue;
     saldi[code] = {
-      naam:  data[i][1], type: data[i][2], cat: data[i][3],
-      bw:    data[i][4], saldo: parseFloat(data[i][5]) || 0,
+      naam:  data[i][KOL.GB.naam], type: data[i][KOL.GB.type], cat: data[i][KOL.GB.categorie],
+      bw:    data[i][KOL.GB.balansWenv], saldo: parseFloat(data[i][KOL.GB.saldo]) || 0,
     };
   }
   return saldi;
@@ -130,7 +130,7 @@ function jaarAlAfgesloten_(ss, jaar) {
   const data = sheet.getDataRange().getValues();
   const refTag = 'JA-' + jaar;
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][11] || '') === refTag) return true;
+    if (String(data[i][KOL.JP.referentie] || '') === refTag) return true;
   }
   return false;
 }
@@ -166,7 +166,7 @@ function voerJaarafsluitingResultaatUit_(ss, jaar) {
       'Ontbrekende rekening(en) in Grootboekschema: ' + ontbreken.join(', '));
     throw new Error(
       'Standaardrekeningen ' + ontbreken.join(' en ') + ' ontbreken in het Grootboekschema. ' +
-      'Open Boekhouding → Setup → Rekeningschema herladen, en probeer het opnieuw.'
+      'Open Boekhoudbaar → Instellingen → Rekeningschema opnieuw laden, en probeer het opnieuw.'
     );
   }
 
