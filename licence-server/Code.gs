@@ -2568,13 +2568,43 @@ function _verzamelAssetsInOperationsMap_(opsMap) {
  * Handmatig een licentiesleutel genereren (bijv. voor een gratis of kortingsexemplaar).
  * Voer uit in de editor; vul naam en email aan in de spreadsheet.
  */
-function genereerHandmatigeLicentie() {
+/**
+ * Maakt een GRATIS test-licentie voor een specifiek e-mailadres en geeft de
+ * sleutel terug. MET e-mail is de licentie direct OTP-activeerbaar (de activatie-
+ * flow zoekt op e-mail), zodat je zonder te kopen je eigen verse kopie kunt
+ * testen. Pure kern — getest in tests/unit/gratis-test-licentie.test.js.
+ */
+function maakTestLicentieVoor_(email, naam) {
+  email = String(email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, fout: 'Ongeldig e-mailadres.' };
+  }
   const sleutel = genereerSleutel_();
   getLicentieSheet_().appendRow([
-    sleutel, 'Handmatig', '', 'Standaard', 'Actief', '', '', new Date(), 'HANDMATIG', '', '',
+    sleutel, naam || 'Test (handmatig)', email, 'Standaard', 'Actief',
+    '', '', new Date(), 'TEST', new Date(), '', '',
   ]);
-  Logger.log('Nieuwe sleutel: ' + sleutel);
-  SpreadsheetApp.getUi().alert('Nieuwe licentiesleutel', sleutel, SpreadsheetApp.getUi().ButtonSet.OK);
+  Logger.log('Test-licentie aangemaakt: ' + sleutel.substring(0, 8) + '… voor ' + email);
+  return { ok: true, sleutel: sleutel, email: email };
+}
+
+/**
+ * EIGENAAR-FUNCTIE — run in de editor (met de Licentie-spreadsheet open).
+ * Vraagt om een e-mailadres en maakt daar een gratis, OTP-activeerbare licentie
+ * voor — zodat je je eigen verse kopie kunt testen zonder te betalen.
+ */
+function genereerHandmatigeLicentie() {
+  const ui = SpreadsheetApp.getUi();
+  const resp = ui.prompt('Gratis test-licentie aanmaken',
+    'E-mailadres waarmee je gaat activeren (dit adres krijgt straks de 6-cijferige code):',
+    ui.ButtonSet.OK_CANCEL);
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+  const r = maakTestLicentieVoor_(resp.getResponseText(), 'Test (handmatig)');
+  if (!r.ok) { ui.alert('Mislukt', r.fout, ui.ButtonSet.OK); return; }
+  ui.alert('✅ Test-licentie aangemaakt',
+    'Sleutel: ' + r.sleutel + '\nE-mail:  ' + r.email +
+    '\n\nOpen je kopie → activeer met dit e-mailadres → je krijgt een 6-cijferige code.',
+    ui.ButtonSet.OK);
 }
 
 /**
