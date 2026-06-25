@@ -2926,15 +2926,35 @@ function verwijderEndpoint_(e) {
   try { otpObj = JSON.parse(otpRaw); } catch (_) { return jsonResp_({ ok: false, fout: 'Ongeldige code.' }); }
   if (Date.now() > otpObj.expiry) {
     props.deleteProperty('otp_' + email);
+    props.deleteProperty('otp_verwijder_pogingen_' + email);
     return jsonResp_({ ok: false, fout: 'Code verlopen — vraag een nieuwe aan.' });
   }
+
+  // Brute-force-bescherming — spiegelt activeerOtpEndpoint_ (lock na 5 foute
+  // pogingen + OTP invalideren), maar met een EIGEN key otp_verwijder_pogingen_
+  // i.p.v. de gedeelde otp_pogingen_. Reden: een mislukte verwijder-poging mag
+  // nooit de kritieke activatie-flow kunnen locken (cross-endpoint self-DoS-
+  // preventie). De router-rate-limit (perEmail:3) faalt OPEN bij cache-storing
+  // en draait op vluchtige CacheService — voor een destructieve actie willen we
+  // een persistente ScriptProperties-backstop. De janitor cleanupVerlopenOtpKeys_
+  // ruimt deze otp_-prefixed key sowieso dagelijks op.
+  const verwPogingenKey = 'otp_verwijder_pogingen_' + email;
+  const verwPogingen = parseInt(props.getProperty(verwPogingenKey) || '0');
+  if (verwPogingen >= 5) {
+    props.deleteProperty('otp_' + email);
+    props.deleteProperty(verwPogingenKey);
+    return jsonResp_({ ok: false, fout: 'Te veel foute pogingen. Vraag een nieuwe code aan.' });
+  }
   if (!veiligVergelijk_(otpObj.code, otp)) {
-    return jsonResp_({ ok: false, fout: 'Onjuiste code.' });
+    props.setProperty(verwPogingenKey, String(verwPogingen + 1));
+    const resterend = 5 - (verwPogingen + 1);
+    return jsonResp_({ ok: false, fout: 'Onjuiste code.' + (resterend > 0 ? ' Nog ' + resterend + ' poging(en).' : ' Vraag een nieuwe code aan.') });
   }
   // Eenmalig gebruik
   props.deleteProperty('otp_' + email);
   props.deleteProperty('otp_ts_' + email);
   props.deleteProperty('otp_pogingen_' + email);
+  props.deleteProperty('otp_verwijder_pogingen_' + email);
 
   const sheet = getLicentieSheet_();
   const data  = sheet.getDataRange().getValues();
