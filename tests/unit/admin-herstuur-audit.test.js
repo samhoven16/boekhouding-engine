@@ -9,6 +9,7 @@
  */
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const { createGasRuntime } = require('../__helpers__/gas-runtime');
 
@@ -62,5 +63,43 @@ describe('C — schrijfAuditLog_ schrijft echt naar de Audit Log-tab', () => {
     expect(appended).toHaveLength(1);
     expect(appended[0][1]).toBe('Test-actie');
     expect(appended[0][2]).toBe('details-x');
+  });
+});
+
+describe('D — adminMaakTestLicentie: zelf-uitgifte vanuit het paneel (standalone-proof)', () => {
+  function ctxMet() {
+    const propStore = { ADMIN_WACHTWOORD: 'geheim123' };
+    const cacheStore = {};
+    const appended = [];
+    const mocks = baseMocks(propStore, cacheStore);
+    mocks.Utilities.getUuid = () => '1234abcd-5678-90ef-1234-567890abcdef';
+    const ctx = createGasRuntime([CODE_GS, DASHBOARD_GS], mocks);
+    ctx.getLicentieSheet_ = () => ({ appendRow: (r) => appended.push(r) });
+    return { ctx, appended };
+  }
+
+  test('met token: geldige BKHE-sleutel + e-mail op kolom 2 (OTP-activeerbaar)', () => {
+    const { ctx, appended } = ctxMet();
+    const token = ctx.adminLogin('geheim123').token;
+    const r = ctx.adminMaakTestLicentie(token, 'Tester@X.nl');
+    expect(r.ok).toBe(true);
+    expect(r.sleutel).toMatch(/^BKHE-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+    expect(r.email).toBe('tester@x.nl');
+    expect(appended).toHaveLength(1);
+    expect(appended[0][2]).toBe('tester@x.nl');
+  });
+
+  test('zonder geldig token: geweigerd, geen rij', () => {
+    const { ctx, appended } = ctxMet();
+    const r = ctx.adminMaakTestLicentie('fout-token', 'x@y.nl');
+    expect(r.ok).toBe(false);
+    expect(r.sessieVerlopen).toBe(true);
+    expect(appended).toHaveLength(0);
+  });
+
+  test('UI: Klanten-tab heeft de knop + bindKlanten roept de server-actie aan', () => {
+    const src = fs.readFileSync(DASHBOARD_GS, 'utf8');
+    expect(src).toMatch(/id="testLicBtn"/);
+    expect(src).toMatch(/\.adminMaakTestLicentie\(TOKEN, em\)/);
   });
 });

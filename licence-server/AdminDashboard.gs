@@ -433,6 +433,24 @@ function adminKlantActie(token, email, actie) {
   return { ok: false, fout: 'Onbekende actie.' };
 }
 
+/**
+ * google.script.run target: geef jezelf (of een tester) een GRATIS, direct
+ * OTP-activeerbare test-licentie zonder de code-editor. Lost op dat
+ * genereerHandmatigeLicentie() op een STANDALONE licence-server niet werkt
+ * (SpreadsheetApp.getUi() bestaat daar niet). De pure kern maakTestLicentieVoor_
+ * leeft in Code.gs en schrijft een geldige BKHE-rij met e-mail (→ OTP-vindbaar).
+ */
+function adminMaakTestLicentie(token, email, naam) {
+  const sessieFout = _adminVereisSessie_(token);
+  if (sessieFout) return sessieFout;
+  if (typeof maakTestLicentieVoor_ !== 'function') {
+    return { ok: false, fout: 'maakTestLicentieVoor_ niet beschikbaar — push de laatste licence-server-code.' };
+  }
+  const r = maakTestLicentieVoor_(email, naam || 'Test (handmatig)');
+  if (r.ok) { try { schrijfAuditLog_('Test-licentie uitgegeven (dashboard)', r.email); } catch (_) {} }
+  return r;
+}
+
 // ─────────────────────────────────────────────
 //  SETUP-ACTIES (zodat de code-editor niet meer nodig is)
 // ─────────────────────────────────────────────
@@ -1136,6 +1154,11 @@ function _adminDashboardHtml_() {
     }).join('');
     var fout = DATA.klantenFout ? '<div class="kaart" style="color:#B91C1C">'+esc(DATA.klantenFout)+'</div>' : '';
     return fout+'<div class="kaart"><h2>Klanten ('+DATA.klanten.length+')</h2>'+
+      '<div style="margin:8px 0 14px;padding:10px;background:#F7F9FC;border-radius:6px">'+
+        '<input id="testLicEmail" class="zoek" style="max-width:280px;display:inline-block" placeholder="e-mail voor test-licentie…"> '+
+        '<button class="btn-sec" id="testLicBtn">➕ Gratis test-licentie uitgeven</button>'+
+        '<div class="hint" style="margin-top:6px">Voor jezelf testen: maakt een direct OTP-activeerbare licentie op dit e-mailadres.</div>'+
+      '</div>'+
       '<input class="zoek" id="klantZoek" placeholder="Filter op naam of e-mail…">'+
       '<div style="overflow-x:auto"><table><thead><tr><th>Naam</th><th>E-mail</th><th>Status</th><th>Onboarded</th><th>Acties</th></tr></thead>'+
       '<tbody id="klantBody">'+(rijen||'<tr><td colspan="5" style="color:#5F6B7A">Nog geen klanten.</td></tr>')+'</tbody></table></div></div>';
@@ -1234,6 +1257,19 @@ function _adminDashboardHtml_() {
         }).withFailureHandler(function(err){ btn.disabled=false; toast((err&&err.message)||'Netwerkfout','rood'); })
         .adminKlantActie(TOKEN, email, actie);
       });
+    });
+    var tlBtn=document.getElementById('testLicBtn');
+    if(tlBtn) tlBtn.addEventListener('click', function(){
+      var em=(document.getElementById('testLicEmail')||{}).value||'';
+      if(!em){ toast('Vul een e-mailadres in','rood'); return; }
+      tlBtn.disabled=true;
+      google.script.run.withSuccessHandler(function(res){
+        tlBtn.disabled=false;
+        if(res && res.sessieVerlopen){ uitloggen(); return; }
+        if(res && res.ok){ toast('Test-licentie: '+res.sleutel+' — activeer je kopie met '+res.email,'groen'); laadData(); }
+        else { toast((res&&res.fout)||'Mislukt','rood'); }
+      }).withFailureHandler(function(err){ tlBtn.disabled=false; toast((err&&err.message)||'Netwerkfout','rood'); })
+      .adminMaakTestLicentie(TOKEN, em);
     });
   }
 
