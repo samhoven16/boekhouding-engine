@@ -93,7 +93,6 @@ const FORMEEL_BEWIJS_INVARIANTEN = [
  * @param {Spreadsheet} ss
  * @returns {{alleGoed: boolean, schendingen: Array, gecheckt: number}}
  */
-// eslint-disable-next-line no-unused-vars
 function bewijsAlleInvarianten_(ss) {
   if (!ss) ss = getSpreadsheet_();
   if (!ss) return { alleGoed: false, schendingen: [{ code: 'INIT', boodschap: 'Spreadsheet niet beschikbaar' }], gecheckt: 0 };
@@ -153,26 +152,41 @@ function _bewijs_I1_debitCreditBalans_(ss) {
   const jp = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
   if (!jp || jp.getLastRow() <= 1) return Object.assign(meta, { geldig: true });
 
-  // Elk journaalpost-record heeft één debet- en één credit-rekening met
-  // hetzelfde bedrag (intra-record balans). De integriteit zit in de
-  // create-flow (maakJournaalpost_), maar I₁ verifieert dat de SOM van
-  // alle debet-bedragen = SOM van alle credit-bedragen (totaal-balans).
+  // Datamodel: elk journaalpost-record heeft ÉÉN debet-rekening [4], ÉÉN credit-
+  // rekening [6] en ÉÉN bedrag [8] — maakJournaalpost_ schrijft beide benen plus
+  // een gevalideerd eindig, positief bedrag. De intra-record balans (debet =
+  // credit) geldt dus structureel ZOLANG beide benen bestaan en het bedrag een
+  // eindig getal is. I₁ verifieert precies dat: een record met een lege debet-
+  // óf credit-rekening is een "eenbenige" boeking (geld uit/naar het niets →
+  // debet ≠ credit), en een niet-numeriek/NaN/Infinity bedrag is corrupt.
+  //
+  // VALS-GROEN-FIX: voorheen telde de code hetzelfde `bedrag` op bij zowel
+  // totaalDebet als totaalCredit (totaalDebet += bedrag; totaalCredit += bedrag)
+  // → ΣDebet ≡ ΣCredit, een tautologie die ALTIJD slaagde en dus niets bewees.
+  // Dezelfde klasse als de I₃-fix F-ACC-001 ("waardoor I₃ ALTIJD slaagde").
   const data = jp.getDataRange().getValues();
-  let totaalDebet = 0, totaalCredit = 0;
-  // Kolommen: [4] debet rek, [6] credit rek, [8] bedrag, [16] status
+  let aantalSchendingen = 0;
+  const voorbeelden = [];
   for (let i = 1; i < data.length; i++) {
     const status = String(data[i][KOL.JP.status] || '').toUpperCase();
     if (status === 'CORRUPT' || status === 'GESTORNEERD') continue;
-    const bedrag = parseFloat(data[i][KOL.JP.bedrag]) || 0;
-    totaalDebet += bedrag;   // debet-zijde van deze journaalpost
-    totaalCredit += bedrag;  // credit-zijde van deze journaalpost (gelijk per I₁)
+    const debet  = String(data[i][KOL.JP.debetRekening]  || '').trim();
+    const credit = String(data[i][KOL.JP.creditRekening] || '').trim();
+    const ruwBedrag = data[i][KOL.JP.bedrag];
+    const bedrag = parseFloat(ruwBedrag);
+    if (!debet || !credit || !isFinite(bedrag)) {
+      aantalSchendingen++;
+      if (voorbeelden.length < 5) {
+        voorbeelden.push({ rij: i + 1, debet: debet, credit: credit, bedrag: ruwBedrag });
+      }
+    }
   }
-  const verschil = Math.abs(totaalDebet - totaalCredit);
-  if (verschil > 0.005) {
+  if (aantalSchendingen > 0) {
     return Object.assign(meta, {
       geldig: false,
-      boodschap: 'ΣDebet (' + totaalDebet + ') ≠ ΣCredit (' + totaalCredit + '), δ=' + verschil,
-      tegenvoorbeeld: { totaalDebet: totaalDebet, totaalCredit: totaalCredit },
+      boodschap: aantalSchendingen + ' journaalpost(en) zonder geldige debet+credit-rekening of eindig ' +
+        'bedrag (eenbenige of corrupte boeking → debet ≠ credit)',
+      tegenvoorbeeld: voorbeelden,
     });
   }
   return Object.assign(meta, { geldig: true });

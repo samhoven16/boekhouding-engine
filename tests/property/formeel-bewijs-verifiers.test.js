@@ -59,6 +59,61 @@ function rng(seed) {
 const round2 = (x) => Math.round(x * 100) / 100;
 const randBedrag = (r) => round2(r() * 5000 + 1);
 
+describe('I₁ — Debit/Credit Balans per journaalpost (echte verifier)', () => {
+  const reks = ['1100', '1300', '8000', '4000'];
+  test('volledige journaalposten (beide benen + eindig bedrag) → geldig (30 random)', () => {
+    const r = rng(11);
+    for (let t = 0; t < 30; t++) {
+      const jp = [JP_H];
+      const n = 3 + Math.floor(r() * 8);
+      for (let k = 0; k < n; k++) {
+        const d = reks[Math.floor(r() * reks.length)];
+        let c = reks[Math.floor(r() * reks.length)]; if (c === d) c = reks[(reks.indexOf(d) + 1) % reks.length];
+        jp.push(jpRow({ debet: d, credit: c, bedrag: randBedrag(r) }));
+      }
+      const res = ctx._bewijs_I1_debitCreditBalans_(mockSs({ Journaalposten: jp }));
+      expect(res.geldig).toBe(true);
+    }
+  });
+
+  test('eenbenige boeking (lege credit-rekening) → schending I1 met tegenvoorbeeld', () => {
+    const jp = [JP_H,
+      jpRow({ id: 'BK1', debet: '1100', credit: '1300', bedrag: 100 }),
+      jpRow({ id: 'BK2', debet: '1100', credit: '', bedrag: 50 }),  // credit ontbreekt
+    ];
+    const res = ctx._bewijs_I1_debitCreditBalans_(mockSs({ Journaalposten: jp }));
+    expect(res.geldig).toBe(false);
+    expect(res.code).toBe('I1');
+    expect(res.tegenvoorbeeld.some((v) => v.rij === 3)).toBe(true);
+  });
+
+  test('lege debet-rekening → schending I1', () => {
+    const jp = [JP_H, jpRow({ id: 'BK3', debet: '', credit: '1300', bedrag: 100 })];
+    expect(ctx._bewijs_I1_debitCreditBalans_(mockSs({ Journaalposten: jp })).geldig).toBe(false);
+  });
+
+  test('niet-numeriek bedrag (NaN) → schending I1', () => {
+    const jp = [JP_H, jpRow({ id: 'BK4', debet: '1100', credit: '1300', bedrag: 'abc' })];
+    expect(ctx._bewijs_I1_debitCreditBalans_(mockSs({ Journaalposten: jp })).geldig).toBe(false);
+  });
+
+  test('CORRUPT/GESTORNEERD rijen worden geskipt (geen valse schending)', () => {
+    const jp = [JP_H,
+      jpRow({ id: 'BK5', debet: '', credit: '', bedrag: '', status: 'CORRUPT' }),
+      jpRow({ id: 'BK6', debet: '1100', credit: '1300', bedrag: 100, status: 'Gevalideerd' }),
+    ];
+    expect(ctx._bewijs_I1_debitCreditBalans_(mockSs({ Journaalposten: jp })).geldig).toBe(true);
+  });
+
+  // REGRESSIE: de oude code telde hetzelfde bedrag op bij zowel totaalDebet als
+  // totaalCredit → ΣDebet ≡ ΣCredit, een tautologie die élke eenbenige boeking
+  // miste (vals-groen). De echte verifier moet 'm nu vangen.
+  test('REGRESSIE tautologie: eenbenige boeking wordt NIET meer gemist', () => {
+    const jp = [JP_H, jpRow({ id: 'X', debet: '1100', credit: '', bedrag: 999 })];
+    expect(ctx._bewijs_I1_debitCreditBalans_(mockSs({ Journaalposten: jp })).geldig).toBe(false);
+  });
+});
+
 describe('I₂ — Grootboeksaldo consistent (echte verifier)', () => {
   const reks = ['1100', '1300', '8000'];
   function bouw(r) {
