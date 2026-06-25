@@ -1245,8 +1245,26 @@ const FEATURE_DEFAULTS = {
 function stuurMailMetDlq_(ontvanger, onderwerp, tekst) {
   if (!ontvanger) return false;
   if (typeof isGeldigEmail_ === 'function' && !isGeldigEmail_(ontvanger)) return false;
+  // Quota-gate: ALLE aanroepers van stuurMailMetDlq_ zijn lage-prioriteit
+  // proactieve notificaties (suppletie-tip, BTW-deadline, bewaarplicht). Bij
+  // KRITIEKE/uitgeputte Gmail-quota mogen die NIET de laatste slots opmaken die
+  // factuur/herinnering (omzet-kritiek) nodig hebben. Dan direct naar de DLQ —
+  // retry zodra de quota morgen reset, zonder een slot te verbruiken. Dit
+  // activeert de mogelijkVerzenden_-prioriteit die voorheen gedefinieerd-maar-
+  // nooit-aangeroepen was (dode gate). Bij onbereikbare quota-API laat
+  // mogelijkVerzenden_ alles door (graceful), dus geen valse uitstel.
+  if (typeof mogelijkVerzenden_ === 'function' && !mogelijkVerzenden_('NORMAAL')) {
+    try {
+      if (typeof dlqVoegToe_ === 'function') {
+        dlqVoegToe_('EMAIL_NOTIFICATIE',
+          { email: ontvanger, onderwerp: onderwerp, tekst: tekst },
+          'Uitgesteld: Gmail-quota kritiek — slots gereserveerd voor factuur/herinnering');
+      }
+    } catch (_) {}
+    return false;
+  }
   try {
-    MailApp.sendEmail(ontvanger, onderwerp, tekst);  // klant-mail-ok: laag-niveau DLQ-sender; de aanroeper bepaalt de gate
+    MailApp.sendEmail(ontvanger, onderwerp, tekst);  // klant-mail-ok: laag-niveau DLQ-sender; quota-gate hierboven beschermt factuur/herinnering-slots
     return true;
   } catch (mailErr) {
     try {
