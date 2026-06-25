@@ -89,7 +89,7 @@ function genereerNotificaties_() {
       urgent: ruimte < 1000,
       bron: 'kor-grens',
     });
-  } else if (kpi.omzet > 20000 && kpi.omzet < 22000) {
+  } else if (kpi.omzet >= 20000) {  // ook ruim boven 22000 + exact 20000 (geen gat)
     lijst.push({
       prioriteit: 90,
       titel: '⚠️ KOR-grens bereikt',

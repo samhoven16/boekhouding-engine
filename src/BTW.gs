@@ -995,9 +995,10 @@ function parseBtwTarief_(label) {
   const l = String(label).toLowerCase();
   // Strikte percent-detectie — voorkomt dat '21' substring een hypothetisch
   // toekomstig tarief als '212' of '21,5%' fout zou matchen.
-  if (l.includes('21%') || l.includes('hoog')) return 0.21;
-  if (l.includes('9%')  || l.includes('laag')) return 0.09;
-  if (l.includes('0%')  || l.includes('nultarief')) return 0.00;
+  // Woordgrens (\b) zodat '19%'/'29%' niet als 9%, en '10%'/'20%' niet als 0% matchen.
+  if (/\b21\s*%/.test(l) || l.includes('hoog')) return 0.21;
+  if (/\b9\s*%/.test(l)  || l.includes('laag')) return 0.09;
+  if (/\b0\s*%/.test(l)  || l.includes('nultarief')) return 0.00;
   if (l.includes('vrijgesteld') || l.includes('verlegd') || l.includes('geen btw')) return null;
   return 0.21;
 }

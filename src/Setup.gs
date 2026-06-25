@@ -183,6 +183,9 @@ function setup() {
     }
 
     PropertiesService.getScriptProperties().setProperty(PROP.SETUP_DONE, 'true');
+    // setupTimestamp: zonder dit vuren NPS-survey + "1 jaar"-achievement NOOIT
+    // (Engagement.gs leest 'setupTimestamp', dat anders nergens werd geschreven).
+    PropertiesService.getScriptProperties().setProperty('setupTimestamp', String(Date.now()));
 
     // Meld onboarding succesvol aan centrale licentieserver (fire-and-forget).
     try { meldOnboardingAanServer_(); } catch (e) { Logger.log('Onboarding-callback overgeslagen: ' + e.message); }
