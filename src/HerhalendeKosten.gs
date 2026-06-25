@@ -321,7 +321,7 @@ function verwerkHerhalendeKosten_() {
       }
 
       const naam     = data[i][KOL.HK.naam];
-      const bedrag   = parseFloat(data[i][KOL.HK.bedragExcl]) || 0;
+      const bedrag   = parseBedrag_(data[i][KOL.HK.bedragExcl]);  // NL/US-veilig: parseFloat las "1.234,56" als 1,234
       const freq     = String(data[i][KOL.HK.frequentie] || 'Maandelijks');
       const rekening = String(data[i][KOL.HK.grootboekrekening] || '7000').split(' ')[0];
       const auto     = String(data[i][KOL.HK.automatischBoeken] || 'Nee');
@@ -505,7 +505,7 @@ function toonHerhalendeKostenOverzicht() {
   let jaarTotaal = 0;
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][KOL.HK.status]) !== 'Actief') continue;
-    const bedrag = parseFloat(data[i][KOL.HK.bedragExcl]) || 0;
+    const bedrag = parseBedrag_(data[i][KOL.HK.bedragExcl]);  // NL/US-veilig
     const freq   = String(data[i][KOL.HK.frequentie] || 'Maandelijks');
     const factor = { 'Wekelijks': 52, 'Maandelijks': 12, 'Kwartaal': 4, 'Halfjaarlijks': 2, 'Jaarlijks': 1 };
     jaarTotaal += bedrag * (factor[freq] || 12);

@@ -17,7 +17,7 @@ describe('BankImport.gs — parseBankCsv_', () => {
   let ctx;
 
   beforeEach(() => {
-    ctx = createGasRuntime(['Config.gs', 'BankImport.gs'], {
+    ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'BankImport.gs'], {
       rondBedrag_: (n) => Math.round(n * 100) / 100,
       getSpreadsheet_: () => ({ getSheetByName: () => null }),
     });

@@ -129,8 +129,10 @@ function maandNaam_(maandNr) {
  */
 function rondBedrag_(bedrag) {
   const n = parseFloat(bedrag) || 0;
+  if (!isFinite(n)) return 0;   // "Infinity"/"1e400" -> veilig 0 (nooit Infinity in de boekhoudkern)
   const cents = Math.round(Math.abs(n) * 100);
-  return (n < 0 ? -cents : cents) / 100;
+  const afgerond = (n < 0 ? -cents : cents) / 100;
+  return isFinite(afgerond) ? afgerond : 0;   // overflow (bv. 1e308 * 100) -> veilig 0
 }
 
 /**
