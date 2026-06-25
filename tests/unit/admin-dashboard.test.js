@@ -44,8 +44,11 @@ function maakCtx(opts) {
       DigestAlgorithm: { SHA_256: 'SHA_256' },
       formatDate: () => '2026-06-11',
     },
-    schrijfAuditLog_: (actie, details) => auditCalls.push({ actie, details }),
   });
+
+  // schrijfAuditLog_ bestaat nu echt in Code.gs → post-load overschrijven zodat
+  // onze spy wint (pre-load mock wordt geschaduwd door de file-definitie).
+  ctx.schrijfAuditLog_ = (actie, details) => auditCalls.push({ actie: actie, details: details });
 
   // getLicentieSheet_ overschrijven met een mock-sheet
   ctx.getLicentieSheet_ = () => ({

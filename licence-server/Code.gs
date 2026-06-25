@@ -2202,6 +2202,25 @@ function maakBrevoContact_(naam, email, sleutel, brevoKey) {
 // ─────────────────────────────────────────────
 //  HELPERS
 // ─────────────────────────────────────────────
+/**
+ * Schrijft een regel naar de "Audit Log"-tab van de licentie-spreadsheet.
+ * ONTBRAK in de licence-server (de functie leefde alleen in het klant-project),
+ * waardoor ~19 aanroepen stil faalden in hun try/catch en de audit-belofte leeg
+ * bleef. Fail-silent by design — een log-fout mag nooit een actie blokkeren.
+ */
+function schrijfAuditLog_(actie, details) {
+  try {
+    const id = PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID');
+    if (!id) return;
+    const ss = SpreadsheetApp.openById(id);
+    let s = ss.getSheetByName('Audit Log');
+    if (!s) { s = ss.insertSheet('Audit Log'); s.appendRow(['Tijd', 'Actie', 'Details']); }
+    s.appendRow([new Date(), String(actie || '').slice(0, 200), String(details || '').slice(0, 500)]);
+  } catch (e) {
+    Logger.log('schrijfAuditLog_ fout: ' + e.message);
+  }
+}
+
 function genereerSleutel_() {
   // Gebruik Utilities.getUuid() voor crypto-secure randomness
   // (Math.random is V8-xorshift, theoretisch voorspelbaar bij genoeg samples).

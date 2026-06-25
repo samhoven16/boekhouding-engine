@@ -403,17 +403,19 @@ function adminKlantActie(token, email, actie) {
     return { ok: true, bericht: 'Licentie ingetrokken.' };
   }
   if (actie === 'herstuur') {
-    // Hergebruik bestaande herstuur-logica indien aanwezig.
-    if (typeof herstuurLicentieMail_ === 'function') {
-      try {
-        herstuurLicentieMail_(email);
-        try { schrijfAuditLog_('Licentie opnieuw verstuurd (dashboard)', email.slice(0, 3) + '***'); } catch (_) {}
-        return { ok: true, bericht: 'Licentie-e-mail opnieuw verstuurd.' };
-      } catch (e) {
-        return { ok: false, fout: 'Versturen mislukt: ' + e.message };
-      }
+    if (typeof stuurLicentiemail_ !== 'function') {
+      return { ok: false, fout: 'Mail-functie niet beschikbaar op deze server.' };
     }
-    return { ok: false, fout: 'Herstuur-functie niet beschikbaar op deze server.' };
+    const sleutel = String(data[rij - 1][0] || '');
+    const naam = String(data[rij - 1][1] || 'Klant');
+    if (!sleutel) return { ok: false, fout: 'Geen licentiesleutel op deze rij.' };
+    try {
+      stuurLicentiemail_(naam, email, sleutel);  // bestaande mailer (naam, email, sleutel)
+      try { schrijfAuditLog_('Licentie opnieuw verstuurd (dashboard)', email.slice(0, 3) + '***'); } catch (_) {}
+      return { ok: true, bericht: 'Licentie-e-mail opnieuw verstuurd.' };
+    } catch (e) {
+      return { ok: false, fout: 'Versturen mislukt: ' + e.message };
+    }
   }
   if (actie === 'verwijderen') {
     // AVG-pseudonymisering (zelfde kolommen als verwijderEndpoint_).
