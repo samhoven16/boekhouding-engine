@@ -2283,14 +2283,27 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       // DLQ: voeg toe voor auto-retry. Opzettelijk geen pdfUrl-attachment in
       // payload — die kan groter zijn dan cell-limit. Retry-handler haalt PDF
       // opnieuw op via factuurnummer.
+      let inDlq = false;
       try {
         if (typeof dlqVoegToe_ === 'function') {
           dlqVoegToe_('EMAIL_HERINNERING', {
             email: klantEmail, onderwerp: onderwerp, tekst: tekst,
             opties: { name: bedrijf },
           }, err.message);
+          inDlq = true;
         }
       } catch (_) {}
+      // Idempotency: zodra de herinnering aan de DLQ is overgedragen (gegarandeerde
+      // retry), markeren we de stap als verzonden. Zonder dit zou de DLQ de mail
+      // (alsnog) afleveren ÉN zou de volgende dagrun dezelfde stap opnieuw sturen
+      // (stapKey stond nog op de oude waarde) → dubbele herinnering naar de
+      // debiteur. Bij definitieve DLQ-fail (3×) escaleert escaleerDlqFataal_ naar
+      // de owner; de mail was dan toch onbestelbaar. Alleen markeren als de DLQ-
+      // overdracht zélf lukte — anders is er geen retry-vangnet en moet de dagrun
+      // het morgen opnieuw proberen.
+      if (inDlq) {
+        try { props.setProperty(stapKey, String(volgendeStap)); } catch (_) {}
+      }
     }
   }
 
