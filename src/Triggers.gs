@@ -1776,7 +1776,15 @@ function dagelijkseTaken() {
   // recreate-stap faalt op ScriptApp-quota MIDDEN in de keten, blijft het
   // systeem zonder triggers tot volgende onOpen. Aan einde plaatsen
   // beperkt blast-radius: alle nuttige work is dan al gedaan.
-  _runTaak_('dashboard',        function() { vernieuwDashboard(); });
+  // KRITIEK: vernieuwDashboard() draait verwerkHerhalendeKosten_() — de
+  // herhalende kosten (huur, abonnementen, verzekering) zijn financiële
+  // journaalposten die niet mogen overslaan. Op volle administraties raakt het
+  // 4-min-budget op (zie triggerSelfHeal-comment: "structureel SKIP"); zonder
+  // kritiek-flag werd de boeking dan stil overgeslagen → chronisch ontbrekende
+  // kosten in de boeken. De render is cosmetisch; de boeking eronder is fiscaal.
+  // Veilig: na budget-overschrijding skippen alle niet-kritieke taken instant,
+  // dus de kritieke taken houden de volle 2-min-marge tot de 6-min hard-cap.
+  _runTaak_('dashboard',        function() { vernieuwDashboard(); }, { kritiek: true });
   // Cycle 68: Belastingadvies-tab is een statische rendering van
   // aftrekposten + spoed-deadlines. Voorheen werd hij alleen vernieuwd
   // als de klant zelf via het menu klikte → "Bijgewerkt:"-timestamp gaf
@@ -1798,10 +1806,13 @@ function dagelijkseTaken() {
     if (typeof featureAan_ === 'function' && !featureAan_('noah_ark_export')) return;
     if (typeof maakNoahArkSnapshot_ === 'function') maakNoahArkSnapshot_();
   });
+  // KRITIEK: draint mislukte factuur-/herinneringsmails (bv. door Gmail-quota).
+  // Stil overslaan = de factuur van de klant bereikt z'n debiteur nooit → klant
+  // wordt niet betaald. Goedkoop (kleine DLQ), dus geen hard-cap-risico.
   _runTaak_('dlqRetry',         function() {
     if (typeof featureAan_ === 'function' && !featureAan_('dlq_retry')) return;
     if (typeof dlqVerwerkRetries_ === 'function') dlqVerwerkRetries_();
-  });
+  }, { kritiek: true });
 
   // Audit-vondst ronde 2 (GAS-runtime): herinneringsStap_<factuurnr> keys
   // worden gewist bij BETAALD/GECREDITEERD, maar facturen die nooit betaald

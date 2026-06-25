@@ -35,10 +35,36 @@ describe('D2: _runTaak_ kritiek-flag negeert budget-skip', () => {
     expect(TRIGGERS).toMatch(/_runTaak_\(\s*'triggerSelfHeal'[\s\S]*?\{\s*kritiek:\s*true\s*\}\s*\)/);
   });
 
-  test('Geen andere taak heeft kritiek=true (regressie: niet rondstrooien)', () => {
-    // Tel exacte kritiek-callsites. Spaarzaam-principe.
+  test('dashboard is kritiek — boekt verwerkHerhalendeKosten_ (financieel, mag niet stil skippen)', () => {
+    // Het dashboard draait verwerkHerhalendeKosten_(): herhalende kosten = echte
+    // journaalposten. Bij budget-overschrijding op volle administraties werd dit
+    // stil overgeslagen → chronisch ontbrekende boekingen. Daarom kritiek.
+    // Anker op de VOLLEDIGE call (vernieuwDashboard() vóór de kritiek-flag) zodat
+    // het reverten van juist déze flag de test rood maakt (niet matchen op een
+    // andere taak z'n kritiek verderop in het bestand).
+    expect(TRIGGERS).toMatch(
+      /_runTaak_\(\s*'dashboard'\s*,\s*function\(\)\s*\{\s*vernieuwDashboard\(\);\s*\}\s*,\s*\{\s*kritiek:\s*true\s*\}\s*\)/);
+  });
+
+  test('dlqRetry is kritiek — draint mislukte factuurmails (omzet, mag niet stil skippen)', () => {
+    // Mislukte factuur-/herinneringsmails moeten gedraind worden; stil overslaan
+    // = de factuur bereikt de debiteur nooit → klant wordt niet betaald.
+    // Anker op dlqVerwerkRetries_() + de afsluitende }, { kritiek: true }) zodat
+    // alleen déze call z'n flag de test groen houdt.
+    // GEEN losse [\s\S]*? tussen de call-body en de flag: de kritiek-flag MOET
+    // direct ná de afsluitende } van déze functie staan, anders zou het reverten
+    // van juist deze flag stil matchen op triggerSelfHeal z'n kritiek verderop.
+    expect(TRIGGERS).toMatch(
+      /_runTaak_\(\s*'dlqRetry'[\s\S]*?dlqVerwerkRetries_\(\);\s*\}\s*,\s*\{\s*kritiek:\s*true\s*\}\s*\)/);
+  });
+
+  test('Precies 3 genoemde kritieke taken (regressie: niet rondstrooien)', () => {
+    // Spaarzaam-principe blijft: alleen taken die financieel/omzet/infra-kritiek
+    // zijn én goedkoop genoeg om de 6-min hard-cap niet te raken. Na budget-
+    // overschrijding skippen alle niet-kritieke taken instant, dus deze 3 houden
+    // de volle 2-min-marge. Voeg NIET zomaar een vierde toe.
     const matches = TRIGGERS.match(/\{\s*kritiek:\s*true\s*\}/g) || [];
-    expect(matches.length).toBe(1);
+    expect(matches.length).toBe(3);
   });
 
   test('Functionele simulatie: budget op + kritiek=true → fn wordt uitgevoerd', () => {
