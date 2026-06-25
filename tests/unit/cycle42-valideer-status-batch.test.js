@@ -43,4 +43,13 @@ describe('CYCLE 42: valideerEndpoint_ batched status fixes', () => {
   test('Status-cell null-safety: `|| \'\'`', () => {
     expect(valBody).toMatch(/data\[i\]\[4\]\s*\|\|\s*['"]['"]/);
   });
+
+  test('Verwijderde licentie (AVG art. 17) wordt permanent afgewezen, vóór de her-binding', () => {
+    expect(valBody).toMatch(/status\.startsWith\(['"]verwijderd['"]\)/);
+    const idxVerwijderd = valBody.indexOf("startsWith('verwijderd')");
+    const idxBinding = valBody.indexOf('getRange(i + 1, 7)');
+    expect(idxVerwijderd).toBeGreaterThan(-1);
+    expect(idxBinding).toBeGreaterThan(-1);
+    expect(idxVerwijderd).toBeLessThan(idxBinding);  // gate vóór her-binding -> installatie-binding wordt niet vrijgegeven
+  });
 });

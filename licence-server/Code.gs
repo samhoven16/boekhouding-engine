@@ -1033,6 +1033,11 @@ function valideerEndpoint_(e) {
       // gecheckt → klant met onbereikbare email kon door zonder dat wij hen
       // konden bereiken voor support.
       if (status.startsWith('ingetrokken')) return jsonResp_({ geldig: false, permanent: true, fout: 'Licentie is ingetrokken.' });
+      // AVG art. 17: een op-verzoek-verwijderde licentie blijft permanent ongeldig.
+      // Voorheen matchte 'Verwijderd op verzoek' geen enkele negatieve status ->
+      // bleef geldig:true valideren EN de installatie-binding (kolom 7) werd hieronder
+      // opnieuw vrijgegeven. Data-export werkt buiten de licentie-gate om.
+      if (status.startsWith('verwijderd')) return jsonResp_({ geldig: false, permanent: true, fout: 'Deze licentie is op je eigen verzoek verwijderd (AVG art. 17).' });
       // F-RED-162: GEEN permanent:true. Een hard-bounce (mogelijk via een gelekt/
       // gespooft Brevo-webhooktoken) mag een BETALENDE klant niet instant bricken
       // + z'n 90-daagse offline-grace-anker wissen. Zonder permanent rijdt de klant
