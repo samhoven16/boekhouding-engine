@@ -767,8 +767,8 @@ function markeerWelkomGezienEnNavigeer(actie) {
     // dicht zonder dat klant zag wat ging gebeuren → 1-3 sec stilte voelt
     // als "kapot". Toast verschijnt onder, sheet-navigation volgt direct.
     const meldingen = {
-      instellingen: 'Naviger naar Instellingen…',
-      dashboard:    'Naviger naar Dashboard…',
+      instellingen: 'Navigeer naar Instellingen…',
+      dashboard:    'Navigeer naar Dashboard…',
       boeking:      'Boekingsdialog wordt geopend…',
       later:        '',
     };

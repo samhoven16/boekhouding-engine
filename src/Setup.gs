@@ -691,7 +691,7 @@ function zetInstellingen_(ss) {
     ['', ''],
     ['RAPPORTAGE INSTELLINGEN', ''],
     ['Dashboard vernieuwen bij openen', 'Ja'],
-    ['Email rapporten naar', 'eigenaar@mijnbedrijf.nl'],
+    ['Email rapporten naar', ''],  // leeg: AutoDefaults vult de Session-email; nep-adres lekte anders als CC op klant-facturen
     ['BTW aangifte herinnering', 'Ja'],
     ['E-mailnotificaties', 'Ja'],
     ['Gewerkte uren dit jaar', '0'],

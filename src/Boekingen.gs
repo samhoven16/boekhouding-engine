@@ -556,6 +556,9 @@ function herberekeningGrootboekSaldi() {
       const credit = String(jpData[i][KOL.JP.creditRekening] || '');
       const bedrag = parseFloat(jpData[i][KOL.JP.bedrag]) || 0;
       if (bedrag === 0) continue;
+      // CORRUPT-halfboeking: saldo is al atomair teruggedraaid; meetellen zou het
+      // grootboek laten divergeren van XAF/CSV/I2 (die CORRUPT óók uitsluiten).
+      if (String(jpData[i][KOL.JP.status] || '').trim().toUpperCase() === 'CORRUPT') continue;
 
       for (const z of [{ code: debet, kant: 'debet' }, { code: credit, kant: 'credit' }]) {
         if (!z.code) continue;
