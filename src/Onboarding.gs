@@ -693,7 +693,7 @@ function toonPostSetupWelkomModal_() {
     </style>
     <div class="label">✨ Setup voltooid</div>
     <h1>${begroeting}</h1>
-    <p class="sub">Je boekhouding staat klaar. Kies hieronder waar je wil beginnen — of later via het Boekhouding-menu.</p>
+    <p class="sub">Je boekhouding staat klaar. Kies hieronder waar je wil beginnen — of later via het Boekhoudbaar-menu.</p>
     <div class="acties">
       <button class="actie actie-primair" type="button" data-actie="instellingen">
         <span class="n">1</span>
