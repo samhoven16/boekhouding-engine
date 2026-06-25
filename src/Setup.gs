@@ -372,7 +372,7 @@ function beschermCellen_(ss) {
   //          bewerking soms nodig is (Instellingen, Grootboek).
   const HARD = [
     { naam: SHEETS.DASHBOARD,      omschr: 'Dashboard — automatisch gegenereerd. Bewerken breekt KPI-formules en alle rapporten daarna.' },
-    { naam: SHEETS.JOURNAALPOSTEN, omschr: 'Journaalposten — boekhoudkundige bron. Bewerken corrumpeert balans + BTW-aangifte. Voeg toe via Boekhouding-menu.' },
+    { naam: SHEETS.JOURNAALPOSTEN, omschr: 'Journaalposten — boekhoudkundige bron. Bewerken corrumpeert balans + BTW-aangifte. Voeg toe via Boekhoudbaar-menu.' },
   ];
   const ZACHT = [
     { naam: SHEETS.GROOTBOEKSCHEMA,    omschr: 'Grootboek — categorisatie. Bewerken alleen na consult.' },
