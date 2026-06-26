@@ -446,12 +446,22 @@ function _bewijs_I8_afgeslotenPeriode_(ss) {
       const tot = new Date(periodes[p].tot);
       if (datum >= van && datum <= tot) {
         const aangemaakt = data[i][KOL.JP.aangemaaktOp];  // kolom: aangemaakt op
-        // Inbreuk alleen als aangemaakt NA periode-sluiting
         if (aangemaakt instanceof Date && periodes[p].geslotenOp) {
+          // Inbreuk als aangemaakt NA periode-sluiting (achteraf geboekt).
           const gesloten = new Date(periodes[p].geslotenOp);
           if (aangemaakt > gesloten) {
-            inbreuk.push({ jpId: data[i][KOL.JP.boekingId], datum: datum, periode: periodes[p].label });
+            inbreuk.push({ jpId: data[i][KOL.JP.boekingId], datum: datum, periode: periodes[p].label, reden: 'aangemaakt na sluiting' });
           }
+        } else {
+          // VALS-GROEN-FIX (A-339): voorheen werd een rij in een gesloten periode
+          // ZÓNDER aanmaak-timestamp (of zonder sluitdatum) stil overgeslagen → I8
+          // slaagde dan vals-groen. Maar maakJournaalpost_ zet die timestamp ALTIJD,
+          // dus een rij eronder kwam buiten de guard om (handmatige sheet-edit /
+          // import) — precies de meest waarschijnlijke immutability-bypass. We kunnen
+          // niet bewijzen dat-ie vóór sluiting is gemaakt → tel als inbreuk i.p.v.
+          // stil 'geldig' claimen. (Zelfde klasse als de I1/I3-vals-groen-fixes.)
+          inbreuk.push({ jpId: data[i][KOL.JP.boekingId], datum: datum, periode: periodes[p].label,
+            reden: (aangemaakt instanceof Date) ? 'periode-sluitdatum onbekend' : 'geen aanmaak-timestamp (mogelijk handmatig/geïmporteerd)' });
         }
         break;
       }

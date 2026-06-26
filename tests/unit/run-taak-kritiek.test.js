@@ -35,15 +35,17 @@ describe('D2: _runTaak_ kritiek-flag negeert budget-skip', () => {
     expect(TRIGGERS).toMatch(/_runTaak_\(\s*'triggerSelfHeal'[\s\S]*?\{\s*kritiek:\s*true\s*\}\s*\)/);
   });
 
-  test('dashboard is kritiek — boekt verwerkHerhalendeKosten_ (financieel, mag niet stil skippen)', () => {
-    // Het dashboard draait verwerkHerhalendeKosten_(): herhalende kosten = echte
-    // journaalposten. Bij budget-overschrijding op volle administraties werd dit
-    // stil overgeslagen → chronisch ontbrekende boekingen. Daarom kritiek.
-    // Anker op de VOLLEDIGE call (vernieuwDashboard() vóór de kritiek-flag) zodat
-    // het reverten van juist déze flag de test rood maakt (niet matchen op een
-    // andere taak z'n kritiek verderop in het bestand).
+  test('herhalendeKosten is kritiek — financiële boeking vooraan, mag niet stil skippen', () => {
+    // A-334-decouple: de financiële boeking (verwerkHerhalendeKosten_) is een eigen
+    // kritieke taak vooraan; niet langer verstopt in de dure dashboard-render.
     expect(TRIGGERS).toMatch(
-      /_runTaak_\(\s*'dashboard'\s*,\s*function\(\)\s*\{\s*vernieuwDashboard\(\);\s*\}\s*,\s*\{\s*kritiek:\s*true\s*\}\s*\)/);
+      /_runTaak_\(\s*'herhalendeKosten'[\s\S]*?verwerkHerhalendeKosten_\(\);\s*\}\s*,\s*\{\s*kritiek:\s*true\s*\}\s*\)/);
+  });
+
+  test('dashboard is NIET (meer) kritiek — de render is cosmetisch/skipbaar (A-334)', () => {
+    // De dashboard-call eindigt direct op `vernieuwDashboard(); })` ZONDER kritiek-
+    // flag. Re-add van kritiek hier (de hard-cap-regressie) maakt deze test rood.
+    expect(TRIGGERS).toMatch(/_runTaak_\(\s*'dashboard'\s*,\s*function\(\)\s*\{\s*vernieuwDashboard\(\);\s*\}\s*\)\s*;/);
   });
 
   test('dlqRetry is kritiek — draint mislukte factuurmails (omzet, mag niet stil skippen)', () => {

@@ -248,6 +248,14 @@ describe('I₈ — Afgesloten periode immutability (echte verifier)', () => {
     const res = ctx._bewijs_I8_afgeslotenPeriode_(mockSs({ Journaalposten: jp }));
     expect(res.geldig).toBe(false); expect(res.code).toBe('I8');
   });
+  test('VALS-GROEN-FIX (A-339): boeking in gesloten periode ZONDER aanmaak-timestamp → schending (niet stil geldig)', () => {
+    // maakJournaalpost_ zet de timestamp altijd; een rij eronder kwam buiten de
+    // guard om (handmatige edit/import) en is dus verdacht. Voorheen werd-ie stil
+    // overgeslagen → I8 vals-groen.
+    const jp = [JP_H, jpRow({ id: 'D', datum: new Date(2025, 5, 1) })];  // geen aangemaakt
+    const res = ctx._bewijs_I8_afgeslotenPeriode_(mockSs({ Journaalposten: jp }));
+    expect(res.geldig).toBe(false); expect(res.code).toBe('I8');
+  });
 });
 
 describe('I₉ — Leaf-only boekingen (echte verifier)', () => {

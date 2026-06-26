@@ -74,6 +74,18 @@ describe('Audit 2026-06-26 — verlegde-BTW-rekeningen 4130/4140', () => {
   });
 });
 
+describe('Audit 2026-06-26 — A-335 setup-watchdog detecteert ontbrekende triggers', () => {
+  const setup = lees('Setup.gs');
+  test('watchdog controleert de kritieke trigger-handlers read-only', () => {
+    expect(setup).toMatch(/getProjectTriggers\(\)/);
+    expect(setup).toMatch(/Achtergrond-taak ontbreekt:/);
+    expect(setup).toMatch(/triggerOntbreekt/);
+  });
+  test('ontbrekende trigger escaleert naar de owner (stil-kapot-preventie)', () => {
+    expect(setup).toMatch(/meldFataalAanOwner_\('SETUP_INCOMPLEET'/);
+  });
+});
+
 describe('Audit 2026-06-26 — copy klopt met de code', () => {
   test('Branding upload-hint adverteert GEEN SVG (de uploader weigert SVG om XSS)', () => {
     const br = lees('Branding.gs');

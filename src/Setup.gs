@@ -173,13 +173,34 @@ function setup() {
       });
     } catch (_) {}
 
+    // A-335: kritieke TRIGGERS controleren (read-only — géén re-install; dat is een
+    // danger-zone die alle triggers wist). Zonder `verwerkHoofdformulier` doet een
+    // Google-Form-inzending NIETS; zonder `dagelijkseTaken` draaien dunning/dashboard/
+    // herhalende kosten nooit ÉN vuurt de trigger-self-heal nooit (die draait IN
+    // dagelijkseTaken). Beide → "stil kapot" terwijl SETUP_DONE 'true' is.
+    let triggerOntbreekt = false;
+    try {
+      const handlers = ScriptApp.getProjectTriggers().map(function(t) {
+        try { return t.getHandlerFunction(); } catch (_) { return ''; }
+      });
+      ['verwerkHoofdformulier', 'dagelijkseTaken'].forEach(function(h) {
+        if (handlers.indexOf(h) === -1) { watchdogFouten.push('Achtergrond-taak ontbreekt: ' + h); triggerOntbreekt = true; }
+      });
+    } catch (_) {}
+
     if (watchdogFouten.length > 0) {
       // Setup heeft technisch geen exception gegooid maar er ontbreken componenten.
-      // Toast + audit-log + WEL SETUP_DONE markeren (zodat klant niet vastloopt)
-      // maar klant krijgt direct te zien wat er ontbreekt.
-      try { ss.toast('Setup grotendeels OK, maar: ' + watchdogFouten[0] + (watchdogFouten.length > 1 ? ' + ' + (watchdogFouten.length - 1) + ' meer' : ''), 'Setup waarschuwing', 30); } catch (_) {}
+      // Toast + audit-log + WEL SETUP_DONE markeren (zodat klant niet vastloopt),
+      // maar met een ACTIEGERICHTE melding zodat de klant niet stil kapot zit.
+      try { ss.toast('Setup grotendeels OK, maar: ' + watchdogFouten[0] + (watchdogFouten.length > 1 ? ' + ' + (watchdogFouten.length - 1) + ' meer' : '') + '. Herlaad de pagina; blijft dit, run Setup opnieuw via het Boekhoudbaar-menu.', 'Setup waarschuwing', 30); } catch (_) {}
       safeAuditLog_('Setup watchdog WAARSCHUWING', watchdogFouten.join(' | '));
       Logger.log('Setup watchdog vond ontbrekende componenten: ' + watchdogFouten.join(' | '));
+      // Owner-escalatie bij ontbrekende TRIGGER: de klant is dan "stil kapot" (Form-
+      // factuur komt niet aan, dagtaken draaien niet) en merkt het pas laat. Sam moet
+      // dit weten om proactief te helpen. meldFataalAanOwner_ is throttled.
+      if (triggerOntbreekt) {
+        try { meldFataalAanOwner_('SETUP_INCOMPLEET', 'Setup voltooide met ontbrekende kritieke trigger(s)', { fouten: watchdogFouten }); } catch (_) {}
+      }
     }
 
     PropertiesService.getScriptProperties().setProperty(PROP.SETUP_DONE, 'true');
