@@ -381,7 +381,10 @@ function verwerkHerhalendeKosten_() {
         iteratie++;
       }
       sheet.getRange(i + 1, 7).setValue(volgende);
-      SpreadsheetApp.flush();  // garandeer datum-update vóór trigger evt. opnieuw fired
+      // A-336: NIET per rij flushen (N vaste lasten = N server-roundtrips, juist
+      // binnen de kritieke dagtaak-staart). De idempotency-key (setProperty 'DONE')
+      // is durable los van SpreadsheetApp.flush() → een re-trigger dubbel-boekt niet,
+      // ook al is deze datum-update nog niet geflusht. Eén flush ná de loop.
 
       // Komende betalingen (volgende 30 dagen)
       const dagenTot = Math.ceil((volgende - vandaag) / (1000 * 60 * 60 * 24));
@@ -389,6 +392,7 @@ function verwerkHerhalendeKosten_() {
         komend.push({ naam, bedrag, datum: volgende, dagenTot });
       }
     }
+    try { SpreadsheetApp.flush(); } catch (_) {}  // A-336: één flush voor álle datum-updates ná de loop
   } finally {
     lock.releaseLock();
   }
