@@ -45,6 +45,28 @@ describe('CYCLE 7: maakStornoJournaalpost_', () => {
     return r;
   }
 
+  // AUDIT 2026-06-26 (accountant-as, BLOCKER): een factuur MET BTW boekt 2
+  // journaalposten met dezelfde ref. Een losse storno draait er één terug terwijl
+  // _markeerFactuurGestorneerd_ de hele factuur uit de BTW-aangifte haalt →
+  // grootboek-BTW ≠ aangifte. De storno moet dat weigeren en naar creditnota wijzen.
+  test('AUDIT-BLOCKER: storno op factuur met 2 benen (omzet+BTW, zelfde ref) → geweigerd, verwijst naar creditnota', () => {
+    const { ctx } = maakCtx([
+      jpRij('BK000010', new Date('2026-03-01'), 'Verkoopfactuur F000001', '1100', '8000', 100, 'F000001'),
+      jpRij('BK000011', new Date('2026-03-01'), 'Verkoopfactuur F000001 (BTW)', '1100', '4110', 21, 'F000001'),
+    ]);
+    expect(() => ctx.maakStornoJournaalpost_(ctx._mockSs, 'BK000010', 'Verkeerde klant geboekt'))
+      .toThrow(/creditnota/i);
+  });
+
+  test('AUDIT-regressie: storno op eenbenige boeking (unieke ref) blijft gewoon toegestaan', () => {
+    const { ctx, appendCalls } = maakCtx([
+      jpRij('BK000020', new Date('2026-03-01'), 'Memoriaal correctie', '7990', '1200', 50, 'MEMO-1'),
+    ]);
+    const id = ctx.maakStornoJournaalpost_(ctx._mockSs, 'BK000020', 'Correctie reden lang genoeg');
+    expect(id).toBeTruthy();
+    expect(appendCalls.length).toBeGreaterThan(0);  // storno-tegenrij is toegevoegd
+  });
+
   test('Geldige storno: inverse boeking met debet/credit gewisseld', () => {
     const orig = jpRij('BK000007', new Date('2026-02-15'), 'Test', '7990', '1200', 100, 'IK001');
     const { ctx, appendCalls } = maakCtx([orig]);
