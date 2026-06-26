@@ -74,6 +74,21 @@ describe('Audit 2026-06-26 — verlegde-BTW-rekeningen 4130/4140', () => {
   });
 });
 
+describe('Audit 2026-06-26 — copy klopt met de code', () => {
+  test('Branding upload-hint adverteert GEEN SVG (de uploader weigert SVG om XSS)', () => {
+    const br = lees('Branding.gs');
+    // de hint-regel (color:#888) mag geen "SVG" meer beloven
+    expect(br).not.toMatch(/color:#888[^<]*SVG/);
+    // en de weigering bestaat nog (regressie)
+    expect(br).toMatch(/geen SVG/i);
+  });
+  test('/functies belooft geen niet-bestaande BTW-rubriek 3b', () => {
+    const fns = fs.readFileSync(
+      path.resolve(__dirname, '../../website/functies/index.html'), 'utf8');
+    expect(fns).not.toMatch(/rubriek 1a, 1b, 3b/);
+  });
+});
+
 describe('Audit 2026-06-26 — MIA-percentage (45,5% bestaat niet)', () => {
   const src = lees('Belastingadvies.gs');
   test('MIA_PCT is 0.45, niet het niet-bestaande 0.455', () => {
