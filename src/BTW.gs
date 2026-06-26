@@ -846,6 +846,16 @@ function sluitBtwPeriode() {
   // (Voorheen stond hier debet=credit=4100 wat een self-posting-error gaf
   // zodra een klant überhaupt omzet met overig tarief had.)
 
+  // Robuustheid: bestaande klant-kopieën (vóór de 4130/4140-toevoeging) hebben
+  // die verlegde-BTW-rekeningen niet in hun grootboek → maakJournaalpost_ zou met
+  // REKENING_ONBEKEND crashen MIDDEN in de afsluiting (ná 4110/4120 al geboekt) →
+  // halve afsluiting, periode niet vergrendeld. Zorg dat ze bestaan vóór we boeken.
+  if ((aangifte.r1e_btw > 0 || aangifte.r4a_btw > 0) &&
+      typeof _zorgGrootboekRekeningBestaat_ === 'function') {
+    _zorgGrootboekRekeningBestaat_(ss, '4130');
+    _zorgGrootboekRekeningBestaat_(ss, '4140');
+  }
+
   // Verlegde BTW (rubriek 1e) — afnemer draagt af; voor administratie boeken
   // wij dit verplaatst naar 4100 zodat aangifte-totaal klopt.
   if (aangifte.r1e_btw > 0) {

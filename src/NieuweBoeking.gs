@@ -1188,6 +1188,7 @@ function vulUploadVelden(s) {
 /* ── DRAG & DROP ── */
 (function() {
   var dz = document.getElementById('dropzone');
+  if (!dz) return;  // De dropzone bestaat alleen als AI-bonscan aan staat (eigen Gemini-key). Zonder key geen drag&drop — niet crashen op een scherm dat elke key-loze klant ziet.
   dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.classList.add('dragover'); });
   dz.addEventListener('dragleave', function(){ dz.classList.remove('dragover'); });
   dz.addEventListener('drop', function(e){

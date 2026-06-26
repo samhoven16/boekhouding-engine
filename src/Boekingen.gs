@@ -1133,6 +1133,28 @@ function zoekGrootboekType_(code) {
   return item ? item.type : 'Onbekend';
 }
 
+/**
+ * Zorgt dat een STANDAARD_GROOTBOEK-rekening daadwerkelijk in het
+ * GROOTBOEKSCHEMA-tabblad staat; voegt 'm toe als-ie ontbreekt. Idempotent.
+ *
+ * Nodig voor bestaande klant-kopieën die een NIEUW toegevoegde standaard-
+ * rekening (bv. 4130/4140 verlegde BTW) nog niet in hun sheet hebben — zonder
+ * dit gooit maakJournaalpost_ → valideerTransactieFormeel_ REKENING_ONBEKEND en
+ * crasht een flow (bv. sluitBtwPeriode) halverwege. Geeft true als toegevoegd.
+ */
+function _zorgGrootboekRekeningBestaat_(ss, code) {
+  const gb = ss && ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
+  if (!gb) return false;
+  const data = gb.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][KOL.GB.code] || '').trim() === String(code)) return false;  // bestaat al
+  }
+  const item = STANDAARD_GROOTBOEK.find(r => String(r.code) === String(code));
+  if (!item) return false;
+  gb.appendRow([item.code, item.naam, item.type, item.cat, item.bw, 0]);
+  return true;
+}
+
 // ─────────────────────────────────────────────
 //  HELPERS RELATIES
 // ─────────────────────────────────────────────
