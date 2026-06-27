@@ -1070,8 +1070,10 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
 
   Logger.log(`Inkoopfactuur IK${inkoopNr} geregistreerd voor ${leverancier}`);
 
-  // Proactief signaal: aankoop ≥ €450 kan worden geactiveerd als investering.
-  if (bedragExcl >= 450) {
+  // Proactief signaal: aankoop ≥ activeringsgrens kan worden geactiveerd als
+  // investering. Grens uit de centrale config (A-CALC-4: was hardcoded 450 naast
+  // B.ACTIVEER_GRENS → divergeerde bij wetswijziging/klant-override).
+  if (bedragExcl >= ((typeof getBelasting_ === 'function' && getBelasting_().ACTIVEER_GRENS) || 450)) {
     try {
       signaleerAfschrijvingskandidaat_(ss, bedragExcl, leverancier, data['Omschrijving uitgave'] || categorie);
     } catch (_) {}
@@ -2079,9 +2081,12 @@ function stuurWeeklySamenvatting_() {
       // Guard: corrupte getKwartaal_ output zou anders Invalid Date geven
       // en de hele weekly summary kapot maken bij een bug in kwartaal-helper.
       if (!isNaN(kNum) && kNum >= 1 && kNum <= 4) {
-        const eindKwartaal = new Date(nu.getFullYear(), kNum * 3, 0);
-        const deadline = new Date(eindKwartaal);
-        deadline.setMonth(deadline.getMonth() + 1);
+        // A-LONG-4: deadline = laatste dag van de maand ná het kwartaal. De oude
+        // setMonth(+1) op een 31e/30e gaf maand-overflow (Q1: 31 mrt → 1 mei i.p.v.
+        // 30 apr; Q2 → 30 jul i.p.v. 31 jul; Q3 → 30 okt i.p.v. 31 okt). new Date(
+        // jaar, kNum*3+1, 0) = laatste dag van die maand, correct voor álle kwartalen
+        // incl. Q4 (maand 13 → 31 jan volgend jaar).
+        const deadline = new Date(nu.getFullYear(), kNum * 3 + 1, 0);
         const dagenTot = Math.ceil((deadline - nu) / (24 * 60 * 60 * 1000));
         if (dagenTot >= 0 && dagenTot <= 30) {
           btwInfo = `\n⏰ BTW-deadline ${kStr}: nog ${dagenTot} dagen (uiterlijk ${formatDatum_(deadline)})\n`;

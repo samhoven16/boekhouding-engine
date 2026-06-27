@@ -74,6 +74,25 @@ describe('Audit 2026-06-26 — verlegde-BTW-rekeningen 4130/4140', () => {
   });
 });
 
+describe('Audit-LONG-4 — BTW-deadline in weekoverzicht (geen maand-overflow)', () => {
+  const t = lees('Triggers.gs');
+  const deadline = (jaar, kNum) => new Date(jaar, kNum * 3 + 1, 0);  // de formule die nu in Triggers staat
+  test('Q1 → 30 april', () => { const d = deadline(2026, 1); expect(d.getMonth()).toBe(3); expect(d.getDate()).toBe(30); });
+  test('Q2 → 31 juli', () => { const d = deadline(2026, 2); expect(d.getMonth()).toBe(6); expect(d.getDate()).toBe(31); });
+  test('Q3 → 31 oktober', () => { const d = deadline(2026, 3); expect(d.getMonth()).toBe(9); expect(d.getDate()).toBe(31); });
+  test('Q4 → 31 januari volgend jaar', () => { const d = deadline(2026, 4); expect(d.getFullYear()).toBe(2027); expect(d.getMonth()).toBe(0); expect(d.getDate()).toBe(31); });
+  test('Triggers gebruikt de overflow-vrije formule (geen setMonth op kwartaal-einde)', () => {
+    expect(t).toMatch(/new Date\(nu\.getFullYear\(\), kNum \* 3 \+ 1, 0\)/);
+    expect(t).not.toMatch(/deadline\.setMonth\(deadline\.getMonth\(\) \+ 1\)/);
+  });
+});
+
+describe('Audit-CALC-4 — activeringsgrens (€450) uit centrale config', () => {
+  test('de inkoop-investeringssignaal leest B.ACTIVEER_GRENS i.p.v. hardcoded 450', () => {
+    expect(lees('Triggers.gs')).toMatch(/getBelasting_\(\)\.ACTIVEER_GRENS/);
+  });
+});
+
 describe('Audit-CALC-5 — herhalende-kosten dropdown gebruikt ECHTE grootboekrekeningen', () => {
   const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Boekingen.gs']);
   const hk = lees('HerhalendeKosten.gs');
