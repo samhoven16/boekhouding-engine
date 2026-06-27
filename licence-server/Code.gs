@@ -560,7 +560,7 @@ function maakBetaling(klantnaam, klantEmail, refCode) {
   const rateLimitKey = 'rate_maakBetaling_' + idemKey;
   const huidig = parseInt(cache.get(rateLimitKey) || '0', 10);
   if (huidig >= 5) {
-    return { fout: 'Te veel betalingspogingen voor dit e-mailadres. Wacht een uur of neem contact op via hallo@boekhoudbaar.nl.' };
+    return { fout: 'Te veel betalingspogingen voor dit e-mailadres. Wacht een uur of neem contact op via support@boekhoudbaar.nl.' };
   }
   cache.put(rateLimitKey, String(huidig + 1), 3600);  // 1 uur
 
