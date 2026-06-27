@@ -74,6 +74,28 @@ describe('Audit 2026-06-26 — verlegde-BTW-rekeningen 4130/4140', () => {
   });
 });
 
+describe('Audit-CALC-5 — herhalende-kosten dropdown gebruikt ECHTE grootboekrekeningen', () => {
+  const ctx = createGasRuntime(['Config.gs', 'Utils.gs', 'Boekingen.gs']);
+  const hk = lees('HerhalendeKosten.gs');
+  // alle codes uit de dropdown moeten bestaan in STANDAARD_GROOTBOEK, anders
+  // gooit maakJournaalpost_ REKENING_ONBEKEND en wordt de kost NOOIT geboekt.
+  const opties = [...hk.matchAll(/<option value="(\d{3,4})\s/g)].map((m) => m[1]);
+  test('de dropdown bevat opties (sanity)', () => {
+    expect(opties.length).toBeGreaterThanOrEqual(8);
+  });
+  test('ELKE dropdown-grootboekcode bestaat in STANDAARD_GROOTBOEK', () => {
+    const onbekend = opties.filter((code) => ctx.zoekGrootboekNaam_(code) === code);
+    expect(onbekend).toEqual([]);  // zoekGrootboekNaam_ geeft de code terug als de rekening niet bestaat
+  });
+  test('geen fantoom 5xxx/6xxx-codes meer (regressie)', () => {
+    expect(opties.filter((c) => /^[56]/.test(c))).toEqual([]);
+  });
+  test('fallback-rekening is 7990 (bestaat), niet 7000-met-verkeerde-naam', () => {
+    expect(hk).toMatch(/\|\| '7990'/);
+    expect(hk).not.toMatch(/\|\| '7000 Overige kosten'/);
+  });
+});
+
 describe('Audit 2026-06-26 — A-351 factuur-tab waarschuwt vooraf bij ontbrekende bedrijfsgegevens', () => {
   const nb = lees('NieuweBoeking.gs');
   test('banner wordt berekend uit Bedrijfsnaam + IBAN', () => {

@@ -95,16 +95,16 @@ function beheerHerhalendeKosten() {
     <div class="form-row">
       <label>Grootboekrekening</label>
       <select id="rekening">
-        <option value="5200 Huurkosten">5200 – Huurkosten</option>
-        <option value="5300 Energie & Water">5300 – Energie & Water</option>
-        <option value="5400 Telefoon & Internet">5400 – Telefoon & Internet</option>
-        <option value="5500 Verzekeringen">5500 – Verzekeringen</option>
-        <option value="5600 Brandstof">5600 – Brandstof</option>
-        <option value="5710 Software & Abonnementen">5710 – Software & Abonnementen</option>
-        <option value="5800 Advies & Accountant">5800 – Advies & Accountant</option>
-        <option value="5900 Marketing & Reclame">5900 – Marketing & Reclame</option>
-        <option value="6100 Bankkosten">6100 – Bankkosten</option>
-        <option value="7000 Overige kosten">7000 – Overige kosten</option>
+        <option value="7210 Huur bedrijfsruimte">7210 – Huur bedrijfsruimte</option>
+        <option value="7220 Energie (gas, water, elektra)">7220 – Energie (gas, water, elektra)</option>
+        <option value="7430 Telefoon en internet">7430 – Telefoon en internet</option>
+        <option value="7910 Bedrijfsverzekeringen">7910 – Bedrijfsverzekeringen</option>
+        <option value="7310 Brandstofkosten">7310 – Brandstofkosten</option>
+        <option value="7440 Software, apps en licenties">7440 – Software, apps en licenties</option>
+        <option value="7450 Accountants- en advieskosten">7450 – Accountants- en advieskosten</option>
+        <option value="7510 Reclame en advertentiekosten">7510 – Reclame en advertentiekosten</option>
+        <option value="7820 Bankkosten en provisies">7820 – Bankkosten en provisies</option>
+        <option value="7990 Overige kosten n.e.g.">7990 – Overige kosten</option>
       </select>
     </div>
     <div class="form-row">
@@ -252,7 +252,7 @@ function opslaanHerhalendeKost(data) {
     (data && data.btw) || '21% (hoog)',
     (data && data.freq) || 'Maandelijks',
     startDatum,
-    (data && data.rekening) || '7000 Overige kosten',
+    (data && data.rekening) || '7990 Overige kosten n.e.g.',
     'Actief',
     (data && data.auto) || 'Nee',
     (data && data.notities) || '',
@@ -323,7 +323,16 @@ function verwerkHerhalendeKosten_() {
       const naam     = data[i][KOL.HK.naam];
       const bedrag   = parseBedrag_(data[i][KOL.HK.bedragExcl]);  // NL/US-veilig: parseFloat las "1.234,56" als 1,234
       const freq     = String(data[i][KOL.HK.frequentie] || 'Maandelijks');
-      const rekening = String(data[i][KOL.HK.grootboekrekening] || '7000').split(' ')[0];
+      // A-CALC-5: fallback naar 7990 (bestaat in STANDAARD_GROOTBOEK). '7000'
+      // (Inkoopkosten) is een ándere rekening; de oude 5xxx-dropdown-codes bestonden
+      // niet eens → maakJournaalpost_ wees ze af (REKENING_ONBEKEND) → de herhalende
+      // kost werd NOOIT geboekt. Nu echte 7xxx-kostenrekeningen.
+      let rekening = String(data[i][KOL.HK.grootboekrekening] || '7990').split(' ')[0];
+      // Vangnet voor bestaande rijen met een oude 5xxx/6xxx/7000-code die niet
+      // (meer) in het grootboek staat: map naar 7990 zodat de boeking niet faalt.
+      if (typeof zoekGrootboekNaam_ === 'function' && zoekGrootboekNaam_(rekening) === rekening) {
+        rekening = '7990';
+      }
       const auto     = String(data[i][KOL.HK.automatischBoeken] || 'Nee');
       const splitPct = Math.min(100, Math.max(0, parseFloat(data[i][KOL.HK.zakelijkPct] || '100') || 100));
       const rijId    = String(data[i][KOL.HK.id] || ('rij' + i));   // unieke ID voor idempotency
