@@ -18,6 +18,19 @@ function openNieuweBoeking() {
   const catOpties = (ctx.categorieen || [])
     .map(function(c){ return '<option>' + _esc(c) + '</option>'; }).join('');
 
+  // A-351: waarschuw VOORAF (niet pas bij "Opslaan") als de bedrijfsgegevens nog
+  // ontbreken. Anders typt een nieuwe klant een hele factuur en krijgt pas bij het
+  // opslaan een harde fout (_eisFactuurBedrijfsgegevens_) → weggegooid werk + "kapot"-
+  // gevoel. Banner alleen op de FACTUUR-tab; kosten/declaratie hebben deze velden niet
+  // nodig en blijven dus zonder drempel werken.
+  const _bedrijfNB = (typeof getInstelling_ === 'function') ? (getInstelling_('Bedrijfsnaam') || '') : '';
+  const _ibanNB    = (typeof getInstelling_ === 'function') ? (getInstelling_('Bankrekening op factuur') || getInstelling_('IBAN') || '') : '';
+  const factuurBedrijfsBanner = (String(_bedrijfNB).trim() && String(_ibanNB).trim()) ? '' :
+    '<div style="background:#FFF3CD;border:1px solid #FFECB3;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#7A5C00;line-height:1.5">' +
+    '⚠ <b>Vul eerst je bedrijfsgegevens in.</b> Een verkoopfactuur vereist minstens je bedrijfsnaam en IBAN ' +
+    '(tabblad <b>Instellingen</b>) — anders kun je deze factuur straks niet opslaan. Sluit dit venster, vul je ' +
+    'gegevens in op Instellingen, en kom terug.</div>';
+
   // BYOK-gating: AI bon-scan vereist klant's eigen Gemini API-key (gratis op
   // aistudio.google.com). Zonder key tonen we GEEN dropzone — dat zou de klant
   // verleiden tot uploaden waarna hij een foutmelding krijgt. In plaats daarvan:
@@ -229,6 +242,7 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
 
 <!-- ════ FACTUUR ════ -->
 <div class="panel actief" id="panel-factuur">
+  ${factuurBedrijfsBanner}
   <div class="spraak-rij">
     <button class="spraak-btn" id="spraak-factuur" onclick="startSpraak('factuur')">🎤 Spraak</button>
     <span class="spraak-status" id="spraakstatus-factuur">Spreek in: "factuur 500 euro advies aan Janssen"</span>

@@ -74,6 +74,28 @@ describe('Audit 2026-06-26 — verlegde-BTW-rekeningen 4130/4140', () => {
   });
 });
 
+describe('Audit 2026-06-26 — A-351 factuur-tab waarschuwt vooraf bij ontbrekende bedrijfsgegevens', () => {
+  const nb = lees('NieuweBoeking.gs');
+  test('banner wordt berekend uit Bedrijfsnaam + IBAN', () => {
+    expect(nb).toMatch(/factuurBedrijfsBanner/);
+    expect(nb).toMatch(/getInstelling_\('Bedrijfsnaam'\)/);
+    expect(nb).toMatch(/_ibanNB/);
+  });
+  test('banner staat in het factuur-panel (niet bij kosten/declaratie)', () => {
+    expect(nb).toMatch(/id="panel-factuur">\s*\n\s*\$\{factuurBedrijfsBanner\}/);
+  });
+});
+
+describe('Audit 2026-06-26 — A-357 gids-hub linkt de 4 hoogste-intentie-gidsen', () => {
+  const hub = fs.readFileSync(path.resolve(__dirname, '../../website/gids/index.html'), 'utf8');
+  ['boekhoudprogramma-zonder-abonnement', 'moneybird-alternatief-2026',
+    'e-boekhouden-vs-moneybird-vs-boekhoudbaar', 'exact-online-stoppen-besparing'].forEach((slug) => {
+    test('zichtbare kaart-link voor /gids/' + slug, () => {
+      expect(hub).toMatch(new RegExp('href="/gids/' + slug + '/" class="gids-kaart"'));
+    });
+  });
+});
+
 describe('Audit 2026-06-26 — A-335 setup-watchdog detecteert ontbrekende triggers', () => {
   const setup = lees('Setup.gs');
   test('watchdog controleert de kritieke trigger-handlers read-only', () => {
