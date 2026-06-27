@@ -85,3 +85,31 @@ A-350 KIA-optimizer negeert €450-ondergrens.
 > 2 nieuwe klassen ontdekt (13 HTML-null-guard, 14 correctie-pad-divergentie). Beide
 > nu met een instantie-fix; de mechanische klasse-sluiting (contract-test) is het
 > geregistreerde structurele werk.
+
+---
+
+## Fase B — andere-methode-sweep (mechanisch + cross-file consistentie + vals-groen + temporeel)
+
+Niet persona-gedreven maar 3 nieuwe lenzen + statische greps. Vond wat de 12 assen misten.
+
+### GEFIXT + geborgd
+- **A-CALC-5 [BLOCKER]** HerhalendeKosten.gs: dropdown bood 5xxx/6xxx-grootboekcodes die niet bestaan → maakJournaalpost_ wees ze af → herhalende kosten werden NOOIT geboekt. → echte 7xxx-rekeningen + 7990-vangnet. (ratel: elke code ∈ STANDAARD_GROOTBOEK)
+- **A-CALC-4 [HOOG]** €450-activeringsgrens hardcoded (Triggers:1074) → leest nu getBelasting_().ACTIVEER_GRENS.
+- **A-LONG-4 [MIDDEL]** weekoverzicht-mail BTW-deadline: setMonth-overflow (Q1 1 mei i.p.v. 30 apr) → new Date(jaar, kNum*3+1, 0).
+- **I5 [vals-groen]** BTW-aangifte-sluitend was tautologisch (r5a vs r5a) → onafhankelijke "belaste grondslag maar €0 BTW"-check.
+
+### GEVERIFIEERD VALS (geen fix — agent had ongelijk)
+- **A-341** XAF [CONCEPT]-marker: prefix vóór de afkapping → marker overleeft altijd. Géén bug.
+
+### OPEN — geladderd (geverifieerd, niet stil gefixt)
+- **CALC-1 [RB]** MIA-default 0.36 (Fiscaal.gs:72) vs 0.45 (Belastingadvies) — categorische MIA vereist RB (al geflagd).
+- **CALC-2 [RB/schema]** MIA-detectie zoekt grootboek `^02[67]` die niet in STANDAARD_GROOTBOEK bestaan → MIA wordt nooit auto-gedetecteerd. Vereist schema- + RB-keuze (welke milieu-rekeningen).
+- **CALC-3 [HOOG-drift]** KOR-grens €20.000 4× hardcoded (BTW.gs/Notificaties.gs/CustomFunctions.gs) naast B.KOR_GRENS — matcht nu, drift-risico. Clean fix = config-read + afgeleide €18.000-drempel.
+- **CALC-6 [design]** reiskosten 7350 (km) vs 7340 (categorie "OV & Reiskosten") — mapping-keuze; advies ziet 7340-boekingen niet.
+- **CALC-7..12 [drift, matcht nu]** BTW-tarief-literals, IB-marginaal-fallbacks (0.3693/0.3582 vs 0.3756), 4 BTW-parsers, 2025-fallback-scalars, BOX3/km cosmetisch.
+- **LONG-1 [HOOG, danger-zone]** factuurnummer-teller reset hangt 100% aan handmatig sluitJaarAf(); op de 2026→2027-grens kan I7-monotonie breken (art. 35 Wet OB). Fix = jaargrens-bewuste teller-reset (raakt volgendFactuurnummer_ — race/uniciteit-danger-zone, zorgvuldig).
+- **LONG-2** jaarafsluiting-waarschuwing vuurt alleen Q1 (DriveStructuur:507) → hele jaar maken.
+- **LONG-3 [trade-off]** getBelasting_ gebruikt getFullYear i.p.v. getBoekjaar_ — maar getBoekjaar_ kan stale zijn; TARIEF_VEROUDERD mitigeert. Sam's beeld nodig.
+- **VG: valideerBtwInvariants_ #3/#4** (BTW.gs) zelfde tautologie als I5 maar #1/#2 ernaast doen de echte check → redundant, lage prio.
+- **VG: parallel-impl-tests** (formeel-bewijs-invarianten.test.js) borgen I6/I7/I10 via her-implementatie i.p.v. de echte verifier → coverage-gat (regressie zou niet gevangen worden).
+- **VG: controleerTaxAdmBewaarplichtCheck_** kalender-only "controle" (LAAG); **I10** catch→push(0) (LAAG).
