@@ -323,6 +323,22 @@ function _bewijs_I5_btwAangifteSluitend_(ss) {
     const tot = new Date(nu.getFullYear(), (q + 1) * 3, 0, 23, 59, 59);
     const a = berekenBtwAangifte_(ss, van, tot);
     if (!a) return Object.assign(meta, { geldig: true });
+    // ONAFHANKELIJKE check vóór de identiteit. De r5a==Σ(rubrieken)- en r5d==r5a-r5b-
+    // checks hieronder zijn DEFINITIE-waar (berekenBtwAangifte_ zet r5a = rondBedrag_(
+    // diezelfde som)) → tautologisch, vals-groen (vgl. de I1/I3/I8-fixes). Een belaste
+    // rubriek (1a=21% / 1b=9%) met grondslag > €1 maar €0 verschuldigde BTW betekent
+    // dat een factuur-btwBedrag handmatig op 0 staat → stille onder-aangifte; dat
+    // glipt door de pure som-identiteit (0 telt netjes op tot 0). Drempel €1 sluit
+    // de sub-cent-afronding-edge uit (verlegd/vrijgesteld zit in r1e/1d, niet 1a/1b).
+    if ((a.r1a_grondslag > 1 && (a.r1a_btw || 0) === 0) ||
+        (a.r1b_grondslag > 1 && (a.r1b_btw || 0) === 0)) {
+      return Object.assign(meta, {
+        geldig: false,
+        boodschap: 'Belaste omzet met grondslag maar €0 verschuldigde BTW (rubriek 1a/1b) — ' +
+          'controleer of een factuur-BTW handmatig op €0 staat (onder-aangifte-risico).',
+        tegenvoorbeeld: { r1a_grondslag: a.r1a_grondslag, r1a_btw: a.r1a_btw, r1b_grondslag: a.r1b_grondslag, r1b_btw: a.r1b_btw },
+      });
+    }
     const r5aBerekend = (a.r1a_btw || 0) + (a.r1b_btw || 0) + (a.r1c_btw || 0) + (a.r1e_btw || 0) + (a.r4a_btw || 0);
     if (Math.abs((a.r5a || 0) - r5aBerekend) > 0.01) {
       return Object.assign(meta, {

@@ -229,6 +229,17 @@ describe('I₅ — BTW-aangifte sluitend (echte verifier, berekenBtwAangifte_ ge
     const res = ctx._bewijs_I5_btwAangifteSluitend_(mockSs({}));
     expect(res.geldig).toBe(false); expect(res.code).toBe('I5');
   });
+  test('VALS-GROEN-FIX: belaste grondslag (1a) maar €0 BTW → schending (de som-identiteit zou dit missen)', () => {
+    // r5a=0=Σ → de pure identiteit zegt "sluitend ✓"; de onafhankelijke check vangt
+    // de handmatig-op-€0-gezette factuur-BTW (onder-aangifte).
+    mockAangifte({ r1a_grondslag: 100, r1a_btw: 0, r5a: 0, r5b: 0, r5d: 0 });
+    const res = ctx._bewijs_I5_btwAangifteSluitend_(mockSs({}));
+    expect(res.geldig).toBe(false); expect(res.code).toBe('I5');
+  });
+  test('belaste grondslag MET correcte BTW → geldig (geen vals alarm)', () => {
+    mockAangifte({ r1a_grondslag: 100, r1a_btw: 21, r5a: 21, r5b: 0, r5d: 21 });
+    expect(ctx._bewijs_I5_btwAangifteSluitend_(mockSs({})).geldig).toBe(true);
+  });
 });
 
 describe('I₈ — Afgesloten periode immutability (echte verifier)', () => {
