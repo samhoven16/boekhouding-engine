@@ -396,28 +396,36 @@ function _bewijs_I7_factuurnummerMonotoon_(ss) {
   if (!vf) return Object.assign(meta, { geldig: true });
   const data = vf.getDataRange().getValues();
 
-  // Groepeer per boekjaar (jaar uit datum [2]), check binnen-jaar monotonie
-  const perJaar = {};
+  // Groepeer per NUMMER-SERIE (de prefix vóór het volgnummer), NIET per datum-jaar.
+  // LONG-1-fix: de teller reset per prefix-serie (F2026-/F2027-, via sluitJaarAf),
+  // niet per kalenderjaar. Een factuur die in het nieuwe jaar wordt uitgegeven vóór
+  // de jaarafsluiting houdt (terecht) de oude prefix + lopende teller. Groeperen op
+  // datum.getFullYear() stopte zo'n stale-prefix-factuur (F2026-…, datum 2027) samen
+  // met de gereset F2027-001-serie in één 2027-groep → VALSE monotonie-breuk op de
+  // jaargrens (art. 35 Wet OB vereist een sequentiële reeks, geen jaar-in-het-nummer).
+  // Groeperen op de prefix-serie toetst de werkelijke nummering-reeks: vangt echte
+  // backdating BINNEN een serie, maar niet de legitieme jaargrens-reset.
+  const perSerie = {};
   for (let i = 1; i < data.length; i++) {
     const nrStr = String(data[i][KOL.VF.factuurnummer] || '').trim();
     const datum = data[i][KOL.VF.datum];
     if (!nrStr || !(datum instanceof Date)) continue;
-    // Extraheer numeriek deel (laatste serie cijfers)
+    // Extraheer numeriek deel (laatste serie cijfers) + de prefix ervóór.
     const m = nrStr.match(/(\d+)\s*$/);
     if (!m) continue;
     const nrNum = parseInt(m[1], 10);
-    const jaar = datum.getFullYear();
-    if (!perJaar[jaar]) perJaar[jaar] = [];
-    perJaar[jaar].push({ nr: nrNum, datum: datum.getTime(), str: nrStr });
+    const serie = nrStr.slice(0, nrStr.length - m[1].length) || '(geen prefix)';
+    if (!perSerie[serie]) perSerie[serie] = [];
+    perSerie[serie].push({ nr: nrNum, datum: datum.getTime(), str: nrStr });
   }
 
   const breuk = [];
-  Object.keys(perJaar).forEach(function(j) {
-    const lijst = perJaar[j];
+  Object.keys(perSerie).forEach(function(s) {
+    const lijst = perSerie[s];
     lijst.sort(function(a, b) { return a.datum - b.datum; });
     for (let i = 1; i < lijst.length; i++) {
       if (lijst[i].nr < lijst[i - 1].nr) {
-        breuk.push({ jaar: j, eerder: lijst[i - 1].str, later: lijst[i].str });
+        breuk.push({ serie: s, eerder: lijst[i - 1].str, later: lijst[i].str });
       }
     }
   });

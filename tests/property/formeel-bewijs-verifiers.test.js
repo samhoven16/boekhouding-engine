@@ -242,6 +242,34 @@ describe('I₅ — BTW-aangifte sluitend (echte verifier, berekenBtwAangifte_ ge
   });
 });
 
+describe('I₇ — Factuurnummer-monotonie (echte verifier, prefix-serie-groepering)', () => {
+  const VF_H = new Array(20).fill('h');
+  const vfRow = (nr, datum) => { const r = new Array(20).fill(''); r[1] = nr; r[2] = datum; return r; };  // [1]=nr [2]=datum
+  test('LONG-1: jaargrens — F2026-…(datum 2027) náást gereset F2027-001(datum 2027) → geldig', () => {
+    const vf = [VF_H,
+      vfRow('F2026-000311', new Date(2026, 11, 20)),
+      vfRow('F2026-000312', new Date(2027, 0, 5)),   // stale prefix, uitgegeven vóór jaarafsluiting
+      vfRow('F2027-000001', new Date(2027, 0, 10)),  // ná sluitJaarAf, teller gereset
+      vfRow('F2027-000002', new Date(2027, 0, 12)),
+    ];
+    // Onder de oude datum-jaar-groepering zou F2027-000001 (nr 1) ná F2026-000312
+    // (nr 312) in dezelfde 2027-groep een valse breuk geven. Prefix-serie-groepering: geldig.
+    expect(ctx._bewijs_I7_factuurnummerMonotoon_(mockSs({ Verkoopfacturen: vf })).geldig).toBe(true);
+  });
+  test('echte backdating BINNEN een serie (latere datum, lager nummer) → schending I7', () => {
+    const vf = [VF_H,
+      vfRow('F2027-000010', new Date(2027, 5, 15)),
+      vfRow('F2027-000009', new Date(2027, 6, 20)),
+    ];
+    const res = ctx._bewijs_I7_factuurnummerMonotoon_(mockSs({ Verkoopfacturen: vf }));
+    expect(res.geldig).toBe(false); expect(res.code).toBe('I7');
+  });
+  test('nette opvolgende reeks → geldig', () => {
+    const vf = [VF_H, vfRow('F2026-000001', new Date(2026, 0, 5)), vfRow('F2026-000002', new Date(2026, 0, 9))];
+    expect(ctx._bewijs_I7_factuurnummerMonotoon_(mockSs({ Verkoopfacturen: vf })).geldig).toBe(true);
+  });
+});
+
 describe('I₈ — Afgesloten periode immutability (echte verifier)', () => {
   const van = new Date(2025, 0, 1), tot = new Date(2025, 11, 31, 23, 59, 59), geslotenOp = new Date(2026, 1, 1);
   beforeAll(() => { ctx._leesGeslotenPeriodes_ = () => [{ van: van, tot: tot, geslotenOp: geslotenOp, label: '2025' }]; });
