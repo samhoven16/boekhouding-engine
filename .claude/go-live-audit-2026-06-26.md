@@ -113,6 +113,11 @@ Niet persona-gedreven maar 3 nieuwe lenzen + statische greps. Vond wat de 12 ass
   boundary-test toegevoegd.
 - **LONG-2 → opgelost** checkJaarwisselingNodig_ Q1-only-guard (maand>3) verwijderd → hele
   jaar waarschuwen bij stale prefix; 1×/dag-throttle blijft. Ratel toegevoegd.
+- **CALC-7 [ACTIEF, niet enkel drift] → opgelost** BelastingOptimizer default-marginaaltarief
+  was hardcoded 0,3693 (~2023-tarief); BEIDE publieke entrypoints (berekenInvesteringsTiming +
+  LP-fallback) roepen ZONDER tarief aan → klant zag fiscaal voordeel tegen 36,93% i.p.v.
+  2026's schijf-1 35,75% (overschatting). Nu uit getBelasting_().IB_SCHIJF_1_PCT, zelf-bijwerkend.
+  Belastingvoordeel.gs:43 stale fallback 0,3582→0,3575. Ratel + mutatiebewijs toegevoegd.
 - **VG: parallel-impl-tests → opgelost** I4/I6/I10 hadden alléén re-implementatie-dekking
   (formeel-bewijs-invarianten.test.js rekent de wiskunde zelf na → een bug in _bewijs_Ix_
   zelf bleef groen). Echte-verifier-tests toegevoegd in formeel-bewijs-verifiers.test.js
@@ -123,7 +128,11 @@ Niet persona-gedreven maar 3 nieuwe lenzen + statische greps. Vond wat de 12 ass
 - **CALC-1 [RB]** MIA-default 0.36 (Fiscaal.gs:72) vs 0.45 (Belastingadvies) — categorische MIA vereist RB (al geflagd).
 - **CALC-2 [RB/schema]** MIA-detectie zoekt grootboek `^02[67]` die niet in STANDAARD_GROOTBOEK bestaan → MIA wordt nooit auto-gedetecteerd. Vereist schema- + RB-keuze (welke milieu-rekeningen).
 - **CALC-6 [design]** reiskosten 7350 (km) vs 7340 (categorie "OV & Reiskosten") — mapping-keuze; advies ziet 7340-boekingen niet.
-- **CALC-7..12 [drift, matcht nu]** BTW-tarief-literals, IB-marginaal-fallbacks (0.3693/0.3582 vs 0.3756), 4 BTW-parsers, 2025-fallback-scalars, BOX3/km cosmetisch.
+- **CALC-8..12 [drift, dood/onbereikbaar]** Resterend: SCHULD_SCHIJF inline-array-fallback
+  (CustomFunctions.gs:135, 2025-waarden) is provably DOOD — `_cf_tarievenVoorJaar_` levert altijd
+  IB_SCHIJVEN (last-resort-snapshot incl.), dus de `: [...]`-tak valt nooit. Per orphan-rule
+  gelaten + genoteerd (was al dood vóór deze sweep). BTW-tarief-literals 0.21/0.09 in 4 parsers:
+  drift-risico maar BTW-tarieven al jaren stabiel; lage prio. BOX3/km cosmetisch.
 - **LONG-1 [HOOG, danger-zone]** factuurnummer-teller reset hangt 100% aan handmatig sluitJaarAf(); op de 2026→2027-grens kan I7-monotonie breken (art. 35 Wet OB). Fix = jaargrens-bewuste teller-reset (raakt volgendFactuurnummer_ — race/uniciteit-danger-zone, zorgvuldig).
 - **LONG-3 [trade-off]** getBelasting_ gebruikt getFullYear i.p.v. getBoekjaar_ — maar getBoekjaar_ kan stale zijn; TARIEF_VEROUDERD mitigeert. Sam's beeld nodig.
 - **VG: controleerTaxAdmBewaarplichtCheck_** kalender-only "controle" (LAAG); **I10** catch→push(0) (LAAG).

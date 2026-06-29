@@ -56,7 +56,8 @@ function kiaAftrekVoorTotaal_(totaal, B) {
  * @param {Array<{naam:string, bedrag:number}>} investeringen — alle geplande
  * @param {number} bestaandJaarN — al-geboekte KIA-investeringen in jaar N
  * @param {number} bestaandJaarN1 — al-geboekte KIA-investeringen in jaar N+1
- * @param {number} marginaalTarief — IB-tarief klant (default 36.93% box 1 tot €76.817 in 2026)
+ * @param {number} marginaalTarief — IB-tarief klant; default = schijf-1 uit
+ *   getBelasting_() (2026: 35,75%) als geen geldig tarief is meegegeven.
  * @param {Object} [Bopt] — optionele BELASTING-config override (test-injection)
  *
  * @returns {{
@@ -87,11 +88,17 @@ function optimaliseerInvesteringsTiming_(investeringen, bestaandJaarN, bestaandJ
         'Splits in twee batches en optimaliseer apart.',
     };
   }
-  const tarief = (isFinite(marginaalTarief) && marginaalTarief > 0 && marginaalTarief < 1)
-    ? marginaalTarief : 0.3693;
   const startN = isFinite(bestaandJaarN) ? bestaandJaarN : 0;
   const startN1 = isFinite(bestaandJaarN1) ? bestaandJaarN1 : 0;
   const B = Bopt || getBelasting_();
+  // CALC-7 (sweep 2026-06-29): default-marginaaltarief uit de centrale config
+  // i.p.v. een hardcoded 0,3693 (verouderd ~2023-tarief; commentaar noemde nog
+  // de 2025-grens €76.817). De publieke wrapper berekenInvesteringsTiming roept
+  // ZONDER tarief aan → de klant zag z'n fiscaal voordeel tegen 36,93% i.p.v.
+  // 2026's schijf-1 35,75% (overschatting). Nu config-gedreven en zelf-bijwerkend.
+  const tarief = (isFinite(marginaalTarief) && marginaalTarief > 0 && marginaalTarief < 1)
+    ? marginaalTarief
+    : (B.IB_SCHIJF_1_PCT || 0.3575);
 
   // Brute-force: iedere bit van mask geeft aan of investering i naar N (0) of N+1 (1) gaat
   let beste = null;
