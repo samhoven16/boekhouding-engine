@@ -207,6 +207,32 @@ describe('I₃ — Balans-wet Activa = Passiva (echte verifier)', () => {
   });
 });
 
+describe('I₄ — Factuur-decompositie excl+btw=incl (echte verifier)', () => {
+  // Sloot voorheen alleen via een re-implementatie in de sibling-suite → een bug
+  // in _bewijs_I4_ zelf werd niet gevangen. Nu de échte verifier.
+  const VF_H = new Array(23).fill('h');
+  // [1]=nr [9]=excl [11]=btw [12]=incl [14]=status
+  const vfRow = (excl, btw, incl, status) => {
+    const r = new Array(23).fill('');
+    r[1] = 'F-001'; r[9] = excl; r[11] = btw; r[12] = incl; r[14] = status || '';
+    return r;
+  };
+  test('sluitende decompositie (100+21=121, 50+4,5=54,5) → geldig', () => {
+    const vf = [VF_H, vfRow(100, 21, 121), vfRow(50, 4.5, 54.5)];
+    expect(ctx._bewijs_I4_factuurDecompositie_(mockSs({ Verkoopfacturen: vf })).geldig).toBe(true);
+  });
+  test('excl+btw ≠ incl (100+21 maar incl 130) → schending I4 met tegenvoorbeeld', () => {
+    const vf = [VF_H, vfRow(100, 21, 130)];
+    const res = ctx._bewijs_I4_factuurDecompositie_(mockSs({ Verkoopfacturen: vf }));
+    expect(res.geldig).toBe(false); expect(res.code).toBe('I4');
+    expect(res.tegenvoorbeeld[0].verwacht).toBeCloseTo(121, 2);
+  });
+  test('gestorneerde factuur met scheve decompositie wordt overgeslagen → geldig', () => {
+    const vf = [VF_H, vfRow(100, 21, 999, 'Gestorneerd')];
+    expect(ctx._bewijs_I4_factuurDecompositie_(mockSs({ Verkoopfacturen: vf })).geldig).toBe(true);
+  });
+});
+
 describe('I₅ — BTW-aangifte sluitend (echte verifier, berekenBtwAangifte_ gemockt)', () => {
   const basis = { r1a_btw: 0, r1b_btw: 0, r1c_btw: 0, r1e_btw: 0, r4a_btw: 0, r5a: 0, r5b: 0, r5d: 0 };
   const mockAangifte = (o) => { ctx.berekenBtwAangifte_ = () => Object.assign({}, basis, o); };
@@ -239,6 +265,28 @@ describe('I₅ — BTW-aangifte sluitend (echte verifier, berekenBtwAangifte_ ge
   test('belaste grondslag MET correcte BTW → geldig (geen vals alarm)', () => {
     mockAangifte({ r1a_grondslag: 100, r1a_btw: 21, r5a: 21, r5b: 0, r5d: 21 });
     expect(ctx._bewijs_I5_btwAangifteSluitend_(mockSs({})).geldig).toBe(true);
+  });
+});
+
+describe('I₆ — Factuurnummer-uniciteit (echte verifier)', () => {
+  // Sloot voorheen alleen via re-implementatie (Set-cardinaliteit) in de
+  // sibling-suite. Nu de échte verifier — vangt o.a. de !nr-skip-branch.
+  const VF_H = new Array(23).fill('h');
+  const vfRow = (nr) => { const r = new Array(23).fill(''); r[1] = nr; return r; };  // [1]=nr
+  test('unieke nummers → geldig', () => {
+    const vf = [VF_H, vfRow('F-001'), vfRow('F-002'), vfRow('F-003')];
+    expect(ctx._bewijs_I6_factuurnummerUniek_(mockSs({ Verkoopfacturen: vf })).geldig).toBe(true);
+  });
+  test('dubbel nummer → schending I6 met rij-paar als tegenvoorbeeld', () => {
+    const vf = [VF_H, vfRow('F-001'), vfRow('F-002'), vfRow('F-001')];
+    const res = ctx._bewijs_I6_factuurnummerUniek_(mockSs({ Verkoopfacturen: vf }));
+    expect(res.geldig).toBe(false); expect(res.code).toBe('I6');
+    expect(res.tegenvoorbeeld[0].nr).toBe('F-001');
+    expect(res.tegenvoorbeeld[0].rijen).toEqual([2, 4]);  // 1-based sheet-rijen (header = rij 1)
+  });
+  test('lege nummer-cellen tellen NIET als duplicaat → geldig (regressie: !nr-skip)', () => {
+    const vf = [VF_H, vfRow(''), vfRow(''), vfRow('F-009')];
+    expect(ctx._bewijs_I6_factuurnummerUniek_(mockSs({ Verkoopfacturen: vf })).geldig).toBe(true);
   });
 });
 
@@ -352,6 +400,30 @@ describe('I₉ — pureParents == valideerJournaalpostBalans_.purePArents (geen 
   });
 });
 
+describe('I₁₀ — BTW-anomalie EWMA+2σ (echte verifier, berekenBtwAangifte_ gemockt)', () => {
+  // De verifier roept berekenBtwAangifte_ 5× aan (oudste kwartaal eerst, huidig
+  // laatst) en leest a.r5d. We voeren een vaste r5d-reeks in via call-volgorde.
+  // Sloot voorheen alleen via re-implementatie (eigen ewma/sigma) → de σ≈0-
+  // fallback-tak van de échte verifier werd nooit getoetst.
+  const mockR5d = (reeks) => { let i = 0; ctx.berekenBtwAangifte_ = () => ({ r5d: reeks[i++] }); };
+  test('huidig kwartaal binnen 2σ van de EWMA → geldig', () => {
+    mockR5d([1000, 1010, 990, 1005, 1015]);  // [0..3]=historie, [4]=huidig
+    expect(ctx._bewijs_I10_btwAnomalie_(mockSs({})).geldig).toBe(true);
+  });
+  test('plotse 5× spike t.o.v. stabiele historie → schending I10 met tegenvoorbeeld', () => {
+    mockR5d([1000, 1010, 990, 1005, 5000]);
+    const res = ctx._bewijs_I10_btwAnomalie_(mockSs({}));
+    expect(res.geldig).toBe(false); expect(res.code).toBe('I10');
+    expect(res.tegenvoorbeeld.huidig).toBe(5000);
+  });
+  test('σ≈0-historie → 10%-tolerantie-fallback: kleine afwijking geldig, grote schending', () => {
+    mockR5d([1000, 1000, 1000, 1000, 1050]);  // tol = max(0,1·1000, 100) = 100; |50| < 100
+    expect(ctx._bewijs_I10_btwAnomalie_(mockSs({})).geldig).toBe(true);
+    mockR5d([1000, 1000, 1000, 1000, 1300]);  // |300| > 100
+    expect(ctx._bewijs_I10_btwAnomalie_(mockSs({})).geldig).toBe(false);
+  });
+});
+
 // ── De ratel: dit gat (verifier zonder property-test) mag niet heropenen ──
 describe('Meta — invariant-dekkingsratel', () => {
   const dir = __dirname;
@@ -375,5 +447,20 @@ describe('Meta — invariant-dekkingsratel', () => {
     }
     // Leeg = elk axioma is zowel afdwingbaar (verifier) als geborgd (test).
     expect(ongedekt).toEqual([]);
+  });
+
+  // META-GAT (sweep 2026-06-29): de check hierboven telt óók een sibling-suite die
+  // de wiskunde RE-IMPLEMENTEERT i.p.v. de echte verifier aanroept — dan is "groen"
+  // geen bewijs dat _bewijs_Ix_ zelf klopt. Deze ratel eist dat DEZE suite elke
+  // echte verifier daadwerkelijk dríjft (ctx._bewijs_Ix_), zodat een regressie in
+  // de productie-verifier hier rood wordt.
+  test('elke échte verifier I1..I10 wordt door DEZE suite aangeroepen (geen re-impl-only dekking)', () => {
+    const dezeSuite = fs.readFileSync(path.join(dir, 'formeel-bewijs-verifiers.test.js'), 'utf8');
+    const ongedreven = [];
+    for (let i = 1; i <= 10; i++) {
+      // trailing _ onderscheidt I1_ van I10_; we eisen een echte aanroep, niet enkel een describe-titel
+      if (!new RegExp('ctx\\._bewijs_I' + i + '_').test(dezeSuite)) ongedreven.push(isub(i));
+    }
+    expect(ongedreven).toEqual([]);
   });
 });
