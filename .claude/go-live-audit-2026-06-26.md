@@ -136,3 +136,26 @@ Niet persona-gedreven maar 3 nieuwe lenzen + statische greps. Vond wat de 12 ass
 - **LONG-1 [HOOG, danger-zone]** factuurnummer-teller reset hangt 100% aan handmatig sluitJaarAf(); op de 2026→2027-grens kan I7-monotonie breken (art. 35 Wet OB). Fix = jaargrens-bewuste teller-reset (raakt volgendFactuurnummer_ — race/uniciteit-danger-zone, zorgvuldig).
 - **LONG-3 [trade-off]** getBelasting_ gebruikt getFullYear i.p.v. getBoekjaar_ — maar getBoekjaar_ kan stale zijn; TARIEF_VEROUDERD mitigeert. Sam's beeld nodig.
 - **VG: controleerTaxAdmBewaarplichtCheck_** kalender-only "controle" (LAAG); **I10** catch→push(0) (LAAG).
+
+## Fase C — bereikbaarheids-sweep (klant klikt → werkt het?) — 2026-06-29
+
+Nieuwe, mechanische lens: élke aanroep-naam die een klant of automatisering kan
+triggeren moet naar een bestaande functie wijzen, anders krijgt de klant een
+spinner-die-nooit-stopt of "Technische fout".
+
+- **google.script.run-handlers**: 24 distinct → **0 ontbrekend** ✓ (dialog-laag heel)
+- **menu-items** (`.addItem(label, handler)`): 109 → **0 ontbrekend** ✓
+- **trigger-handlers** (`newTrigger(name)`): 7 → **0 ontbrekend** ✓
+  (controleerBtwDeadline_, dagelijkseTaken, mailMaandrapport, onEdit, onOpen,
+   stuurWeeklySamenvatting_, verwerkHoofdformulier)
+
+Conclusie: de volledige interactie-/automatiseringslaag is correct bedraad —
+geen dode knoppen, dode menu's of dode triggers.
+
+- **Stil-geslikte fouten in geld-paden** (catch zonder log/audit/throw in
+  Boekingen/Verkoopfacturen/BTW/Mollie/Bank…): ~45 lege `catch(_) {}`. Dit is het
+  bewúste fail-open-idioom van deze codebase (de `_`-param markeert "opzettelijk
+  genegeerd", eslint staat het toe). De niet-lege catches handelen de fout af
+  (ui.alert / veilige default). Kritieke schrijf-paden hebben partial-failure-
+  dekking (storm-tests E1–E4 + audit-keten). Per surgical/orphan-regel NIET
+  massaal aangeraakt — losse risico-sites horen per stuk beoordeeld, niet en-bloc.
