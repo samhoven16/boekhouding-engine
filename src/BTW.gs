@@ -968,7 +968,7 @@ function controleerKor() {
     totaalOmzet += parseFloat(vfData[i][KOL.VF.bedragExcl]) || 0;  // Excl. BTW
   }
 
-  const korGrens = 20000;
+  const korGrens = (typeof getBelasting_ === 'function' && getBelasting_().KOR_GRENS) || 20000;  // CALC-3: één config-bron
   // CYCLE-56: isJa_ helper (consistent met andere paden)
   const korActief = (typeof isJa_ === 'function')
     ? isJa_(getInstelling_('KOR regeling actief'))

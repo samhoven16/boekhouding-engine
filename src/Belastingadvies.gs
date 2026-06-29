@@ -245,6 +245,13 @@ const BELASTING_PER_JAAR = {
   },
 };
 
+// CALC-3: één service-vrije bron-of-truth voor de KOR-omzetgrens (€20.000).
+// getBelasting_() baseert z'n default hierop én de pure @customfunction
+// KOR_GESCHIKT leest deze const direct (mag getBelasting_ niet aanroepen —
+// dat doet sheet-reads/UrlFetch, verboden in cel-context). Klant-override
+// blijft mogelijk via de Instellingen-merge in getBelasting_ hieronder.
+const KOR_GRENS_BASIS = 20000;
+
 function getBelasting_() {
   const jaar = new Date().getFullYear();
   // Server-side override — bij wetswijziging update centrale config zonder dat
@@ -321,7 +328,7 @@ function getBelasting_() {
   catch (e) { Logger.log('Belasting-overrides lezen mislukt: ' + e.message); }
 
   return Object.assign({
-    KOR_GRENS:              20000,
+    KOR_GRENS:              KOR_GRENS_BASIS,
     // KIA — investerings-aftrek-tabel 2026. Definitieve staffel,
     // geverifieerd op belastingdienst.nl (2026-06-10):
     //   t/m €2.900: 0% · €2.901–€71.683: 28% · €71.684–€132.746: vast €20.072

@@ -511,10 +511,13 @@ function checkJaarwisselingNodig_() {
     // zelf setupte (archief + prefix-herschrijving + teller-reset = dataverlies).
     if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) !== 'true') return;
     const huidigJaar = new Date().getFullYear();
-    // Alleen waarschuwen in januari–februari (vroeg in nieuw jaar) en bij
-    // mismatch — voorkomt onnodige paniek midden in jaar bij prefix-typo.
-    const maand = new Date().getMonth() + 1; // 1-12
-    if (maand > 3) return;
+    // LONG-2-fix: het HELE jaar waarschuwen (niet alleen t/m maart) zolang de
+    // factuurprefix aantoonbaar achterloopt. Voorheen stopte de melding na Q1 →
+    // wie de januari-prompt negeerde, factureerde de rest van het jaar met een
+    // stale prefix (verkeerd boekjaar in het factuurnummer; vgl. LONG-1). De
+    // mismatch-check hieronder eist een écht 4-cijferig jaar < huidig jaar (een
+    // prefix-typo zonder jaartal valt af) en de melding is 1×/dag gethrottled — dus
+    // geen spam, alleen een blijvende herinnering tot de klant het jaar afsluit.
 
     const props = PropertiesService.getScriptProperties();
     const KEY = 'jaarwisselingWaarschuwingTs';

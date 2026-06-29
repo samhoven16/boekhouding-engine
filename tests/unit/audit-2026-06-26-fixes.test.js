@@ -115,6 +115,58 @@ describe('Audit-CALC-5 — herhalende-kosten dropdown gebruikt ECHTE grootboekre
   });
 });
 
+describe('Audit-CALC-3 — KOR-grens uit één bron (geen 20000-drift)', () => {
+  // De KOR-omzetgrens stond 4× hardcoded (BTW.gs, Notificaties.gs 2×, CustomFunctions.gs).
+  // Ze matchten toevallig op 20000 → stille divergentie bij wetswijziging/klant-override.
+  // Nu: getBelasting_().KOR_GRENS voor de runtime-paden + de service-vrije const
+  // KOR_GRENS_BASIS voor de pure @customfunction.
+  test('Belastingadvies.gs definieert KOR_GRENS_BASIS en baseert KOR_GRENS daarop', () => {
+    const ba = lees('Belastingadvies.gs');
+    expect(ba).toMatch(/const\s+KOR_GRENS_BASIS\s*=\s*20000\s*;/);
+    expect(ba).toMatch(/KOR_GRENS:\s*KOR_GRENS_BASIS/);
+    expect(ba).not.toMatch(/KOR_GRENS:\s*20000/);  // geen losse magic number meer
+  });
+  test('BTW.gs en Notificaties.gs lezen getBelasting_().KOR_GRENS (geen hardcoded vergelijking)', () => {
+    expect(lees('BTW.gs')).toMatch(/getBelasting_\(\)\.KOR_GRENS/);
+    const not = lees('Notificaties.gs');
+    expect(not).toMatch(/getBelasting_\(\)\.KOR_GRENS/);
+    // De KOR-blokvergelijkingen mogen geen kale 18000/20000 meer bevatten
+    expect(not).not.toMatch(/kpi\.omzet\s*>=\s*18000/);
+    expect(not).not.toMatch(/kpi\.omzet\s*<\s*20000/);
+    expect(not).not.toMatch(/kpi\.omzet\s*>=\s*20000/);
+  });
+  test('CustomFunctions.KOR_GESCHIKT leest de const, niet een eigen 20000-literal', () => {
+    const cf = lees('CustomFunctions.gs');
+    // de vergelijking gebruikt `grens` (afgeleid van KOR_GRENS_BASIS), niet `<= 20000`.
+    // Dit IS de single-source-proof: revert naar `n <= 20000` → deze test wordt rood.
+    expect(cf).toMatch(/var\s+grens\s*=\s*\(typeof\s+KOR_GRENS_BASIS\s*===\s*'number'\)\s*\?\s*KOR_GRENS_BASIS\s*:\s*20000/);
+    expect(cf).toMatch(/n\s*<=\s*grens/);
+    expect(cf).not.toMatch(/n\s*<=\s*20000/);  // regressie: geen kale literal-vergelijking
+  });
+  test('KOR_GESCHIKT gedraagt zich correct op de grens (boundary)', () => {
+    // NB: const-bindings worden niet als ctx-property geëxporteerd in de vm-harness
+    // (zelfde reden als STANDAARD_GROOTBOEK → source-regex), maar de closure van
+    // KOR_GESCHIKT ziet KOR_GRENS_BASIS wél in de gedeelde script-scope. De
+    // single-source-koppeling zelf is geborgd door de regex-test hierboven.
+    const ctx = createGasRuntime(['Belastingadvies.gs', 'CustomFunctions.gs']);
+    expect(ctx.KOR_GESCHIKT(19999)).toBe('JA — KOR mogelijk');
+    expect(ctx.KOR_GESCHIKT(20000)).toBe('JA — KOR mogelijk');   // exact = nog mogelijk
+    expect(ctx.KOR_GESCHIKT(20001)).toBe('NEE — boven drempel');
+    expect(ctx.KOR_GESCHIKT('onzin')).toBe('Onbekend');
+  });
+});
+
+describe('Audit-LONG-2 — jaarwisseling-waarschuwing het hele jaar (niet alleen Q1)', () => {
+  const ds = lees('DriveStructuur.gs');
+  test('checkJaarwisselingNodig_ stopt NIET meer na maart (maand > 3 guard weg)', () => {
+    expect(ds).not.toMatch(/const\s+maand\s*=\s*new Date\(\)\.getMonth\(\)\s*\+\s*1;[\s\S]{0,80}?if\s*\(\s*maand\s*>\s*3\s*\)\s*return;/);
+    expect(ds).not.toMatch(/if\s*\(\s*maand\s*>\s*3\s*\)\s*return;/);
+  });
+  test('de 1×/dag-throttle (jaarwisselingWaarschuwingTs) blijft staan — geen spam', () => {
+    expect(ds).toMatch(/jaarwisselingWaarschuwingTs/);
+  });
+});
+
 describe('Audit 2026-06-26 — A-351 factuur-tab waarschuwt vooraf bij ontbrekende bedrijfsgegevens', () => {
   const nb = lees('NieuweBoeking.gs');
   test('banner wordt berekend uit Bedrijfsnaam + IBAN', () => {
