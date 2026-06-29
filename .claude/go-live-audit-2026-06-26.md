@@ -152,6 +152,29 @@ spinner-die-nooit-stopt of "Technische fout".
 Conclusie: de volledige interactie-/automatiseringslaag is correct bedraad —
 geen dode knoppen, dode menu's of dode triggers.
 
+## Fase D — kolom-index/schema-consistentie (DANGER ZONE) — 2026-06-29
+
+CLAUDE.md's #1 danger zone: "Sheet column indices — off-by-one silently corrupts
+all data rows." Cross-check: aantal velden per KOL-accessor (SheetKolom.gs) vs de
+breedte van de header-array die Setup.gs/modules schrijft, trailing-comma-veilig.
+
+| Tab | KOL-velden | Header-kolommen | Match |
+|-----|-----------|-----------------|-------|
+| VF (Verkoopfacturen) | 23 | 23 | ✓ |
+| IF (Inkoopfacturen) | 20 | 20 | ✓ |
+| BT (Banktransacties) | 15 | 15 | ✓ |
+| JP (Journaalposten) | 19 | 19 | ✓ |
+| REL (Relaties) | 19 | 19 | ✓ |
+| GB (Grootboekschema) | 6 | 6 | ✓ |
+| AUDIT (Audit-log) | 8 | 8 | ✓ |
+| HK (Herhalende kosten) | 12 | 12 | ✓ |
+| TAAK (Taakstatus) | 5 | 5 | ✓ |
+
+Alle KOL-secties zijn bovendien gesloten reeksen 0..n-1 (geen gat/dubbel). Conclusie:
+de datalaag is exact uitgelijnd — geen stille kolom-corruptie. Vastgelegd in een
+mutatie-bestendige ratel (`kol-header-consistency.test.js`) zodat dit nooit kan
+wegdrijven: een KOL-veld toevoegen zonder header (of omgekeerd) maakt de suite rood.
+
 - **Stil-geslikte fouten in geld-paden** (catch zonder log/audit/throw in
   Boekingen/Verkoopfacturen/BTW/Mollie/Bank…): ~45 lege `catch(_) {}`. Dit is het
   bewúste fail-open-idioom van deze codebase (de `_`-param markeert "opzettelijk
