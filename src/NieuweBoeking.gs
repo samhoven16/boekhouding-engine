@@ -299,6 +299,8 @@ input.ok{border-color:#16A34A;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
   <div class="foutmelding" id="fm-f-r1prijs"></div>
   <div class="foutmelding" id="fm-f-r1omschr"></div>
 
+  <div class="tip">💡 <b>Reiskosten of onkosten doorbelasten?</b> Zet ze als extra regel hierboven — doorbelaste onkosten volgen hetzelfde BTW-tarief als je dienst (meestal 21%), niet apart op 9%.</div>
+
   <div class="totalen">
     <table>
       <tr><td>Subtotaal excl. BTW</td><td id="tot-excl">€ 0,00</td></tr>
