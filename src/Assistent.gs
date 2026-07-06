@@ -51,7 +51,7 @@ function openAssistent() {
         { v: 'Wanneer moet ik BTW-aangifte doen?',
           a: `U doet ${btwPeriode === 'Kwartaal' ? 'elk kwartaal (elke 3 maanden)' : 'maandelijks'} BTW-aangifte.<br><b>Deadlines:</b> Q1 → 30 april | Q2 → 31 juli | Q3 → 31 oktober | Q4 → 31 januari.<br>Ga naar <b>Boekhoudbaar → BTW</b> om uw aangifte klaar te zetten.` },
         { v: 'Wat is de Kleineondernemersregeling (KOR)?',
-          a: 'Als uw jaaromzet onder €20.000 blijft, bent u vrijgesteld van BTW-aangifte. U hoeft dan geen BTW te berekenen aan klanten. Uw systeem detecteert dit automatisch. Zie <b>Boekhoudbaar → BTW → KOR check</b>.' },
+          a: 'Als uw jaaromzet onder €20.000 blijft, bent u vrijgesteld van BTW-aangifte. U hoeft dan geen BTW te berekenen aan klanten. Uw systeem detecteert dit automatisch. Zie <b>Boekhoudbaar → BTW → Kleineondernemersregeling (KOR) check</b>.' },
         { v: 'Wat is de zelfstandigenaftrek?',
           a: `Als u meer dan 1.225 uur per jaar aan uw bedrijf besteedt, mag u een vast bedrag aftrekken van uw winst. Dit verlaagt uw inkomstenbelasting. Zie <b>Boekhoudbaar → 💡 Fiscaal & besparingstips → Fiscaal overzicht & besparingstips</b> voor het exacte bedrag.` },
         { v: 'Wat is de MKB-winstvrijstelling?',

@@ -225,6 +225,34 @@ function maakStornoJournaalpost_(ss, origineelBoekingId, reden) {
     throw new Error('Storno: ' + origineelBoekingId + ' is al eerder gestorneerd. Dubbele storno zou origineel weer effectief maken.');
   }
 
+  // BLOCKER-fix (audit accountant): een factuur MET BTW boekt 2 journaalposten
+  // met DEZELFDE ref (netto-been 1100/8000 + BTW-been 1100/4110, zie Triggers.gs).
+  // Een losse journaalpost-storno draait er maar ÉÉN terug, terwijl
+  // _markeerFactuurGestorneerd_ de hele factuur uit de BTW-aangifte haalt → het
+  // andere been blijft in het grootboek → grootboek-BTW ≠ aangifte, en GÉÉN
+  // invariant vangt dit (I2 blijft grootboek↔journaal-consistent). Daarom:
+  // weiger de losse storno op een factuur-met-meerdere-benen en verwijs naar de
+  // creditnota (verkoop, draait de hele factuur incl. BTW + PDF correct terug) of
+  // het corrigeren van de inkoopfactuur. Een eenbenige boeking (memoriaal, of
+  // 0%/vrijgestelde factuur) heeft refCount ≤ 1 → storno blijft gewoon toegestaan.
+  const origRef = String(origineel[KOL.JP.referentie] || '').trim();
+  if (origRef) {
+    let refCount = 0;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][KOL.JP.referentie] || '').trim() !== origRef) continue;
+      // tel alleen de oorspronkelijke benen, niet eerder gemaakte storno-tegenrijen
+      if (String(data[i][KOL.JP.omschrijving] || '').indexOf('STORNO ') === 0) continue;
+      refCount++;
+    }
+    if (refCount > 1) {
+      throw new Error('Deze boeking hoort bij factuur ' + origRef + ', die uit meerdere ' +
+        'journaalposten bestaat (omzet + BTW). Draai een factuur niet met een losse ' +
+        'journaalpost-storno terug — dat laat het grootboek en de BTW-aangifte uiteenlopen. ' +
+        'Gebruik voor een verkoopfactuur "Creditnota maken van factuur" (die draait de hele ' +
+        'factuur incl. BTW correct terug); corrigeer een inkoopfactuur via de Inkoopfacturen-tab.');
+    }
+  }
+
   // Kolom-indices (zie .claude/sheet-schemas.md JOURNAALPOSTEN):
   //   [1] Datum  [3] Dagboek  [4] Debet rek  [6] Credit rek  [8] Bedrag
   //   [9] BTW%   [10] BTW bedrag  [11] Referentie  [13] Type
@@ -556,6 +584,9 @@ function herberekeningGrootboekSaldi() {
       const credit = String(jpData[i][KOL.JP.creditRekening] || '');
       const bedrag = parseFloat(jpData[i][KOL.JP.bedrag]) || 0;
       if (bedrag === 0) continue;
+      // CORRUPT-halfboeking: saldo is al atomair teruggedraaid; meetellen zou het
+      // grootboek laten divergeren van XAF/CSV/I2 (die CORRUPT óók uitsluiten).
+      if (String(jpData[i][KOL.JP.status] || '').trim().toUpperCase() === 'CORRUPT') continue;
 
       for (const z of [{ code: debet, kant: 'debet' }, { code: credit, kant: 'credit' }]) {
         if (!z.code) continue;
@@ -1128,6 +1159,28 @@ function zoekGrootboekNaam_(code) {
 function zoekGrootboekType_(code) {
   const item = STANDAARD_GROOTBOEK.find(r => r.code === String(code));
   return item ? item.type : 'Onbekend';
+}
+
+/**
+ * Zorgt dat een STANDAARD_GROOTBOEK-rekening daadwerkelijk in het
+ * GROOTBOEKSCHEMA-tabblad staat; voegt 'm toe als-ie ontbreekt. Idempotent.
+ *
+ * Nodig voor bestaande klant-kopieën die een NIEUW toegevoegde standaard-
+ * rekening (bv. 4130/4140 verlegde BTW) nog niet in hun sheet hebben — zonder
+ * dit gooit maakJournaalpost_ → valideerTransactieFormeel_ REKENING_ONBEKEND en
+ * crasht een flow (bv. sluitBtwPeriode) halverwege. Geeft true als toegevoegd.
+ */
+function _zorgGrootboekRekeningBestaat_(ss, code) {
+  const gb = ss && ss.getSheetByName(SHEETS.GROOTBOEKSCHEMA);
+  if (!gb) return false;
+  const data = gb.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][KOL.GB.code] || '').trim() === String(code)) return false;  // bestaat al
+  }
+  const item = STANDAARD_GROOTBOEK.find(r => String(r.code) === String(code));
+  if (!item) return false;
+  gb.appendRow([item.code, item.naam, item.type, item.cat, item.bw, 0]);
+  return true;
 }
 
 // ─────────────────────────────────────────────

@@ -154,6 +154,62 @@ function _adminVereisSessie_(token) {
 // ─────────────────────────────────────────────
 //  DASHBOARD-DATA (één call vult de hele UI)
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  KLANT-RIJ FILTERING (robuust tegen ghost-/foutrijen)
+// ─────────────────────────────────────────────
+// Een kapotte Dashboard-formule lekt anders als '#REF!'-klant in het admin-
+// overzicht en blaast de '#klanten'-teller op (gezien: 12 i.p.v. 1).
+const _SHEET_FOUTWAARDEN_ = ['#REF!', '#N/A', '#VALUE!', '#DIV/0!', '#NAME?', '#NULL!', '#NUM!', '#ERROR!'];
+
+function _isSheetFout_(v) {
+  return _SHEET_FOUTWAARDEN_.indexOf(String(v == null ? '' : v).trim().toUpperCase()) !== -1;
+}
+
+// Enige bron van waarheid: een echte licentie heeft exact het formaat
+// BKHE-XXXX-XXXX-XXXX (zie genereerSleutel_). Alles daarbuiten (#REF!, '1',
+// leeg, KPI-labels uit een Dashboard-blad) is GEEN klant.
+function _isGeldigeLicentieSleutel_(s) {
+  return /^BKHE-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(String(s == null ? '' : s).trim());
+}
+
+function _schoonCel_(v) {
+  const s = String(v == null ? '' : v).trim();
+  return _isSheetFout_(s) ? '' : s;
+}
+
+function _veiligeDatum_(v) {
+  if (!v) return '';
+  try { const d = new Date(v); return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10); }
+  catch (_) { return ''; }
+}
+
+// Pure kern: KPI's + klantenlijst uit ruwe sheet-rijen (data[0] = header).
+// Filtert hard op een geldige sleutel zodat ghost-/foutrijen nooit als klant
+// meetellen. Getest in tests/unit/admin-klanten-ghostrijen.test.js.
+function _telKlantenUitRijen_(data) {
+  const kpis = { totaal: 0, actief: 0, onboarded: 0, wachtTemplate: 0 };
+  const klanten = [];
+  for (let i = 1; i < (data ? data.length : 0); i++) {
+    const sleutel = String(data[i][0] == null ? '' : data[i][0]).trim();
+    if (!_isGeldigeLicentieSleutel_(sleutel)) continue;
+    const statusRaw = _schoonCel_(data[i][4]);
+    const statusL = statusRaw.toLowerCase();
+    kpis.totaal++;
+    if (statusL.indexOf('actief') === 0) kpis.actief++;
+    if (data[i][10]) kpis.onboarded++;
+    if (statusRaw.indexOf('wacht op TEMPLATE') !== -1) kpis.wachtTemplate++;
+    klanten.push({
+      sleutel: sleutel,
+      naam: _schoonCel_(data[i][1]),
+      email: _schoonCel_(data[i][2]),
+      status: statusRaw,
+      onboarded: _veiligeDatum_(data[i][10]),
+      laatsteValidatie: _veiligeDatum_(data[i][9]),
+    });
+  }
+  return { kpis: kpis, klanten: klanten };
+}
+
 /**
  * google.script.run target: alle data voor de UI in één keer.
  * Secrets worden gemaskeerd (alleen ingesteld-ja/nee + laatste 4 tekens).
@@ -198,29 +254,9 @@ function adminData(token) {
   let klanten = [];
   try {
     const sheet = getLicentieSheet_();
-    const data = sheet.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      const sleutel = String(data[i][0] || '');
-      const email = String(data[i][2] || '');
-      // Skip ghost-rijen: alleen rijen met een echte sleutel (BKHE-...) of
-      // tenminste een email tellen als klant. Voorkomt dat KPI-labels uit
-      // een verkeerd geconfigureerd Dashboard-blad als klanten verschijnen.
-      if (!/^BKHE-/.test(sleutel) && !email) continue;
-      const statusRaw = String(data[i][4] || '');
-      const statusL = statusRaw.toLowerCase();
-      kpis.totaal++;
-      if (statusL.indexOf('actief') === 0) kpis.actief++;
-      if (data[i][10]) kpis.onboarded++;
-      if (statusRaw.indexOf('wacht op TEMPLATE') !== -1) kpis.wachtTemplate++;
-      klanten.push({
-        sleutel: sleutel,
-        naam: String(data[i][1] || ''),
-        email: email,
-        status: statusRaw,
-        onboarded: data[i][10] ? new Date(data[i][10]).toISOString().slice(0, 10) : '',
-        laatsteValidatie: data[i][9] ? new Date(data[i][9]).toISOString().slice(0, 10) : '',
-      });
-    }
+    const telling = _telKlantenUitRijen_(sheet.getDataRange().getValues());
+    kpis = telling.kpis;
+    klanten = telling.klanten;
   } catch (e) {
     return { ok: true, config: config, health: health, testModusAan: testModusAan,
       kpis: kpis, klanten: [], klantenFout: 'Licentie-sheet niet leesbaar: ' + e.message,
@@ -367,17 +403,19 @@ function adminKlantActie(token, email, actie) {
     return { ok: true, bericht: 'Licentie ingetrokken.' };
   }
   if (actie === 'herstuur') {
-    // Hergebruik bestaande herstuur-logica indien aanwezig.
-    if (typeof herstuurLicentieMail_ === 'function') {
-      try {
-        herstuurLicentieMail_(email);
-        try { schrijfAuditLog_('Licentie opnieuw verstuurd (dashboard)', email.slice(0, 3) + '***'); } catch (_) {}
-        return { ok: true, bericht: 'Licentie-e-mail opnieuw verstuurd.' };
-      } catch (e) {
-        return { ok: false, fout: 'Versturen mislukt: ' + e.message };
-      }
+    if (typeof stuurLicentiemail_ !== 'function') {
+      return { ok: false, fout: 'Mail-functie niet beschikbaar op deze server.' };
     }
-    return { ok: false, fout: 'Herstuur-functie niet beschikbaar op deze server.' };
+    const sleutel = String(data[rij - 1][0] || '');
+    const naam = String(data[rij - 1][1] || 'Klant');
+    if (!sleutel) return { ok: false, fout: 'Geen licentiesleutel op deze rij.' };
+    try {
+      stuurLicentiemail_(naam, email, sleutel);  // bestaande mailer (naam, email, sleutel)
+      try { schrijfAuditLog_('Licentie opnieuw verstuurd (dashboard)', email.slice(0, 3) + '***'); } catch (_) {}
+      return { ok: true, bericht: 'Licentie-e-mail opnieuw verstuurd.' };
+    } catch (e) {
+      return { ok: false, fout: 'Versturen mislukt: ' + e.message };
+    }
   }
   if (actie === 'verwijderen') {
     // AVG-pseudonymisering (zelfde kolommen als verwijderEndpoint_).
@@ -393,6 +431,24 @@ function adminKlantActie(token, email, actie) {
     return { ok: true, bericht: 'Klantgegevens gepseudonymiseerd (factuurnummers blijven 7 jaar bewaard).' };
   }
   return { ok: false, fout: 'Onbekende actie.' };
+}
+
+/**
+ * google.script.run target: geef jezelf (of een tester) een GRATIS, direct
+ * OTP-activeerbare test-licentie zonder de code-editor. Lost op dat
+ * genereerHandmatigeLicentie() op een STANDALONE licence-server niet werkt
+ * (SpreadsheetApp.getUi() bestaat daar niet). De pure kern maakTestLicentieVoor_
+ * leeft in Code.gs en schrijft een geldige BKHE-rij met e-mail (→ OTP-vindbaar).
+ */
+function adminMaakTestLicentie(token, email, naam) {
+  const sessieFout = _adminVereisSessie_(token);
+  if (sessieFout) return sessieFout;
+  if (typeof maakTestLicentieVoor_ !== 'function') {
+    return { ok: false, fout: 'maakTestLicentieVoor_ niet beschikbaar — push de laatste licence-server-code.' };
+  }
+  const r = maakTestLicentieVoor_(email, naam || 'Test (handmatig)');
+  if (r.ok) { try { schrijfAuditLog_('Test-licentie uitgegeven (dashboard)', r.email); } catch (_) {} }
+  return r;
 }
 
 // ─────────────────────────────────────────────
@@ -1098,6 +1154,11 @@ function _adminDashboardHtml_() {
     }).join('');
     var fout = DATA.klantenFout ? '<div class="kaart" style="color:#B91C1C">'+esc(DATA.klantenFout)+'</div>' : '';
     return fout+'<div class="kaart"><h2>Klanten ('+DATA.klanten.length+')</h2>'+
+      '<div style="margin:8px 0 14px;padding:10px;background:#F7F9FC;border-radius:6px">'+
+        '<input id="testLicEmail" class="zoek" style="max-width:280px;display:inline-block" placeholder="e-mail voor test-licentie…"> '+
+        '<button class="btn-sec" id="testLicBtn">➕ Gratis test-licentie uitgeven</button>'+
+        '<div class="hint" style="margin-top:6px">Voor jezelf testen: maakt een direct OTP-activeerbare licentie op dit e-mailadres.</div>'+
+      '</div>'+
       '<input class="zoek" id="klantZoek" placeholder="Filter op naam of e-mail…">'+
       '<div style="overflow-x:auto"><table><thead><tr><th>Naam</th><th>E-mail</th><th>Status</th><th>Onboarded</th><th>Acties</th></tr></thead>'+
       '<tbody id="klantBody">'+(rijen||'<tr><td colspan="5" style="color:#5F6B7A">Nog geen klanten.</td></tr>')+'</tbody></table></div></div>';
@@ -1196,6 +1257,19 @@ function _adminDashboardHtml_() {
         }).withFailureHandler(function(err){ btn.disabled=false; toast((err&&err.message)||'Netwerkfout','rood'); })
         .adminKlantActie(TOKEN, email, actie);
       });
+    });
+    var tlBtn=document.getElementById('testLicBtn');
+    if(tlBtn) tlBtn.addEventListener('click', function(){
+      var em=(document.getElementById('testLicEmail')||{}).value||'';
+      if(!em){ toast('Vul een e-mailadres in','rood'); return; }
+      tlBtn.disabled=true;
+      google.script.run.withSuccessHandler(function(res){
+        tlBtn.disabled=false;
+        if(res && res.sessieVerlopen){ uitloggen(); return; }
+        if(res && res.ok){ toast('Test-licentie: '+res.sleutel+' — activeer je kopie met '+res.email,'groen'); laadData(); }
+        else { toast((res&&res.fout)||'Mislukt','rood'); }
+      }).withFailureHandler(function(err){ tlBtn.disabled=false; toast((err&&err.message)||'Netwerkfout','rood'); })
+      .adminMaakTestLicentie(TOKEN, em);
     });
   }
 

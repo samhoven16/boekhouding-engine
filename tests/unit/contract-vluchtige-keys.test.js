@@ -34,6 +34,7 @@ const TOEGESTAAN = {
   'otp_':                'gesweept: cleanupVerlopenOtpKeys_ (15-min OTP)',
   'otp_ts_':             'gesweept: cleanupVerlopenOtpKeys_',
   'otp_pogingen_':       'gesweept: cleanupVerlopenOtpKeys_',
+  'otp_verwijder_pogingen_': 'gesweept: cleanupVerlopenOtpKeys_ (otp_-prefix; brute-force-teller verwijder-endpoint)',
   'serverFout_':         'gebonden: capped ring-buffer (max 5, schuift)',
   'dripuit_':            'permanent by design: wettelijke opt-out — moet blijven bestaan',
   // ── F-SCALE-330: variabele-vorm-prefixes die de oude regex ontweken; na

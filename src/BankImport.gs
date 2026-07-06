@@ -147,14 +147,13 @@ function parseBankDatum_(s) {
 }
 
 function parseBankBedrag_(s) {
-  const str = String(s || '').trim().replace(/^"|"$/g, '').replace(/€/g, '').replace(/\s/g, '');
-  if (!str) return 0;
-  // Bunq: "1234.56" of "-1234.56", ING: "1234,56"
-  const normalized = str.indexOf(',') >= 0 && str.lastIndexOf('.') < str.indexOf(',')
-    ? str.replace(/\./g, '').replace(',', '.')
-    : str.replace(/,/g, '');
-  const n = parseFloat(normalized);
-  return isFinite(n) ? n : 0;
+  // Delegeer naar de canonieke NL/US-parser (_parseBedragKern_): die leest
+  // "1.500" (geen komma) correct als 1500 i.p.v. 1,50. De oude lokale kopie
+  // viel bij bedragen ZONDER komma terug op "punten = decimaal" -> 1000x fout
+  // op bankafschriften met duizend-punten ("-1.500" = -1500, niet -1,50).
+  const str = String(s || '').replace(/^"|"$/g, '').replace(/€/g, '').replace(/\s/g, '');
+  const w = _parseBedragKern_(str);
+  return isFinite(w) ? rondBedrag_(w) : 0;
 }
 
 function extraheerReferentie_(omschr) {
@@ -338,7 +337,7 @@ function verwerkBankImport_(ss, transacties) {
       const tDatum = t.datum instanceof Date
         ? Utilities.formatDate(t.datum, 'Europe/Amsterdam', 'yyyy-MM-dd')
         : String(t.datum || '');
-      const dedupKey = tDatum + '|' + (parseFloat(t.bedrag) || 0).toFixed(2) + '|' + String(t.omschr || '').slice(0, 30);
+      const dedupKey = tDatum + '|' + (parseFloat(t.bedrag) || 0).toFixed(2) + '|' + String(saniteer_(t.omschr) || '').slice(0, 30);
       if (bestaandeKeys.has(dedupKey)) {
         resultaat.overgeslagen++;
         continue;

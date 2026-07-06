@@ -560,7 +560,7 @@ function maakBetaling(klantnaam, klantEmail, refCode) {
   const rateLimitKey = 'rate_maakBetaling_' + idemKey;
   const huidig = parseInt(cache.get(rateLimitKey) || '0', 10);
   if (huidig >= 5) {
-    return { fout: 'Te veel betalingspogingen voor dit e-mailadres. Wacht een uur of neem contact op via hallo@boekhoudbaar.nl.' };
+    return { fout: 'Te veel betalingspogingen voor dit e-mailadres. Wacht een uur of neem contact op via support@boekhoudbaar.nl.' };
   }
   cache.put(rateLimitKey, String(huidig + 1), 3600);  // 1 uur
 
@@ -1033,6 +1033,11 @@ function valideerEndpoint_(e) {
       // gecheckt → klant met onbereikbare email kon door zonder dat wij hen
       // konden bereiken voor support.
       if (status.startsWith('ingetrokken')) return jsonResp_({ geldig: false, permanent: true, fout: 'Licentie is ingetrokken.' });
+      // AVG art. 17: een op-verzoek-verwijderde licentie blijft permanent ongeldig.
+      // Voorheen matchte 'Verwijderd op verzoek' geen enkele negatieve status ->
+      // bleef geldig:true valideren EN de installatie-binding (kolom 7) werd hieronder
+      // opnieuw vrijgegeven. Data-export werkt buiten de licentie-gate om.
+      if (status.startsWith('verwijderd')) return jsonResp_({ geldig: false, permanent: true, fout: 'Deze licentie is op je eigen verzoek verwijderd (AVG art. 17).' });
       // F-RED-162: GEEN permanent:true. Een hard-bounce (mogelijk via een gelekt/
       // gespooft Brevo-webhooktoken) mag een BETALENDE klant niet instant bricken
       // + z'n 90-daagse offline-grace-anker wissen. Zonder permanent rijdt de klant
@@ -2202,6 +2207,25 @@ function maakBrevoContact_(naam, email, sleutel, brevoKey) {
 // ─────────────────────────────────────────────
 //  HELPERS
 // ─────────────────────────────────────────────
+/**
+ * Schrijft een regel naar de "Audit Log"-tab van de licentie-spreadsheet.
+ * ONTBRAK in de licence-server (de functie leefde alleen in het klant-project),
+ * waardoor ~19 aanroepen stil faalden in hun try/catch en de audit-belofte leeg
+ * bleef. Fail-silent by design — een log-fout mag nooit een actie blokkeren.
+ */
+function schrijfAuditLog_(actie, details) {
+  try {
+    const id = PropertiesService.getScriptProperties().getProperty('LICENTIE_SHEET_ID');
+    if (!id) return;
+    const ss = SpreadsheetApp.openById(id);
+    let s = ss.getSheetByName('Audit Log');
+    if (!s) { s = ss.insertSheet('Audit Log'); s.appendRow(['Tijd', 'Actie', 'Details']); }
+    s.appendRow([new Date(), String(actie || '').slice(0, 200), String(details || '').slice(0, 500)]);
+  } catch (e) {
+    Logger.log('schrijfAuditLog_ fout: ' + e.message);
+  }
+}
+
 function genereerSleutel_() {
   // Gebruik Utilities.getUuid() voor crypto-secure randomness
   // (Math.random is V8-xorshift, theoretisch voorspelbaar bij genoeg samples).
@@ -2568,13 +2592,43 @@ function _verzamelAssetsInOperationsMap_(opsMap) {
  * Handmatig een licentiesleutel genereren (bijv. voor een gratis of kortingsexemplaar).
  * Voer uit in de editor; vul naam en email aan in de spreadsheet.
  */
-function genereerHandmatigeLicentie() {
+/**
+ * Maakt een GRATIS test-licentie voor een specifiek e-mailadres en geeft de
+ * sleutel terug. MET e-mail is de licentie direct OTP-activeerbaar (de activatie-
+ * flow zoekt op e-mail), zodat je zonder te kopen je eigen verse kopie kunt
+ * testen. Pure kern — getest in tests/unit/gratis-test-licentie.test.js.
+ */
+function maakTestLicentieVoor_(email, naam) {
+  email = String(email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, fout: 'Ongeldig e-mailadres.' };
+  }
   const sleutel = genereerSleutel_();
   getLicentieSheet_().appendRow([
-    sleutel, 'Handmatig', '', 'Standaard', 'Actief', '', '', new Date(), 'HANDMATIG', '', '',
+    sleutel, naam || 'Test (handmatig)', email, 'Standaard', 'Actief',
+    '', '', new Date(), 'TEST', new Date(), '', '',
   ]);
-  Logger.log('Nieuwe sleutel: ' + sleutel);
-  SpreadsheetApp.getUi().alert('Nieuwe licentiesleutel', sleutel, SpreadsheetApp.getUi().ButtonSet.OK);
+  Logger.log('Test-licentie aangemaakt: ' + sleutel.substring(0, 8) + '… voor ' + email);
+  return { ok: true, sleutel: sleutel, email: email };
+}
+
+/**
+ * EIGENAAR-FUNCTIE — run in de editor (met de Licentie-spreadsheet open).
+ * Vraagt om een e-mailadres en maakt daar een gratis, OTP-activeerbare licentie
+ * voor — zodat je je eigen verse kopie kunt testen zonder te betalen.
+ */
+function genereerHandmatigeLicentie() {
+  const ui = SpreadsheetApp.getUi();
+  const resp = ui.prompt('Gratis test-licentie aanmaken',
+    'E-mailadres waarmee je gaat activeren (dit adres krijgt straks de 6-cijferige code):',
+    ui.ButtonSet.OK_CANCEL);
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+  const r = maakTestLicentieVoor_(resp.getResponseText(), 'Test (handmatig)');
+  if (!r.ok) { ui.alert('Mislukt', r.fout, ui.ButtonSet.OK); return; }
+  ui.alert('✅ Test-licentie aangemaakt',
+    'Sleutel: ' + r.sleutel + '\nE-mail:  ' + r.email +
+    '\n\nOpen je kopie → activeer met dit e-mailadres → je krijgt een 6-cijferige code.',
+    ui.ButtonSet.OK);
 }
 
 /**
@@ -2872,15 +2926,35 @@ function verwijderEndpoint_(e) {
   try { otpObj = JSON.parse(otpRaw); } catch (_) { return jsonResp_({ ok: false, fout: 'Ongeldige code.' }); }
   if (Date.now() > otpObj.expiry) {
     props.deleteProperty('otp_' + email);
+    props.deleteProperty('otp_verwijder_pogingen_' + email);
     return jsonResp_({ ok: false, fout: 'Code verlopen — vraag een nieuwe aan.' });
   }
+
+  // Brute-force-bescherming — spiegelt activeerOtpEndpoint_ (lock na 5 foute
+  // pogingen + OTP invalideren), maar met een EIGEN key otp_verwijder_pogingen_
+  // i.p.v. de gedeelde otp_pogingen_. Reden: een mislukte verwijder-poging mag
+  // nooit de kritieke activatie-flow kunnen locken (cross-endpoint self-DoS-
+  // preventie). De router-rate-limit (perEmail:3) faalt OPEN bij cache-storing
+  // en draait op vluchtige CacheService — voor een destructieve actie willen we
+  // een persistente ScriptProperties-backstop. De janitor cleanupVerlopenOtpKeys_
+  // ruimt deze otp_-prefixed key sowieso dagelijks op.
+  const verwPogingenKey = 'otp_verwijder_pogingen_' + email;
+  const verwPogingen = parseInt(props.getProperty(verwPogingenKey) || '0');
+  if (verwPogingen >= 5) {
+    props.deleteProperty('otp_' + email);
+    props.deleteProperty(verwPogingenKey);
+    return jsonResp_({ ok: false, fout: 'Te veel foute pogingen. Vraag een nieuwe code aan.' });
+  }
   if (!veiligVergelijk_(otpObj.code, otp)) {
-    return jsonResp_({ ok: false, fout: 'Onjuiste code.' });
+    props.setProperty(verwPogingenKey, String(verwPogingen + 1));
+    const resterend = 5 - (verwPogingen + 1);
+    return jsonResp_({ ok: false, fout: 'Onjuiste code.' + (resterend > 0 ? ' Nog ' + resterend + ' poging(en).' : ' Vraag een nieuwe code aan.') });
   }
   // Eenmalig gebruik
   props.deleteProperty('otp_' + email);
   props.deleteProperty('otp_ts_' + email);
   props.deleteProperty('otp_pogingen_' + email);
+  props.deleteProperty('otp_verwijder_pogingen_' + email);
 
   const sheet = getLicentieSheet_();
   const data  = sheet.getDataRange().getValues();

@@ -100,7 +100,7 @@ const SUGGESTIES_CATALOG = [
     cta: 'btw-reserveren',
     prioriteit: 60,
     conditie: function(ctx) {
-      return (ctx.kpi && ctx.kpi.btwTeBetalen > 1000);
+      return (ctx.kpi && ctx.kpi.btwSaldo > 1000);  // KPI-veld heet btwSaldo (niet btwTeBetalen)
     },
   },
   {

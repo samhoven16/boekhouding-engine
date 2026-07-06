@@ -87,7 +87,7 @@ export async function onRequestPost(context) {
     let detail = '';
     try { detail = (await resp.text()).slice(0, 200); } catch (_) {}
     console.error('[subscribe] Brevo error', resp.status, detail);
-    return new Response('Inschrijven lukte niet. Mail info@boekhoudbaar.nl als dit blijft hangen.', { status: 502 });
+    return new Response('Inschrijven lukte niet. Mail support@boekhoudbaar.nl als dit blijft hangen.', { status: 502 });
   } catch (err) {
     console.error('[subscribe] Fetch error', err && err.message);
     return new Response('Verbindingsprobleem. Probeer het zo opnieuw.', { status: 502 });

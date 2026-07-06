@@ -77,23 +77,27 @@ function genereerNotificaties_() {
   });
 
   // ── 2. KOR-grens nadert (laatste €2.000 ruimte) ───────────────
-  if (kpi.omzet > 0 && kpi.omzet >= 18000 && kpi.omzet < 20000) {
-    const ruimte = 20000 - kpi.omzet;
+  // CALC-3: grens uit de centrale config (was hardcoded 18000/20000 naast B.KOR_GRENS
+  // → divergeerde bij wetswijziging/klant-override). Eén bron van waarheid.
+  const korGrens = (typeof getBelasting_ === 'function' && getBelasting_().KOR_GRENS) || 20000;
+  const korGrensStr = '€' + korGrens.toLocaleString('nl-NL');
+  if (kpi.omzet > 0 && kpi.omzet >= (korGrens - 2000) && kpi.omzet < korGrens) {
+    const ruimte = korGrens - kpi.omzet;
     lijst.push({
       prioriteit: 70,
       titel: '⚠️ KOR-grens binnen handbereik',
-      tekst: 'Je hebt nog ' + formatBedrag_(ruimte) + ' ruimte voor de KOR (€20.000 omzet/jaar). ' +
+      tekst: 'Je hebt nog ' + formatBedrag_(ruimte) + ' ruimte voor de KOR (' + korGrensStr + ' omzet/jaar). ' +
              'Bij overschrijding moet je BTW gaan rekenen — plan resterende facturen slim.',
       actie: 'Open Boekhoudbaar → BTW → KOR-check',
       euros: null,
       urgent: ruimte < 1000,
       bron: 'kor-grens',
     });
-  } else if (kpi.omzet > 20000 && kpi.omzet < 22000) {
+  } else if (kpi.omzet >= korGrens) {  // ook ruim boven de grens + exact de grens (geen gat)
     lijst.push({
       prioriteit: 90,
       titel: '⚠️ KOR-grens bereikt',
-      tekst: 'Je omzet (' + formatBedrag_(kpi.omzet) + ') komt over de €20.000 KOR-grens. ' +
+      tekst: 'Je omzet (' + formatBedrag_(kpi.omzet) + ') komt over de ' + korGrensStr + ' KOR-grens. ' +
              'Tijd om af te melden voor de KOR en voortaan met BTW te factureren — niets dramatisch, wel iets om deze maand te regelen.',
       actie: 'Boekhoudbaar → BTW → KOR-check voor de stappen',
       euros: null,
