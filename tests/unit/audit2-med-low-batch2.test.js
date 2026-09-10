@@ -161,7 +161,10 @@ describe('Fix #4 — Top-3 ontbrekende FAQ-items', () => {
     const start = home.indexOf('id="boeking-corrigeren"');
     const blok = home.slice(start, start + 2000);
     expect(blok).toMatch(/credit-nota/);
-    expect(blok).toMatch(/Storneren/);
+    // A-352: verwijst naar de ECHTE route (Geavanceerd → Journaalpost storneren),
+    // niet meer naar de niet-bestaande "rechtsklik → Storneren".
+    expect(blok).toMatch(/Journaalpost storneren/i);
+    expect(blok).not.toMatch(/rechtsklik/i);
     expect(blok).toMatch(/Periode ontgrendelen/);
   });
 

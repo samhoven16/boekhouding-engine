@@ -1096,7 +1096,7 @@ function toonLicentieInfo() {
     'Versie: '         + versie    + '\n' +
     'Sleutel: '        + sleutel   + '\n' +
     'Spreadsheet-ID: ' + ssId      + '\n\n' +
-    'Vragen? info@boekhoudbaar.nl',
+    'Vragen? support@boekhoudbaar.nl',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }

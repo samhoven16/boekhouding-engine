@@ -55,6 +55,7 @@ describe('CYCLE 12: Google-warning pre-framing op homepage', () => {
   test('Mailto-link voor klanten met twijfels', () => {
     const fnStart = html.indexOf('id="google-warning"');
     const fn = html.slice(fnStart, fnStart + 3000);
-    expect(fn).toMatch(/mailto:hallo@boekhoudbaar\.nl/);
+    // A-354: gestandaardiseerd op het canonieke support@ (was hallo@).
+    expect(fn).toMatch(/mailto:support@boekhoudbaar\.nl/);
   });
 });

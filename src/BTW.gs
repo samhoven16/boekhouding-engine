@@ -296,6 +296,17 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
   // wijziging van een juridisch bedrag (dat zou legitieme aftrek kunnen wegnemen).
   let r5bZonderBewijsAantal = 0;
   let r5bZonderBewijsBedrag = 0;
+  // Verlegde inkoop (reverse charge) waarvan de zelf-berekende BTW (rubriek 4a)
+  // ontbreekt: de leverancier factureert €0 BTW, dus btwBedrag=0 in de inkooprij.
+  // Dan blijft r4a_btw €0 terwijl er wél een grondslag is → de verschuldigde
+  // verleggings-BTW wordt niet aangegeven (en de aftrek niet geclaimd). We FLAGGEN
+  // dit zonder het juridische aangiftebedrag stil te wijzigen: het juiste tarief
+  // (21% vs 9%) én het aftrek-aandeel (pro-rata/zakelijk%) horen bij data-entry te
+  // worden vastgelegd. Een stille 21%-aanname hier zou voor pro-rata/vrijgestelde
+  // ondernemers een verkeerd bedrag opleveren (fiscaal geverifieerd 2026-06; de
+  // structurele fix self-assesst bij verwerkUitgaven + boekt 1400→4100, niet hier).
+  let verlegdInkoopZonderBtwAantal = 0;
+  let verlegdInkoopZonderBtwGrondslag = 0;
   for (let i = 1; i < ifData.length; i++) {
     if (!ifData[i][KOL.IF.factuurdatumLeverancier]) continue;
     const datum = parseDatum_(ifData[i][KOL.IF.factuurdatumLeverancier]);
@@ -324,6 +335,12 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
       // reverse-charge inkoop (ads, SaaS, EU-diensten). De r5b vloeit hierna
       // door de pro-rata-breuk (r5bOrigineel wordt ná deze loop bepaald).
       aangifte.r5b += btwBedrag;
+      // Verleggings-BTW niet zelf-berekend (leverancier factureerde €0): rubriek
+      // 4a blijft €0 op een reële grondslag → onder-aangifte. Flag (zie boven).
+      if (btwBedrag === 0 && grondslag > 0) {
+        verlegdInkoopZonderBtwAantal++;
+        verlegdInkoopZonderBtwGrondslag += grondslag;
+      }
       // Art. 15 Wet OB: ook verlegde voorbelasting vereist een bewijsstuk.
       if (btwBedrag > 0 && !String(ifData[i][KOL.IF.bijlageUrl] || '').trim()) {
         r5bZonderBewijsAantal++;
@@ -349,6 +366,24 @@ function berekenBtwAangifte_(ss, vanDatum, totDatum) {
         r5bZonderBewijsAantal + ' inkooprij(en) claimen € ' +
         rondBedrag_(r5bZonderBewijsBedrag) + ' voorbelasting zonder Drive-bijlage ' +
         '(art. 15 Wet OB) — voeg het bewijsstuk toe vóór een eventuele controle.');
+    } catch (_) {}
+  }
+
+  // Verlegde inkoop met €0 zelf-berekende BTW → rubriek 4a is te laag. Flag +
+  // audit-log; aangifte ongewijzigd (geen stille tarief-aanname op een juridisch
+  // bedrag). De 21%-schatting is puur indicatief voor de waarschuwing.
+  if (verlegdInkoopZonderBtwAantal > 0) {
+    aangifte._verlegdInkoopZonderBtwAantal = verlegdInkoopZonderBtwAantal;
+    aangifte._verlegdInkoopZonderBtwGrondslag = rondBedrag_(verlegdInkoopZonderBtwGrondslag);
+    aangifte._verlegdInkoopZonderBtwSchatting21 = rondBedrag_(verlegdInkoopZonderBtwGrondslag * 0.21);
+    try {
+      schrijfAuditLog_('BTW VERLEGDE INKOOP ZONDER ZELF-BEREKENDE BTW',
+        verlegdInkoopZonderBtwAantal + ' verlegde inkooprij(en) met samen € ' +
+        rondBedrag_(verlegdInkoopZonderBtwGrondslag) + ' grondslag hebben €0 zelf-berekende ' +
+        'BTW (rubriek 4a). Bij verlegging factureert de leverancier €0, maar jij geeft de BTW ' +
+        'zelf aan (verschuldigd) én trekt die — bij aftrekrecht — af. Indicatief 21%: € ' +
+        aangifte._verlegdInkoopZonderBtwSchatting21 + '. Controleer het tarief en boek de ' +
+        'verleggings-BTW vóór indiening.');
     } catch (_) {}
   }
 
@@ -579,6 +614,16 @@ function valideerAangifteVoorIndiening_(aangifte, vorigeAangifte) {
       'Belastingdienst de onderliggende factuur (art. 15 Wet OB).');
   }
 
+  // Verlegde inkoop zonder zelf-berekende BTW: rubriek 4a te laag → onder-aangifte.
+  if (aangifte._verlegdInkoopZonderBtwAantal > 0) {
+    issues.push(aangifte._verlegdInkoopZonderBtwAantal + ' verlegde inkoopfactuur(en) met samen €' +
+      (aangifte._verlegdInkoopZonderBtwGrondslag || 0).toFixed(2) + ' grondslag hebben €0 ' +
+      'zelf-berekende BTW (rubriek 4a). Bij verlegging factureert de leverancier €0, maar jij ' +
+      'geeft de BTW zelf aan (verschuldigd) én trekt die — bij aftrekrecht — af. Indicatief 21%: €' +
+      (aangifte._verlegdInkoopZonderBtwSchatting21 || 0).toFixed(2) +
+      '. Controleer het tarief en boek de verleggings-BTW vóór indiening.');
+  }
+
   return issues;
 }
 
@@ -696,6 +741,21 @@ function zetBtwAangifteOpSheet_(ss, aangifte, kwartaal, periode) {
       .setWrap(true).setVerticalAlignment('top');
   }
 
+  // Persistente waarschuwing voor verlegde inkoop zonder zelf-berekende BTW.
+  // Direct onder de eventuele bewijsstuk-waarschuwing (+1 als die er staat).
+  if (aangifte._verlegdInkoopZonderBtwAantal > 0) {
+    const verlRij = startRij + rijen.length + 1 + (aangifte._r5bZonderBewijsAantal > 0 ? 1 : 0);
+    sheet.getRange(verlRij, 1, 1, 4).merge()
+      .setValue('⚠ Verlegde inkoop zonder zelf-berekende BTW: ' + aangifte._verlegdInkoopZonderBtwAantal +
+        ' inkoopfactuur(en) met samen € ' + (aangifte._verlegdInkoopZonderBtwGrondslag || 0).toFixed(2) +
+        ' grondslag (rubriek 4a) staan op €0 BTW. Bij verlegging geef je de BTW zelf aan ' +
+        '(verschuldigd) én trek je die — bij aftrekrecht — af. Indicatief 21%: € ' +
+        (aangifte._verlegdInkoopZonderBtwSchatting21 || 0).toFixed(2) +
+        '. Controleer het tarief en boek de verleggings-BTW vóór indiening.')
+      .setBackground('#FFF3CD').setFontColor('#7A5C00').setFontWeight('bold')
+      .setWrap(true).setVerticalAlignment('top');
+  }
+
   // Journaalpost voor BTW afdracht aanmaken (als saldo te betalen)
   if (aangifte.saldo > 0) {
     Logger.log(`BTW aangifte ${kwartaal} ${jaar}: te betalen ${aangifte.saldo}`);
@@ -785,6 +845,16 @@ function sluitBtwPeriode() {
   // omdat er geen rate-specifieke rekening voor overige tarieven bestaat.
   // (Voorheen stond hier debet=credit=4100 wat een self-posting-error gaf
   // zodra een klant überhaupt omzet met overig tarief had.)
+
+  // Robuustheid: bestaande klant-kopieën (vóór de 4130/4140-toevoeging) hebben
+  // die verlegde-BTW-rekeningen niet in hun grootboek → maakJournaalpost_ zou met
+  // REKENING_ONBEKEND crashen MIDDEN in de afsluiting (ná 4110/4120 al geboekt) →
+  // halve afsluiting, periode niet vergrendeld. Zorg dat ze bestaan vóór we boeken.
+  if ((aangifte.r1e_btw > 0 || aangifte.r4a_btw > 0) &&
+      typeof _zorgGrootboekRekeningBestaat_ === 'function') {
+    _zorgGrootboekRekeningBestaat_(ss, '4130');
+    _zorgGrootboekRekeningBestaat_(ss, '4140');
+  }
 
   // Verlegde BTW (rubriek 1e) — afnemer draagt af; voor administratie boeken
   // wij dit verplaatst naar 4100 zodat aangifte-totaal klopt.
@@ -898,7 +968,7 @@ function controleerKor() {
     totaalOmzet += parseFloat(vfData[i][KOL.VF.bedragExcl]) || 0;  // Excl. BTW
   }
 
-  const korGrens = 20000;
+  const korGrens = (typeof getBelasting_ === 'function' && getBelasting_().KOR_GRENS) || 20000;  // CALC-3: één config-bron
   // CYCLE-56: isJa_ helper (consistent met andere paden)
   const korActief = (typeof isJa_ === 'function')
     ? isJa_(getInstelling_('KOR regeling actief'))
@@ -995,9 +1065,10 @@ function parseBtwTarief_(label) {
   const l = String(label).toLowerCase();
   // Strikte percent-detectie — voorkomt dat '21' substring een hypothetisch
   // toekomstig tarief als '212' of '21,5%' fout zou matchen.
-  if (l.includes('21%') || l.includes('hoog')) return 0.21;
-  if (l.includes('9%')  || l.includes('laag')) return 0.09;
-  if (l.includes('0%')  || l.includes('nultarief')) return 0.00;
+  // Woordgrens (\b) zodat '19%'/'29%' niet als 9%, en '10%'/'20%' niet als 0% matchen.
+  if (/\b21\s*%/.test(l) || l.includes('hoog')) return 0.21;
+  if (/\b9\s*%/.test(l)  || l.includes('laag')) return 0.09;
+  if (/\b0\s*%/.test(l)  || l.includes('nultarief')) return 0.00;
   if (l.includes('vrijgesteld') || l.includes('verlegd') || l.includes('geen btw')) return null;
   return 0.21;
 }

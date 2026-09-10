@@ -40,7 +40,10 @@ function berekenBelastingvoordeel_(advies, BELASTING) {
   // belastbare winst — geen exact marginal-rate maar goede schatting.
   const winst = advies.winstNaAftrek || 0;
   const ib = advies.geschatteIB || 0;
-  const effectiefTarief = winst > 0 ? ib / winst : (BELASTING.IB_SCHIJF_1_PCT || 0.3582);
+  // CALC-7: fallback-literal op de canonieke 2026 schijf-1 (35,75%) i.p.v. de
+  // stale 2025-waarde 0,3582 (consistent met getBelasting_() en de twin-fallback
+  // in Belastingadvies.gs). Wordt alleen geraakt bij ontbrekende config.
+  const effectiefTarief = winst > 0 ? ib / winst : (BELASTING.IB_SCHIJF_1_PCT || 0.3575);
   const marginaalTarief = winst > BELASTING.IB_SCHIJF_1_MAX
     ? (BELASTING.IB_SCHIJF_2_PCT || 0.495)
     : effectiefTarief;

@@ -236,7 +236,7 @@ function openBrandingInstellingen() {
   <div id="logoInhoud">
     <div style="font-size:28px;margin-bottom:6px">🏢</div>
     <div>Klik hier om een logo te uploaden</div>
-    <div style="font-size:11px;color:#888;margin-top:4px">PNG, JPG, SVG — max 200 KB</div>
+    <div style="font-size:11px;color:#888;margin-top:4px">PNG, JPG, GIF of WebP — max 200 KB</div>
   </div>
 </div>
 <input type="file" id="logoInput" accept="image/*" style="display:none">

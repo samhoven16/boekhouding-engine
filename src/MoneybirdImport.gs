@@ -198,15 +198,30 @@ function verwerkXafBestand(xafTekst) {
             }
           });
           if (bedragExcl <= 0) { overgeslagenFacturen++; return; }
+          // Robuuste factuurdatum: ISO (XAF-standaard) of NL dd-mm-jjjj; sla over
+          // bij onleesbaar i.p.v. een Invalid-Date/NaN-cel weg te schrijven (zo'n
+          // factuur valt uit elk kwartaal-filter van de BTW-aangifte = omzet weg).
+          let _mbDatum = new Date(datum);
+          if (isNaN(_mbDatum.getTime())) {
+            const _md = String(datum || '').match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+            _mbDatum = _md ? new Date(parseInt(_md[3], 10), parseInt(_md[2], 10) - 1, parseInt(_md[1], 10)) : _mbDatum;
+          }
+          if (isNaN(_mbDatum.getTime())) { overgeslagenFacturen++; return; }
+          // Leid het BTW-tarief af uit de verhouding i.p.v. élke factuur naar 21%
+          // te forceren (een 9%-factuur belandde anders in rubriek 1a = 21%).
+          const _mbRatio = btwBedrag / bedragExcl;
+          const _mbLabel = _mbRatio > 0.15 ? '21% (hoog)'
+                         : _mbRatio > 0.04 ? '9% (laag)'
+                         : (btwBedrag > 0 ? '21% (hoog)' : '0% (nultarief)');
           vfSheet.appendRow([
             '', // ID auto
             saniteer_(String(invNr).trim()),  // FIX F-RED-304: formule-injectie-guard op XAF-velden
-            new Date(datum),
-            new Date(new Date(datum).getTime() + 30 * 86400000),  // vervaldatum +30d default
+            new Date(_mbDatum.getTime()),
+            new Date(_mbDatum.getTime() + 30 * 86400000),  // vervaldatum +30d default
             '', '', '', '',  // klant ID/naam/KvK/BTW — niet gekoppeld
             saniteer_(desc || ('Import vanuit Moneybird ' + invNr)),
             rondBedrag_(bedragExcl),
-            btwBedrag > 0 ? '21% (hoog)' : '0% / vrijgesteld',
+            _mbLabel,
             rondBedrag_(btwBedrag),
             rondBedrag_(bedragExcl + btwBedrag),
             0,  // betaald

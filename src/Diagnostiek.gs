@@ -124,6 +124,12 @@ function openExecutionsDashboard() {
  */
 function controleerTriggerWatchdog_() {
   try {
+    // Verse kopie? SETUP_DONE reist NIET mee bij "Maak een kopie". Zolang de
+    // kopie zijn eigen setup niet draaide, is een GEËRFDE (oude) Taakstatus-
+    // stempel van de master geen "valse start" — anders krijgt elke verse kopie
+    // bij de eerste open ten onrechte "⚠️ Triggers stilgevallen?". Pas ná de
+    // eigen setup draait dagelijkseTaken echt en is de watchdog zinvol.
+    if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) !== 'true') return;
     // Laatste run van dagelijkseTaken via Taakstatus-tab
     const ss = getSpreadsheet_();
     if (!ss) return;

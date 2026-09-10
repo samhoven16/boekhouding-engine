@@ -11,7 +11,7 @@
  *  - KOR                            €0 BTW  (omzet < €20.000)
  *  - KIA                            28%     (investeringen €2.801–€353.973)
  *  - FOR                            9,44%   (max €10.786 per jaar)
- *  - MIA/VAMIL                      45,5%   (milieu-investeringen)
+ *  - MIA/VAMIL                      tot 45% (milieu-investeringen; 27/36/45% naar RVO-categorie)
  *  - Reiskosten eigen vervoer       €0,23/km
  *  - Thuiswerkvergoeding            €2,40/dag
  *  - Representatiekosten            73,5% aftrekbaar
@@ -245,6 +245,13 @@ const BELASTING_PER_JAAR = {
   },
 };
 
+// CALC-3: één service-vrije bron-of-truth voor de KOR-omzetgrens (€20.000).
+// getBelasting_() baseert z'n default hierop én de pure @customfunction
+// KOR_GESCHIKT leest deze const direct (mag getBelasting_ niet aanroepen —
+// dat doet sheet-reads/UrlFetch, verboden in cel-context). Klant-override
+// blijft mogelijk via de Instellingen-merge in getBelasting_ hieronder.
+const KOR_GRENS_BASIS = 20000;
+
 function getBelasting_() {
   const jaar = new Date().getFullYear();
   // Server-side override — bij wetswijziging update centrale config zonder dat
@@ -321,7 +328,7 @@ function getBelasting_() {
   catch (e) { Logger.log('Belasting-overrides lezen mislukt: ' + e.message); }
 
   return Object.assign({
-    KOR_GRENS:              20000,
+    KOR_GRENS:              KOR_GRENS_BASIS,
     // KIA — investerings-aftrek-tabel 2026. Definitieve staffel,
     // geverifieerd op belastingdienst.nl (2026-06-10):
     //   t/m €2.900: 0% · €2.901–€71.683: 28% · €71.684–€132.746: vast €20.072
@@ -334,7 +341,7 @@ function getBelasting_() {
     KIA_AFBOUW_START:       132747,
     KIA_AFBOUW_PCT:         0.0756,
     FOR_PCT:                0.0944,
-    MIA_PCT:                0.455,
+    MIA_PCT:                0.45,    // max MIA-categorie 2026 (27%/36%/45% naar RVO-milieulijst); het oude vlakke 0.455 was geen bestaand tarief. Vlak max = bovengrens-schatting; categorie-afhankelijk vereist RB.
     MIA_MIN:                2500,
     URENCRITERIUM:          1225,
     ACTIVEER_GRENS:         450,
@@ -830,7 +837,7 @@ function _isInvesteringsRekening02_(code) {
 /**
  * F-TAX-335 (klasse 10): MIA/VAMIL-variant — milieu-investeringen staan op
  * 026x/027x. Zelfde 0x90-contra/afschrijving-exclusie als _isInvesteringsRekening02_
- * zodat een positief afschrijvings/contra-saldo de MIA-grondslag (45,5% aftrek)
+ * zodat een positief afschrijvings/contra-saldo de MIA-grondslag (tot 45% aftrek)
  * niet opblaast → geen te hoog advies → geen naheffing.
  * @param {*} code grootboekrekening-code
  * @returns {boolean}
@@ -1296,21 +1303,21 @@ function _berekenBelastingadviesRaw_(ss) {
   });
   if (milieu >= BELASTING.MIA_MIN) {
     const miaAftrek = rondBedrag_(milieu * BELASTING.MIA_PCT);
-    aftrekken.push({ naam: 'MIA – Milieu-investeringsaftrek (45,5%)', bedrag: miaAftrek, voorwaarde: `Milieu-investeringen ≥ €2.500 op de RVO-milieulijst`, code: '7990' });
+    aftrekken.push({ naam: 'MIA – Milieu-investeringsaftrek (tot 45%)', bedrag: miaAftrek, voorwaarde: `Milieu-investeringen ≥ €2.500 op de RVO-milieulijst`, code: '7990' });
     totaalAftrek += miaAftrek;
     adviezen.push({
       type: 'AFTREKPOST',
       titel: '✅ MIA – Milieu-investeringsaftrek: ' + formatBedrag_(miaAftrek),
-      tekst: `${formatBedrag_(milieu)} aan milieu-investeringen gedetecteerd. MIA geeft 45,5% extra aftrek: ${formatBedrag_(miaAftrek)}. ` +
+      tekst: `${formatBedrag_(milieu)} aan milieu-investeringen gedetecteerd. MIA geeft tot 45% extra aftrek (het exacte percentage — 27%, 36% of 45% — hangt af van de RVO-milieucategorie); maximaal: ${formatBedrag_(miaAftrek)}. ` +
              `Investeringen moeten op de RVO-milieulijst staan én vóór aanschaf gemeld bij RVO. Combineerbaar met KIA.`,
       besparing: rondBedrag_(miaAftrek * marginaalIbTarief_(winst, BELASTING)),
     });
   } else if (milieu === 0) {
     adviezen.push({
       type: 'TIP',
-      titel: '🌱 Tip: MIA/VAMIL – 45,5% extra aftrek bij milieu-investeringen',
+      titel: '🌱 Tip: MIA/VAMIL – tot 45% extra aftrek bij milieu-investeringen',
       tekst: `Investeert u in zonnepanelen, elektrische auto, warmtepomp of andere milieu-investeringen? ` +
-             `Dan geeft MIA 45,5% extra aftrek bóvenop de normale afschrijving. Meld vóór aankoop bij RVO.nl.`,
+             `Dan geeft MIA tot 45% extra aftrek bóvenop de normale afschrijving (27%, 36% of 45% naar RVO-categorie). Meld vóór aankoop bij RVO.nl.`,
       besparing: null,
     });
   }
@@ -2039,7 +2046,7 @@ function berekenPriveBelastingvoordelen_(winst) {
     titel: '☀️ Zonnepanelen – belasting besparen én salderen (t/m 2027)',
     tekst: `Zonnepanelen op uw eigen woning zijn BTW-vrij (0% BTW bij aankoop, mits u terugleverd). ` +
            `Terugleversubsidie (saldering) loopt door t/m 2027, daarna afgebouwd. ` +
-           `Zakelijk geplaatste zonnepanelen komen in aanmerking voor KIA (28%) en eventueel MIA (45,5%). ` +
+           `Zakelijk geplaatste zonnepanelen komen in aanmerking voor KIA (28%) en eventueel MIA (tot 45%). ` +
            `Dien de BTW-melding in bij de Belastingdienst binnen 6 maanden na installatie.`,
     besparing: null,
   });

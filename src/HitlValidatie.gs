@@ -226,6 +226,9 @@ function _haalConceptBoekingen_(ss) {
  * Optioneel aan te roepen vanuit onOpen voor zachte herinnering.
  */
 function _waarschuwOnvalidered_() {
+  // Verse kopie: SETUP_DONE reist niet mee; zonder gate telt deze toast de
+  // GEËRFDE master-JOURNAALPOSTEN als "concept" en alarmeert onterecht.
+  if (PropertiesService.getScriptProperties().getProperty(PROP.SETUP_DONE) !== 'true') return;
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) return;
   try {

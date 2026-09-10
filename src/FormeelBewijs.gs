@@ -93,7 +93,6 @@ const FORMEEL_BEWIJS_INVARIANTEN = [
  * @param {Spreadsheet} ss
  * @returns {{alleGoed: boolean, schendingen: Array, gecheckt: number}}
  */
-// eslint-disable-next-line no-unused-vars
 function bewijsAlleInvarianten_(ss) {
   if (!ss) ss = getSpreadsheet_();
   if (!ss) return { alleGoed: false, schendingen: [{ code: 'INIT', boodschap: 'Spreadsheet niet beschikbaar' }], gecheckt: 0 };
@@ -153,26 +152,41 @@ function _bewijs_I1_debitCreditBalans_(ss) {
   const jp = ss.getSheetByName(SHEETS.JOURNAALPOSTEN);
   if (!jp || jp.getLastRow() <= 1) return Object.assign(meta, { geldig: true });
 
-  // Elk journaalpost-record heeft één debet- en één credit-rekening met
-  // hetzelfde bedrag (intra-record balans). De integriteit zit in de
-  // create-flow (maakJournaalpost_), maar I₁ verifieert dat de SOM van
-  // alle debet-bedragen = SOM van alle credit-bedragen (totaal-balans).
+  // Datamodel: elk journaalpost-record heeft ÉÉN debet-rekening [4], ÉÉN credit-
+  // rekening [6] en ÉÉN bedrag [8] — maakJournaalpost_ schrijft beide benen plus
+  // een gevalideerd eindig, positief bedrag. De intra-record balans (debet =
+  // credit) geldt dus structureel ZOLANG beide benen bestaan en het bedrag een
+  // eindig getal is. I₁ verifieert precies dat: een record met een lege debet-
+  // óf credit-rekening is een "eenbenige" boeking (geld uit/naar het niets →
+  // debet ≠ credit), en een niet-numeriek/NaN/Infinity bedrag is corrupt.
+  //
+  // VALS-GROEN-FIX: voorheen telde de code hetzelfde `bedrag` op bij zowel
+  // totaalDebet als totaalCredit (totaalDebet += bedrag; totaalCredit += bedrag)
+  // → ΣDebet ≡ ΣCredit, een tautologie die ALTIJD slaagde en dus niets bewees.
+  // Dezelfde klasse als de I₃-fix F-ACC-001 ("waardoor I₃ ALTIJD slaagde").
   const data = jp.getDataRange().getValues();
-  let totaalDebet = 0, totaalCredit = 0;
-  // Kolommen: [4] debet rek, [6] credit rek, [8] bedrag, [16] status
+  let aantalSchendingen = 0;
+  const voorbeelden = [];
   for (let i = 1; i < data.length; i++) {
     const status = String(data[i][KOL.JP.status] || '').toUpperCase();
     if (status === 'CORRUPT' || status === 'GESTORNEERD') continue;
-    const bedrag = parseFloat(data[i][KOL.JP.bedrag]) || 0;
-    totaalDebet += bedrag;   // debet-zijde van deze journaalpost
-    totaalCredit += bedrag;  // credit-zijde van deze journaalpost (gelijk per I₁)
+    const debet  = String(data[i][KOL.JP.debetRekening]  || '').trim();
+    const credit = String(data[i][KOL.JP.creditRekening] || '').trim();
+    const ruwBedrag = data[i][KOL.JP.bedrag];
+    const bedrag = parseFloat(ruwBedrag);
+    if (!debet || !credit || !isFinite(bedrag)) {
+      aantalSchendingen++;
+      if (voorbeelden.length < 5) {
+        voorbeelden.push({ rij: i + 1, debet: debet, credit: credit, bedrag: ruwBedrag });
+      }
+    }
   }
-  const verschil = Math.abs(totaalDebet - totaalCredit);
-  if (verschil > 0.005) {
+  if (aantalSchendingen > 0) {
     return Object.assign(meta, {
       geldig: false,
-      boodschap: 'ΣDebet (' + totaalDebet + ') ≠ ΣCredit (' + totaalCredit + '), δ=' + verschil,
-      tegenvoorbeeld: { totaalDebet: totaalDebet, totaalCredit: totaalCredit },
+      boodschap: aantalSchendingen + ' journaalpost(en) zonder geldige debet+credit-rekening of eindig ' +
+        'bedrag (eenbenige of corrupte boeking → debet ≠ credit)',
+      tegenvoorbeeld: voorbeelden,
     });
   }
   return Object.assign(meta, { geldig: true });
@@ -309,6 +323,22 @@ function _bewijs_I5_btwAangifteSluitend_(ss) {
     const tot = new Date(nu.getFullYear(), (q + 1) * 3, 0, 23, 59, 59);
     const a = berekenBtwAangifte_(ss, van, tot);
     if (!a) return Object.assign(meta, { geldig: true });
+    // ONAFHANKELIJKE check vóór de identiteit. De r5a==Σ(rubrieken)- en r5d==r5a-r5b-
+    // checks hieronder zijn DEFINITIE-waar (berekenBtwAangifte_ zet r5a = rondBedrag_(
+    // diezelfde som)) → tautologisch, vals-groen (vgl. de I1/I3/I8-fixes). Een belaste
+    // rubriek (1a=21% / 1b=9%) met grondslag > €1 maar €0 verschuldigde BTW betekent
+    // dat een factuur-btwBedrag handmatig op 0 staat → stille onder-aangifte; dat
+    // glipt door de pure som-identiteit (0 telt netjes op tot 0). Drempel €1 sluit
+    // de sub-cent-afronding-edge uit (verlegd/vrijgesteld zit in r1e/1d, niet 1a/1b).
+    if ((a.r1a_grondslag > 1 && (a.r1a_btw || 0) === 0) ||
+        (a.r1b_grondslag > 1 && (a.r1b_btw || 0) === 0)) {
+      return Object.assign(meta, {
+        geldig: false,
+        boodschap: 'Belaste omzet met grondslag maar €0 verschuldigde BTW (rubriek 1a/1b) — ' +
+          'controleer of een factuur-BTW handmatig op €0 staat (onder-aangifte-risico).',
+        tegenvoorbeeld: { r1a_grondslag: a.r1a_grondslag, r1a_btw: a.r1a_btw, r1b_grondslag: a.r1b_grondslag, r1b_btw: a.r1b_btw },
+      });
+    }
     const r5aBerekend = (a.r1a_btw || 0) + (a.r1b_btw || 0) + (a.r1c_btw || 0) + (a.r1e_btw || 0) + (a.r4a_btw || 0);
     if (Math.abs((a.r5a || 0) - r5aBerekend) > 0.01) {
       return Object.assign(meta, {
@@ -366,28 +396,36 @@ function _bewijs_I7_factuurnummerMonotoon_(ss) {
   if (!vf) return Object.assign(meta, { geldig: true });
   const data = vf.getDataRange().getValues();
 
-  // Groepeer per boekjaar (jaar uit datum [2]), check binnen-jaar monotonie
-  const perJaar = {};
+  // Groepeer per NUMMER-SERIE (de prefix vóór het volgnummer), NIET per datum-jaar.
+  // LONG-1-fix: de teller reset per prefix-serie (F2026-/F2027-, via sluitJaarAf),
+  // niet per kalenderjaar. Een factuur die in het nieuwe jaar wordt uitgegeven vóór
+  // de jaarafsluiting houdt (terecht) de oude prefix + lopende teller. Groeperen op
+  // datum.getFullYear() stopte zo'n stale-prefix-factuur (F2026-…, datum 2027) samen
+  // met de gereset F2027-001-serie in één 2027-groep → VALSE monotonie-breuk op de
+  // jaargrens (art. 35 Wet OB vereist een sequentiële reeks, geen jaar-in-het-nummer).
+  // Groeperen op de prefix-serie toetst de werkelijke nummering-reeks: vangt echte
+  // backdating BINNEN een serie, maar niet de legitieme jaargrens-reset.
+  const perSerie = {};
   for (let i = 1; i < data.length; i++) {
     const nrStr = String(data[i][KOL.VF.factuurnummer] || '').trim();
     const datum = data[i][KOL.VF.datum];
     if (!nrStr || !(datum instanceof Date)) continue;
-    // Extraheer numeriek deel (laatste serie cijfers)
+    // Extraheer numeriek deel (laatste serie cijfers) + de prefix ervóór.
     const m = nrStr.match(/(\d+)\s*$/);
     if (!m) continue;
     const nrNum = parseInt(m[1], 10);
-    const jaar = datum.getFullYear();
-    if (!perJaar[jaar]) perJaar[jaar] = [];
-    perJaar[jaar].push({ nr: nrNum, datum: datum.getTime(), str: nrStr });
+    const serie = nrStr.slice(0, nrStr.length - m[1].length) || '(geen prefix)';
+    if (!perSerie[serie]) perSerie[serie] = [];
+    perSerie[serie].push({ nr: nrNum, datum: datum.getTime(), str: nrStr });
   }
 
   const breuk = [];
-  Object.keys(perJaar).forEach(function(j) {
-    const lijst = perJaar[j];
+  Object.keys(perSerie).forEach(function(s) {
+    const lijst = perSerie[s];
     lijst.sort(function(a, b) { return a.datum - b.datum; });
     for (let i = 1; i < lijst.length; i++) {
       if (lijst[i].nr < lijst[i - 1].nr) {
-        breuk.push({ jaar: j, eerder: lijst[i - 1].str, later: lijst[i].str });
+        breuk.push({ serie: s, eerder: lijst[i - 1].str, later: lijst[i].str });
       }
     }
   });
@@ -432,12 +470,22 @@ function _bewijs_I8_afgeslotenPeriode_(ss) {
       const tot = new Date(periodes[p].tot);
       if (datum >= van && datum <= tot) {
         const aangemaakt = data[i][KOL.JP.aangemaaktOp];  // kolom: aangemaakt op
-        // Inbreuk alleen als aangemaakt NA periode-sluiting
         if (aangemaakt instanceof Date && periodes[p].geslotenOp) {
+          // Inbreuk als aangemaakt NA periode-sluiting (achteraf geboekt).
           const gesloten = new Date(periodes[p].geslotenOp);
           if (aangemaakt > gesloten) {
-            inbreuk.push({ jpId: data[i][KOL.JP.boekingId], datum: datum, periode: periodes[p].label });
+            inbreuk.push({ jpId: data[i][KOL.JP.boekingId], datum: datum, periode: periodes[p].label, reden: 'aangemaakt na sluiting' });
           }
+        } else {
+          // VALS-GROEN-FIX (A-339): voorheen werd een rij in een gesloten periode
+          // ZÓNDER aanmaak-timestamp (of zonder sluitdatum) stil overgeslagen → I8
+          // slaagde dan vals-groen. Maar maakJournaalpost_ zet die timestamp ALTIJD,
+          // dus een rij eronder kwam buiten de guard om (handmatige sheet-edit /
+          // import) — precies de meest waarschijnlijke immutability-bypass. We kunnen
+          // niet bewijzen dat-ie vóór sluiting is gemaakt → tel als inbreuk i.p.v.
+          // stil 'geldig' claimen. (Zelfde klasse als de I1/I3-vals-groen-fixes.)
+          inbreuk.push({ jpId: data[i][KOL.JP.boekingId], datum: datum, periode: periodes[p].label,
+            reden: (aangemaakt instanceof Date) ? 'periode-sluitdatum onbekend' : 'geen aanmaak-timestamp (mogelijk handmatig/geïmporteerd)' });
         }
         break;
       }

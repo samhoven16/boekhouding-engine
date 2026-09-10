@@ -3,7 +3,7 @@
 # Specificatie: https://www.rfc-editor.org/rfc/rfc9116
 
 Contact: mailto:support@boekhoudbaar.nl
-Contact: mailto:info@boekhoudbaar.nl
+Contact: mailto:support@boekhoudbaar.nl
 Expires: 2027-05-18T00:00:00.000Z
 Preferred-Languages: nl, en
 Canonical: https://www.boekhoudbaar.nl/.well-known/security.txt

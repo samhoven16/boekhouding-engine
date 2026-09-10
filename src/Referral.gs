@@ -96,7 +96,7 @@ function toonReferralDialog() {
     </div>
     <div class="voordeel-kaart">
       <strong>Voor jou</strong>
-      <span>€5 cashback per succesvolle verwijzing — uitbetaald per IBAN of als bol.com cadeaubon (jouw keuze).</span>
+      <span>€5 cashback per succesvolle verwijzing — per IBAN of als bol.com cadeaubon. Je voorkeur geef je door in de maandelijkse cashback-mail.</span>
     </div>
 
     <p style="font-size:12px;font-weight:700;color:#0D1B4E;margin-bottom:6px;letter-spacing:0.3px">JOUW PERSOONLIJKE LINK</p>

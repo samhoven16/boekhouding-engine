@@ -55,7 +55,7 @@ function vernieuwDashboard() {
   // dus persoonlijk gevoel werkt sterk.
   const u = nu.getHours();
   const tijdGroet = u < 12 ? 'Goedemorgen' : u < 18 ? 'Goedemiddag' : u < 22 ? 'Goedenavond' : 'Hoi';
-  const aanspreek = bedrijf || 'ondernemer';
+  const aanspreek = (bedrijf && bedrijf.indexOf('←') === -1) ? bedrijf : 'ondernemer';  // placeholder ('← Vul...') nooit als naam in de begroeting
   const greeting = `${tijdGroet}, ${aanspreek}`;
 
   sheet.getRange(1, 1, 1, 8).merge()

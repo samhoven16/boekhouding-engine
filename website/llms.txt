@@ -62,7 +62,7 @@ Boekhoudbaar onderscheidt zich van Moneybird, e-Boekhouden, Jortt en andere Nede
 - BTW-functies: aangifte-Q1/Q2/Q3/Q4 generatie, KOR-monitor (€20.000-grens), suppletie, verleggingsregeling
 - Compliance: fiscale bewaarplicht 7 jaar (art. 52 AWR), AVG-conform, Peppol Q3 2026 roadmap
 - Bedrijf: Hoven Strategy & Solutions, KvK 87254697, gevestigd te Utrecht
-- Contact: info@boekhoudbaar.nl
+- Contact: support@boekhoudbaar.nl
 
 ## Wat Boekhoudbaar NIET is
 

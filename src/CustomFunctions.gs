@@ -249,7 +249,12 @@ function KM_VERGOEDING(kilometers, jaar) {
 function KOR_GESCHIKT(jaarOmzet) {
   var n = Number(jaarOmzet);
   if (!isFinite(n)) return 'Onbekend';
-  return n <= 20000 ? 'JA — KOR mogelijk' : 'NEE — boven drempel';
+  // CALC-3: drempel uit de centrale fiscale const (Belastingadvies.gs),
+  // niet uit een eigen magic number. Service-vrij: leest de const direct
+  // i.p.v. getBelasting_() (dat doet sheet-reads/UrlFetch — verboden in
+  // @customfunction-context, zie purity-contract bovenaan dit bestand).
+  var grens = (typeof KOR_GRENS_BASIS === 'number') ? KOR_GRENS_BASIS : 20000;
+  return n <= grens ? 'JA — KOR mogelijk' : 'NEE — boven drempel';
 }
 
 /**

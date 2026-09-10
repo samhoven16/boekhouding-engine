@@ -321,6 +321,6 @@ function _parsePeriodeKey_(key) {
   const jaar = parseInt(m[1], 10);
   const kw = parseInt(m[2], 10);
   const van = new Date(jaar, (kw - 1) * 3, 1);
-  const tot = new Date(jaar, kw * 3, 0, 23, 59, 59);
+  const tot = new Date(jaar, kw * 3, 0, 23, 59, 59, 999);  // .999 = identiek aan bepaalBtwPeriode_ (geen rand-drift)
   return { jaar: jaar, kwartaal: kw, van: van, tot: tot };
 }

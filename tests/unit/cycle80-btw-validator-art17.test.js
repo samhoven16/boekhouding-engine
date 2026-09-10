@@ -237,3 +237,55 @@ describe('CYCLE 80: verwijderEndpoint_ (GDPR Art. 17)', () => {
     expect(setCalls.find((c) => c.col === 9)).toBeUndefined();
   });
 });
+
+describe('verwijderEndpoint_ — brute-force-bescherming (eigen teller)', () => {
+  const email = 'klant@example.nl';
+  const sleutel = 'BKHE-AAAA-BBBB-CCCC';
+  const validOtp = { code: '123456', expiry: Date.now() + 600000 };
+  const rij = [[sleutel, 'X', email, 'Standaard', 'Actief', '', 'ss', new Date(), '', new Date(), '', '']];
+  const ctxMet = (props) => maakVerwijderCtx({ props, rows: rij });
+
+  test('na 5 foute pogingen: lock + OTP geïnvalideerd', () => {
+    const { ctx, propStore } = ctxMet({
+      ['otp_' + email]: JSON.stringify(validOtp),
+      ['otp_verwijder_pogingen_' + email]: '5',
+    });
+    const r = parseJson(ctx.verwijderEndpoint_({ parameter: { email, otp: '000000' } }));
+    expect(r.ok).toBe(false);
+    expect(r.fout).toMatch(/te veel foute pogingen/i);
+    expect(propStore['otp_' + email]).toBeUndefined();
+    expect(propStore['otp_verwijder_pogingen_' + email]).toBeUndefined();
+  });
+
+  test('foute poging hoogt de eigen teller op en laat de OTP staan (tot 5)', () => {
+    const { ctx, propStore } = ctxMet({
+      ['otp_' + email]: JSON.stringify(validOtp),
+      ['otp_verwijder_pogingen_' + email]: '2',
+    });
+    const r = parseJson(ctx.verwijderEndpoint_({ parameter: { email, otp: '000000' } }));
+    expect(r.ok).toBe(false);
+    expect(propStore['otp_verwijder_pogingen_' + email]).toBe('3');
+    expect(propStore['otp_' + email]).toBeDefined();
+  });
+
+  test('correcte OTP na eerdere foute pogingen: succes + eigen teller gewist', () => {
+    const { ctx, propStore } = ctxMet({
+      ['otp_' + email]: JSON.stringify(validOtp),
+      ['otp_verwijder_pogingen_' + email]: '3',
+    });
+    const r = parseJson(ctx.verwijderEndpoint_({ parameter: { email, otp: '123456' } }));
+    expect(r.ok).toBe(true);
+    expect(propStore['otp_verwijder_pogingen_' + email]).toBeUndefined();
+  });
+
+  test('eigen key: een foute verwijder-poging raakt de activatie-teller (otp_pogingen_) NIET', () => {
+    const { ctx, propStore } = ctxMet({
+      ['otp_' + email]: JSON.stringify(validOtp),
+      ['otp_pogingen_' + email]: '4',  // activatie-teller bijna vol
+    });
+    ctx.verwijderEndpoint_({ parameter: { email, otp: '000000' } });
+    // Cross-endpoint self-DoS-preventie: de activatie-flow blijft ongemoeid.
+    expect(propStore['otp_pogingen_' + email]).toBe('4');
+    expect(propStore['otp_verwijder_pogingen_' + email]).toBe('1');
+  });
+});

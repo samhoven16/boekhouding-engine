@@ -6,7 +6,7 @@
   | |_) | (_) |  __/   <| | | | (_) | |_| \__,_| |_) | (_| | (_| | |
   |____/ \___/ \___|_|\_\_| |_|\___/ \__,_|___/|_.__/ \__,_|\__,_|_|
 
-  Gemaakt door één persoon · info@boekhoudbaar.nl
+  Gemaakt door één persoon · support@boekhoudbaar.nl
   Want jouw boekhouding hoort van jou te zijn.
   Source: github.com/samhoven16/boekhouding-engine
 -->
@@ -216,7 +216,7 @@
           "name": "Ik heb iets fout geboekt — hoe corrigeer ik?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Het hangt af van de status. Verkoopfactuur al verstuurd: maak een credit-nota via Boekhoudbaar → Facturen & Betalingen → Creditnota maken van factuur (de oude factuur blijft staan, art. 35a Wet OB). Inkoopboeking foutief: open de Inkoopfacturen-tab, rechtsklik de rij → 'Storneren' voor een automatische tegenboeking. Handmatige journaalpost: alleen in de lopende periode (afgesloten periodes vereisen Periode ontgrendelen met motivatie, gelogd voor de Belastingdienst)."
+            "text": "Het hangt af van de status. Verkoopfactuur al verstuurd: maak een credit-nota via Boekhoudbaar → Facturen & Betalingen → Creditnota maken van factuur (de oude factuur blijft staan, art. 35a Wet OB). Inkoopfactuur foutief: corrigeer of verwijder de rij op het Inkoopfacturen-tabblad. Een losse handmatige journaalpost draai je terug via Boekhoudbaar → Geavanceerd → Journaalpost storneren (correctie), met het boekingsnummer uit kolom A; alleen in de lopende periode (afgesloten periodes vereisen Periode ontgrendelen met motivatie, gelogd voor de Belastingdienst)."
           }
         },
         {
@@ -1608,7 +1608,7 @@
   <div class="container">
     <p class="section-label">Wat het kost over 5 jaar</p>
     <h2 id="anchor-heading" class="reveal-on-scroll">€49 nu. Bespaar <em>€2.291</em> over 5 jaar.</h2>
-    <p class="sub-tekst">Je kunt elk willekeurig boekhoudpakket pakken. Ik laat zien wat de jouwe over vijf jaar zou kosten, dan kies jij zelf.</p>
+    <p class="sub-tekst">Pak elk boekhoudpakket dat je wilt. Ik laat zien wat het jou over vijf jaar écht kost — daarna kies jij.</p>
 
     <div class="anchor-grid" role="list">
       <article class="anchor-card anchor-card--ons" role="listitem">
@@ -1698,7 +1698,7 @@
       <div class="oprichter-tekst">
         <p class="section-label" style="margin-bottom:6px;">Gemaakt door één persoon</p>
         <h2 id="oprichter-heading" class="reveal-on-scroll">Door Sam — zelfstandig ondernemer, net als jij</h2>
-        <p>Ik bouwde Boekhoudbaar eerst voor mezelf, omdat ik niet afhankelijk wilde zijn van andermans software. Toen vroegen anderen ernaar. Zo is dit product ontstaan.</p>
+        <p>Boekhoudbaar begon als mijn eigen oplossing — omdat ik niet afhankelijk wilde zijn van andermans software. Toen anderen ernaar vroegen, werd het meer dan dat.</p>
         <p><a href="/over/" class="oprichter-link">Lees meer over mij en hoe ik werk →</a></p>
       </div>
     </div>
@@ -1865,7 +1865,7 @@
         <p>Het hangt af van de status:</p>
         <ul class="faq-list">
           <li><strong>Verkoopfactuur al verstuurd</strong>: maak een credit-nota via <em>Boekhoudbaar → Facturen &amp; Betalingen → Creditnota maken van factuur</em>. De oude factuur blijft staan (art. 35a Wet OB — niet wissen).</li>
-          <li><strong>Inkoopboeking foutief</strong>: open <em>Inkoopfacturen</em>-tab, rechtsklik rij → "Storneren". Genereert automatisch een tegenboeking.</li>
+          <li><strong>Inkoopfactuur foutief</strong>: corrigeer of verwijder de rij op het <em>Inkoopfacturen</em>-tabblad. Een losse handmatige journaalpost draai je terug via <em>Boekhoudbaar → Geavanceerd → ↺ Journaalpost storneren (correctie)</em> (voer het boekingsnummer uit kolom A in).</li>
           <li><strong>Journaalpost handmatig</strong>: alleen in lopende periode (afgesloten periodes vereisen <em>Periode ontgrendelen</em> met motivatie — gelogd voor Belastingdienst).</li>
         </ul>
         <p>Te veel of te weinig BTW aangegeven? Zie de gids <a href="/gids/suppletie-aangifte-btw/">BTW corrigeren &amp; suppletie</a>.</p>
@@ -1886,7 +1886,7 @@
         <summary>Google geeft een "niet-geverifieerde app"-waarschuwing — is dat veilig?</summary>
         <p>Ja, dat is correct én verwacht. Boekhoudbaar is een klein NL-bedrijf en heeft Google's officiële OAuth-app-verificatie — een uitgebreid reviewproces van enkele weken (demo, scope-onderbouwing, domeincontrole) — nog niet volledig doorlopen. <strong>De waarschuwing zegt niets over veiligheid</strong>: hij verschijnt voor ALLE Apps Scripts die niet door Google zijn geverifieerd, óók eerlijke kleine producten zoals deze.</p>
         <p><strong>Wat de waarschuwing concreet betekent:</strong> Google weet niet of mijn app-naam, logo en privacy-policy door een grote organisatie zijn nagekeken. Dat is alles. De code zelf draait wel binnen Google's eigen infrastructuur, op jouw Drive, met OAuth-permissies die jij expliciet bevestigt.</p>
-        <p><strong>Eerlijk advies:</strong> klik op <em>"Geavanceerd"</em> → <em>"Ga naar Boekhoudbaar (onveilig)"</em>. Dat is standaard-procedure bij niet-geverifieerde Apps Scripts in NL. Wil je 100% zekerheid? Lees eerst de code op <a href="https://github.com/samhoven16/boekhouding-engine" target="_blank" rel="noopener">GitHub</a> (source-available) of mail <a href="mailto:hallo@boekhoudbaar.nl">hallo@boekhoudbaar.nl</a> voor uitleg. Geen druk.</p>
+        <p><strong>Eerlijk advies:</strong> klik op <em>"Geavanceerd"</em> → <em>"Ga naar Boekhoudbaar (onveilig)"</em>. Dat is standaard-procedure bij niet-geverifieerde Apps Scripts in NL. Wil je 100% zekerheid? Lees eerst de code op <a href="https://github.com/samhoven16/boekhouding-engine" target="_blank" rel="noopener">GitHub</a> (source-available) of mail <a href="mailto:support@boekhoudbaar.nl">support@boekhoudbaar.nl</a> voor uitleg. Geen druk.</p>
       </details>
 
     </div>
@@ -1953,7 +1953,7 @@
         <li><a href="/partners/">Affiliate-programma</a></li>
         <li><a href="/adverteren/">Adverteren / partnerships</a></li>
         <li><a href="/faq/">FAQ</a></li>
-        <li><a href="mailto:info@boekhoudbaar.nl">Contact</a></li>
+        <li><a href="mailto:support@boekhoudbaar.nl">Contact</a></li>
         <li><a href="/privacy/">Privacybeleid</a></li>
         <li><a href="/voorwaarden/">Voorwaarden</a></li>
         <li><a href="/dpa/">Verwerkersovereenkomst (DPA)</a></li>

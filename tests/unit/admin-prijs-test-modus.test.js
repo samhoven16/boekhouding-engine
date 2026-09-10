@@ -40,8 +40,10 @@ function maakCtx(opts) {
       }),
       MimeType: { JSON: 'json' },
     },
-    schrijfAuditLog_: (actie, details) => auditCalls.push({ actie, details }),
   });
+  // schrijfAuditLog_ bestaat nu echt in Code.gs → post-load overschrijven zodat
+  // onze spy wint (pre-load mock wordt geschaduwd door de file-definitie).
+  ctx.schrijfAuditLog_ = (actie, details) => auditCalls.push({ actie: actie, details: details });
   return { ctx, propStore, auditCalls };
 }
 

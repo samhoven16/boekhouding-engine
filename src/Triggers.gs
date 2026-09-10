@@ -1070,8 +1070,10 @@ function verwerkUitgavenUitHoofdformulier_(ss, data) {
 
   Logger.log(`Inkoopfactuur IK${inkoopNr} geregistreerd voor ${leverancier}`);
 
-  // Proactief signaal: aankoop ≥ €450 kan worden geactiveerd als investering.
-  if (bedragExcl >= 450) {
+  // Proactief signaal: aankoop ≥ activeringsgrens kan worden geactiveerd als
+  // investering. Grens uit de centrale config (A-CALC-4: was hardcoded 450 naast
+  // B.ACTIVEER_GRENS → divergeerde bij wetswijziging/klant-override).
+  if (bedragExcl >= ((typeof getBelasting_ === 'function' && getBelasting_().ACTIVEER_GRENS) || 450)) {
     try {
       signaleerAfschrijvingskandidaat_(ss, bedragExcl, leverancier, data['Omschrijving uitgave'] || categorie);
     } catch (_) {}
@@ -1618,6 +1620,18 @@ function dagelijkseTaken() {
   // Wrap in _runTaak_ voor automatische metrics + status-logging.
   _runTaak_('markeerVervallen', function() { markeerVervallenFacturen_(ss); });
   _runTaak_('herinneringen',    function() { stuurAutomatischeBetalingsherinneringen_(ss); });
+  // KRITIEK + VROEG: de herhalende kosten (huur, abonnementen, verzekering) zijn
+  // financiële journaalposten die niet mogen overslaan. Voorheen zaten ze ALLEEN
+  // binnenin vernieuwDashboard (kritiek-gemaakt), maar dat dwong de DURE dashboard-
+  // render óók de budget-bypass in → op volle administraties kon de render tegen de
+  // 6-min hard-cap aanlopen MIDDEN in de boeking (gas-runtime-audit A-334). Nu staat
+  // de goedkope, financiële boeking als EIGEN kritieke taak vooraan (binnen budget),
+  // en mag de cosmetische render weer overslaan. verwerkHerhalendeKosten_ is
+  // idempotent (per rij+datum), dus de tweede aanroep binnenin het dashboard is een
+  // veilige no-op (en levert nog steeds `komend` voor de waarschuwingen).
+  _runTaak_('herhalendeKosten', function() {
+    if (typeof verwerkHerhalendeKosten_ === 'function') verwerkHerhalendeKosten_();
+  }, { kritiek: true });
   // Master e-mailnotificatie-schakelaar: één 'E-mailnotificaties'=Nee zet alle
   // klant-gerichte meldingsmails uit (de gebruiker wil niet "elke dag mails").
   // Standaard aan; betalingsherinneringen naar de eigen klanten blijven buiten.
@@ -1776,6 +1790,11 @@ function dagelijkseTaken() {
   // recreate-stap faalt op ScriptApp-quota MIDDEN in de keten, blijft het
   // systeem zonder triggers tot volgende onOpen. Aan einde plaatsen
   // beperkt blast-radius: alle nuttige work is dan al gedaan.
+  // NIET kritiek: de dashboard-render is cosmetisch (stale KPI's = 1 dag oud, prima)
+  // en is de DUURSTE taak (6+ full-sheet-scans). De financiële kant — herhalende
+  // kosten boeken — draait nu als eigen kritieke taak `herhalendeKosten` vooraan
+  // (A-334-decouple), dus deze render mag onder budgetdruk overslaan zonder dat er
+  // een boeking verloren gaat of de 6-min hard-cap geraakt wordt.
   _runTaak_('dashboard',        function() { vernieuwDashboard(); });
   // Cycle 68: Belastingadvies-tab is een statische rendering van
   // aftrekposten + spoed-deadlines. Voorheen werd hij alleen vernieuwd
@@ -1798,10 +1817,13 @@ function dagelijkseTaken() {
     if (typeof featureAan_ === 'function' && !featureAan_('noah_ark_export')) return;
     if (typeof maakNoahArkSnapshot_ === 'function') maakNoahArkSnapshot_();
   });
+  // KRITIEK: draint mislukte factuur-/herinneringsmails (bv. door Gmail-quota).
+  // Stil overslaan = de factuur van de klant bereikt z'n debiteur nooit → klant
+  // wordt niet betaald. Goedkoop (kleine DLQ), dus geen hard-cap-risico.
   _runTaak_('dlqRetry',         function() {
     if (typeof featureAan_ === 'function' && !featureAan_('dlq_retry')) return;
     if (typeof dlqVerwerkRetries_ === 'function') dlqVerwerkRetries_();
-  });
+  }, { kritiek: true });
 
   // Audit-vondst ronde 2 (GAS-runtime): herinneringsStap_<factuurnr> keys
   // worden gewist bij BETAALD/GECREDITEERD, maar facturen die nooit betaald
@@ -2059,9 +2081,12 @@ function stuurWeeklySamenvatting_() {
       // Guard: corrupte getKwartaal_ output zou anders Invalid Date geven
       // en de hele weekly summary kapot maken bij een bug in kwartaal-helper.
       if (!isNaN(kNum) && kNum >= 1 && kNum <= 4) {
-        const eindKwartaal = new Date(nu.getFullYear(), kNum * 3, 0);
-        const deadline = new Date(eindKwartaal);
-        deadline.setMonth(deadline.getMonth() + 1);
+        // A-LONG-4: deadline = laatste dag van de maand ná het kwartaal. De oude
+        // setMonth(+1) op een 31e/30e gaf maand-overflow (Q1: 31 mrt → 1 mei i.p.v.
+        // 30 apr; Q2 → 30 jul i.p.v. 31 jul; Q3 → 30 okt i.p.v. 31 okt). new Date(
+        // jaar, kNum*3+1, 0) = laatste dag van die maand, correct voor álle kwartalen
+        // incl. Q4 (maand 13 → 31 jan volgend jaar).
+        const deadline = new Date(nu.getFullYear(), kNum * 3 + 1, 0);
         const dagenTot = Math.ceil((deadline - nu) / (24 * 60 * 60 * 1000));
         if (dagenTot >= 0 && dagenTot <= 30) {
           btwInfo = `\n⏰ BTW-deadline ${kStr}: nog ${dagenTot} dagen (uiterlijk ${formatDatum_(deadline)})\n`;
@@ -2272,14 +2297,27 @@ function stuurAutomatischeBetalingsherinneringen_(ss) {
       // DLQ: voeg toe voor auto-retry. Opzettelijk geen pdfUrl-attachment in
       // payload — die kan groter zijn dan cell-limit. Retry-handler haalt PDF
       // opnieuw op via factuurnummer.
+      let inDlq = false;
       try {
         if (typeof dlqVoegToe_ === 'function') {
           dlqVoegToe_('EMAIL_HERINNERING', {
             email: klantEmail, onderwerp: onderwerp, tekst: tekst,
             opties: { name: bedrijf },
           }, err.message);
+          inDlq = true;
         }
       } catch (_) {}
+      // Idempotency: zodra de herinnering aan de DLQ is overgedragen (gegarandeerde
+      // retry), markeren we de stap als verzonden. Zonder dit zou de DLQ de mail
+      // (alsnog) afleveren ÉN zou de volgende dagrun dezelfde stap opnieuw sturen
+      // (stapKey stond nog op de oude waarde) → dubbele herinnering naar de
+      // debiteur. Bij definitieve DLQ-fail (3×) escaleert escaleerDlqFataal_ naar
+      // de owner; de mail was dan toch onbestelbaar. Alleen markeren als de DLQ-
+      // overdracht zélf lukte — anders is er geen retry-vangnet en moet de dagrun
+      // het morgen opnieuw proberen.
+      if (inDlq) {
+        try { props.setProperty(stapKey, String(volgendeStap)); } catch (_) {}
+      }
     }
   }
 

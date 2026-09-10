@@ -166,6 +166,8 @@ const STANDAARD_GROOTBOEK = [
   { code:'4100', naam:'Te betalen BTW (omzetbelasting)',       type:'Passief', cat:'Kortlopende schulden',  bw:'Balans' },
   { code:'4110', naam:'Te betalen BTW 21%',                    type:'Passief', cat:'Kortlopende schulden',  bw:'Balans' },
   { code:'4120', naam:'Te betalen BTW 9%',                     type:'Passief', cat:'Kortlopende schulden',  bw:'Balans' },
+  { code:'4130', naam:'Te betalen BTW verlegd (verkoop)',      type:'Passief', cat:'Kortlopende schulden',  bw:'Balans' },
+  { code:'4140', naam:'Te betalen BTW verlegd (inkoop)',       type:'Passief', cat:'Kortlopende schulden',  bw:'Balans' },
   { code:'4200', naam:'Te betalen loonheffing',                type:'Passief', cat:'Kortlopende schulden',  bw:'Balans' },
   { code:'4210', naam:'Te betalen sociale premies',            type:'Passief', cat:'Kortlopende schulden',  bw:'Balans' },
   { code:'4300', naam:'Te betalen bedragen',                   type:'Passief', cat:'Kortlopende schulden',  bw:'Balans' },

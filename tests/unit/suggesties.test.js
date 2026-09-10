@@ -140,7 +140,7 @@ describe('Suggesties.gs', () => {
   // ──────────────────────────────────────────────────────────────────
   test('falende conditie-fn laat andere suggesties nog werken', () => {
     const { ss, toastFn } = maakSsStub();
-    const ctx = laadRuntime({ btwTeBetalen: 5000 }, { IBAN: 'NL91ABNA0417164300' });
+    const ctx = laadRuntime({ btwSaldo: 5000 }, { IBAN: 'NL91ABNA0417164300' });
     ctx.__ss = ss;
 
     // Sabotage eerste conditie (geen-iban) door getInstelling_ te laten crashen

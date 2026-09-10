@@ -117,14 +117,33 @@ describe('BelastingOptimizer.gs — functionele tests met GAS-runtime', () => {
       expect(r.besparingVsAllesIn_N).toBe(0);
     });
 
-    test('Default marginaal tarief = 36.93% bij ongeldige input', () => {
+    test('CALC-7: default-tarief = config schijf-1 (2026: 35,75%), NIET het stale 0,3693', () => {
+      // De publieke wrapper berekenInvesteringsTiming roept aan met marginaalTarief=null.
+      // Voorheen viel dat terug op een hardcoded 0,3693 (~2023-tarief) → de klant zag z'n
+      // fiscaal voordeel overschat. Nu uit getBelasting_() schijf-1.
       const inv = [
         { naam: 'a', bedrag: 50000 },
         { naam: 'b', bedrag: 50000 },
       ];
-      const r1 = ctx.optimaliseerInvesteringsTiming_(inv, 0, 0, null, B);
-      const r2 = ctx.optimaliseerInvesteringsTiming_(inv, 0, 0, 0.3693, B);
-      expect(r1.besparingFiscaalEur).toBeCloseTo(r2.besparingFiscaalEur, 2);
+      const rDefault = ctx.optimaliseerInvesteringsTiming_(inv, 0, 0, null, B);
+      const rConfig  = ctx.optimaliseerInvesteringsTiming_(inv, 0, 0, B.IB_SCHIJF_1_PCT, B);
+      const rOud     = ctx.optimaliseerInvesteringsTiming_(inv, 0, 0, 0.3693, B);
+      // default == config-schijf-1 …
+      expect(rDefault.besparingFiscaalEur).toBeCloseTo(rConfig.besparingFiscaalEur, 2);
+      // … en NIET meer gelijk aan het oude hardcoded 0,3693 (besparing>0, dus meetbaar verschil)
+      expect(rDefault.besparingVsAllesIn_N).toBeGreaterThan(0);
+      expect(rDefault.besparingFiscaalEur).not.toBeCloseTo(rOud.besparingFiscaalEur, 2);
+      // uitleg toont het 2026-config-tarief, niet 36,9%
+      expect(rDefault.uitleg).toMatch(/× 35\.8%/);
+      expect(rDefault.uitleg).not.toMatch(/× 36\.9%/);
+    });
+
+    test('CALC-7 (mutatiebewijs): default-tarief LEEST uit config — distinctief tarief volgt door', () => {
+      const inv = [{ naam: 'a', bedrag: 50000 }, { naam: 'b', bedrag: 50000 }];
+      const Bcustom = Object.assign({}, B, { IB_SCHIJF_1_PCT: 0.40 });
+      const r = ctx.optimaliseerInvesteringsTiming_(inv, 0, 0, null, Bcustom);
+      // Reverteren naar een hardcoded literal maakt dit rood — bewijst de config-read.
+      expect(r.uitleg).toMatch(/× 40\.0%/);
     });
 
     test('Custom marginaal tarief 49.5% (top-schijf) → grotere fiscale impact', () => {
