@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trengo — Digital Customer Success</title>
+<style>
+:root{
+  --bg:#0B0D0C; --surface:#161A18; --text:#F5F7F6; --muted:#8A9491;
+  --green:#00B27A; --violet:#A78BFA; --amber:#F0A02A; --grey:#39403C;
+  --radius:14px;
+  --font:-apple-system,"Segoe UI",Roboto,Inter,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font-family:var(--font);overflow:hidden;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+/* ---- type scale (nothing below 18px) ---- */
+.hero{font-size:clamp(54px,6.2vw,86px);font-weight:800;line-height:1.03;letter-spacing:-.02em}
+.headline{font-size:clamp(34px,3.7vw,50px);font-weight:700;line-height:1.1;letter-spacing:-.015em}
+.subhead{font-size:clamp(24px,2.5vw,32px);font-weight:600;line-height:1.15}
+.body{font-size:clamp(22px,2vw,26px);font-weight:400;line-height:1.35;color:var(--text)}
+.muted{color:var(--muted)}
+.label{font-size:18px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--muted)}
+
+/* ---- deck / scenes ---- */
+#deck{position:fixed;inset:0}
+.scene{position:absolute;inset:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:10vh 6vw 6vh}
+.scene.active{display:flex}
+.scene .wrap{width:100%;max-width:1400px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:min(2.6vh,26px);transform-origin:center center;will-change:transform}
+
+/* ---- progressive-disclosure step ---- */
+.step{opacity:0;transform:translateY(14px);
+  transition:opacity .34s ease-out, transform .34s ease-out}
+.step.shown{opacity:1;transform:none}
+
+/* ---- evidence pill ---- */
+.evidence{position:absolute;top:3.2vh;left:3vw;display:inline-flex;align-items:center;
+  gap:.5em;padding:.5em 1em;border-radius:999px;font-size:18px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;background:var(--surface);
+  border:1px solid #262c29;color:var(--muted);z-index:5}
+.evidence::before{content:"";width:11px;height:11px;border-radius:50%;background:currentColor}
+.evidence.case{color:var(--green)}
+.evidence.verified{color:var(--green)}
+.evidence.illustrative{color:var(--muted)}
+.evidence.assumption{color:var(--amber)}
+.evidence.target{color:var(--violet)}
+.evidence.confirm{color:var(--amber)}
+
+/* ---- dot field motif ---- */
+.dotfield{display:grid;grid-template-columns:repeat(20,1fr);
+  gap:clamp(4px,.55vw,9px);width:min(58vh,760px);aspect-ratio:1}
+.dot{width:100%;aspect-ratio:1;border-radius:50%;background:var(--grey);
+  opacity:0;transform:scale(.35);
+  transition:opacity .3s ease-out, transform .3s ease-out, background-color .3s ease-out}
+.dot.in{opacity:.45;transform:none}
+.dot.dim{opacity:.1}
+.dot.green{background:var(--green);opacity:1;transform:none}
+.dot.amber{background:var(--amber);opacity:1;transform:none}
+.dot.violet{background:var(--violet);opacity:1;transform:none}
+.dot.human{background:var(--text);opacity:1;transform:none}
+.dot.pulse{animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(240,160,42,.5)}50%{box-shadow:0 0 0 6px rgba(240,160,42,0)}}
+
+.dotfield.sm{width:min(34vh,360px)}
+.dotfield.md{width:min(46vh,520px)}
+.dotfield.d100{grid-template-columns:repeat(10,1fr);width:min(40vh,440px)}
+
+/* ---- generic building blocks ---- */
+.card{background:var(--surface);border:1px solid #23292600;border:1px solid #262c29;
+  border-radius:var(--radius);padding:min(3vh,28px) min(2.4vw,30px);text-align:left}
+.tag{display:inline-block;font-size:18px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;padding:.28em .7em;border-radius:8px}
+.tag.green{background:rgba(0,178,122,.16);color:var(--green)}
+.tag.amber{background:rgba(240,160,42,.16);color:var(--amber)}
+.tag.violet{background:rgba(167,139,250,.16);color:var(--violet)}
+.tag.grey{background:#20251f;color:var(--muted)}
+
+/* screenshot evidence window */
+.shot{position:relative;border:1px solid #2b322e;border-radius:12px;overflow:hidden;
+  background:#0e1210;display:flex;align-items:center;justify-content:center}
+.shot img{display:block;width:100%;height:100%;object-fit:cover}
+.shot .ph{padding:1.2em 1.2em 3em;text-align:center;color:var(--muted);font-size:18px;line-height:1.4}
+.shot .ph b{color:var(--text);font-weight:700;display:block;margin-bottom:.4em;font-size:18px}
+.shot .cap{position:absolute;left:0;bottom:0;right:0;font-size:18px;padding:.5em .8em;
+  background:rgba(0,0,0,.55);color:var(--muted);text-align:left}
+
+/* layout utilities */
+.row{display:flex;gap:min(2.4vw,28px);align-items:stretch;justify-content:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;gap:min(2vh,20px)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:min(3vw,40px);width:100%;align-items:center}
+.vs{width:1px;background:#262c29}
+.big-num{font-size:clamp(56px,8vw,110px);font-weight:800;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+
+/* pricing recreation (scene 2) */
+.ptable{display:grid;grid-template-columns:1.4fr .8fr .8fr 1fr;gap:0;border-radius:12px;overflow:hidden;border:1px solid #262c29}
+.ptable>div{padding:.7em .9em;border-bottom:1px solid #1e2320;font-size:20px}
+.ptable .ph{background:#11150f;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:18px}
+.ptable .na{color:var(--muted)}
+.ptable .yes{color:var(--green);font-weight:700}
+.ptable .rowlabel{font-weight:700}
+
+/* ladder (scene 3) */
+.ladder{display:flex;flex-direction:column-reverse;gap:10px;width:min(560px,80vw)}
+.rung{display:flex;align-items:center;justify-content:space-between;gap:1em;
+  padding:.65em 1em;border-radius:12px;background:var(--surface);border:1px solid #262c29;
+  font-size:22px;font-weight:600;color:var(--muted);opacity:.35;transition:opacity .3s ease-out,color .3s ease-out,border-color .3s ease-out}
+.rung.lit{opacity:1;color:var(--text)}
+.rung.kpi.lit{border-color:var(--green)}
+
+/* flow chips (scene 6) */
+.chip{display:inline-block;padding:.4em .8em;border-radius:10px;font-size:20px;font-weight:600;background:#20251f;color:var(--text)}
+.chip.ai{background:rgba(167,139,250,.16);color:var(--violet)}
+.bubble{max-width:22em;padding:.7em 1em;border-radius:14px;font-size:22px;line-height:1.3}
+.bubble.q{background:#20251f;color:var(--text);align-self:flex-start}
+.bubble.a{background:rgba(0,178,122,.14);color:var(--text);align-self:flex-start;border:1px solid rgba(0,178,122,.3)}
+.arrowdown{color:var(--muted);font-size:24px;line-height:1}
+
+/* inbox + landing (scene 7) */
+.mail{width:min(760px,92vw);border:1px solid #262c29;border-radius:14px;overflow:hidden;background:var(--surface);text-align:left}
+.mail .bar{display:flex;align-items:center;gap:.6em;padding:.7em 1em;background:#11150f;border-bottom:1px solid #1e2320;font-size:18px;color:var(--muted)}
+.dotr{width:11px;height:11px;border-radius:50%;background:var(--green)}
+.mail .from{padding:.9em 1.1em .2em;font-weight:700;font-size:22px;display:flex;justify-content:space-between}
+.mail .time{color:var(--muted);font-weight:400;font-size:18px}
+.mail .subj{padding:.1em 1.1em;font-size:24px;font-weight:700}
+.mail .bod{padding:.6em 1.1em 1em;font-size:22px;color:var(--text);line-height:1.4}
+.btn{display:inline-block;background:var(--green);color:#04160f;font-weight:700;font-size:20px;
+  padding:.7em 1.2em;border-radius:10px;border:none;cursor:pointer}
+.landing{width:min(720px,92vw);text-align:left}
+.qrow{display:grid;grid-template-columns:auto 1fr auto;gap:.8em;align-items:center;padding:.35em 0;font-size:21px}
+.qrow .rk{color:var(--muted);font-weight:700;width:1.6em}
+.qbar{height:14px;border-radius:7px;background:#20251f;overflow:hidden}
+.qbar>span{display:block;height:100%;background:var(--green)}
+.qrow .pc{color:var(--muted);font-variant-numeric:tabular-nums;width:3.2em;text-align:right}
+.qrow.top{font-weight:700}
+.qrow.top .qbar>span{background:var(--green)}
+
+/* trust ladder stages (scene 8) */
+.stage{padding:.8em 1.2em;border-radius:14px;background:var(--surface);border:1px solid #262c29;
+  text-align:left;transition:transform .3s ease-out,opacity .3s ease-out,border-color .3s ease-out;min-width:min(260px,80vw)}
+.stage .st{font-size:26px;font-weight:800;letter-spacing:.02em}
+.stage .sd{font-size:20px;color:var(--muted);margin-top:.2em}
+.stage.cur{transform:scale(1.06);border-color:var(--green)}
+.stage.done{opacity:.5}
+
+/* chat (scene 9) */
+.chat{width:min(680px,92vw);display:flex;flex-direction:column;gap:14px;text-align:left}
+.msg{max-width:80%;padding:.7em 1em;border-radius:14px;font-size:23px;line-height:1.35;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:#20251f}
+.msg.ai{align-self:flex-start;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.28)}
+.msg .caret{display:inline-block;width:.6ch;color:var(--violet)}
+.mtag{align-self:flex-start;margin-top:-6px}
+.mtag.u{align-self:flex-end}
+
+/* control room (scene 10) */
+.panel{display:flex;flex-direction:column;gap:.5em;text-align:left;font-size:22px}
+.pmet{display:flex;justify-content:space-between;gap:2em;border-bottom:1px solid #1e2320;padding:.3em 0}
+.pmet b{font-variant-numeric:tabular-nums}
+.pmet.stuck b{color:var(--amber)}
+.pmet.human b{color:var(--text)}
+.acct .chk{display:flex;align-items:center;gap:.6em;font-size:20px;color:var(--muted);opacity:.4;transition:opacity .3s ease-out,color .3s ease-out}
+.acct .chk.lit{opacity:1;color:var(--green)}
+.acct .chk .box{width:16px;height:16px;border-radius:4px;border:2px solid currentColor}
+
+/* not-do list (scene 11) */
+.nd{display:flex;align-items:flex-start;gap:.6em;font-size:clamp(22px,2.3vw,30px);color:var(--muted);line-height:1.25}
+.nd .x{color:var(--muted);font-weight:800}
+
+/* flight path (scene 12) */
+.flight{display:flex;flex-direction:column;gap:14px;text-align:left}
+.leg{display:flex;gap:1em;align-items:flex-start;padding:.5em .2em}
+.leg .d{font-size:20px;font-weight:800;color:var(--green);letter-spacing:.06em;min-width:4em}
+.leg .t{font-size:21px;color:var(--text);line-height:1.3}
+.signals{font-size:20px;color:var(--muted);line-height:1.5;text-align:left}
+
+/* ---- presenter notes ---- */
+#notes{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#05060699;
+  backdrop-filter:blur(6px);border-top:1px solid #22282500;border-top:1px solid #202523;
+  padding:14px 22px;display:none;color:var(--text)}
+#notes.on{display:block}
+#notes .n1{font-size:19px;font-weight:600}
+#notes .n2{font-size:18px;color:var(--muted);margin-top:3px}
+#notes .meta{float:right;color:var(--muted);font-size:18px;letter-spacing:.04em}
+
+/* ---- progress ---- */
+#progress{position:fixed;right:3vw;bottom:2.6vh;z-index:30;font-size:18px;
+  color:var(--muted);letter-spacing:.08em;font-weight:600}
+
+/* ---- overview ---- */
+#overview{position:fixed;inset:0;z-index:60;background:#070908f2;display:none;
+  padding:5vh 5vw;overflow:auto}
+#overview.on{display:block}
+#overview h2{font-size:22px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.14em;margin:0 0 3vh}
+#ovgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.ovcell{background:var(--surface);border:1px solid #262c29;border-radius:12px;
+  padding:20px;cursor:pointer;text-align:left;transition:border-color .2s ease-out}
+.ovcell:hover,.ovcell:focus{border-color:var(--green);outline:none}
+.ovcell .num{font-size:18px;color:var(--green);font-weight:800;letter-spacing:.1em}
+.ovcell .ti{font-size:22px;font-weight:600;margin-top:6px;line-height:1.15}
+.ovcell .du{font-size:18px;color:var(--muted);margin-top:10px}
+
+/* ---- reduced motion ---- */
+@media (prefers-reduced-motion: reduce){
+  .step{transition:opacity .001s linear;transform:none}
+  .dot{transition:opacity .001s linear, background-color .001s linear;transform:none}
+  .dot.pulse{animation:none}
+}
+
+/* ---- print emergency fallback ---- */
+@media print{
+  html,body{overflow:visible;background:#fff;color:#111}
+  #notes,#progress,#overview{display:none!important}
+  .scene{position:relative;display:flex!important;page-break-after:always;
+    min-height:100vh;padding:6vh 6vw;background:#fff;color:#111}
+  .step{opacity:1!important;transform:none!important}
+  .evidence{background:#f0f0f0;border-color:#ccc}
+  .muted,.body.muted{color:#555}
+  .card{background:#f6f6f6;border-color:#ddd;color:#111}
+  .dot{opacity:1}
+  .dot.idle,.dot.in,.dot.dim{background:#d5d5d5;opacity:1}
+  @page{size:landscape}
+}
+</style>
+</head>
+<body>
+<div id="deck" aria-live="polite"></div>
+<div id="notes" role="note"></div>
+<div id="progress"></div>
+<div id="overview" role="dialog" aria-label="Scene overview">
+  <h2>Overview — click a scene</h2>
+  <div id="ovgrid"></div>
+</div>
+
+<script>
+"use strict";
+(function(){
+const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= reusable helpers ================= */
+function el(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!=null)n.textContent=txt;return n;}
+function step(node,n){node.classList.add('step');node.dataset.step=n;return node;}
+
+const EV = {
+  case:'Case data', verified:'Verified — product', illustrative:'Illustrative',
+  assumption:'Assumption', target:'Target', confirm:'To confirm'
+};
+function pill(kind,textOverride){
+  const p=el('div','evidence '+kind, textOverride||EV[kind]||kind);
+  return p;
+}
+
+/* dot field: 400 dots, states idle/green/amber/violet/human + dim */
+function buildDotField(n){
+  n=n||400;
+  const wrap=el('div','dotfield');
+  const dots=[];
+  for(let i=0;i<n;i++){const d=el('span','dot');wrap.appendChild(d);dots.push(d);}
+  return {el:wrap,dots};
+}
+function setDot(d,state){
+  d.classList.remove('dim','green','amber','violet','human');
+  if(state==='idle'){/* stays base */}
+  else if(state==='dim'){d.classList.add('dim');}
+  else if(state){d.classList.add(state);}
+}
+// reveal dots in a staggered wave
+function revealDots(dots,stagger){
+  stagger = REDUCED?0:(stagger==null?4:stagger);
+  dots.forEach((d,i)=>{
+    const delay = stagger? (i%20 + Math.floor(i/20))*stagger : 0;
+    setTimeout(()=>d.classList.add('in'), delay);
+  });
+}
+// transition a set of dot indices to a state, staggered
+function transitionDots(dots,indices,state,stagger){
+  stagger = REDUCED?0:(stagger==null?6:stagger);
+  indices.forEach((idx,k)=>{
+    setTimeout(()=>setDot(dots[idx],state), k*stagger);
+  });
+}
+function firstN(count,total){const a=[];for(let i=0;i<count&&i<total;i++)a.push(i);return a;}
+
+/* screenshot window with graceful fallback */
+function shotWindow(file,w,h,phTitle,phDesc,cap){
+  const box=el('div','shot');
+  box.style.width=w; box.style.height=h;
+  const ph=el('div','ph');
+  ph.appendChild(el('b',null,phTitle));
+  ph.appendChild(document.createTextNode(phDesc));
+  box.appendChild(ph);
+  if(file){
+    const img=new Image();
+    img.alt=phTitle;
+    img.onload=()=>{ ph.remove(); box.insertBefore(img,box.firstChild); };
+    img.onerror=()=>{ /* keep placeholder */ };
+    img.src=file;
+  }
+  if(cap){const c=el('div','cap',cap);box.appendChild(c);}
+  return box;
+}
+
+/* ================= SCENES ================= */
+/* Each scene: {id,title,dur,note:[l1,l2],steps, build(root)->{toStep?,enter?,exit?,busy?,finish?}} */
+const SCENES = [];
+function scene(def){SCENES.push(def);}
+
+// scene helpers
+function mk(node){node.classList.add('step');return node;}          // controlled (no data-step)
+function rev(node,on){node.classList.toggle('shown',!!on);}
+function animateCount(node,from,to,ms){
+  if(REDUCED||ms<=0){node.textContent=to;return;}
+  const start=performance.now();
+  (function tick(t){const p=Math.min(1,(t-start)/ms);node.textContent=Math.round(from+(to-from)*p);if(p<1)requestAnimationFrame(tick);})(start);
+}
+function seededOrder(n,seed){const a=[...Array(n).keys()];let s=seed||1;
+  for(let i=n-1;i>0;i--){s=(s*1103515245+12345)&0x7fffffff;const j=s%(i+1);const tmp=a[i];a[i]=a[j];a[j]=tmp;}return a;}
+
+/* 01 — THE PORTFOLIO */
+scene({ id:'s1', title:'The Portfolio', dur:40,
+  note:['“400 customers. Fewer than 15% have activated AI. Let’s run one.”','Next: why this role has to exist at all.'],
+  steps:4,
+  build(root){
+    root.appendChild(mk(pill('case')));
+    const plEl=root.querySelector('.evidence');
+    const w=el('div','wrap');
+    const df=buildDotField(400); df.el.classList.add('sm');
+    const big=step(el('div','col'),1); big.style.gap='6px'; big.style.alignItems='center';
+    big.append(el('div','big-num','400'), el('div','label','SMB & Mid-Market · Benelux'));
+    const g=step(el('div','subhead'),2);
+    g.innerHTML='Fewer than <b style="color:var(--green)">15%</b> have activated AI';
+    const q=step(el('div','headline'),3); q.style.maxWidth='17em';
+    q.textContent='How do you create the effect of a Customer Success Manager for 400 customers — without managing 400 one-to-one?';
+    const run=step(el('div','body muted','Let’s run one.'),4);
+    w.append(df.el,big,g,q,run); root.appendChild(w);
+    const greenIdx=[]; for(let i=3;i<400 && greenIdx.length<58;i+=7)greenIdx.push(i);
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in');setDot(d,'idle');}); revealDots(df.dots,4); },
+      toStep(s){ rev(plEl,s>=2);
+        if(s>=2) transitionDots(df.dots,greenIdx,'green',8);
+        else greenIdx.forEach(i=>setDot(df.dots[i],'idle')); }
+    };
+  }
+});
+
+/* 02 — WHY THIS ROLE EXISTS */
+scene({ id:'s2', title:'Why This Role Exists', dur:45,
+  note:['“The scale problem is built into the pricing model — not an accident.”','Next: the ladder — activation vs adoption.'],
+  steps:3,
+  build(root){
+    root.appendChild(pill('verified','Verified — pricing page'));
+    const w=el('div','wrap'); const sp=el('div','split');
+    const left=el('div','col');
+    const t=el('div','ptable'); const add=(c,x)=>t.appendChild(el('div',c,x));
+    add('ph',''); add('ph','Boost'); add('ph','Pro'); add('ph','Enterprise');
+    add('rowlabel','Dedicated Success Manager'); add('na','Not available'); add('na','Not available'); add('yes','Success manager');
+    left.appendChild(t);
+    left.appendChild(shotWindow('s1.png','min(440px,90%)','180px','Trengo pricing page','“Dedicated Success Manager” — Boost/Pro not available, Enterprise only.','s1.png — pricing page'));
+    const r1=step(el('div','headline','The scale problem is built into the model.'),2); r1.style.maxWidth='11em';
+    const r2=step(el('div','body muted'),3); r2.style.maxWidth='16em';
+    r2.textContent='400 customers cannot be served like 40 Enterprise accounts. So it needs a different model — not more hours.';
+    const right=el('div','col'); right.style.textAlign='left'; right.append(r1,r2);
+    sp.append(left,right); w.appendChild(sp); root.appendChild(w);
+    return {};
+  }
+});
+
+/* 03 — ACTIVATION IS NOT THE GOAL */
+scene({ id:'s3', title:'Activation Is Not The Goal', dur:50,
+  note:['“Activation is the KPI. Adoption is the proof it was real.”','Next: how I choose WHO — the selection engine.'],
+  steps:3,
+  build(root){
+    root.appendChild(mk(pill('assumption'))); const plEl=root.querySelector('.evidence');
+    const w=el('div','wrap');
+    const rungs=['ENGAGEMENT','ACTIVATION','ADOPTION','CUSTOMER VALUE','RETENTION'];
+    const lad=el('div','ladder'); lad.style.transition='opacity .3s ease-out';
+    const rungEls=rungs.map(name=>{ const r=el('div','rung'); if(name==='ACTIVATION')r.classList.add('kpi');
+      r.appendChild(el('span',null,name));
+      if(name==='ACTIVATION')r.appendChild(el('span','tag green','THE KPI'));
+      if(name==='ADOPTION')r.appendChild(el('span','tag grey','WHAT I OPTIMISE FOR'));
+      lad.appendChild(r); return r; });
+    const line=step(el('div','hero'),2); line.style.maxWidth='14em';
+    line.innerHTML='Activation is the KPI.<br><span style="color:var(--green)">Adoption is the proof.</span>';
+    const ass=step(el('div','body muted'),3); ass.style.maxWidth='30em';
+    ass.textContent='15% → 40% is ~160 of 400. Assumption: 25% read as percentage points. I’d confirm on day one.';
+    w.append(lad,line,ass); root.appendChild(w);
+    return {
+      enter(){ rungEls.forEach(r=>r.classList.remove('lit')); },
+      toStep(s){ rev(plEl,s>=3);
+        lad.style.opacity = s<2?'1':'0';
+        if(s>=1 && s<2) rungEls.forEach((r,i)=>setTimeout(()=>r.classList.add('lit'), REDUCED?0:i*90)); }
+    };
+  }
+});
+
+/* 04 — THE SELECTION ENGINE (HERO) */
+scene({ id:'s4', title:'The Selection Engine', dur:70,
+  note:['“I’m not predicting who NEEDS AI — I’m predicting who is READY to adopt it.”','Next: three account-shaped examples from that 100.'],
+  steps:5,
+  build(root){
+    root.appendChild(pill('illustrative','Illustrative — interim numbers'));
+    const w=el('div','wrap');
+    const top=el('div','row'); top.style.alignItems='center'; top.style.gap='min(4vw,60px)';
+    const df=buildDotField(400); df.el.classList.add('md');
+    const side=el('div','col'); side.style.textAlign='left'; side.style.minWidth='min(360px,80vw)';
+    const counter=el('div','big-num','400'); const clab=el('div','label','of 400 in scope');
+    const filters=[['Filter 01 — Need','volume · growth · repeat topics · team size'],
+      ['Filter 02 — Readiness','help centre · existing automation · active admin · integration'],
+      ['Filter 03 — Fit','topic concentration · objective answers · channel · plan']];
+    const fEls=filters.map(([h,d])=>{ const c=el('div','card'); c.style.opacity='.35';
+      c.style.transition='opacity .3s ease-out,border-color .3s ease-out'; c.append(el('div','label',h));
+      const dd=el('div','body',d); dd.style.fontSize='20px'; dd.style.color='var(--muted)'; c.append(dd); return c; });
+    side.append(counter,clab,...fEls); top.append(df.el,side);
+    const head=step(el('div','headline'),4); head.style.maxWidth='15em';
+    head.innerHTML='I’m not predicting who <span class="muted">needs</span> AI.<br>I’m predicting who is <span style="color:var(--green)">ready to adopt</span> it.';
+    const cap=step(el('div','body muted'),5); cap.style.maxWidth='30em';
+    cap.textContent='Signals I would validate against CRM and product data before scoring.';
+    w.append(top,head,cap); root.appendChild(w);
+    const order=seededOrder(400,7); const counts=[400,238,147,100]; let lastShown=400;
+    function applyFilter(s){ const f=Math.max(0,Math.min(3,s)); const surv=counts[f];
+      const survSet=new Set(order.slice(0,surv));
+      df.dots.forEach((d,i)=>{ if(!d.classList.contains('in'))d.classList.add('in');
+        if(survSet.has(i)){ setDot(d, f>=3?'green':'idle'); d.classList.add('in'); } else setDot(d,'dim'); });
+      fEls.forEach((c,i)=>{ c.style.opacity=(i<f)?'1':'.35'; c.style.borderColor=(i===f-1)?'var(--green)':'#262c29'; });
+      const target=counts[f];
+      if(!REDUCED && target<lastShown) animateCount(counter,lastShown,target,600); else counter.textContent=target;
+      lastShown=target; }
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in','dim','green');setDot(d,'idle');}); revealDots(df.dots,3); lastShown=400; counter.textContent='400'; },
+      toStep(s){ applyFilter(s); }
+    };
+  }
+});
+
+/* 05 — THREE ACCOUNTS */
+scene({ id:'s5', title:'Three Accounts', dur:60,
+  note:['“Same score can mean start here, different path, or later — and one gets excluded.”','Next: why A (Pro) and B (Boost) take different routes.'],
+  steps:3,
+  build(root){
+    root.appendChild(pill('illustrative','Illustrative — synthetic examples'));
+    const w=el('div','wrap');
+    const mkcard=(letter,plan,lines,verdict,vclass)=>{ const c=el('div','card'); c.style.width='min(340px,90vw)';
+      const h=el('div'); h.style.cssText='display:flex;justify-content:space-between;align-items:baseline';
+      h.append(el('span','subhead',letter), el('span','label',plan)); c.appendChild(h);
+      lines.forEach(t=>{const p=el('div','body',t);p.style.cssText='font-size:19px;color:var(--muted);line-height:1.4';c.appendChild(p);});
+      const v=el('div','tag '+vclass,verdict); v.style.marginTop='10px'; c.appendChild(v); return c; };
+    const cA=mkcard('A','E-commerce · Pro',['4,200 conversations/yr','62% order-status','Shopify connected','Help centre: 18 articles','4 users · 1 active admin'],'START HERE','grey');
+    const cB=mkcard('B','E-commerce · Boost',['5,800 conversations/yr','55% order-status','No help centre','Flowbot running','3 users'],'HIGH NEED · DIFFERENT PATH','amber');
+    const cC=mkcard('C','Hospitality · Pro',['2,900 conversations','Topics spread out','Help centre: yes','No automation','8 users'],'LATER COHORT','grey');
+    const cards=step(el('div','row'),1); cards.append(cA,cB,cC);
+    const exc=step(el('div','card'),2); exc.style.cssText='width:min(720px,92vw);text-align:center'; exc.style.borderColor='var(--amber)';
+    exc.innerHTML='<span style="text-decoration:line-through;color:var(--muted);font-size:22px">High score, open escalation</span> — <b style="color:var(--amber)">excluded.</b> <span style="font-size:20px;color:var(--muted)">Fix first, expand later.</span>';
+    w.append(cards,exc); root.appendChild(w);
+    return { toStep(s){ if(s>=3){ cA.style.borderColor='var(--green)'; cA.querySelector('.tag').className='tag green'; }
+      else { cA.style.borderColor='#262c29'; cA.querySelector('.tag').className='tag grey'; } } };
+  }
+});
+
+/* 06 — SAME CUSTOMERS, DIFFERENT PATHS */
+scene({ id:'s6', title:'Same Customers, Different Paths', dur:55,
+  note:['“Same goal — an answer. Different path, because the plan allows different tools.”','Next: how I reach them at scale — the campaign.'],
+  steps:3,
+  build(root){
+    root.appendChild(pill('verified','Verified — pricing: 3rd-party AI Actions not on Boost'));
+    const w=el('div','wrap'); const sp=el('div','split');
+    const side=(planTag,planClass,chips,q,a)=>{ const col=el('div','col'); col.style.alignItems='flex-start';
+      col.appendChild(el('span','tag '+planClass,planTag));
+      const cr=el('div','row'); cr.style.cssText='justify-content:flex-start;gap:8px';
+      chips.forEach(([t,ai])=>cr.appendChild(el('span','chip'+(ai?' ai':''),t))); col.appendChild(cr);
+      col.appendChild(el('div','arrowdown','↓')); col.appendChild(el('div','bubble q',q));
+      col.appendChild(el('div','arrowdown','↓')); col.appendChild(el('div','bubble a',a)); return col; };
+    const left=step(side('PRO','green',[['Knowledge',false],['+ AI Actions',true]],'“Where is my order?”','Real-time answer pulled from the order system.'),1);
+    const right=step(side('BOOST','grey',[['Knowledge',false]],'“What’s your return policy?”','Document-based answer from the help centre.'),2);
+    sp.append(left,right); w.appendChild(sp);
+    const bottom=step(el('div','headline','Same goal. Different path.'),3); w.appendChild(bottom); root.appendChild(w);
+    return {};
+  }
+});
+
+/* 07 — THE CAMPAIGN LANDS (HERO) */
+scene({ id:'s7', title:'The Campaign Lands', dur:70,
+  note:['“The campaign isn’t a message about AI — it’s their own data handed back to them.”','Next: how they learn to trust it — the trust ladder.'],
+  steps:3,
+  build(root){
+    root.appendChild(pill('illustrative'));
+    const w=el('div','wrap');
+    const inbox=el('div','mail'); inbox.style.transition='opacity .3s ease-out';
+    const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'Inbox · 1 unread'));
+    const from=el('div','from'); from.append(el('span',null,'Trengo Customer Success'),el('span','time','09:02'));
+    const subj=el('div','subj','You already know the 10 questions your team answers most');
+    const bod=el('div','bod','Your customers already told you what to automate. We found your top ten. Pick one. Build it. Try to break it.');
+    const bwrap=el('div'); bwrap.style.padding='0 1.1em 1.2em'; bwrap.appendChild(el('button','btn','See my 10 questions →'));
+    inbox.append(bar,from,subj,bod,bwrap);
+    const landing=el('div','landing'); landing.style.cssText='transition:opacity .3s ease-out;opacity:0';
+    landing.appendChild(el('div','label','Account A · your top questions'));
+    const qs=[['Where is my order?',34],['Has my order shipped yet?',14],['Can I change my delivery address?',9],
+      ['What’s your return policy?',8],['When will it be delivered?',7],['I want to cancel my order',5],
+      ['Do you ship internationally?',4],['My discount code won’t work',4],['Is this item in stock?',3],['How do I return an item?',3]];
+    qs.forEach(([t,p],i)=>{ const r=el('div','qrow'+(i===0?' top':''));
+      const mid=el('div'); mid.appendChild(el('div',null,t)); const qb=el('div','qbar'); const sp2=el('span'); sp2.style.width=p+'%'; qb.appendChild(sp2); mid.appendChild(qb);
+      r.append(el('span','rk','#'+(i+1)), mid, el('span','pc',p+'%')); landing.appendChild(r); });
+    const ab=el('div'); ab.style.marginTop='14px'; ab.appendChild(el('button','btn','Automate #1 →')); landing.appendChild(ab);
+    const cap=step(el('div','body muted'),3); cap.style.maxWidth='30em';
+    cap.textContent='The campaign isn’t a message about AI. It’s their own data handed back to them.';
+    w.append(inbox,landing,cap); root.appendChild(w);
+    return { toStep(s){
+      inbox.style.opacity=s<2?'1':'0'; inbox.style.display=s<2?'block':'none';
+      landing.style.opacity=s>=2?'1':'0'; landing.style.display=s>=2?'block':'none'; } };
+  }
+});
+
+/* 08 — THE TRUST LADDER (HERO) */
+scene({ id:'s8', title:'The Trust Ladder', dur:60,
+  note:['“I don’t want them to trust AI because I said so — because they tested it.”','Next: what testing it looks like — try to break it.'],
+  steps:4,
+  build(root){
+    root.appendChild(pill('verified','Verified in product'));
+    const w=el('div','wrap');
+    const data=[['PLAYGROUND','“Break it.” Nothing published. No customer sees it.'],
+      ['SUPERVISED','“Watch it.” Real conversations, a human approves.'],
+      ['AUTOPILOT','“Trust it.” Only once the evidence is there.']];
+    const strip=el('div','row'); strip.style.alignItems='stretch';
+    const stEls=data.map(([t,d])=>{ const s=el('div','stage'); s.style.opacity='0'; s.append(el('div','st',t),el('div','sd',d)); strip.appendChild(s); return s; });
+    w.appendChild(strip);
+    const shot=shotWindow('s2.png','min(520px,92vw)','180px','AI Agent settings (product)','“Generate summary on escalation” is ON — a human gets a handover summary.','s2.png — AI Agent config');
+    shot.style.marginTop='6px'; w.appendChild(shot);
+    const line=step(el('div','headline'),4); line.style.maxWidth='16em';
+    line.innerHTML='I don’t want customers to trust AI because I told them to.<br><span style="color:var(--green)">I want them to trust it because they tested it.</span>';
+    w.appendChild(line);
+    const note=step(el('div','body muted'),4); note.style.cssText='font-size:18px;max-width:42em';
+    note.textContent='“Autopilot” is a named mode in Trengo; I use “Playground”/“Supervised” for its testing preview and human-approval handover.';
+    w.appendChild(note); root.appendChild(w);
+    return { toStep(s){ stEls.forEach((e,i)=>{ e.style.opacity=(i<s)?'1':'0';
+      e.classList.toggle('cur',(i===s-1)&&s<=3); e.classList.toggle('done',(i<s-1)); }); } };
+  }
+});
+
+/* 09 — TRY TO BREAK IT (HERO, centrepiece) */
+scene({ id:'s9', title:'Try To Break It', dur:80,
+  note:['“That refusal — handing over instead of guessing — is exactly the behaviour I want.”','Next: watching all 100 at once — the control room.'],
+  steps:4,
+  build(root){
+    root.appendChild(pill('illustrative','Illustrative conversation'));
+    const w=el('div','wrap');
+    const title=step(el('div','hero','TRY TO BREAK IT'),1); w.appendChild(title);
+    const chat=el('div','chat'); chat.style.transition='opacity .3s ease-out'; w.appendChild(chat);
+    const shot=step(shotWindow('s3.png','min(460px,92vw)','160px','AI Agent handover (product)','On escalation the AI generates a summary for the human — seen in trial.','s3.png — escalation summary'),3);
+    shot.style.marginTop='6px'; w.appendChild(shot);
+    const done=step(el('div','headline','That’s the behaviour I want to see.'),4); done.style.maxWidth='14em'; w.appendChild(done);
+    root.appendChild(w);
+    const msgs=[
+      {step:2,role:'user',text:'Where is my order 18492?'},
+      {step:2,role:'ai',text:'Order 18492 shipped Tuesday and is out for delivery today. Anything else?',tag:['green','Answered']},
+      {step:3,role:'user',text:'It says delivered but my neighbour never got it. Refund me.'},
+      {step:3,role:'ai',text:'I don’t have enough information to handle this safely.',tag:['amber','Handed to a human — with summary']}
+    ];
+    const nodes=msgs.map(m=>({m,bubble:el('div','msg '+m.role),tag:m.tag?el('span','tag '+m.tag[0]+' mtag'+(m.role==='user'?' u':''),m.tag[1]):null}));
+    let animating=false, timers=[], typing=null, curStep=1;
+    function clearAll(){ timers.forEach(t=>clearTimeout(t)); timers=[]; if(typing){clearInterval(typing);typing=null;} }
+    function renderInstant(upto){ clearAll(); animating=false; chat.innerHTML='';
+      nodes.forEach(n=>{ if(n.m.step<=upto){ n.bubble.textContent=n.m.text; chat.appendChild(n.bubble); if(n.tag)chat.appendChild(n.tag); } }); }
+    function typeSeq(stepNo){ const seq=nodes.filter(n=>n.m.step===stepNo); animating=true; let idx=0;
+      (function go(){ if(idx>=seq.length){ animating=false; return; }
+        const n=seq[idx++]; n.bubble.textContent=''; chat.appendChild(n.bubble);
+        if(REDUCED){ n.bubble.textContent=n.m.text; if(n.tag)chat.appendChild(n.tag); go(); return; }
+        let i=0; typing=setInterval(()=>{ n.bubble.textContent=n.m.text.slice(0,++i);
+          if(i>=n.m.text.length){ clearInterval(typing); typing=null; if(n.tag)chat.appendChild(n.tag);
+            timers.push(setTimeout(go, n.m.role==='user'?250:450)); } },35); })(); }
+    return {
+      enter(){ clearAll(); animating=false; chat.innerHTML=''; curStep=1; chat.style.opacity='0'; },
+      busy(){ return animating; },
+      finish(){ renderInstant(curStep); },
+      toStep(s){ curStep=s; chat.style.opacity=(s===1)?'0':'1';
+        if(s<2){ clearAll(); animating=false; chat.innerHTML=''; return; }
+        renderInstant(s-1); if(s>=2&&s<=3) typeSeq(s); else renderInstant(s); }
+    };
+  }
+});
+
+/* 10 — THE CONTROL ROOM */
+scene({ id:'s10', title:'The Control Room', dur:70,
+  note:['“Human time isn’t the delivery layer — it’s the exception layer.”','Next: the discipline — what I would deliberately NOT do.'],
+  steps:4,
+  build(root){
+    root.appendChild(pill('illustrative'));
+    const w=el('div','wrap'); const sp=el('div','split');
+    const df=buildDotField(100); df.el.classList.add('d100');
+    const dfWrap=el('div','col'); dfWrap.style.alignItems='center'; dfWrap.appendChild(df.el);
+    const panel=el('div','panel'); panel.style.marginTop='10px';
+    [['Engaged',72,''],['Testing',54,'violet'],['Activated',39,'green'],['Adopting',27,'green'],['Stuck',8,'stuck'],['Human',3,'human']]
+      .forEach(([n,v,c])=>{ const r=el('div','pmet '+(c||'')); r.append(el('span',null,n),el('b',null,String(v))); panel.appendChild(r); });
+    const left=el('div','col'); left.append(dfWrap,panel,
+      shotWindow('s4.png','min(360px,90%)','150px','AI Agent dashboard (product)','Where these states would come from in Trengo.','s4.png — dashboard'));
+    const acct=el('div','card acct'); acct.style.cssText='opacity:0;transition:opacity .3s ease-out';
+    acct.appendChild(el('div','label','Account #73 — signal'));
+    ['Email opened','Webinar watched','Playground opened','Setup revisited 4×','Not published'].forEach(t=>{ const p=el('div','body',t); p.style.cssText='font-size:19px;color:var(--muted)'; acct.appendChild(p); });
+    const checks=el('div','col'); checks.style.cssText='margin-top:10px;gap:6px';
+    const chkEls=['INTENT','FRICTION','POTENTIAL'].map(t=>{ const c=el('div','chk'); c.append(el('span','box'),el('span',null,t)); checks.appendChild(c); return c; });
+    acct.appendChild(checks);
+    const right=el('div','col'); right.appendChild(acct);
+    sp.append(left,right); w.appendChild(sp);
+    const line1=step(el('div','headline','15 minutes, within 48 hours.'),3);
+    const line2=step(el('div','body muted','Human time isn’t the delivery layer. It’s the exception layer.'),3); line2.style.maxWidth='26em';
+    const line3=step(el('div','body'),4); line3.style.maxWidth='30em';
+    line3.innerHTML='And if fifty accounts show the same signal, I don’t book fifty calls. <span style="color:var(--green)">I fix the step they’re stuck on.</span>';
+    w.append(line1,line2,line3); root.appendChild(w);
+    const order=seededOrder(100,11); const amberDot=order[0];
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in','dim','green','amber','violet','human','pulse');setDot(d,'idle');});
+        revealDots(df.dots,4);
+        const g=order.slice(0,39), v=order.slice(39,66), a=order.slice(66,74), h=order.slice(74,77);
+        setTimeout(()=>{ g.forEach(i=>setDot(df.dots[i],'green')); v.forEach(i=>setDot(df.dots[i],'violet'));
+          a.forEach(i=>setDot(df.dots[i],'amber')); h.forEach(i=>setDot(df.dots[i],'human')); df.dots.forEach(d=>d.classList.add('in')); }, REDUCED?0:400); },
+      toStep(s){ acct.style.opacity=s>=2?'1':'0'; const d=df.dots[amberDot];
+        if(s>=2){ setDot(d,'amber'); d.classList.add('pulse','in'); } else d.classList.remove('pulse');
+        chkEls.forEach((c,i)=>setTimeout(()=>c.classList.toggle('lit',s>=2), REDUCED?0:i*140)); }
+    };
+  }
+});
+
+/* 11 — WHAT I WOULD NOT DO */
+scene({ id:'s11', title:'What I Would Not Do', dur:45,
+  note:['“Scale isn’t doing more — it’s knowing what NOT to do.”','Next: the 90-day plan and the honest close.'],
+  steps:6,
+  build(root){
+    const w=el('div','wrap');
+    const list=el('div','col'); list.style.cssText='align-items:flex-start;gap:16px;text-align:left;max-width:22em';
+    ['Call all 400.','Send the same AI email to everyone.','Measure success by activation alone.','Add more outreach when the problem is friction.','Promise that AI reduces churn within 90 days.']
+      .forEach((t,i)=>{ const r=step(el('div','nd'),i+1); r.append(el('span','x','✕'),el('span',null,t)); list.appendChild(r); });
+    w.appendChild(list);
+    const fin=step(el('div','hero'),6); fin.style.cssText='text-align:center;max-width:18em;margin-top:2vh';
+    fin.innerHTML='Scale isn’t doing more.<br><span style="color:var(--green)">It’s knowing what not to do.</span>';
+    w.appendChild(fin); root.appendChild(w);
+    return {};
+  }
+});
+
+/* 12 — 90 DAYS, AND THE CLOSE */
+scene({ id:'s12', title:'90 Days, and the Close', dur:75,
+  note:['“90 days proves adoption — not churn. I’d rather say that now than claim it later.”','End: the 400 return, 160 green. No thank-you slide.'],
+  steps:9,
+  build(root){
+    root.appendChild(pill('target'));
+    const w=el('div','wrap');
+    const sp=el('div','split'); sp.style.gridTemplateColumns='1.3fr .9fr';
+    const flight=el('div','flight');
+    [['DAY 30','100 prioritised · lighthouse built · campaign live'],
+     ['DAY 60','first cohort live · adoption measured'],
+     ['DAY 90','~160 of 400 · second cohort started · playbook written']]
+      .forEach(([d,t],i)=>{ const L=step(el('div','leg'),i+1); const tt=el('div','t');
+        if(i===2) tt.innerHTML='<span style="color:var(--violet)">~160 of 400</span> <span class="tag target" style="font-size:18px">TARGET</span> · second cohort started · playbook written';
+        else tt.textContent=t;
+        L.append(el('div','d',d),tt); flight.appendChild(L); });
+    const right=step(el('div','col'),4); right.style.alignItems='flex-start';
+    right.appendChild(el('div','label','Commercial signals'));
+    const sig=el('div','signals'); sig.innerHTML='AI conversations · bundle usage · plan upgrades · extra users<br><span style="color:var(--muted)">— measured against contraction.</span>'; right.appendChild(sig);
+    const honest=el('div','body'); honest.style.cssText='font-size:19px;margin-top:8px;max-width:22em';
+    honest.textContent='90 days proves adoption. It doesn’t prove churn. I’d rather say that now than claim it later.'; right.appendChild(honest);
+    const tierb=el('div','body muted'); tierb.style.cssText='font-size:18px;max-width:22em';
+    tierb.textContent='Tier B starts five weeks later — a comparison group, not a randomised experiment.'; right.appendChild(tierb);
+    sp.append(flight,right); const spWrap=el('div'); spWrap.style.width='100%'; spWrap.appendChild(sp); w.appendChild(spWrap);
+    const closeWrap=el('div','col'); closeWrap.style.alignItems='center';
+    const df=buildDotField(400); df.el.classList.add('sm'); df.el.style.cssText='opacity:0;transition:opacity .3s ease-out'; closeWrap.appendChild(df.el);
+    const lines=['400 customers.','100 prioritised.','One system that makes the next 100 easier.',null];
+    const cEls=lines.map((t)=>{ const c=el('div','headline'); c.style.cssText='opacity:0;transition:opacity .3s ease-out;max-width:16em';
+      if(t)c.textContent=t; closeWrap.appendChild(c); return c; });
+    cEls[3].innerHTML='Not 100 customers switching on AI.<br><span style="color:var(--green)">100 customers running part of their operation on Trengo.</span>';
+    w.appendChild(closeWrap); root.appendChild(w);
+    const greenIdx=seededOrder(400,3).slice(0,160);
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in','green');setDot(d,'idle');}); },
+      toStep(s){ const closing=s>=5;
+        spWrap.style.display=closing?'none':'block';
+        df.el.style.opacity=closing?'1':'0';
+        if(closing){ df.dots.forEach(d=>d.classList.add('in')); transitionDots(df.dots,greenIdx,'green',5); }
+        else greenIdx.forEach(i=>setDot(df.dots[i],'idle'));
+        cEls[0].style.opacity=s>=6?'1':'0'; cEls[1].style.opacity=s>=7?'1':'0';
+        cEls[2].style.opacity=s>=8?'1':'0'; cEls[3].style.opacity=s>=9?'1':'0'; }
+    };
+  }
+});
+
+/* ================= ENGINE ================= */
+const deck=document.getElementById('deck');
+const notesEl=document.getElementById('notes');
+const progEl=document.getElementById('progress');
+const overviewEl=document.getElementById('overview');
+const ovgrid=document.getElementById('ovgrid');
+
+const state=[]; // per scene: {def,sec,inst,step,built:bool}
+
+function buildScene(i){
+  const def=SCENES[i];
+  const sec=el('section','scene');
+  sec.dataset.index=i;
+  sec.setAttribute('aria-label',def.title);
+  deck.appendChild(sec);
+  const inst=def.build(sec)||{};
+  state[i]={def,sec,inst,step:1};
+}
+
+function maxStep(i){return SCENES[i].steps||1;}
+
+let cur=0;
+
+function applyStep(i){
+  const st=state[i];
+  const s=st.step;
+  st.sec.querySelectorAll('.step').forEach(node=>{
+    if(node.dataset.step===undefined) return; // driven manually by toStep()
+    const ns=parseInt(node.dataset.step,10)||1;
+    node.classList.toggle('shown', ns<=s);
+  });
+  if(st.inst.toStep) st.inst.toStep(s);
+  fitScene(i);
+  renderProgress();
+  renderNote();
+}
+
+// scale a scene's wrap down if its content is taller/wider than the viewport
+function fitScene(i){
+  const st=state[i]; if(!st) return;
+  const wrap=st.sec.querySelector('.wrap'); if(!wrap) return;
+  wrap.style.transform='none';
+  const cs=getComputedStyle(st.sec);
+  const availH=st.sec.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  const availW=st.sec.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  const h=wrap.scrollHeight, wd=wrap.scrollWidth;
+  if(!h||!wd) return;
+  const scale=Math.min(1, availH/h, availW/wd);
+  if(scale<0.999) wrap.style.transform='scale('+scale.toFixed(4)+')';
+}
+window.addEventListener('resize',()=>{ if(state[cur]) fitScene(cur); });
+
+function show(i,atLastStep){
+  if(i<0)i=0; if(i>SCENES.length-1)i=SCENES.length-1;
+  // exit current
+  if(state[cur]){
+    if(state[cur].inst.exit) state[cur].inst.exit();
+    state[cur].sec.classList.remove('active');
+  }
+  cur=i;
+  const st=state[i];
+  st.step = atLastStep?maxStep(i):1;
+  st.sec.classList.add('active');
+  if(st.inst.enter) st.inst.enter();
+  applyStep(i);
+}
+
+function next(){
+  const st=state[cur];
+  // busy interaction (e.g. typing) -> finish it instead of advancing
+  if(st.inst.busy && st.inst.busy()){ if(st.inst.finish) st.inst.finish(); return; }
+  if(st.step < maxStep(cur)){
+    st.step++;
+    applyStep(cur);
+  }else if(cur < SCENES.length-1){
+    show(cur+1,false);
+  }
+}
+function prev(){
+  const st=state[cur];
+  if(st.inst.busy && st.inst.busy()){ if(st.inst.finish) st.inst.finish(); return; }
+  if(st.step>1){ st.step--; applyStep(cur); }
+  else if(cur>0){ show(cur-1,true); }
+}
+function jump(i){ if(i>=0&&i<SCENES.length) show(i,false); }
+
+function renderProgress(){
+  progEl.textContent = String(cur+1).padStart(2,'0')+' / '+String(SCENES.length).padStart(2,'0');
+}
+function renderNote(){
+  const def=state[cur].def;
+  const n=def.note||['',''];
+  notesEl.innerHTML='';
+  const meta=el('div','meta', (def.title||'')+'  ·  ~'+(def.dur||0)+'s  ·  step '+state[cur].step+'/'+maxStep(cur));
+  notesEl.appendChild(meta);
+  notesEl.appendChild(el('div','n1',n[0]||''));
+  if(n[1])notesEl.appendChild(el('div','n2',n[1]));
+}
+
+/* overlays */
+function toggleNotes(){ notesEl.classList.toggle('on'); }
+function openOverview(){ overviewEl.classList.add('on'); }
+function closeOverview(){ overviewEl.classList.remove('on'); }
+function toggleFullscreen(){
+  if(!document.fullscreenElement){ (document.documentElement.requestFullscreen||function(){}).call(document.documentElement); }
+  else if(document.exitFullscreen){ document.exitFullscreen(); }
+}
+
+function buildOverview(){
+  SCENES.forEach((def,i)=>{
+    const c=el('div','ovcell'); c.tabIndex=0;
+    c.appendChild(el('div','num',String(i+1).padStart(2,'0')));
+    c.appendChild(el('div','ti',def.title));
+    c.appendChild(el('div','du','~'+def.dur+'s · '+def.steps+' steps'));
+    const go=()=>{ closeOverview(); jump(i); };
+    c.addEventListener('click',go);
+    c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+    ovgrid.appendChild(c);
+  });
+}
+
+/* single keydown listener */
+window.addEventListener('keydown',e=>{
+  const k=e.key;
+  if(overviewEl.classList.contains('on')){
+    if(k==='Escape'||k==='o'||k==='O'){ closeOverview(); e.preventDefault(); }
+    return;
+  }
+  if(k==='ArrowRight'||k===' '||k==='Spacebar'||k==='PageDown'){ e.preventDefault(); next(); }
+  else if(k==='ArrowLeft'||k==='PageUp'){ e.preventDefault(); prev(); }
+  else if(k==='p'||k==='P'){ e.preventDefault(); toggleNotes(); }
+  else if(k==='o'||k==='O'){ e.preventDefault(); openOverview(); }
+  else if(k==='f'||k==='F'){ e.preventDefault(); toggleFullscreen(); }
+  else if(k==='Escape'){ if(notesEl.classList.contains('on')) toggleNotes(); }
+  else if(/^[0-9]$/.test(k)){ e.preventDefault(); const n=(k==='0')?9:(parseInt(k,10)-1); jump(n); }
+},{passive:false});
+
+/* print: force every scene to reveal all content (JS sets inline opacity, so CSS alone can't) */
+let printPrev=null;
+window.addEventListener('beforeprint',()=>{
+  printPrev=cur;
+  state.forEach((st,i)=>{ if(!st)return;
+    st.sec.classList.add('active'); st.step=maxStep(i);
+    st.sec.querySelectorAll('.step').forEach(n=>{ if(n.dataset.step!==undefined)n.classList.add('shown'); });
+    if(st.inst.toStep) st.inst.toStep(maxStep(i));
+    const wr=st.sec.querySelector('.wrap'); if(wr) wr.style.transform='none';
+  });
+});
+window.addEventListener('afterprint',()=>{
+  state.forEach(st=>{ if(st) st.sec.classList.remove('active'); });
+  const c=(printPrev==null)?cur:printPrev; cur=c;
+  state[c].sec.classList.add('active'); state[c].step=1; applyStep(c);
+});
+
+/* boot */
+SCENES.forEach((_,i)=>buildScene(i));
+buildOverview();
+show(0,false);
+
+// expose for headless verification
+window.__deck={next,prev,jump,get cur(){return cur;},get step(){return state[cur].step;},count:SCENES.length,maxStep};
+})();
+</script>
+</body>
+</html>
