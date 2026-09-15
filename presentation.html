@@ -568,10 +568,10 @@ scene({ id:'s5', title:'Operation Millionaire', dur:80,
     const head=el('div'); head.style.cssText='text-align:left;width:100%;max-width:60em';
     const hdr=el('div','apphdr'); hdr.appendChild(el('span','lg'));
     const hb=document.createElement('span'); hb.innerHTML='Trengo › <b>Journeys</b> › Operation Millionaire'; hdr.appendChild(hb);
-    head.append(hdr, (()=>{const t=el('div','headline','Operation Millionaire');t.style.fontSize='clamp(30px,3.2vw,44px)';return t;})(), el('div','label','The four-week journey · if you make your client a millionaire…'));
+    head.append(hdr, (()=>{const t=el('div','headline','Operation Millionaire');t.style.fontSize='clamp(30px,3.2vw,44px)';return t;})(), el('div','label','4 weeks. One real AI use case.'));
     w.appendChild(head);
     const rail=el('div','mmrail');
-    const wkEls=[['Week 1','awareness → relevance'],['Week 2','trying → activating'],['Week 3','activating → first value'],['Week 4','first value → adoption']]
+    const wkEls=[['Week 1 · DISCOVER','the repeating question'],['Week 2 · TRY','test it — don’t launch it'],['Week 3 · ACTIVATE','0 → 100 accounts live'],['Week 4 · ADOPT','the next use case']]
       .map(([wk,tr])=>{ const c=el('div','mmweek'); c.append(el('div','wk',wk),el('div','tr',tr)); rail.appendChild(c); return c; });
     w.appendChild(rail);
     const stage=el('div'); stage.style.cssText='width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:min(42vh,360px)';
@@ -600,15 +600,24 @@ scene({ id:'s5', title:'Operation Millionaire', dur:80,
     two.append(toast,wb); b2.appendChild(two);
     const cap2=el('div','body muted','Nobody is asked to go live yet. They’re asked to try to break it.'); cap2.style.cssText='font-size:19px;max-width:36em'; b2.appendChild(cap2);
 
-    // BEAT 3 — results panel (no invented %)
-    const b3=el('div','col'); b3.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
-    const rp=el('div','rpanel');
-    const barRow=(lab,pct)=>{ const r=el('div','rrow'); const l=el('div','rlab'); l.appendChild(el('span',null,lab)); r.appendChild(l);
-      const bar2=el('div','rbar'); const sp=el('span'); sp.style.width=pct+'%'; bar2.appendChild(sp); r.appendChild(bar2); return r; };
-    rp.append(barRow('Conversations handled by AI',80), barRow('Escalated to a person',30));
-    const rt=el('div','rrow'); const rl=el('div','rlab'); const a=el('span',null,'Response time'), bmin=el('span',null,'hours → minutes'); bmin.style.color='var(--green)'; rl.append(a,bmin); rt.appendChild(rl); rp.appendChild(rt);
-    b3.append(rp, el('span','tag grey','Illustrative'));
-    const cap3=el('div','body muted','First value is their own dashboard, not my promise.'); cap3.style.cssText='font-size:19px;max-width:36em'; b3.appendChild(cap3);
+    // BEAT 3 — ACTIVATE: the whole campaign drives to 100 activations (target, not a result)
+    const b3=el('div','col'); b3.style.cssText='align-items:center;gap:16px;transition:opacity .3s ease-out';
+    const actHead=el('div','subhead','Priority list · target 100 accounts'); actHead.style.fontSize='22px'; b3.appendChild(actHead);
+    const bigWrap=el('div'); bigWrap.style.cssText='display:flex;align-items:baseline;gap:12px';
+    const bigNum=el('div',null,'0'); bigNum.style.cssText='font-size:clamp(56px,9vw,108px);font-weight:800;color:var(--green);line-height:1;font-variant-numeric:tabular-nums';
+    const bigOf=el('div',null,'/ 100 accounts activated'); bigOf.style.cssText='font-size:22px;color:var(--muted)';
+    bigWrap.append(bigNum,bigOf); b3.appendChild(bigWrap);
+    const track=el('div'); track.style.cssText='width:min(620px,90vw);height:12px;border-radius:99px;background:var(--grey);overflow:hidden';
+    const fill=el('div'); fill.style.cssText='height:100%;width:0;background:var(--green);transition:width .05s linear'; track.appendChild(fill); b3.appendChild(track);
+    const live=el('div',null,'AI Agent live · Supervised → Autopilot'); live.style.cssText='font-size:19px;color:var(--text)'; b3.appendChild(live);
+    b3.append(el('span','tag grey','Target · illustrative'));
+    const cap3=el('div','body muted','Activation is the goal: 100 accounts running one real use case — not a headline number.'); cap3.style.cssText='font-size:19px;max-width:36em'; b3.appendChild(cap3);
+    let actTimer=null;
+    function runActivation(){ if(actTimer){clearInterval(actTimer);actTimer=null;}
+      if(REDUCED){ bigNum.textContent='100'; fill.style.width='100%'; return; }
+      let v=0; bigNum.textContent='0'; fill.style.width='0';
+      actTimer=setInterval(()=>{ v+=2; if(v>=100){v=100;clearInterval(actTimer);actTimer=null;} bigNum.textContent=String(v); fill.style.width=v+'%'; },22); }
+    function stopActivation(){ if(actTimer){clearInterval(actTimer);actTimer=null;} }
 
     // BEAT 4 — adoption options
     const b4=el('div','col'); b4.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
@@ -622,11 +631,15 @@ scene({ id:'s5', title:'Operation Millionaire', dur:80,
     const beats=[b1,b2,b3,b4];
     beats.forEach(bx=>{ bx.style.opacity='0'; bx.style.display='none'; stage.appendChild(bx); });
     root.appendChild(w);
+    let lastCs=0;
     return {
       toStep(s){ const cs=Math.max(1,Math.min(4,s));
         wkEls.forEach((c,i)=> c.classList.toggle('on', i===cs-1));
         beats.forEach((bx,i)=>{ const on=(i===cs-1); bx.style.display=on?'flex':'none'; bx.style.opacity=on?'1':'0'; });
-      }
+        if(cs===3){ if(lastCs!==3) runActivation(); } else stopActivation();
+        lastCs=cs;
+      },
+      exit(){ stopActivation(); lastCs=0; }
     };
   }
 });
@@ -888,55 +901,31 @@ function beatsFor(i){
   if(b&&b.length>=n) return b;
   const a=[]; for(let k=0;k<n;k++)a.push(k*1600); return a; // fallback 1600ms/step
 }
-function startAutoplay(i){
-  clearPlay();
-  const st=state[i], n=maxStep(i);
-  if(REDUCED){ st.step=n; applyStep(i); return; }
-  st.step=1; applyStep(i);
-  const beats=beatsFor(i);
-  pendingBeats=Math.max(0,n-1);
-  for(let s=2;s<=n;s++){
-    const at=(beats[s-1]!=null)?beats[s-1]:(s-1)*1600;
-    playTimers.push(setTimeout(()=>{ pendingBeats--; if(cur!==i)return; st.step=s; applyStep(i); }, at));
-  }
-  // hands-free chaining: reveal the next scene of the SAME chapter, then hold at the boundary
-  const nx=i+1;
-  if(nx<SCENES.length && chapterOf(nx)===chapterOf(i)){
-    const lastAt=(beats[n-1]!=null)?beats[n-1]:(n-1)*1600;
-    pendingBeats++;
-    playTimers.push(setTimeout(()=>{ pendingBeats--; if(cur!==i)return; show(nx); }, lastAt+1800));
-  }
-}
-function isPlaying(i){
-  const st=state[i];
-  if(st.step<maxStep(i)) return true;
-  if(pendingBeats>0) return true;
-  if(st.inst.busy&&st.inst.busy()) return true;
-  return false;
-}
-function skipToEnd(i){
-  clearPlay();
-  const st=state[i]; st.step=maxStep(i); applyStep(i);
-  if(st.inst.finish) st.inst.finish(); // ensure typing scenes render fully
-}
-function show(i){
+function isPlaying(i){ const st=state[i]; return !!(st.inst.busy&&st.inst.busy()); }
+function show(i,atLastStep){                             // manual stepping: one click = one idea
   if(i<0)i=0; if(i>SCENES.length-1)i=SCENES.length-1;
   clearPlay();
   if(state[cur]){ if(state[cur].inst.exit) state[cur].inst.exit(); state[cur].sec.classList.remove('active'); }
   cur=i;
-  const st=state[i]; st.sec.classList.add('active');
+  const st=state[i]; st.step=atLastStep?maxStep(i):1;
+  st.sec.classList.add('active');
   if(st.inst.enter) st.inst.enter();
-  startAutoplay(i);
+  applyStep(i);
 }
-function next(){                                        // one click = advance one chapter
-  const ch=chapterOf(cur);
-  if(ch<lastChapter()) show(firstOfChapter(ch+1));
-  else if(cur<SCENES.length-1) show(cur+1);            // inside last chapter, step to its end
-  else skipToEnd(cur);
+function next(){
+  const st=state[cur];
+  if(st.inst.busy&&st.inst.busy()){ if(st.inst.finish)st.inst.finish(); return; } // finish typing first
+  if(st.step<maxStep(cur)){ st.step++; applyStep(cur); }        // reveal next idea
+  else if(cur<SCENES.length-1) show(cur+1,false);               // then next scene
 }
-function prev(){ show(firstOfChapter(chapterOf(cur)>1?chapterOf(cur)-1:1)); }
-function jump(i){ if(i>=0&&i<SCENES.length) show(i); }
-function jumpChapter(ch){ show(firstOfChapter(ch)); }
+function prev(){
+  const st=state[cur];
+  if(st.inst.busy&&st.inst.busy()){ if(st.inst.finish)st.inst.finish(); return; }
+  if(st.step>1){ st.step--; applyStep(cur); }
+  else if(cur>0) show(cur-1,true);                              // back one scene, fully revealed
+}
+function jump(i){ if(i>=0&&i<SCENES.length) show(i,false); }
+function jumpChapter(ch){ show(firstOfChapter(ch),false); }
 
 function renderProgress(){
   const ch=chapterOf(cur);
