@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trengo — Digital Customer Success</title>
+<style>
+:root{
+  --bg:#0B0D0C; --surface:#161A18; --text:#F5F7F6; --muted:#8A9491;
+  --green:#00B27A; --violet:#A78BFA; --amber:#F0A02A; --grey:#39403C;
+  --radius:14px;
+  --font:-apple-system,"Segoe UI",Roboto,Inter,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font-family:var(--font);overflow:hidden;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+/* ---- type scale (nothing below 18px) ---- */
+.hero{font-size:clamp(54px,6.2vw,86px);font-weight:800;line-height:1.03;letter-spacing:-.02em}
+.headline{font-size:clamp(34px,3.7vw,50px);font-weight:700;line-height:1.1;letter-spacing:-.015em}
+.subhead{font-size:clamp(24px,2.5vw,32px);font-weight:600;line-height:1.15}
+.body{font-size:clamp(22px,2vw,26px);font-weight:400;line-height:1.35;color:var(--text)}
+.muted{color:var(--muted)}
+.label{font-size:18px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--muted)}
+
+/* ---- deck / scenes ---- */
+#deck{position:fixed;inset:0;user-select:none;-webkit-user-select:none}
+.scene{position:absolute;inset:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:10vh 6vw 6vh}
+.scene.active{display:flex}
+.scene .wrap{width:100%;max-width:1400px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:min(2.6vh,26px);transform-origin:center center;will-change:transform}
+
+/* ---- progressive-disclosure step ---- */
+.step{opacity:0;transform:translateY(14px);
+  transition:opacity .34s ease-out, transform .34s ease-out}
+.step.shown{opacity:1;transform:none}
+
+/* ---- evidence pill ---- */
+.evidence{position:absolute;top:3.2vh;left:3vw;display:inline-flex;align-items:center;
+  gap:.5em;padding:.5em 1em;border-radius:999px;font-size:18px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;background:var(--surface);
+  border:1px solid #262c29;color:var(--muted);z-index:5}
+.evidence::before{content:"";width:11px;height:11px;border-radius:50%;background:currentColor}
+.evidence.case{color:var(--green)}
+.evidence.verified{color:var(--green)}
+.evidence.illustrative{color:var(--muted)}
+.evidence.assumption{color:var(--amber)}
+.evidence.target{color:var(--violet)}
+.evidence.confirm{color:var(--amber)}
+
+/* ---- dot field motif ---- */
+.dotfield{display:grid;grid-template-columns:repeat(20,1fr);
+  gap:clamp(4px,.55vw,9px);width:min(58vh,760px);aspect-ratio:1}
+.dot{width:100%;aspect-ratio:1;border-radius:50%;background:var(--grey);
+  opacity:0;transform:scale(.35);
+  transition:opacity .3s ease-out, transform .3s ease-out, background-color .3s ease-out}
+.dot.in{opacity:.45;transform:none}
+.dot.dim{opacity:.1}
+.dot.green{background:var(--green);opacity:1;transform:none}
+.dot.amber{background:var(--amber);opacity:1;transform:none}
+.dot.violet{background:var(--violet);opacity:1;transform:none}
+.dot.human{background:var(--text);opacity:1;transform:none}
+.dot.pulse{animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(240,160,42,.5)}50%{box-shadow:0 0 0 6px rgba(240,160,42,0)}}
+.dot.ring{outline:3px solid var(--text);outline-offset:2px;z-index:2}
+
+.dotfield.sm{width:min(34vh,360px)}
+.dotfield.md{width:min(46vh,520px)}
+.dotfield.d100{grid-template-columns:repeat(10,1fr);width:min(40vh,440px)}
+
+/* ---- generic building blocks ---- */
+.card{background:var(--surface);border:1px solid #23292600;border:1px solid #262c29;
+  border-radius:var(--radius);padding:min(3vh,28px) min(2.4vw,30px);text-align:left}
+.tag{display:inline-block;font-size:18px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;padding:.28em .7em;border-radius:8px}
+.tag.green{background:rgba(0,178,122,.16);color:var(--green)}
+.tag.amber{background:rgba(240,160,42,.16);color:var(--amber)}
+.tag.violet{background:rgba(167,139,250,.16);color:var(--violet)}
+.tag.grey{background:#20251f;color:var(--muted)}
+
+/* screenshot evidence window */
+.shot{position:relative;border:1px solid #2b322e;border-radius:12px;overflow:hidden;
+  background:#0e1210;display:flex;align-items:center;justify-content:center}
+.shot img{display:block;width:100%;height:100%;object-fit:cover}
+.shot .ph{padding:1.2em 1.2em 3em;text-align:center;color:var(--muted);font-size:18px;line-height:1.4}
+.shot .ph b{color:var(--text);font-weight:700;display:block;margin-bottom:.4em;font-size:18px}
+.shot .cap{position:absolute;left:0;bottom:0;right:0;font-size:18px;padding:.5em .8em;
+  background:rgba(0,0,0,.55);color:var(--muted);text-align:left}
+
+/* layout utilities */
+.row{display:flex;gap:min(2.4vw,28px);align-items:stretch;justify-content:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;gap:min(2vh,20px)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:min(3vw,40px);width:100%;align-items:center}
+.vs{width:1px;background:#262c29}
+.big-num{font-size:clamp(56px,8vw,110px);font-weight:800;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+
+/* pricing recreation (scene 2) */
+.ptable{display:grid;grid-template-columns:1.4fr .8fr .8fr 1fr;gap:0;border-radius:12px;overflow:hidden;border:1px solid #262c29}
+.ptable>div{padding:.7em .9em;border-bottom:1px solid #1e2320;font-size:20px}
+.ptable .ph{background:#11150f;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:18px}
+.ptable .na{color:var(--muted)}
+.ptable .yes{color:var(--green);font-weight:700}
+.ptable .rowlabel{font-weight:700}
+
+/* ladder (scene 3) */
+.ladder{display:flex;flex-direction:column-reverse;gap:10px;width:min(560px,80vw);align-self:center}
+.rung{display:flex;align-items:center;justify-content:space-between;gap:1em;
+  padding:.65em 1em;border-radius:12px;background:var(--surface);border:1px solid #262c29;
+  font-size:22px;font-weight:600;color:var(--muted);opacity:.35;transition:opacity .3s ease-out,color .3s ease-out,border-color .3s ease-out}
+.rung.lit{opacity:1;color:var(--text)}
+.rung.kpi.lit{border-color:var(--green)}
+
+/* flow chips (scene 6) */
+.chip{display:inline-block;padding:.4em .8em;border-radius:10px;font-size:20px;font-weight:600;background:#20251f;color:var(--text)}
+.chip.ai{background:rgba(167,139,250,.16);color:var(--violet)}
+.bubble{max-width:22em;padding:.7em 1em;border-radius:14px;font-size:22px;line-height:1.3}
+.bubble.q{background:#20251f;color:var(--text);align-self:flex-start}
+.bubble.a{background:rgba(0,178,122,.14);color:var(--text);align-self:flex-start;border:1px solid rgba(0,178,122,.3)}
+.arrowdown{color:var(--muted);font-size:24px;line-height:1}
+
+/* inbox + landing (scene 7) */
+.mail{width:min(760px,92vw);border:1px solid #262c29;border-radius:14px;overflow:hidden;background:var(--surface);text-align:left}
+.mail .bar{display:flex;align-items:center;gap:.6em;padding:.7em 1em;background:#11150f;border-bottom:1px solid #1e2320;font-size:18px;color:var(--muted)}
+.dotr{width:11px;height:11px;border-radius:50%;background:var(--green)}
+.mail .from{padding:.9em 1.1em .2em;font-weight:700;font-size:22px;display:flex;justify-content:space-between}
+.mail .time{color:var(--muted);font-weight:400;font-size:18px}
+.mail .subj{padding:.1em 1.1em;font-size:24px;font-weight:700}
+.mail .bod{padding:.6em 1.1em 1em;font-size:22px;color:var(--text);line-height:1.4}
+.btn{display:inline-block;background:var(--green);color:#04160f;font-weight:700;font-size:20px;
+  padding:.7em 1.2em;border-radius:10px;border:none;cursor:pointer}
+.landing{width:min(720px,92vw);text-align:left}
+.qrow{display:grid;grid-template-columns:auto 1fr auto;gap:.8em;align-items:center;padding:.35em 0;font-size:21px}
+.qrow .rk{color:var(--muted);font-weight:700;width:1.6em}
+.qbar{height:14px;border-radius:7px;background:#20251f;overflow:hidden}
+.qbar>span{display:block;height:100%;background:var(--green)}
+.qrow .pc{color:var(--muted);font-variant-numeric:tabular-nums;width:3.2em;text-align:right}
+.qrow.top{font-weight:700}
+.qrow.top .qbar>span{background:var(--green)}
+
+/* trust ladder stages (scene 8) */
+.stage{padding:.8em 1.2em;border-radius:14px;background:var(--surface);border:1px solid #262c29;
+  text-align:left;transition:transform .3s ease-out,opacity .3s ease-out,border-color .3s ease-out;min-width:min(260px,80vw)}
+.stage .st{font-size:26px;font-weight:800;letter-spacing:.02em}
+.stage .sd{font-size:20px;color:var(--muted);margin-top:.2em}
+.stage.cur{transform:scale(1.06);border-color:var(--green)}
+.stage.done{opacity:.5}
+
+/* chat (scene 9) */
+.chat{width:min(680px,92vw);display:flex;flex-direction:column;gap:14px;text-align:left}
+.msg{max-width:80%;padding:.7em 1em;border-radius:14px;font-size:23px;line-height:1.35;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:#20251f}
+.msg.ai{align-self:flex-start;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.28)}
+.msg .caret{display:inline-block;width:.6ch;color:var(--violet)}
+.mtag{align-self:flex-start;margin-top:-6px}
+.mtag.u{align-self:flex-end}
+
+/* playground (scene 06) */
+.pg{display:grid;grid-template-columns:0.85fr 1.5fr 0.85fr;gap:min(1.4vw,16px);width:100%;align-items:stretch}
+.pgcol{background:var(--surface);border:1px solid #262c29;border-radius:var(--radius);
+  padding:min(2vh,16px) min(1.3vw,16px);text-align:left;display:flex;flex-direction:column;gap:8px}
+.pgcol .h{font-size:18px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700}
+.src{display:flex;align-items:center;gap:.5em;font-size:19px;color:var(--text);line-height:1.25}
+.src .d{width:9px;height:9px;border-radius:50%;background:var(--green);flex:none}
+.src.off .d{background:var(--grey)}
+.pstat{display:flex;justify-content:space-between;gap:1em;font-size:19px;color:var(--text);border-bottom:1px solid #1e2320;padding:.28em 0}
+.pstat b{font-weight:700}
+.pstat.amber b{color:var(--amber)}
+.pgcol .chat{gap:10px}
+.pgcol .msg{max-width:100%;font-size:20px}
+.flow{display:flex;align-items:center;gap:.5em;font-size:19px;font-weight:700;letter-spacing:.03em;justify-content:center;margin-top:6px}
+.flow .n{padding:.3em .7em;border-radius:8px;background:#20251f;color:var(--muted)}
+.flow .n.on{color:var(--text)}
+.flow .n.human{background:rgba(240,160,42,.16);color:var(--amber)}
+.flow .ar{color:var(--muted)}
+.handover{border:1px solid var(--amber);border-radius:10px;padding:.55em .75em;background:rgba(240,160,42,.08);
+  font-size:19px;color:var(--text);line-height:1.3;transition:opacity .3s ease-out}
+.handover .t{font-size:18px;text-transform:uppercase;letter-spacing:.08em;color:var(--amber);font-weight:700;margin-bottom:.25em}
+
+/* operation millionaire campaign (scene 05) */
+.apphdr{display:inline-flex;align-items:center;gap:.5em;font-size:18px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.apphdr .lg{width:16px;height:16px;border-radius:5px;background:var(--green);flex:none}
+.apphdr b{color:var(--green)}
+.mmrail{display:flex;gap:min(1.6vw,18px);justify-content:center;flex-wrap:wrap;width:100%}
+.mmweek{display:flex;flex-direction:column;gap:2px;align-items:center;opacity:.35;transition:opacity .3s ease-out;min-width:9.5em}
+.mmweek.on{opacity:1}
+.mmweek .wk{font-size:18px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.mmweek.on .wk{color:var(--green)}
+.mmweek .tr{font-size:18px;color:var(--muted);white-space:nowrap}
+.crmrow{display:flex;flex-wrap:wrap;gap:.4em 1em;align-items:center;justify-content:center;font-size:19px;
+  color:var(--muted);background:var(--surface);border:1px solid #262c29;border-radius:12px;padding:.6em 1em;max-width:44em}
+.crmrow b{color:var(--text)}
+.crmrow .enters{color:var(--green);font-weight:700;letter-spacing:.04em}
+.toast{background:var(--surface);border:1px solid #262c29;border-radius:12px;padding:.9em 1.1em;text-align:left;
+  max-width:22em;display:flex;flex-direction:column;gap:.8em}
+.toast .msg{font-size:20px;color:var(--text);line-height:1.3}
+.wbcard{background:var(--surface);border:1px solid #262c29;border-radius:12px;padding:.9em 1.1em;text-align:left;max-width:24em}
+.wbcard .kick{font-size:18px;letter-spacing:.08em;text-transform:uppercase;color:var(--violet);font-weight:700}
+.wbcard .wt{font-size:22px;font-weight:700;margin:.15em 0 .45em}
+.wbcard ol{margin:0;padding-left:1.3em;font-size:19px;color:var(--muted);line-height:1.55}
+.rpanel{display:flex;flex-direction:column;gap:12px;width:min(560px,90vw);text-align:left}
+.rrow{display:flex;flex-direction:column;gap:5px}
+.rrow .rlab{display:flex;justify-content:space-between;gap:1em;font-size:20px;color:var(--text)}
+.rbar{height:14px;border-radius:7px;background:#20251f;overflow:hidden}
+.rbar>span{display:block;height:100%;background:var(--green)}
+
+/* friction engine (scene 07) */
+.ftree{display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;max-width:30em}
+.fhead{align-self:center;font-size:20px;font-weight:800;letter-spacing:.08em;color:var(--green);text-transform:uppercase}
+.fbranch{display:flex;justify-content:space-between;align-items:center;gap:1em;padding:.6em .9em;border-radius:12px;
+  background:var(--surface);border:1px solid #262c29;opacity:.35;transition:opacity .3s ease-out,border-color .3s ease-out}
+.fbranch.lit{opacity:1}
+.fbranch.auto.lit{border-color:var(--green)}
+.fbranch.human{padding:.9em 1em}
+.fbranch.human.lit{border-color:var(--amber)}
+.fbranch .ttl{font-size:19px;font-weight:600;color:var(--text)}
+.fbranch .rte{font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+.fbranch.auto.lit .rte{color:var(--green)}
+.fbranch.human.lit .rte{color:var(--amber)}
+
+/* control room (scene 10) */
+.panel{display:flex;flex-direction:column;gap:.5em;text-align:left;font-size:22px}
+.pmet{display:flex;justify-content:space-between;gap:2em;border-bottom:1px solid #1e2320;padding:.3em 0}
+.pmet b{font-variant-numeric:tabular-nums}
+.pmet.stuck b{color:var(--amber)}
+.pmet.human b{color:var(--text)}
+.acct .chk{display:flex;align-items:center;gap:.6em;font-size:20px;color:var(--muted);opacity:.4;transition:opacity .3s ease-out,color .3s ease-out}
+.acct .chk.lit{opacity:1;color:var(--green)}
+.acct .chk .box{width:16px;height:16px;border-radius:4px;border:2px solid currentColor}
+
+/* not-do list (scene 11) */
+.nd{display:flex;align-items:flex-start;gap:.6em;font-size:clamp(22px,2.3vw,30px);color:var(--muted);line-height:1.25}
+.nd .x{color:var(--muted);font-weight:800}
+
+/* flight path (scene 12) */
+.flight{display:flex;flex-direction:column;gap:14px;text-align:left}
+.leg{display:flex;gap:1em;align-items:flex-start;padding:.5em .2em}
+.leg .d{font-size:20px;font-weight:800;color:var(--green);letter-spacing:.06em;min-width:4em}
+.leg .t{font-size:21px;color:var(--text);line-height:1.3}
+.signals{font-size:20px;color:var(--muted);line-height:1.5;text-align:left}
+
+/* ---- presenter notes ---- */
+#notes{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#05060699;
+  backdrop-filter:blur(6px);border-top:1px solid #22282500;border-top:1px solid #202523;
+  padding:14px 22px;display:none;color:var(--text)}
+#notes.on{display:block}
+.pmhead{display:flex;justify-content:space-between;font-size:18px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px}
+.pmrows{display:flex;flex-direction:column;gap:6px}
+.pmrow{display:flex;gap:14px;align-items:baseline}
+.pmlab{flex:none;width:3.6em;font-size:18px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700}
+.pmtxt{font-size:22px;color:var(--text);line-height:1.3}
+.pmrow.say .pmtxt{color:var(--green);font-weight:600}
+
+/* ---- progress ---- */
+#progress{position:fixed;right:3vw;bottom:2.6vh;z-index:30;font-size:18px;
+  color:var(--muted);letter-spacing:.08em;font-weight:600}
+#simmark{position:fixed;top:3.4vh;right:3vw;z-index:30;font-size:18px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--muted);opacity:.55;pointer-events:none}
+#coverage{position:fixed;top:calc(3.4vh + 26px);right:3vw;z-index:30;display:flex;gap:.5em;
+  font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;pointer-events:none}
+#coverage .cv{color:var(--muted);opacity:.3}
+#coverage .cv.done{opacity:.5}
+#coverage .cv.now{color:var(--green);opacity:.85}
+@media print{#coverage{display:none!important}}
+
+/* ---- overview ---- */
+#overview{position:fixed;inset:0;z-index:60;background:#070908f2;display:none;
+  padding:5vh 5vw;overflow:auto}
+#overview.on{display:block}
+#overview h2{font-size:22px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.14em;margin:0 0 3vh}
+#ovgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.ovcell{background:var(--surface);border:1px solid #262c29;border-radius:12px;
+  padding:20px;cursor:pointer;text-align:left;transition:border-color .2s ease-out}
+.ovcell:hover,.ovcell:focus{border-color:var(--green);outline:none}
+.ovcell .num{font-size:18px;color:var(--green);font-weight:800;letter-spacing:.1em}
+.ovcell .ti{font-size:22px;font-weight:600;margin-top:6px;line-height:1.15}
+.ovcell .du{font-size:18px;color:var(--muted);margin-top:10px}
+
+/* ---- reduced motion ---- */
+@media (prefers-reduced-motion: reduce){
+  .step{transition:opacity .001s linear;transform:none}
+  .dot{transition:opacity .001s linear, background-color .001s linear;transform:none}
+  .dot.pulse{animation:none}
+}
+
+/* ---- print emergency fallback ---- */
+@media print{
+  html,body{overflow:visible;background:#fff;color:#111}
+  #notes,#progress,#overview{display:none!important}
+  .scene{position:relative;display:flex!important;page-break-after:always;
+    min-height:100vh;padding:6vh 6vw;background:#fff;color:#111}
+  .step{opacity:1!important;transform:none!important}
+  .evidence{background:#f0f0f0;border-color:#ccc}
+  .muted,.body.muted{color:#555}
+  .card{background:#f6f6f6;border-color:#ddd;color:#111}
+  .dot{opacity:1}
+  .dot.idle,.dot.in,.dot.dim{background:#d5d5d5;opacity:1}
+  @page{size:landscape}
+}
+</style>
+</head>
+<body>
+<div id="deck" aria-live="polite"></div>
+<div id="notes" role="note"></div>
+<div id="progress"></div>
+<div id="simmark">Simulation · Illustrative data</div>
+<div id="coverage" aria-hidden="true"></div>
+<div id="overview" role="dialog" aria-label="Scene overview">
+  <h2>Overview — click a scene</h2>
+  <div id="ovgrid"></div>
+</div>
+
+<script>
+"use strict";
+(function(){
+const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= reusable helpers ================= */
+function el(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!=null)n.textContent=txt;return n;}
+function step(node,n){node.classList.add('step');node.dataset.step=n;return node;}
+
+const EV = {
+  case:'Case data', verified:'Verified — product', illustrative:'Illustrative',
+  assumption:'Assumption', target:'Target', confirm:'To confirm'
+};
+function pill(kind,textOverride){
+  const p=el('div','evidence '+kind, textOverride||EV[kind]||kind);
+  return p;
+}
+
+/* dot field: 400 dots, states idle/green/amber/violet/human + dim */
+function buildDotField(n){
+  n=n||400;
+  const wrap=el('div','dotfield');
+  const dots=[];
+  for(let i=0;i<n;i++){const d=el('span','dot');wrap.appendChild(d);dots.push(d);}
+  return {el:wrap,dots};
+}
+function setDot(d,state){
+  d.classList.remove('dim','green','amber','violet','human');
+  if(state==='idle'){/* stays base */}
+  else if(state==='dim'){d.classList.add('dim');}
+  else if(state){d.classList.add(state);}
+}
+// reveal dots in a staggered wave
+function revealDots(dots,stagger){
+  stagger = REDUCED?0:(stagger==null?4:stagger);
+  dots.forEach((d,i)=>{
+    const delay = stagger? (i%20 + Math.floor(i/20))*stagger : 0;
+    setTimeout(()=>d.classList.add('in'), delay);
+  });
+}
+// transition a set of dot indices to a state, staggered
+function transitionDots(dots,indices,state,stagger){
+  stagger = REDUCED?0:(stagger==null?6:stagger);
+  indices.forEach((idx,k)=>{
+    setTimeout(()=>setDot(dots[idx],state), k*stagger);
+  });
+}
+function firstN(count,total){const a=[];for(let i=0;i<count&&i<total;i++)a.push(i);return a;}
+
+/* screenshot window with graceful fallback */
+function shotWindow(file,w,h,phTitle,phDesc,cap){
+  const box=el('div','shot');
+  box.style.width=w; box.style.height=h;
+  const ph=el('div','ph');
+  ph.appendChild(el('b',null,phTitle));
+  ph.appendChild(document.createTextNode(phDesc));
+  box.appendChild(ph);
+  if(file){
+    const img=new Image();
+    img.alt=phTitle;
+    img.onload=()=>{ ph.remove(); box.insertBefore(img,box.firstChild); };
+    img.onerror=()=>{ /* keep placeholder */ };
+    img.src=file;
+  }
+  if(cap){const c=el('div','cap',cap);box.appendChild(c);}
+  return box;
+}
+
+/* ================= SCENES ================= */
+/* Each scene: {id,title,dur,note:[l1,l2],steps, build(root)->{toStep?,enter?,exit?,busy?,finish?}} */
+const SCENES = [];
+function scene(def){SCENES.push(def);}
+
+// scene helpers
+function mk(node){node.classList.add('step');return node;}          // controlled (no data-step)
+function rev(node,on){node.classList.toggle('shown',!!on);}
+function animateCount(node,from,to,ms){
+  if(REDUCED||ms<=0){node.textContent=to;return;}
+  const start=performance.now();
+  (function tick(t){const p=Math.min(1,(t-start)/ms);node.textContent=Math.round(from+(to-from)*p);if(p<1)requestAnimationFrame(tick);})(start);
+}
+function seededOrder(n,seed){const a=[...Array(n).keys()];let s=seed||1;
+  for(let i=n-1;i>0;i--){s=(s*1103515245+12345)&0x7fffffff;const j=s%(i+1);const tmp=a[i];a[i]=a[j];a[j]=tmp;}return a;}
+
+/* Canonical focus account — persists visually across scenes 04→05→06→07.
+   Its dot sits at a fixed position (46) in the 100-grid so the audience
+   tracks the SAME customer through journey → playground → friction → human. */
+const FOCUS={ id:'#47', kind:'Mid-market e-commerce', plan:'Pro', tenure:'14 months',
+  bundlePct:71, afterHours:38, articles:22, rules:3, ai:'Not activated', dot:46 };
+
+/* 01 — THE PORTFOLIO */
+scene({ id:'s1', title:'The Portfolio', dur:40,
+  note:['“400 customers, under 15% on AI — a basic inbox is replaceable, an embedded AI is not.”','Next: what I actually optimise for — the ladder.'],
+  steps:4,
+  build(root){
+    root.appendChild(mk(pill('case')));
+    const plEl=root.querySelector('.evidence');
+    const w=el('div','wrap');
+    const df=buildDotField(400); df.el.classList.add('sm');
+    const big=step(el('div','col'),1); big.style.gap='6px'; big.style.alignItems='center';
+    big.append(el('div','big-num','400'), el('div','label','SMB & Mid-Market · Benelux'));
+    const g=step(el('div','subhead'),2);
+    g.innerHTML='Fewer than <b style="color:var(--green)">15%</b> have activated AI';
+    const frame=step(el('div','row'),3); frame.style.cssText='gap:min(1.6vw,18px);align-items:center;justify-content:center;flex-wrap:wrap';
+    const node=(t,c)=>{ const d=el('div','subhead',t); d.style.cssText='padding:.3em .8em;border-radius:12px;background:var(--surface);border:1px solid #262c29'; if(c)d.style.color=c; return d; };
+    const arr=()=>{ const a=el('div','subhead','→'); a.style.color='var(--muted)'; return a; };
+    frame.append(node('400'), arr(), node('<15% activated','var(--amber)'), arr(), node('85% opportunity','var(--green)'));
+    const mission=step(el('div','body'),4); mission.style.cssText='max-width:30em;color:var(--text)';
+    mission.textContent='The goal: make Trengo part of how the customer operates — not just where messages arrive.';
+    const arrline=step(el('div','body muted'),3); arrline.style.fontSize='19px';
+    arrline.innerHTML='≈ <b style="color:var(--text)">€1.5M ARR</b> in this group · Boost pricing (est.)';
+    const chans=step(el('div','label'),4); chans.style.color='var(--muted)';
+    chans.textContent='WhatsApp · Instagram · Facebook · Email · Voice · SMS';
+    w.append(df.el,big,g,frame,arrline,mission,chans); root.appendChild(w);
+    const greenIdx=[]; for(let i=3;i<400 && greenIdx.length<58;i+=7)greenIdx.push(i);
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in');setDot(d,'idle');}); revealDots(df.dots,4); },
+      toStep(s){ rev(plEl,s>=2);
+        if(s>=2) transitionDots(df.dots,greenIdx,'green',8);
+        else greenIdx.forEach(i=>setDot(df.dots[i],'idle')); }
+    };
+  }
+});
+
+/* 02 — ACTIVATION IS NOT THE GOAL */
+scene({ id:'s2', title:'Activation Is Not The Goal', dur:50,
+  note:['“Activation is the KPI. Adoption is the proof it was real.”','Next: how I choose WHO — the filter.'],
+  steps:3,
+  build(root){
+    root.appendChild(mk(pill('assumption'))); const plEl=root.querySelector('.evidence');
+    const w=el('div','wrap');
+    const rungs=['ENGAGEMENT','ACTIVATION','ADOPTION','CUSTOMER VALUE','RETENTION'];
+    const lad=el('div','ladder'); lad.style.transition='opacity .3s ease-out';
+    const rungEls=rungs.map(name=>{ const r=el('div','rung'); if(name==='ACTIVATION')r.classList.add('kpi');
+      r.appendChild(el('span',null,name));
+      if(name==='ACTIVATION')r.appendChild(el('span','tag green','THE KPI'));
+      if(name==='ADOPTION')r.appendChild(el('span','tag grey','WHAT I OPTIMISE FOR'));
+      lad.appendChild(r); return r; });
+    const line=step(el('div','hero'),2); line.style.maxWidth='19em';
+    line.innerHTML='Two jobs at once: go <span style="color:var(--green)">deeper</span> into how customers operate —<br>and do it <span style="color:var(--green)">one-to-many</span>, because CS can’t scale 1:1.';
+    const ass=step(el('div','body muted'),3); ass.style.maxWidth='30em';
+    ass.textContent='15% → 40% is ~160 of 400. Assumption: 25% read as percentage points. I’d confirm on day one.';
+    w.append(lad,line,ass); root.appendChild(w);
+    return {
+      enter(){ rungEls.forEach(r=>r.classList.remove('lit')); },
+      toStep(s){ rev(plEl,s>=3);
+        lad.style.opacity = s<2?'1':'0';
+        if(s>=1 && s<2) rungEls.forEach((r,i)=>setTimeout(()=>r.classList.add('lit'), REDUCED?0:i*90)); }
+    };
+  }
+});
+
+/* 03 — THE ACTIVATION MATRIX (HERO) */
+scene({ id:'s3', title:'The Activation Matrix', dur:70,
+  note:['“I don’t pick the biggest customers — I pick Need × Readiness × Fit.”','Next: one of the Core 100, up close.'],
+  steps:5,
+  build(root){
+    root.appendChild(pill('illustrative','Illustrative — interim numbers'));
+    const w=el('div','wrap');
+    const top=el('div','row'); top.style.alignItems='center'; top.style.gap='min(4vw,60px)';
+    const df=buildDotField(400); df.el.classList.add('md');
+    const side=el('div','col'); side.style.textAlign='left'; side.style.minWidth='min(380px,80vw)';
+    const counter=el('div','big-num','400'); const clab=el('div','label','of 400 · Need × Readiness × Fit');
+    const filters=[['Need','volume · growth · repeat topics · team size'],
+      ['Readiness','help centre · automation · active admin · integration'],
+      ['Fit','knowledge sources · use case · channel · plan']];
+    const fEls=filters.map(([h,d])=>{ const c=el('div','card'); c.style.opacity='.35';
+      c.style.transition='opacity .3s ease-out,border-color .3s ease-out'; c.append(el('div','label',h));
+      const dd=el('div','body',d); dd.style.fontSize='20px'; dd.style.color='var(--muted)'; c.append(dd); return c; });
+    const src=el('div','body muted'); src.style.fontSize='18px';
+    src.innerHTML='Data I’d look for: <b style="color:var(--text)">CRM + product-usage signals</b> + an <b style="color:var(--violet)">AI analysis layer</b> for pattern-finding — signals I control';
+    side.append(counter,clab,...fEls,src); top.append(df.el,side);
+    const tiers=step(el('div','row'),4); tiers.style.cssText='justify-content:center;gap:min(2.2vw,26px);flex-wrap:wrap';
+    const tier=(name,desc,col)=>{ const c=el('div'); c.style.cssText='display:flex;align-items:center;gap:.5em;font-size:20px';
+      const d=el('span'); d.style.cssText='width:14px;height:14px;border-radius:50%;flex:none;background:'+col;
+      const t=el('span',null,name); t.style.cssText='color:var(--text);font-weight:700';
+      c.append(d,t,el('span','muted',desc)); return c; };
+    tiers.append(tier('Tier A · Core 100','start here','var(--green)'), tier('Tier B · next 200','follow','var(--violet)'), tier('Tier C · last 100','monitor','var(--grey)'));
+    const head=step(el('div','headline'),4); head.style.maxWidth='18em';
+    head.innerHTML='Not the best 100 — the 100 with the <span style="color:var(--green)">same problem</span>, so one campaign fits them all.';
+    const cap=step(el('div','body muted'),5); cap.style.maxWidth='30em';
+    cap.textContent='The model scores; I decide which signals may count. Human-controlled segmentation.';
+    w.append(top,tiers,head,cap); root.appendChild(w);
+    const order=seededOrder(400,7); const counts=[400,238,147,100]; let lastShown=400;
+    const tierA=order.slice(0,100), tierB=order.slice(100,300), tierC=order.slice(300,400);
+    function applyFilter(s){
+      if(s>=4){ df.dots.forEach(d=>{d.classList.remove('dim');d.classList.add('in');});
+        tierA.forEach(i=>setDot(df.dots[i],'green'));
+        tierB.forEach(i=>setDot(df.dots[i],'violet'));
+        tierC.forEach(i=>{setDot(df.dots[i],'idle');df.dots[i].classList.add('dim');});
+        fEls.forEach(c=>c.style.opacity='1'); counter.textContent=100; lastShown=100; return; }
+      const f=Math.max(0,Math.min(3,s)); const surv=counts[f]; const survSet=new Set(order.slice(0,surv));
+      df.dots.forEach((d,i)=>{ if(!d.classList.contains('in'))d.classList.add('in');
+        if(survSet.has(i)){ setDot(d, f>=3?'green':'idle'); d.classList.add('in'); } else { setDot(d,'idle'); d.classList.add('dim'); } });
+      fEls.forEach((c,i)=>{ c.style.opacity=(i<f)?'1':'.35'; c.style.borderColor=(i===f-1)?'var(--green)':'#262c29'; });
+      const target=counts[f];
+      if(!REDUCED && target<lastShown) animateCount(counter,lastShown,target,600); else counter.textContent=target;
+      lastShown=target; }
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in','dim','green','violet');setDot(d,'idle');}); revealDots(df.dots,3); lastShown=400; counter.textContent='400'; },
+      toStep(s){ applyFilter(s); }
+    };
+  }
+});
+
+/* 04 — ONE ACCOUNT */
+scene({ id:'s4', title:'One Account', dur:55,
+  note:['“The score isn’t a feeling — it’s fields: bundle load, after-hours volume, knowledge, AI still off.”','Next: the Core 100 through four weeks.'],
+  steps:3,
+  build(root){
+    root.appendChild(pill('illustrative','Illustrative — synthetic account'));
+    const w=el('div','wrap'); const sp=el('div','split'); sp.style.gridTemplateColumns='0.85fr 1.15fr';
+    const df=buildDotField(100); df.el.classList.add('d100');
+    const dfWrap=el('div','col'); dfWrap.style.alignItems='center';
+    dfWrap.append(df.el, el('div','label','Core 100 · one account'));
+    const card=el('div','card'); card.style.cssText='opacity:0;transition:opacity .3s ease-out;min-width:min(360px,86vw)';
+    const h=el('div'); h.style.cssText='display:flex;justify-content:space-between;align-items:baseline';
+    h.append(el('span','subhead','Account '+FOCUS.id), el('span','label',FOCUS.plan+' · '+FOCUS.tenure));
+    card.appendChild(h);
+    const sub=el('div','body muted',FOCUS.kind); sub.style.fontSize='19px'; card.appendChild(sub);
+    const fields=[['Annual bundle used',FOCUS.bundlePct+'%','green'],
+      ['After-hours share',FOCUS.afterHours+'%',''],
+      ['Help-centre articles',String(FOCUS.articles),''],
+      ['Active rules',String(FOCUS.rules),''],
+      ['AI status',FOCUS.ai,'amber']];
+    const rows=el('div'); rows.style.cssText='margin-top:10px;display:flex;flex-direction:column;gap:4px';
+    fields.forEach(([k,v,c])=>{ const r=el('div','pmet'); const kk=el('span',null,k); kk.style.fontSize='20px';
+      const vv=el('b',null,v); if(c==='green')vv.style.color='var(--green)'; if(c==='amber')vv.style.color='var(--amber)';
+      r.append(kk,vv); rows.appendChild(r); });
+    card.appendChild(rows);
+    const pt=step(el('div','body'),3); pt.style.cssText='max-width:26em;color:var(--text)';
+    pt.innerHTML='The score is <span style="color:var(--green)">fields</span>, not a feeling.';
+    sp.append(dfWrap,card); w.append(sp,pt); root.appendChild(w);
+    const focus=FOCUS.dot;
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in','green','ring','amber','human','violet');setDot(d,'idle');});
+        revealDots(df.dots,4);
+        setTimeout(()=>{ df.dots.forEach(d=>d.classList.add('in')); setDot(df.dots[focus],'green'); df.dots[focus].classList.add('ring','in'); }, REDUCED?0:350); },
+      toStep(s){ card.style.opacity=s>=2?'1':'0'; }
+    };
+  }
+});
+
+/* 05 — MISSION MILLIONAIRE (HERO) — the four-week campaign */
+scene({ id:'s5', title:'Operation Millionaire', dur:80,
+  note:['“Make your clients millionaire, they make you billionaire — four weeks, one real use case.”','Next: I open one of them — the playground.'],
+  steps:6,
+  build(root){
+    root.appendChild(pill('illustrative'));
+    const w=el('div','wrap'); w.style.gap='min(2.2vh,22px)';
+
+    // INTRO (steps 1–2) — the campaign quote, then its business meaning
+    const intro=el('div','col'); intro.style.cssText='align-items:center;gap:min(3vh,30px);max-width:22em';
+    const quote=el('div','hero'); quote.style.cssText='font-size:clamp(34px,4.4vw,60px);line-height:1.08;font-weight:800';
+    quote.innerHTML='“Make your clients&nbsp;<span style="color:var(--green)">millionaire</span>,<br>they make you&nbsp;<span style="color:var(--green)">billionaire</span>.”';
+    const coremsg=el('div'); coremsg.style.cssText='transition:opacity .3s ease-out';
+    coremsg.innerHTML='<div class="subhead" style="font-size:clamp(22px,2.4vw,30px)">The goal is not <span style="color:var(--muted)">“activate AI.”</span><br>It’s to solve one concrete operational problem — and save the customer real time.</div>';
+    intro.append(quote,coremsg); w.appendChild(intro);
+
+    const head=el('div'); head.style.cssText='text-align:left;width:100%;max-width:60em';
+    const hdr=el('div','apphdr'); hdr.appendChild(el('span','lg'));
+    const hb=document.createElement('span'); hb.innerHTML='Trengo › <b>Journeys</b> › Operation Millionaire'; hdr.appendChild(hb);
+    head.append(hdr, (()=>{const t=el('div','headline','Operation Millionaire');t.style.fontSize='clamp(30px,3.2vw,44px)';return t;})(), el('div','label','4 weeks. One real AI use case.'));
+    w.appendChild(head);
+    const rail=el('div','mmrail');
+    const wkEls=[['Week 1 · DISCOVER','the repeating question'],['Week 2 · PROVE','test it — don’t launch it'],['Week 3 · ACTIVATE','one use case, one channel · live'],['Week 4 · PROVE VALUE','measure → expand']]
+      .map(([wk,tr])=>{ const c=el('div','mmweek'); c.append(el('div','wk',wk),el('div','tr',tr)); rail.appendChild(c); return c; });
+    w.appendChild(rail);
+    const stage=el('div'); stage.style.cssText='width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:min(42vh,360px)';
+    w.appendChild(stage);
+
+    // BEAT 1 — CRM row + email
+    const b1=el('div','col'); b1.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
+    const crm=el('div','crmrow');
+    crm.innerHTML='<b>Account #47</b> · bundle <b>71%</b> · after-hours <b>38%</b> · help centre <b>22</b> · <span style="color:var(--amber)">AI off</span> &nbsp;<span class="enters">→ ENTERS OPERATION MILLIONAIRE</span>';
+    b1.appendChild(crm);
+    const inbox=el('div','mail'); inbox.style.maxWidth='min(620px,92vw)';
+    const ibar=el('div','bar'); ibar.append(el('span','dotr'),el('span',null,'Support inbox · this week'));
+    inbox.appendChild(ibar);
+    [['Where is my order?','08:14',false],['Where is my order?','11:47',false],['Where is my order?','18:32',true],['Where is my order?','21:05',true]]
+      .forEach(([q,t,late])=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:19px';
+        const lft=el('div'); lft.append(el('span',null,q)); if(late){ const af=el('span',null,' · after-hours'); af.style.color='var(--amber)'; lft.appendChild(af); }
+        const tm=el('span',null,t); tm.style.color='var(--muted)'; r.append(lft,tm); inbox.appendChild(r); });
+    const opp=el('div'); opp.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:.7em 1.1em;border-top:1px solid var(--grey);background:rgba(0,178,122,.10)';
+    const ot=el('span',null,'Same question, over and over — the candidate for one AI use case.'); ot.style.fontSize='18px';
+    opp.append(el('span','tag green','AI OPPORTUNITY DETECTED'), ot); inbox.appendChild(opp);
+    b1.appendChild(inbox);
+    const cap1=el('div','body muted','Discovery is their own inbox, not our product news.'); cap1.style.cssText='font-size:19px;max-width:36em'; b1.appendChild(cap1);
+
+    // BEAT 2 — TRY: AI Agent config panel + supervised review (no go-live yet)
+    const b2=el('div','col'); b2.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
+    const cfg=el('div','mail'); cfg.style.maxWidth='min(680px,94vw)';
+    const cbar=el('div','bar'); cbar.append(el('span','dotr'),el('span',null,'AI Agent · Setup'),
+      (()=>{const s=el('span','tag violet','Supervised Mode');s.style.marginLeft='auto';return s;})());
+    cfg.appendChild(cbar);
+    const crow=(k,v,ok)=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:16px;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:18px';
+      const kk=el('span',null,k); kk.style.cssText='color:var(--muted);min-width:7.5em';
+      const vv=el('span'); vv.appendChild(document.createTextNode(v)); vv.style.textAlign='right';
+      if(ok){ const c=el('span',null,' ✓'); c.style.color='var(--green)'; vv.appendChild(c); }
+      r.append(kk,vv); cfg.appendChild(r); };
+    crow('Knowledge','Help centre · 22 articles',true);
+    crow('Instructions','Answer delivery questions; never guess a refund',false);
+    crow('Skills','Order lookup · Track & Trace',true);
+    crow('Channel','WhatsApp + Web',true);
+    crow('Escalation','Hand to a human on refunds & disputes',true);
+    const act=el('div'); act.style.cssText='display:flex;gap:10px;padding:.7em 1.1em;border-top:1px solid var(--grey);align-items:center;flex-wrap:wrap';
+    const secBtn=(t)=>{ const b=el('button','btn',t); b.style.cssText='background:transparent;color:var(--text);border:1px solid var(--grey)'; return b; };
+    act.append((()=>{const s=el('span',null,'Every reply reviewed →');s.style.cssText='font-size:18px;color:var(--muted);margin-right:auto';return s;})(),
+      el('button','btn','Approve'), secBtn('Edit'), secBtn('Escalate'));
+    cfg.appendChild(act);
+    b2.appendChild(cfg);
+    const cap2=el('div','body muted','Nobody goes live yet: they configure it, then approve every reply by hand.'); cap2.style.cssText='font-size:19px;max-width:36em'; b2.appendChild(cap2);
+
+    // BEAT 3 — ACTIVATE: the whole campaign drives to 100 activations (target, not a result)
+    const b3=el('div','col'); b3.style.cssText='align-items:center;gap:16px;transition:opacity .3s ease-out';
+    const actHead=el('div','subhead','Priority list · target 100 accounts'); actHead.style.fontSize='22px'; b3.appendChild(actHead);
+    const bigWrap=el('div'); bigWrap.style.cssText='display:flex;align-items:baseline;gap:12px';
+    const bigNum=el('div',null,'0'); bigNum.style.cssText='font-size:clamp(56px,9vw,108px);font-weight:800;color:var(--green);line-height:1;font-variant-numeric:tabular-nums';
+    const bigOf=el('div',null,'/ 100 accounts activated'); bigOf.style.cssText='font-size:22px;color:var(--muted)';
+    bigWrap.append(bigNum,bigOf); b3.appendChild(bigWrap);
+    const track=el('div'); track.style.cssText='width:min(620px,90vw);height:12px;border-radius:99px;background:var(--grey);overflow:hidden';
+    const fill=el('div'); fill.style.cssText='height:100%;width:0;background:var(--green);transition:width .05s linear'; track.appendChild(fill); b3.appendChild(track);
+    const live=el('div',null,'AI Agent live · Supervised → Autopilot'); live.style.cssText='font-size:19px;color:var(--text)'; b3.appendChild(live);
+    b3.append(el('span','tag grey','Target · illustrative'));
+    const cap3=el('div','body muted','Activation is the goal: 100 accounts running one real use case — not a headline number.'); cap3.style.cssText='font-size:19px;max-width:36em'; b3.appendChild(cap3);
+    let actTimer=null;
+    function runActivation(){ if(actTimer){clearInterval(actTimer);actTimer=null;}
+      if(REDUCED){ bigNum.textContent='100'; fill.style.width='100%'; return; }
+      let v=0; bigNum.textContent='0'; fill.style.width='0';
+      actTimer=setInterval(()=>{ v+=2; if(v>=100){v=100;clearInterval(actTimer);actTimer=null;} bigNum.textContent=String(v); fill.style.width=v+'%'; },22); }
+    function stopActivation(){ if(actTimer){clearInterval(actTimer);actTimer=null;} }
+
+    // BEAT 4 — PROVE VALUE: outcome-measurement view (metric names, no fabricated results) → expand
+    const b4=el('div','col'); b4.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
+    const dash=el('div','mail'); dash.style.maxWidth='min(680px,94vw)';
+    const dbar=el('div','bar'); dbar.append(el('span','dotr'),el('span',null,'Week 4 · what we measure'),
+      (()=>{const s=el('span','tag grey','Proposed metrics');s.style.marginLeft='auto';return s;})());
+    dash.appendChild(dbar);
+    const drow=(k,v,verified)=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:16px;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:18px';
+      const kk=el('span',null,k); kk.style.cssText='color:var(--text);min-width:11em';
+      const vv=el('span','tag '+(verified?'green':'grey'),v); r.append(kk,vv); dash.appendChild(r); };
+    drow('Conversations handled by AI','Product metric',true);
+    drow('Response time','Product metric',true);
+    drow('Human interventions','Product metric',true);
+    drow('CSAT on AI replies','Business metric',false);
+    b4.appendChild(dash);
+    const nxt=el('div'); nxt.style.cssText='display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:.7em 1.1em;border:1px solid var(--grey);border-radius:12px;background:rgba(167,139,250,.10);max-width:min(680px,94vw)';
+    nxt.append(el('span','tag violet','VALUE PROVEN → EXPAND'), (()=>{const s=el('span',null,'One question wider, or one channel more — same agent.');s.style.fontSize='18px';return s;})());
+    b4.appendChild(nxt);
+    const cap4=el('div','body muted','Don’t stop at “AI activated.” Show what it changed — then expand.'); cap4.style.cssText='font-size:19px;max-width:36em'; b4.appendChild(cap4);
+
+    const beats=[b1,b2,b3,b4];
+    beats.forEach(bx=>{ bx.style.opacity='0'; bx.style.display='none'; stage.appendChild(bx); });
+    root.appendChild(w);
+    let lastCs=0;
+    return {
+      toStep(s){
+        const introMode=s<=2;
+        intro.style.display=introMode?'flex':'none';
+        coremsg.style.opacity=(s>=2)?'1':'0';
+        head.style.display=introMode?'none':'block';
+        rail.style.display=introMode?'none':'flex';
+        stage.style.display=introMode?'none':'flex';
+        if(introMode){ stopActivation(); lastCs=0; return; }
+        const cs=Math.max(1,Math.min(4,s-2));               // steps 3–6 → weeks 1–4
+        wkEls.forEach((c,i)=> c.classList.toggle('on', i===cs-1));
+        beats.forEach((bx,i)=>{ const on=(i===cs-1); bx.style.display=on?'flex':'none'; bx.style.opacity=on?'1':'0'; });
+        if(cs===3){ if(lastCs!==3) runActivation(); } else stopActivation();
+        lastCs=cs;
+      },
+      exit(){ stopActivation(); lastCs=0; }
+    };
+  }
+});
+
+/* 06 — TRY TO BREAK IT (HERO, centrepiece) — simulated playground */
+scene({ id:'s6', title:'Try To Break It', dur:80,
+  note:['“Two it nails from their own knowledge; the edge case it refuses and hands to a human with a summary.”','Next: the same 100 as a live friction monitor.'],
+  steps:5,
+  build(root){
+    root.appendChild(pill('illustrative','Illustrative — simulated playground'));
+    const w=el('div','wrap');
+    const head=el('div','row'); head.style.cssText='justify-content:space-between;width:100%;align-items:baseline';
+    head.append(el('div','subhead','Account '+FOCUS.id+' · Playground'), el('div','label','Try to break it'));
+    w.appendChild(head);
+    const pg=el('div','pg');
+    const left=el('div','pgcol'); left.appendChild(el('div','h','Knowledge'));
+    [['Help centre · '+FOCUS.articles+' articles'],['Order system · AI Action'],['Returns policy'],['Agent config · Playground']]
+      .forEach(([t])=>{ const r=el('div','src'); r.append(el('span','d'),el('span',null,t)); left.appendChild(r); });
+    const center=el('div','pgcol');
+    const chat=el('div','chat'); chat.style.transition='opacity .3s ease-out'; center.appendChild(chat);
+    const hoCard=el('div','handover'); hoCard.style.cssText='opacity:0;display:none';
+    hoCard.innerHTML='<div class="t">Handover summary</div>Order 18492 · shows delivered, customer disputes receipt · refund requested · needs carrier check.';
+    center.appendChild(hoCard);
+    const flow=el('div','flow');
+    const nHum=el('span','n','HUMAN');
+    flow.append(el('span','n on','CUSTOMER'), el('span','ar','→'), el('span','n on','AI'), el('span','ar','→'), nHum);
+    center.appendChild(flow);
+    const right=el('div','pgcol'); right.appendChild(el('div','h','AI status'));
+    const mkstat=(k,v)=>{ const r=el('div','pstat'); r.append(el('span',null,k), el('b',null,v)); right.appendChild(r); return r; };
+    mkstat('Knowledge','3 sources'); mkstat('Mode','Playground'); mkstat('Escalation','On');
+    const hoRow=mkstat('Handover','—');
+    pg.append(left,center,right); w.appendChild(pg);
+    const done=step(el('div','headline'),5); done.style.maxWidth='16em';
+    done.innerHTML='Two it nails. <span style="color:var(--amber)">One it refuses</span> — and hands to a human.';
+    w.appendChild(done);
+    const wismo=step(el('div','body muted'),5); wismo.style.cssText='font-size:19px;max-width:36em;margin-top:2px';
+    wismo.textContent='WISMO — “where is my order” — the question support teams repeat most.';
+    w.appendChild(wismo); root.appendChild(w);
+    const msgs=[
+      {step:2,role:'user',text:'Where is my order 18492?'},
+      {step:2,role:'ai',text:'Shipped Tuesday, out for delivery today.',tag:['green','Answered']},
+      {step:3,role:'user',text:'What’s your return policy?'},
+      {step:3,role:'ai',text:'30 days, unused, free label — from your help centre.',tag:['green','Answered']},
+      {step:4,role:'user',text:'It says delivered but my neighbour never got it. Refund me.'},
+      {step:4,role:'ai',text:'This needs a human. I’ve prepared a handover.',tag:['amber','Handed to a human']}
+    ];
+    const nodes=msgs.map(m=>({m,bubble:el('div','msg '+m.role),tag:m.tag?el('span','tag '+m.tag[0]+' mtag'+(m.role==='user'?' u':''),m.tag[1]):null}));
+    let animating=false, timers=[], typing=null, curStep=1;
+    function clearAll(){ timers.forEach(t=>clearTimeout(t)); timers=[]; if(typing){clearInterval(typing);typing=null;} }
+    function renderInstant(upto){ clearAll(); animating=false; chat.innerHTML='';
+      nodes.forEach(n=>{ if(n.m.step<=upto){ n.bubble.textContent=n.m.text; chat.appendChild(n.bubble); if(n.tag)chat.appendChild(n.tag); } }); }
+    function typeSeq(stepNo){ const seq=nodes.filter(n=>n.m.step===stepNo); animating=true; let idx=0;
+      (function go(){ if(idx>=seq.length){ animating=false; return; }
+        const n=seq[idx++]; n.bubble.textContent=''; chat.appendChild(n.bubble);
+        if(REDUCED){ n.bubble.textContent=n.m.text; if(n.tag)chat.appendChild(n.tag); go(); return; }
+        let i=0; typing=setInterval(()=>{ n.bubble.textContent=n.m.text.slice(0,++i);
+          if(i>=n.m.text.length){ clearInterval(typing); typing=null; if(n.tag)chat.appendChild(n.tag);
+            timers.push(setTimeout(go, n.m.role==='user'?250:450)); } },35); })(); }
+    function status(s){ const esc=s>=4;
+      hoCard.style.opacity=esc?'1':'0'; hoCard.style.display=esc?'block':'none';
+      hoRow.querySelector('b').textContent=esc?'Generated':'—'; hoRow.classList.toggle('amber',esc);
+      nHum.classList.toggle('human',esc); nHum.classList.toggle('on',esc); }
+    return {
+      enter(){ clearAll(); animating=false; chat.innerHTML=''; curStep=1; chat.style.opacity='0'; status(1); },
+      exit(){ clearAll(); animating=false; },
+      busy(){ return animating; },
+      finish(){ renderInstant(Math.min(curStep,4)); },
+      toStep(s){ curStep=s; chat.style.opacity=(s===1)?'0':'1';
+        if(s<2){ clearAll(); animating=false; chat.innerHTML=''; }
+        else { renderInstant(s-1); if(s>=2&&s<=4) typeSeq(s); else renderInstant(4); }
+        status(s); }
+    };
+  }
+});
+
+/* 07 — THE FRICTION ENGINE */
+scene({ id:'s7', title:'The Friction Engine', dur:70,
+  note:['“Most friction resolves without a call — I spend human time only where intent is high and blocked.”','Next: the 90-day plan.'],
+  steps:4,
+  build(root){
+    root.appendChild(pill('illustrative'));
+    const w=el('div','wrap'); const sp=el('div','split');
+    const df=buildDotField(100); df.el.classList.add('d100');
+    const dfWrap=el('div','col'); dfWrap.style.alignItems='center';
+    dfWrap.append(df.el, el('div','label','Core 100 · friction monitor'));
+    const src=el('div','body muted'); src.style.cssText='font-size:18px;max-width:24em;text-align:center';
+    src.innerHTML='<span class="tag grey" style="font-size:18px">Proposed signals</span> &nbsp;from product-usage data I’d track';
+    dfWrap.appendChild(src);
+    const legend=el('div','body'); legend.style.cssText='font-size:19px;opacity:0;transition:opacity .3s ease-out;color:var(--muted)';
+    legend.innerHTML='10 friction signals · <span style="color:var(--green)">9 handled at scale</span> · <span style="color:var(--amber)">1 needs a person</span>';
+    dfWrap.appendChild(legend);
+    const tree=el('div','ftree');
+    tree.appendChild(el('div','fhead','Digital first'));
+    const mkbranch=(cls,ttl,rte)=>{ const b=el('div','fbranch '+cls); b.append(el('div','ttl',ttl), el('div','rte',rte)); tree.appendChild(b); return b; };
+    const b1=mkbranch('auto','Small friction','→ In-app guide');
+    const b2=mkbranch('auto','Conceptual friction','→ Group session');
+    const b3=mkbranch('human','High intent · blocked','→ 15 minutes with me');
+    const right=el('div','col'); right.style.alignItems='flex-start'; right.appendChild(tree);
+    sp.append(dfWrap,right); w.appendChild(sp);
+    const trig=step(el('div','body muted'),4); trig.style.cssText='font-size:20px';
+    trig.innerHTML='The evidence: <b style="color:var(--text)">Intent</b> + <b style="color:var(--amber)">Friction</b> + <b style="color:var(--green)">Potential</b> → a time-boxed 15 minutes.';
+    const line=step(el('div','headline'),4); line.style.maxWidth='20em';
+    line.innerHTML='Human intervention is the <span style="color:var(--amber)">exception</span> — triggered by evidence.';
+    w.append(trig,line); root.appendChild(w);
+    const order=seededOrder(100,17);
+    const green=order.slice(0,52), violet=order.slice(52,78);
+    const friction=order.slice(78,87).filter(i=>i!==FOCUS.dot).slice(0,9); // 9 auto-resolved (never the focus)
+    const smallSet=friction.slice(0,5), conceptSet=friction.slice(5,9);
+    function base(){ df.dots.forEach(d=>d.classList.add('in'));
+      green.forEach(i=>setDot(df.dots[i],'green')); violet.forEach(i=>setDot(df.dots[i],'violet')); }
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in','green','violet','amber','human','pulse','ring');setDot(d,'idle');});
+        revealDots(df.dots,4); },
+      toStep(s){
+        base(); friction.forEach(i=>setDot(df.dots[i],'amber'));
+        if(s>=2) smallSet.forEach(i=>setDot(df.dots[i],'green'));
+        if(s>=3) conceptSet.forEach(i=>setDot(df.dots[i],'green'));
+        const fd=df.dots[FOCUS.dot]; fd.classList.remove('pulse','ring');
+        if(s>=4){ setDot(fd,'amber'); fd.classList.add('pulse','ring','in');
+          setTimeout(()=>{ setDot(fd,'human'); fd.classList.remove('pulse'); fd.classList.add('ring','in'); }, REDUCED?0:750); }
+        else setDot(fd,'green');
+        b1.classList.toggle('lit',s>=2); b2.classList.toggle('lit',s>=3); b3.classList.toggle('lit',s>=4);
+        legend.style.opacity=s>=4?'1':'0';
+      }
+    };
+  }
+});
+
+/* 08 — 90 DAYS */
+scene({ id:'s8', title:'90 Days', dur:60,
+  note:['“90 days proves adoption — not churn. I’d rather say that now than claim it later.”','Next: the close.'],
+  steps:4,
+  build(root){
+    root.appendChild(pill('target'));
+    const w=el('div','wrap');
+    const sp=el('div','split'); sp.style.gridTemplateColumns='1.3fr .9fr';
+    const flight=el('div','flight');
+    [['DAY 30','100 prioritised · lighthouse built · campaign live'],
+     ['DAY 60','first cohort live · adoption measured'],
+     ['DAY 90','~160 of 400 · second cohort started · playbook written']]
+      .forEach(([d,t],i)=>{ const L=step(el('div','leg'),i+1); const tt=el('div','t');
+        if(i===2) tt.innerHTML='<span style="color:var(--violet)">~160 of 400</span> <span class="tag target" style="font-size:18px">TARGET</span> · second cohort started · playbook written';
+        else tt.textContent=t;
+        L.append(el('div','d',d),tt); flight.appendChild(L); });
+    const right=step(el('div','col'),4); right.style.alignItems='flex-start';
+    right.appendChild(el('div','label','Success — four layers'));
+    const metrics=el('div'); metrics.style.cssText='display:flex;flex-direction:column;gap:2px;margin-bottom:8px';
+    [['Activation','the KPI'],['Adoption','it sticks'],['Customer value','a problem solved'],['Health','guardrails: escalation · negative CSAT · AI cost']]
+      .forEach(([k,v])=>{ const d=el('div','body'); d.style.cssText='font-size:19px;color:var(--muted)';
+        d.innerHTML='<b style="color:var(--text)">'+k+'</b> — '+v; metrics.appendChild(d); });
+    right.appendChild(metrics);
+    right.appendChild(el('div','label','Leading indicators'));
+    const sig=el('div','signals'); sig.innerHTML='email engagement · playground started · HelpMate created · knowledge connected · test conversations · publish rate<br><span style="color:var(--muted)">— what predicts activation.</span>'; right.appendChild(sig);
+    const honest=el('div','body'); honest.style.cssText='font-size:19px;margin-top:8px;max-width:22em';
+    honest.textContent='90 days proves adoption. It doesn’t prove churn. I’d rather say that now than claim it later.'; right.appendChild(honest);
+    const tierb=el('div','body muted'); tierb.style.cssText='font-size:18px;max-width:22em';
+    tierb.textContent='Tier B starts five weeks later — a comparison group, not a randomised experiment.'; right.appendChild(tierb);
+    sp.append(flight,right); const spWrap=el('div'); spWrap.style.width='100%'; spWrap.appendChild(sp); w.appendChild(spWrap);
+    root.appendChild(w);
+    return {};
+  }
+});
+
+/* 09 — THE CLOSE */
+scene({ id:'s9', title:'The Close', dur:45,
+  note:['“Not 100 customers switching on AI — 100 running part of their operation on Trengo.”','End. No thank-you slide.'],
+  steps:6,
+  build(root){
+    root.appendChild(mk(pill('target'))); const plEl=root.querySelector('.evidence');
+    const w=el('div','wrap'); const closeWrap=el('div','col'); closeWrap.style.alignItems='center';
+    const df=buildDotField(400); df.el.classList.add('sm'); df.el.style.transition='opacity .3s ease-out'; closeWrap.appendChild(df.el);
+    const cap=el('div','label'); cap.style.cssText='opacity:0;transition:opacity .3s ease-out'; closeWrap.appendChild(cap);
+    const lEls=['400 accounts.','100 activations.','One system that makes the next 100 easier.'].map(t=>{
+      const c=el('div','headline'); c.style.cssText='opacity:0;transition:opacity .3s ease-out;max-width:16em'; c.textContent=t; closeWrap.appendChild(c); return c; });
+    const finalLine=el('div','headline'); finalLine.style.cssText='opacity:0;transition:opacity .3s ease-out;max-width:18em';
+    finalLine.innerHTML='Not 100 customers simply switching on AI.<br><span style="color:var(--green)">100 customers running a real part of their customer operation on Trengo</span><br>— and a system that makes the next 100 easier.';
+    finalLine.style.maxWidth='22em';
+    closeWrap.appendChild(finalLine);
+    w.appendChild(closeWrap); root.appendChild(w);
+    const core100=seededOrder(400,3).slice(0,100);
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in','green');setDot(d,'idle');}); revealDots(df.dots,3); },
+      toStep(s){ const nearBlack=s>=6;
+        rev(plEl, s>=2 && !nearBlack);
+        df.el.style.opacity=nearBlack?'0':'1';
+        df.dots.forEach(d=>{ d.classList.add('in'); setDot(d,'idle'); });
+        if(s>=2) transitionDots(df.dots,core100,'green',4);
+        cap.textContent = s>=2?'100 of 400 · activated':'400 accounts';
+        cap.style.opacity=(s>=1&&!nearBlack)?'1':'0';
+        lEls[0].style.opacity=(s>=3&&!nearBlack)?'1':'0';
+        lEls[1].style.opacity=(s>=4&&!nearBlack)?'1':'0';
+        lEls[2].style.opacity=(s>=5&&!nearBlack)?'1':'0';
+        finalLine.style.opacity=nearBlack?'1':'0';
+      }
+    };
+  }
+});
+
+/* ================= ENGINE ================= */
+const deck=document.getElementById('deck');
+const notesEl=document.getElementById('notes');
+const progEl=document.getElementById('progress');
+const overviewEl=document.getElementById('overview');
+const ovgrid=document.getElementById('ovgrid');
+const coverageEl=document.getElementById('coverage');
+
+const state=[]; // per scene: {def,sec,inst,step,built:bool}
+
+function buildScene(i){
+  const def=SCENES[i];
+  const sec=el('section','scene');
+  sec.dataset.index=i;
+  sec.setAttribute('aria-label',def.title);
+  deck.appendChild(sec);
+  const inst=def.build(sec)||{};
+  state[i]={def,sec,inst,step:1};
+}
+
+function maxStep(i){return SCENES[i].steps||1;}
+
+let cur=0;
+
+function applyStep(i){
+  const st=state[i];
+  const s=st.step;
+  st.sec.querySelectorAll('.step').forEach(node=>{
+    if(node.dataset.step===undefined) return; // driven manually by toStep()
+    const ns=parseInt(node.dataset.step,10)||1;
+    node.classList.toggle('shown', ns<=s);
+  });
+  if(st.inst.toStep) st.inst.toStep(s);
+  fitScene(i);
+  renderProgress();
+  renderPresenter();
+  renderCoverage();
+}
+
+// scale a scene's wrap down if its content is taller/wider than the viewport
+function fitScene(i){
+  const st=state[i]; if(!st) return;
+  const wrap=st.sec.querySelector('.wrap'); if(!wrap) return;
+  wrap.style.transform='none';
+  const cs=getComputedStyle(st.sec);
+  const availH=st.sec.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  const availW=st.sec.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  const h=wrap.scrollHeight, wd=wrap.scrollWidth;
+  if(!h||!wd) return;
+  const scale=Math.min(1, availH/h, availW/wd);
+  if(scale<0.999) wrap.style.transform='scale('+scale.toFixed(4)+')';
+}
+window.addEventListener('resize',()=>{ if(state[cur]) fitScene(cur); });
+
+/* ============================================================
+   FOUR TOP-LEVEL SLIDES = FOUR CHAPTERS
+   - Internal beats (scene steps) auto-play on a timeline, then FREEZE.
+   - SPACE / →  = next top-level slide.  ← / PageUp = previous slide.
+   - The presenter never advances internal beats; they just speak.
+   ============================================================ */
+/* per-step dwell (ms) before the next beat fires; the chapter's LAST beat never advances */
+const HOLD=[
+  [3400,4200,4200,4200],               // 01 portfolio (explanation — deliberately slow)
+  [3600,4200,4600],                    // 02 value ladder
+  [3400,4200,4600,5600,5600],          // 03 matrix (framework — held long, readable)
+  [3600,4200,4200],                    // 04 one account
+  [4600,4600,4600,4600,4600,5200],     // 05 campaign (quote, message, weeks 1–4)
+  [3800,4600,4200,4600,4600],          // 06 playground (typing needs room)
+  [3600,4200,4200,5000],               // 07 human intervention
+  [3600,4200,4200,4600],               // 08 success matrix
+  [3200,3200,3400,3600,3600,4600]      // 09 close
+];
+let slideTimers=[];
+function clearSlide(){ slideTimers.forEach(t=>clearTimeout(t)); slideTimers=[]; }
+function framesForChapter(ch){
+  const frames=[];
+  CHAPTER_OF.forEach((c,sc)=>{ if(c!==ch) return;
+    const n=maxStep(sc);
+    for(let st=1;st<=n;st++){ frames.push({sc,st,hold:(HOLD[sc]&&HOLD[sc][st-1])||3800}); }
+  });
+  return frames;
+}
+function activateScene(sc){
+  if(cur===sc) return;
+  if(state[cur]){ if(state[cur].inst.exit) state[cur].inst.exit(); state[cur].sec.classList.remove('active'); }
+  cur=sc; state[sc].sec.classList.add('active');
+  if(state[sc].inst.enter) state[sc].inst.enter();
+}
+function applyFrame(f){ activateScene(f.sc); state[f.sc].step=f.st; applyStep(f.sc); }
+let curChapter=1, curFrames=[], frameIdx=0;
+function scheduleFrame(){
+  if(frameIdx>=curFrames.length-1) return;                 // FREEZE indefinitely at the last beat
+  const hold=curFrames[frameIdx].hold;
+  slideTimers.push(setTimeout(()=>{ frameIdx++; applyFrame(curFrames[frameIdx]); scheduleFrame(); }, hold));
+}
+function playChapter(ch){
+  ch=Math.max(1,Math.min(lastChapter(),ch));
+  clearSlide();
+  curChapter=ch; curFrames=framesForChapter(ch); frameIdx=0;
+  const first=curFrames[0].sc;
+  // hard-restart the first scene even if it is already current
+  if(state[cur]){ if(state[cur].inst.exit) state[cur].inst.exit(); state[cur].sec.classList.remove('active'); }
+  cur=first; state[first].sec.classList.add('active'); if(state[first].inst.enter) state[first].inst.enter();
+  applyFrame(curFrames[0]);
+  if(REDUCED){ seekChapterEnd(ch); return; }                // reduced motion: jump to frozen end
+  scheduleFrame();
+}
+function seekChapterEnd(ch){                                // land on the frozen final state (reduced-motion / QA)
+  ch=Math.max(1,Math.min(lastChapter(),ch));
+  clearSlide(); curChapter=ch; curFrames=framesForChapter(ch); frameIdx=curFrames.length-1;
+  CHAPTER_OF.forEach((c,sc)=>{ if(c!==ch) return;
+    activateScene(sc); state[sc].step=maxStep(sc); applyStep(sc); });   // ends with the chapter's last scene active
+}
+function nextSlide(){ if(curChapter<lastChapter()) playChapter(curChapter+1); }
+function prevSlide(){ if(curChapter>1) playChapter(curChapter-1); }
+function jump(i){ if(i>=0&&i<SCENES.length) playChapter(chapterOf(i)); }   // overview → that scene's slide
+function jumpChapter(ch){ playChapter(ch); }
+
+function renderProgress(){
+  const ch=chapterOf(cur);
+  progEl.textContent = ch+' / 4  ·  '+CHAPTER_TIME[ch-1];
+}
+/* four top-level slides; scenes auto-play within a slide, then freeze at the boundary */
+const CHAPTER_OF=[1,1,2,2,3,3,4,4,4];
+const CHAPTER_TITLES=['Portfolio & Goals','Triggers & Segmentation','Operation Millionaire','Human & Success'];
+const CHAPTER_TIME=['0–3 min','3–7 min','7–13 min','13–15 min'];
+function chapterOf(i){ return CHAPTER_OF[i]||1; }
+function firstOfChapter(ch){ const k=CHAPTER_OF.indexOf(ch); return k<0?0:k; }
+function lastChapter(){ return CHAPTER_OF[CHAPTER_OF.length-1]; }
+/* presenter teleprompter, per scene index */
+const PRESENTER=[
+  {say:"I don't see 400 customers. I see a prioritisation problem.", then:"The portfolio is a prioritisation problem, not a headcount problem.", shows:"the portfolio"},
+  {say:"Activation is the KPI. Adoption is the proof.", then:"Adoption is what I optimise for, one rung past activation.", shows:"the KPI vs the proof"},
+  {say:"I decide who deserves attention before I decide what to send.", then:"A 400 → 100 filter on need, readiness and fit.", shows:"the filter"},
+  {say:"This is what the customer actually receives.", then:"The score is real fields, not a vibe.", shows:"one account"},
+  {say:"This is Operation Millionaire — four weeks, and every week moves one behaviour.", then:"The campaign is a behavioural journey, not a blast.", shows:"the four-week campaign"},
+  {say:"We don't ask customers to trust AI. We let them try to break it.", then:"Two answers land; the edge case hands to a human.", shows:"the playground"},
+  {say:"Human time is the exception, triggered by evidence.", then:"Most friction resolves at scale; one needs a person.", shows:"the friction monitor"},
+  {say:"90 days proves adoption. It doesn't prove churn.", then:"Targets, and the honest limit of the window.", shows:"the 90-day plan"},
+  {say:"The goal isn't 100 activations. It's a system that makes the next 100 easier.", then:"100 running part of their operation on Trengo.", shows:"the close"}
+];
+function phaseFor(i){ return CHAPTER_TITLES[chapterOf(i)-1]; }
+function renderCoverage(){
+  const ci=chapterOf(cur)-1; coverageEl.innerHTML='';
+  CHAPTER_TITLES.forEach((t,k)=>{ const s=el('span','cv'+(k===ci?' now':k<ci?' done':''),(k+1)+' '+t); coverageEl.appendChild(s); });
+}
+function renderPresenter(){
+  const i=cur, p=PRESENTER[i]||{say:'',then:'',shows:''};
+  const nextShows=(i+1<SCENES.length&&PRESENTER[i+1])?PRESENTER[i+1].shows:'—';
+  notesEl.innerHTML='';
+  const head=el('div','pmhead');
+  head.append(el('span',null,String(i+1).padStart(2,'0')+' / '+String(SCENES.length).padStart(2,'0')),
+              el('span',null,'Case: '+phaseFor(i)));
+  notesEl.appendChild(head);
+  const rows=el('div','pmrows');
+  const row=(cls,lab,txt)=>{ const r=el('div','pmrow'+cls); r.append(el('span','pmlab',lab), el('span','pmtxt',txt)); return r; };
+  rows.append(row(' say','Say',p.say||''), row('','Then',p.then||''), row('','Next',nextShows));
+  notesEl.appendChild(rows);
+}
+
+/* overlays */
+function toggleNotes(){ notesEl.classList.toggle('on'); }
+function openOverview(){ overviewEl.classList.add('on'); }
+function closeOverview(){ overviewEl.classList.remove('on'); }
+function toggleFullscreen(){
+  if(!document.fullscreenElement){ (document.documentElement.requestFullscreen||function(){}).call(document.documentElement); }
+  else if(document.exitFullscreen){ document.exitFullscreen(); }
+}
+
+function buildOverview(){
+  SCENES.forEach((def,i)=>{
+    const c=el('div','ovcell'); c.tabIndex=0;
+    c.appendChild(el('div','num',String(i+1).padStart(2,'0')));
+    c.appendChild(el('div','ti',def.title));
+    c.appendChild(el('div','du','~'+def.dur+'s · '+def.steps+' steps'));
+    const go=()=>{ closeOverview(); jump(i); };
+    c.addEventListener('click',go);
+    c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+    ovgrid.appendChild(c);
+  });
+}
+
+/* single keydown listener */
+window.addEventListener('keydown',e=>{
+  const k=e.key;
+  if(overviewEl.classList.contains('on')){
+    if(k==='Escape'||k==='o'||k==='O'){ closeOverview(); e.preventDefault(); }
+    return;
+  }
+  if(k==='ArrowRight'||k===' '||k==='Spacebar'||k==='PageDown'){ e.preventDefault(); nextSlide(); }
+  else if(k==='ArrowLeft'||k==='PageUp'){ e.preventDefault(); prevSlide(); }
+  else if(k==='p'||k==='P'){ e.preventDefault(); toggleNotes(); }
+  else if(k==='o'||k==='O'){ e.preventDefault(); openOverview(); }
+  else if(k==='f'||k==='F'){ e.preventDefault(); toggleFullscreen(); }
+  else if(k==='Escape'){ if(notesEl.classList.contains('on')) toggleNotes(); }
+  else if(/^[1-4]$/.test(k)){ e.preventDefault(); jumpChapter(parseInt(k,10)); }
+},{passive:false});
+
+/* print: force every scene to reveal all content (JS sets inline opacity, so CSS alone can't) */
+let printPrev=null;
+window.addEventListener('beforeprint',()=>{
+  printPrev=cur;
+  state.forEach((st,i)=>{ if(!st)return;
+    st.sec.classList.add('active'); st.step=maxStep(i);
+    st.sec.querySelectorAll('.step').forEach(n=>{ if(n.dataset.step!==undefined)n.classList.add('shown'); });
+    if(st.inst.toStep) st.inst.toStep(maxStep(i));
+    const wr=st.sec.querySelector('.wrap'); if(wr) wr.style.transform='none';
+  });
+});
+window.addEventListener('afterprint',()=>{
+  state.forEach(st=>{ if(st) st.sec.classList.remove('active'); });
+  clearSlide();
+  playChapter(printPrev==null?curChapter:chapterOf(printPrev));
+});
+
+/* boot */
+SCENES.forEach((_,i)=>buildScene(i));
+buildOverview();
+playChapter(1);
+
+// expose for headless verification / QA
+window.__deck={
+  nextSlide, prevSlide, playChapter, seekChapterEnd,
+  get chapter(){return curChapter;}, get cur(){return cur;}, get step(){return state[cur].step;},
+  get frame(){return frameIdx;}, get frames(){return curFrames.length;},
+  chapters:lastChapter(), count:SCENES.length, maxStep,
+  // QA only: freeze at frame `idx` of chapter `ch` (applies every frame up to idx, no timers)
+  _seek(ch,idx){ clearSlide(); curChapter=ch; curFrames=framesForChapter(ch);
+    idx=Math.max(0,Math.min(curFrames.length-1,idx)); frameIdx=idx;
+    for(let k=0;k<=idx;k++) applyFrame(curFrames[k]); }
+};
+})();
+</script>
+</body>
+</html>
