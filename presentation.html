@@ -26,7 +26,7 @@ img{max-width:100%}
 .label{font-size:18px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--muted)}
 
 /* ---- deck / scenes ---- */
-#deck{position:fixed;inset:0}
+#deck{position:fixed;inset:0;user-select:none;-webkit-user-select:none}
 .scene{position:absolute;inset:0;display:none;flex-direction:column;
   align-items:center;justify-content:center;text-align:center;padding:10vh 6vw 6vh}
 .scene.active{display:flex}
@@ -106,7 +106,7 @@ img{max-width:100%}
 .ptable .rowlabel{font-weight:700}
 
 /* ladder (scene 3) */
-.ladder{display:flex;flex-direction:column-reverse;gap:10px;width:min(560px,80vw)}
+.ladder{display:flex;flex-direction:column-reverse;gap:10px;width:min(560px,80vw);align-self:center}
 .rung{display:flex;align-items:center;justify-content:space-between;gap:1em;
   padding:.65em 1em;border-radius:12px;background:var(--surface);border:1px solid #262c29;
   font-size:22px;font-weight:600;color:var(--muted);opacity:.35;transition:opacity .3s ease-out,color .3s ease-out,border-color .3s ease-out}
@@ -179,6 +179,30 @@ img{max-width:100%}
   font-size:19px;color:var(--text);line-height:1.3;transition:opacity .3s ease-out}
 .handover .t{font-size:18px;text-transform:uppercase;letter-spacing:.08em;color:var(--amber);font-weight:700;margin-bottom:.25em}
 
+/* mission millionaire campaign (scene 05) */
+.mmrail{display:flex;gap:min(1.6vw,18px);justify-content:center;flex-wrap:wrap;width:100%}
+.mmweek{display:flex;flex-direction:column;gap:2px;align-items:center;opacity:.35;transition:opacity .3s ease-out;min-width:9.5em}
+.mmweek.on{opacity:1}
+.mmweek .wk{font-size:18px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.mmweek.on .wk{color:var(--green)}
+.mmweek .tr{font-size:18px;color:var(--muted);white-space:nowrap}
+.crmrow{display:flex;flex-wrap:wrap;gap:.4em 1em;align-items:center;justify-content:center;font-size:19px;
+  color:var(--muted);background:var(--surface);border:1px solid #262c29;border-radius:12px;padding:.6em 1em;max-width:44em}
+.crmrow b{color:var(--text)}
+.crmrow .enters{color:var(--green);font-weight:700;letter-spacing:.04em}
+.toast{background:var(--surface);border:1px solid #262c29;border-radius:12px;padding:.9em 1.1em;text-align:left;
+  max-width:22em;display:flex;flex-direction:column;gap:.8em}
+.toast .msg{font-size:20px;color:var(--text);line-height:1.3}
+.wbcard{background:var(--surface);border:1px solid #262c29;border-radius:12px;padding:.9em 1.1em;text-align:left;max-width:24em}
+.wbcard .kick{font-size:18px;letter-spacing:.08em;text-transform:uppercase;color:var(--violet);font-weight:700}
+.wbcard .wt{font-size:22px;font-weight:700;margin:.15em 0 .45em}
+.wbcard ol{margin:0;padding-left:1.3em;font-size:19px;color:var(--muted);line-height:1.55}
+.rpanel{display:flex;flex-direction:column;gap:12px;width:min(560px,90vw);text-align:left}
+.rrow{display:flex;flex-direction:column;gap:5px}
+.rrow .rlab{display:flex;justify-content:space-between;gap:1em;font-size:20px;color:var(--text)}
+.rbar{height:14px;border-radius:7px;background:#20251f;overflow:hidden}
+.rbar>span{display:block;height:100%;background:var(--green)}
+
 /* friction engine (scene 07) */
 .ftree{display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;max-width:30em}
 .fhead{align-self:center;font-size:20px;font-weight:800;letter-spacing:.08em;color:var(--green);text-transform:uppercase}
@@ -219,15 +243,25 @@ img{max-width:100%}
   backdrop-filter:blur(6px);border-top:1px solid #22282500;border-top:1px solid #202523;
   padding:14px 22px;display:none;color:var(--text)}
 #notes.on{display:block}
-#notes .n1{font-size:19px;font-weight:600}
-#notes .n2{font-size:18px;color:var(--muted);margin-top:3px}
-#notes .meta{float:right;color:var(--muted);font-size:18px;letter-spacing:.04em}
+.pmhead{display:flex;justify-content:space-between;font-size:18px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px}
+.pmrows{display:flex;flex-direction:column;gap:6px}
+.pmrow{display:flex;gap:14px;align-items:baseline}
+.pmlab{flex:none;width:3.6em;font-size:18px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700}
+.pmtxt{font-size:22px;color:var(--text);line-height:1.3}
+.pmrow.say .pmtxt{color:var(--green);font-weight:600}
 
 /* ---- progress ---- */
 #progress{position:fixed;right:3vw;bottom:2.6vh;z-index:30;font-size:18px;
   color:var(--muted);letter-spacing:.08em;font-weight:600}
 #simmark{position:fixed;top:3.4vh;right:3vw;z-index:30;font-size:18px;font-weight:700;
   letter-spacing:.14em;text-transform:uppercase;color:var(--muted);opacity:.55;pointer-events:none}
+#coverage{position:fixed;top:calc(3.4vh + 26px);right:3vw;z-index:30;display:flex;gap:.5em;
+  font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;pointer-events:none}
+#coverage .cv{color:var(--muted);opacity:.3}
+#coverage .cv.done{opacity:.5}
+#coverage .cv.now{color:var(--green);opacity:.85}
+@media print{#coverage{display:none!important}}
 
 /* ---- overview ---- */
 #overview{position:fixed;inset:0;z-index:60;background:#070908f2;display:none;
@@ -271,6 +305,7 @@ img{max-width:100%}
 <div id="notes" role="note"></div>
 <div id="progress"></div>
 <div id="simmark">Simulation · Illustrative data</div>
+<div id="coverage" aria-hidden="true"></div>
 <div id="overview" role="dialog" aria-label="Scene overview">
   <h2>Overview — click a scene</h2>
   <div id="ovgrid"></div>
@@ -379,13 +414,10 @@ scene({ id:'s1', title:'The Portfolio', dur:40,
     big.append(el('div','big-num','400'), el('div','label','SMB & Mid-Market · Benelux'));
     const g=step(el('div','subhead'),2);
     g.innerHTML='Fewer than <b style="color:var(--green)">15%</b> have activated AI';
-    const frame=step(el('div','row'),3); frame.style.cssText='gap:min(2.2vw,26px);align-items:stretch;justify-content:center';
-    const c1=el('div','card'); c1.style.cssText='text-align:center;min-width:min(240px,80vw)';
-    c1.append(el('div','subhead','Basic inbox'), (()=>{const p=el('div','body muted','Easy to replace');p.style.fontSize='20px';return p;})());
-    const arrow=el('div','subhead','→'); arrow.style.cssText='align-self:center;color:var(--muted)';
-    const c2=el('div','card'); c2.style.cssText='text-align:center;min-width:min(260px,80vw);border-color:var(--green)';
-    c2.append((()=>{const h=el('div','subhead','AI in the operation');h.style.color='var(--green)';return h;})(), (()=>{const p=el('div','body muted','Harder to replace');p.style.fontSize='20px';return p;})());
-    frame.append(c1,arrow,c2);
+    const frame=step(el('div','row'),3); frame.style.cssText='gap:min(1.6vw,18px);align-items:center;justify-content:center;flex-wrap:wrap';
+    const node=(t,c)=>{ const d=el('div','subhead',t); d.style.cssText='padding:.3em .8em;border-radius:12px;background:var(--surface);border:1px solid #262c29'; if(c)d.style.color=c; return d; };
+    const arr=()=>{ const a=el('div','subhead','→'); a.style.color='var(--muted)'; return a; };
+    frame.append(node('400'), arr(), node('<15% activated','var(--amber)'), arr(), node('85% opportunity','var(--green)'));
     const mission=step(el('div','body'),4); mission.style.cssText='max-width:30em;color:var(--text)';
     mission.textContent='The goal: make Trengo part of how the customer operates — not just where messages arrive.';
     const chans=step(el('div','label'),4); chans.style.color='var(--muted)';
@@ -506,46 +538,73 @@ scene({ id:'s4', title:'One Account', dur:55,
   }
 });
 
-/* 05 — THE FOUR WEEKS (HERO) */
-scene({ id:'s5', title:'The Four Weeks', dur:70,
-  note:['“The Core 100 don’t get a marketing timeline — they move through a behaviour: aware, try, activate, prove, adopt.”','Next: I open one of them — the playground.'],
+/* 05 — MISSION MILLIONAIRE (HERO) — the four-week campaign */
+scene({ id:'s5', title:'Mission Millionaire', dur:80,
+  note:['“This is Mission Millionaire — four weeks, and every week moves one behaviour.”','Next: I open one of them — the playground.'],
   steps:4,
   build(root){
-    root.appendChild(pill('illustrative','Illustrative — funnel counts'));
-    const w=el('div','wrap'); const sp=el('div','split'); sp.style.gridTemplateColumns='0.95fr 1.05fr';
-    const df=buildDotField(100); df.el.classList.add('d100');
-    const dfWrap=el('div','col'); dfWrap.style.alignItems='center';
-    dfWrap.append(df.el, el('div','label','Core 100 · four weeks'));
-    const right=el('div','col'); right.style.cssText='align-items:flex-start;gap:14px;text-align:left';
-    const wk=el('div','subhead'); wk.style.color='var(--text)'; right.appendChild(wk);
-    const stages=['AWARENESS','TRY','ACTIVATE','PROVE','ADOPT'];
-    const ladRow=el('div','row'); ladRow.style.cssText='justify-content:flex-start;gap:6px;flex-wrap:wrap';
-    const stEls=stages.map((t,i)=>{ const c=el('span','chip',t); c.style.opacity='.4'; ladRow.appendChild(c);
-      if(i<stages.length-1){const a=el('span',null,'→');a.style.color='var(--muted)';ladRow.appendChild(a);} return c; });
-    right.appendChild(ladRow);
-    const counts=[['Awareness',100,1],['Try',64,2],['Activate',41,3],['Adopt',28,4]];
-    const legend=el('div'); legend.style.cssText='display:flex;flex-direction:column;gap:4px;width:100%;max-width:18em';
-    const cEls=counts.map(([k,v,st])=>{ const r=el('div','pmet'); r.style.cssText='opacity:0;transition:opacity .3s ease-out';
-      const kk=el('span',null,k); kk.style.fontSize='20px'; r.append(kk,el('b',null,String(v))); legend.appendChild(r); return {el:r,st}; });
-    right.appendChild(legend);
-    sp.append(dfWrap,right); w.appendChild(sp); root.appendChild(w);
-    const order=seededOrder(100,23);
-    const seq=[FOCUS.dot,...order.filter(i=>i!==FOCUS.dot)];
-    const weeks=['Week 1 — confront','Week 2 — sandbox','Week 3 — value','Week 4 — expansion'];
-    const litUpTo=[0,1,3,4];
-    function render(s){ const cs=Math.max(1,Math.min(4,s));
-      wk.textContent=weeks[cs-1];
-      df.dots.forEach(d=>{ d.classList.add('in'); setDot(d,'idle'); });
-      if(s>=2) seq.slice(0,64).forEach(i=>setDot(df.dots[i],'violet'));
-      if(s>=3) seq.slice(0,41).forEach(i=>setDot(df.dots[i],'green'));
-      const fd=df.dots[FOCUS.dot]; fd.classList.add('ring','in');
-      if(s>=3) setDot(fd,'green'); else if(s>=2) setDot(fd,'violet');
-      const lit=litUpTo[cs-1];
-      stEls.forEach((c,i)=> c.style.opacity=(i<=lit)?'1':'.4');
-      cEls.forEach(o=> o.el.style.opacity=(s>=o.st)?'1':'0'); }
+    root.appendChild(pill('illustrative'));
+    const w=el('div','wrap'); w.style.gap='min(2.2vh,22px)';
+    const head=el('div'); head.style.cssText='text-align:left;width:100%;max-width:60em';
+    head.append((()=>{const t=el('div','headline','Mission Millionaire');t.style.fontSize='clamp(30px,3.2vw,44px)';return t;})(), el('div','label','The four-week journey'));
+    w.appendChild(head);
+    const rail=el('div','mmrail');
+    const wkEls=[['Week 1','awareness → relevance'],['Week 2','trying → activating'],['Week 3','activating → first value'],['Week 4','first value → adoption']]
+      .map(([wk,tr])=>{ const c=el('div','mmweek'); c.append(el('div','wk',wk),el('div','tr',tr)); rail.appendChild(c); return c; });
+    w.appendChild(rail);
+    const stage=el('div'); stage.style.cssText='width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:min(42vh,360px)';
+    w.appendChild(stage);
+
+    // BEAT 1 — CRM row + email
+    const b1=el('div','col'); b1.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
+    const crm=el('div','crmrow');
+    crm.innerHTML='<b>Account #47</b> · bundle <b>71%</b> · after-hours <b>38%</b> · help centre <b>22</b> · <span style="color:var(--amber)">AI off</span> &nbsp;<span class="enters">→ ENTERS MISSION MILLIONAIRE</span>';
+    b1.appendChild(crm);
+    const mail=el('div','mail'); mail.style.maxWidth='min(620px,92vw)';
+    const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'Inbox · 1 unread'));
+    const from=el('div','from'); from.append(el('span',null,'Trengo Customer Success'),el('span','time','09:02'));
+    mail.append(bar,from, el('div','subj','Which questions are stealing your team’s time?'),
+      el('div','bod','Last month your team answered the same delivery question over and over. A third of them after 18:00. Here are your top ten — and the one I’d automate first.'));
+    const bw=el('div'); bw.style.padding='0 1.1em 1.2em'; bw.appendChild(el('button','btn','See my ten questions →')); mail.appendChild(bw);
+    b1.appendChild(mail);
+    const cap1=el('div','body muted','Awareness becomes relevance when it’s their data, not our product news.'); cap1.style.cssText='font-size:19px;max-width:36em'; b1.appendChild(cap1);
+
+    // BEAT 2 — in-app toast + webinar
+    const b2=el('div','col'); b2.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
+    const two=el('div','row'); two.style.cssText='justify-content:center;align-items:stretch;gap:min(2vw,20px)';
+    const toast=el('div','toast'); toast.append(el('div','msg','“You’ve answered this question dozens of times this month.”'), el('button','btn','Test it in the playground'));
+    const wb=el('div','wbcard'); wb.append(el('div','kick','30 min · Live · Thursday'), el('div','wt','Build your first AI use case'));
+    const ol=document.createElement('ol'); ['Find your repeating question','Connect your knowledge','Test it in the playground','Launch in Supervised Mode'].forEach(t=>{const li=document.createElement('li');li.textContent=t;ol.appendChild(li);}); wb.appendChild(ol);
+    two.append(toast,wb); b2.appendChild(two);
+    const cap2=el('div','body muted','Nobody is asked to go live yet. They’re asked to try to break it.'); cap2.style.cssText='font-size:19px;max-width:36em'; b2.appendChild(cap2);
+
+    // BEAT 3 — results panel (no invented %)
+    const b3=el('div','col'); b3.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
+    const rp=el('div','rpanel');
+    const barRow=(lab,pct)=>{ const r=el('div','rrow'); const l=el('div','rlab'); l.appendChild(el('span',null,lab)); r.appendChild(l);
+      const bar2=el('div','rbar'); const sp=el('span'); sp.style.width=pct+'%'; bar2.appendChild(sp); r.appendChild(bar2); return r; };
+    rp.append(barRow('Conversations handled by AI',80), barRow('Escalated to a person',30));
+    const rt=el('div','rrow'); const rl=el('div','rlab'); const a=el('span',null,'Response time'), bmin=el('span',null,'hours → minutes'); bmin.style.color='var(--green)'; rl.append(a,bmin); rt.appendChild(rl); rp.appendChild(rt);
+    b3.append(rp, el('span','tag grey','Illustrative'));
+    const cap3=el('div','body muted','First value is their own dashboard, not my promise.'); cap3.style.cssText='font-size:19px;max-width:36em'; b3.appendChild(cap3);
+
+    // BEAT 4 — adoption options
+    const b4=el('div','col'); b4.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
+    const opts=el('div','row'); opts.style.cssText='justify-content:center;gap:min(2vw,20px)';
+    const opt=(t,d)=>{ const c=el('div','card'); c.style.cssText='text-align:left;min-width:min(280px,86vw)';
+      const h=el('div','subhead',t); h.style.fontSize='24px'; c.append(h, (()=>{const p=el('div','body muted',d);p.style.fontSize='19px';return p;})()); return c; };
+    opts.append(opt('A second use case','→ another question, same agent'), opt('A second channel','→ the same agent, one channel wider'));
+    b4.appendChild(opts);
+    const cap4=el('div','body muted','Adoption is when it stops being a trial and becomes how they work.'); cap4.style.cssText='font-size:19px;max-width:36em'; b4.appendChild(cap4);
+
+    const beats=[b1,b2,b3,b4];
+    beats.forEach(bx=>{ bx.style.opacity='0'; bx.style.display='none'; stage.appendChild(bx); });
+    root.appendChild(w);
     return {
-      enter(){ df.dots.forEach(d=>{d.classList.remove('in','green','violet','ring','amber','human');setDot(d,'idle');}); revealDots(df.dots,4); },
-      toStep(s){ render(s); }
+      toStep(s){ const cs=Math.max(1,Math.min(4,s));
+        wkEls.forEach((c,i)=> c.classList.toggle('on', i===cs-1));
+        beats.forEach((bx,i)=>{ const on=(i===cs-1); bx.style.display=on?'flex':'none'; bx.style.opacity=on?'1':'0'; });
+      }
     };
   }
 });
@@ -582,7 +641,7 @@ scene({ id:'s6', title:'Try To Break It', dur:80,
     done.innerHTML='Two it nails. <span style="color:var(--amber)">One it refuses</span> — and hands to a human.';
     w.appendChild(done);
     const wismo=step(el('div','body muted'),5); wismo.style.cssText='font-size:19px;max-width:36em;margin-top:2px';
-    wismo.innerHTML='<span class="tag green" style="font-size:18px">Verified · public</span> &nbsp;“Where is my order” = WISMO — Trengo customer Comercial Méndez resolves <b style="color:var(--green)">74%</b> of it with AI.';
+    wismo.textContent='WISMO — “where is my order” — the question support teams repeat most.';
     w.appendChild(wismo); root.appendChild(w);
     const msgs=[
       {step:2,role:'user',text:'Where is my order 18492?'},
@@ -640,8 +699,8 @@ scene({ id:'s7', title:'The Friction Engine', dur:70,
     tree.appendChild(el('div','fhead','Digital first'));
     const mkbranch=(cls,ttl,rte)=>{ const b=el('div','fbranch '+cls); b.append(el('div','ttl',ttl), el('div','rte',rte)); tree.appendChild(b); return b; };
     const b1=mkbranch('auto','Small friction','→ In-app guide');
-    const b2=mkbranch('auto','Conceptual friction','→ Group session · 1:many');
-    const b3=mkbranch('human','High intent · blocked','→ Human · 1:1');
+    const b2=mkbranch('auto','Conceptual friction','→ Group session');
+    const b3=mkbranch('human','High intent · blocked','→ 15 minutes with me');
     const right=el('div','col'); right.style.alignItems='flex-start'; right.appendChild(tree);
     sp.append(dfWrap,right); w.appendChild(sp);
     const line=step(el('div','headline'),4); line.style.maxWidth='20em';
@@ -673,8 +732,8 @@ scene({ id:'s7', title:'The Friction Engine', dur:70,
 
 /* 08 — 90 DAYS */
 scene({ id:'s8', title:'90 Days', dur:60,
-  note:['“90 days proves adoption — not churn — and here’s what adoption looks like in Trengo’s own customers.”','Next: the close.'],
-  steps:5,
+  note:['“90 days proves adoption — not churn. I’d rather say that now than claim it later.”','Next: the close.'],
+  steps:4,
   build(root){
     root.appendChild(pill('target'));
     const w=el('div','wrap');
@@ -695,13 +754,6 @@ scene({ id:'s8', title:'90 Days', dur:60,
     const tierb=el('div','body muted'); tierb.style.cssText='font-size:18px;max-width:22em';
     tierb.textContent='Tier B starts five weeks later — a comparison group, not a randomised experiment.'; right.appendChild(tierb);
     sp.append(flight,right); const spWrap=el('div'); spWrap.style.width='100%'; spWrap.appendChild(sp); w.appendChild(spWrap);
-    const proof=step(el('div','col'),5); proof.style.cssText='align-items:center;gap:6px;margin-top:8px;width:100%;max-width:34em';
-    const pl=el('div'); pl.innerHTML='<span class="tag green" style="font-size:18px">Verified · public case studies</span> &nbsp;<span style="color:var(--muted);font-size:18px">adoption, in Trengo’s own customers</span>'; proof.appendChild(pl);
-    const pledger=el('div'); pledger.style.cssText='width:100%;display:flex;flex-direction:column;gap:4px';
-    [['Vue Cinemas','40% resolved by AI'],['Goedgemerkt','+240% tickets · flat team'],['Dentakay','270 hrs/month saved']]
-      .forEach(([n,r])=>{ const row=el('div','pmet'); const k=el('span',null,n); k.style.fontSize='20px';
-        const v=el('b',null,r); v.style.color='var(--green)'; row.append(k,v); pledger.appendChild(row); });
-    proof.appendChild(pledger); w.appendChild(proof);
     root.appendChild(w);
     return {};
   }
@@ -749,6 +801,7 @@ const notesEl=document.getElementById('notes');
 const progEl=document.getElementById('progress');
 const overviewEl=document.getElementById('overview');
 const ovgrid=document.getElementById('ovgrid');
+const coverageEl=document.getElementById('coverage');
 
 const state=[]; // per scene: {def,sec,inst,step,built:bool}
 
@@ -777,7 +830,8 @@ function applyStep(i){
   if(st.inst.toStep) st.inst.toStep(s);
   fitScene(i);
   renderProgress();
-  renderNote();
+  renderPresenter();
+  renderCoverage();
 }
 
 // scale a scene's wrap down if its content is taller/wider than the viewport
@@ -795,51 +849,100 @@ function fitScene(i){
 }
 window.addEventListener('resize',()=>{ if(state[cur]) fitScene(cur); });
 
-function show(i,atLastStep){
-  if(i<0)i=0; if(i>SCENES.length-1)i=SCENES.length-1;
-  // exit current
-  if(state[cur]){
-    if(state[cur].inst.exit) state[cur].inst.exit();
-    state[cur].sec.classList.remove('active');
+/* ---- autoplay timeline: scenes play their own steps; one press between scenes ---- */
+let playTimers=[], pendingBeats=0;
+function clearPlay(){ playTimers.forEach(t=>clearTimeout(t)); playTimers=[]; pendingBeats=0; }
+function beatsFor(i){
+  const n=maxStep(i); const b=(typeof BEATS!=='undefined'&&BEATS[i]);
+  if(b&&b.length>=n) return b;
+  const a=[]; for(let k=0;k<n;k++)a.push(k*1600); return a; // fallback 1600ms/step
+}
+function startAutoplay(i){
+  clearPlay();
+  const st=state[i], n=maxStep(i);
+  if(REDUCED){ st.step=n; applyStep(i); return; }
+  st.step=1; applyStep(i);
+  const beats=beatsFor(i);
+  pendingBeats=Math.max(0,n-1);
+  for(let s=2;s<=n;s++){
+    const at=(beats[s-1]!=null)?beats[s-1]:(s-1)*1600;
+    playTimers.push(setTimeout(()=>{ pendingBeats--; if(cur!==i)return; st.step=s; applyStep(i); }, at));
   }
-  cur=i;
+}
+function isPlaying(i){
   const st=state[i];
-  st.step = atLastStep?maxStep(i):1;
-  st.sec.classList.add('active');
+  if(st.step<maxStep(i)) return true;
+  if(pendingBeats>0) return true;
+  if(st.inst.busy&&st.inst.busy()) return true;
+  return false;
+}
+function skipToEnd(i){
+  clearPlay();
+  const st=state[i]; st.step=maxStep(i); applyStep(i);
+  if(st.inst.finish) st.inst.finish(); // ensure typing scenes render fully
+}
+function show(i){
+  if(i<0)i=0; if(i>SCENES.length-1)i=SCENES.length-1;
+  clearPlay();
+  if(state[cur]){ if(state[cur].inst.exit) state[cur].inst.exit(); state[cur].sec.classList.remove('active'); }
+  cur=i;
+  const st=state[i]; st.sec.classList.add('active');
   if(st.inst.enter) st.inst.enter();
-  applyStep(i);
+  startAutoplay(i);
 }
-
 function next(){
-  const st=state[cur];
-  // busy interaction (e.g. typing) -> finish it instead of advancing
-  if(st.inst.busy && st.inst.busy()){ if(st.inst.finish) st.inst.finish(); return; }
-  if(st.step < maxStep(cur)){
-    st.step++;
-    applyStep(cur);
-  }else if(cur < SCENES.length-1){
-    show(cur+1,false);
-  }
+  if(isPlaying(cur)){ skipToEnd(cur); return; }      // reveal current scene fully first
+  if(cur<SCENES.length-1) show(cur+1);                // then advance
 }
-function prev(){
-  const st=state[cur];
-  if(st.inst.busy && st.inst.busy()){ if(st.inst.finish) st.inst.finish(); return; }
-  if(st.step>1){ st.step--; applyStep(cur); }
-  else if(cur>0){ show(cur-1,true); }
-}
-function jump(i){ if(i>=0&&i<SCENES.length) show(i,false); }
+function prev(){ show(cur>0?cur-1:0); }               // back one scene, replay from start
+function jump(i){ if(i>=0&&i<SCENES.length) show(i); }
 
 function renderProgress(){
   progEl.textContent = String(cur+1).padStart(2,'0')+' / '+String(SCENES.length).padStart(2,'0');
 }
-function renderNote(){
-  const def=state[cur].def;
-  const n=def.note||['',''];
+/* autoplay beat timings per scene index (ms from entry, one per step); null = fallback */
+const BEATS=[
+  [0,1600,3400,5200],            // 01
+  [0,2000,4000],                 // 02
+  [0,1600,3000,4600,6200],       // 03
+  [0,1600,3200],                 // 04
+  [0,5000,10000,15000],          // 05 (campaign — long beats to read each artefact)
+  [0,1500,4200,7200,10800],      // 06 (typing — long beats)
+  [0,1600,3200,4800],            // 07
+  [0,1600,3000,4400],            // 08
+  [0,1400,2800,4000,5200,6600]   // 09
+];
+/* presenter teleprompter, per scene index */
+const PRESENTER=[
+  {say:"I don't see 400 customers. I see a prioritisation problem.", then:"The portfolio is a prioritisation problem, not a headcount problem.", shows:"the portfolio"},
+  {say:"Activation is the KPI. Adoption is the proof.", then:"Adoption is what I optimise for, one rung past activation.", shows:"the KPI vs the proof"},
+  {say:"I decide who deserves attention before I decide what to send.", then:"A 400 → 100 filter on need, readiness and fit.", shows:"the filter"},
+  {say:"This is what the customer actually receives.", then:"The score is real fields, not a vibe.", shows:"one account"},
+  {say:"This is Mission Millionaire — four weeks, and every week moves one behaviour.", then:"The campaign is a behavioural journey, not a blast.", shows:"the four-week campaign"},
+  {say:"We don't ask customers to trust AI. We let them try to break it.", then:"Two answers land; the edge case hands to a human.", shows:"the playground"},
+  {say:"Human time is the exception, triggered by evidence.", then:"Most friction resolves at scale; one needs a person.", shows:"the friction monitor"},
+  {say:"90 days proves adoption. It doesn't prove churn.", then:"Targets, and the honest limit of the window.", shows:"the 90-day plan"},
+  {say:"The goal isn't 100 activations. It's a system that makes the next 100 easier.", then:"100 running part of their operation on Trengo.", shows:"the close"}
+];
+function phaseFor(i){ return i<=1?'PRIORITISATION': i<=3?'TRIGGERS': i<=5?'CAMPAIGN': i===6?'HUMAN TOUCH':'MEASUREMENT'; }
+const COVERAGE=['Prioritisation','Triggers','Campaign','Human touch','Measurement'];
+function phaseIdx(i){ return i<=1?0: i<=3?1: i<=5?2: i===6?3:4; }
+function renderCoverage(){
+  const ci=phaseIdx(cur); coverageEl.innerHTML='';
+  COVERAGE.forEach((t,k)=>{ coverageEl.appendChild(el('span','cv'+(k===ci?' now':k<ci?' done':''),t)); });
+}
+function renderPresenter(){
+  const i=cur, p=PRESENTER[i]||{say:'',then:'',shows:''};
+  const nextShows=(i+1<SCENES.length&&PRESENTER[i+1])?PRESENTER[i+1].shows:'—';
   notesEl.innerHTML='';
-  const meta=el('div','meta', (def.title||'')+'  ·  ~'+(def.dur||0)+'s  ·  step '+state[cur].step+'/'+maxStep(cur));
-  notesEl.appendChild(meta);
-  notesEl.appendChild(el('div','n1',n[0]||''));
-  if(n[1])notesEl.appendChild(el('div','n2',n[1]));
+  const head=el('div','pmhead');
+  head.append(el('span',null,String(i+1).padStart(2,'0')+' / '+String(SCENES.length).padStart(2,'0')),
+              el('span',null,'Case: '+phaseFor(i)));
+  notesEl.appendChild(head);
+  const rows=el('div','pmrows');
+  const row=(cls,lab,txt)=>{ const r=el('div','pmrow'+cls); r.append(el('span','pmlab',lab), el('span','pmtxt',txt)); return r; };
+  rows.append(row(' say','Say',p.say||''), row('','Then',p.then||''), row('','Next',nextShows));
+  notesEl.appendChild(rows);
 }
 
 /* overlays */
@@ -893,17 +996,18 @@ window.addEventListener('beforeprint',()=>{
 });
 window.addEventListener('afterprint',()=>{
   state.forEach(st=>{ if(st) st.sec.classList.remove('active'); });
-  const c=(printPrev==null)?cur:printPrev; cur=c;
-  state[c].sec.classList.add('active'); state[c].step=1; applyStep(c);
+  clearPlay();
+  show((printPrev==null)?cur:printPrev);
 });
 
 /* boot */
 SCENES.forEach((_,i)=>buildScene(i));
 buildOverview();
-show(0,false);
+show(0);
 
 // expose for headless verification
-window.__deck={next,prev,jump,get cur(){return cur;},get step(){return state[cur].step;},count:SCENES.length,maxStep};
+window.__deck={next,prev,jump,get cur(){return cur;},get step(){return state[cur].step;},
+  count:SCENES.length,maxStep,playing:()=>isPlaying(cur)};
 })();
 </script>
 </body>
