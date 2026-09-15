@@ -595,14 +595,29 @@ scene({ id:'s5', title:'Operation Millionaire', dur:80,
     b1.appendChild(inbox);
     const cap1=el('div','body muted','Discovery is their own inbox, not our product news.'); cap1.style.cssText='font-size:19px;max-width:36em'; b1.appendChild(cap1);
 
-    // BEAT 2 — in-app toast + webinar
+    // BEAT 2 — TRY: AI Agent config panel + supervised review (no go-live yet)
     const b2=el('div','col'); b2.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
-    const two=el('div','row'); two.style.cssText='justify-content:center;align-items:stretch;gap:min(2vw,20px)';
-    const toast=el('div','toast'); toast.append(el('div','msg','“You’ve answered this question dozens of times this month.”'), el('button','btn','Test it in the playground'));
-    const wb=el('div','wbcard'); wb.append(el('div','kick','30 min · Live · Thursday'), el('div','wt','Build your first AI use case'));
-    const ol=document.createElement('ol'); ['Find your repeating question','Connect your knowledge','Test it in the playground','Launch in Supervised Mode'].forEach(t=>{const li=document.createElement('li');li.textContent=t;ol.appendChild(li);}); wb.appendChild(ol);
-    two.append(toast,wb); b2.appendChild(two);
-    const cap2=el('div','body muted','Nobody is asked to go live yet. They’re asked to try to break it.'); cap2.style.cssText='font-size:19px;max-width:36em'; b2.appendChild(cap2);
+    const cfg=el('div','mail'); cfg.style.maxWidth='min(680px,94vw)';
+    const cbar=el('div','bar'); cbar.append(el('span','dotr'),el('span',null,'AI Agent · Setup'),
+      (()=>{const s=el('span','tag violet','Supervised Mode');s.style.marginLeft='auto';return s;})());
+    cfg.appendChild(cbar);
+    const crow=(k,v,ok)=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:16px;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:18px';
+      const kk=el('span',null,k); kk.style.cssText='color:var(--muted);min-width:7.5em';
+      const vv=el('span'); vv.appendChild(document.createTextNode(v)); vv.style.textAlign='right';
+      if(ok){ const c=el('span',null,' ✓'); c.style.color='var(--green)'; vv.appendChild(c); }
+      r.append(kk,vv); cfg.appendChild(r); };
+    crow('Knowledge','Help centre · 22 articles',true);
+    crow('Instructions','Answer delivery questions; never guess a refund',false);
+    crow('Skills','Order lookup · Track & Trace',true);
+    crow('Channel','WhatsApp + Web',true);
+    crow('Escalation','Hand to a human on refunds & disputes',true);
+    const act=el('div'); act.style.cssText='display:flex;gap:10px;padding:.7em 1.1em;border-top:1px solid var(--grey);align-items:center;flex-wrap:wrap';
+    const secBtn=(t)=>{ const b=el('button','btn',t); b.style.cssText='background:transparent;color:var(--text);border:1px solid var(--grey)'; return b; };
+    act.append((()=>{const s=el('span',null,'Every reply reviewed →');s.style.cssText='font-size:18px;color:var(--muted);margin-right:auto';return s;})(),
+      el('button','btn','Approve'), secBtn('Edit'), secBtn('Escalate'));
+    cfg.appendChild(act);
+    b2.appendChild(cfg);
+    const cap2=el('div','body muted','Nobody goes live yet: they configure it, then approve every reply by hand.'); cap2.style.cssText='font-size:19px;max-width:36em'; b2.appendChild(cap2);
 
     // BEAT 3 — ACTIVATE: the whole campaign drives to 100 activations (target, not a result)
     const b3=el('div','col'); b3.style.cssText='align-items:center;gap:16px;transition:opacity .3s ease-out';
