@@ -388,7 +388,9 @@ scene({ id:'s1', title:'The Portfolio', dur:40,
     frame.append(c1,arrow,c2);
     const mission=step(el('div','body'),4); mission.style.cssText='max-width:30em;color:var(--text)';
     mission.textContent='The goal: make Trengo part of how the customer operates — not just where messages arrive.';
-    w.append(df.el,big,g,frame,mission); root.appendChild(w);
+    const chans=step(el('div','label'),4); chans.style.color='var(--muted)';
+    chans.textContent='WhatsApp · Instagram · Facebook · Email · Voice · SMS';
+    w.append(df.el,big,g,frame,mission,chans); root.appendChild(w);
     const greenIdx=[]; for(let i=3;i<400 && greenIdx.length<58;i+=7)greenIdx.push(i);
     return {
       enter(){ df.dots.forEach(d=>{d.classList.remove('in');setDot(d,'idle');}); revealDots(df.dots,4); },
@@ -578,7 +580,10 @@ scene({ id:'s6', title:'Try To Break It', dur:80,
     pg.append(left,center,right); w.appendChild(pg);
     const done=step(el('div','headline'),5); done.style.maxWidth='16em';
     done.innerHTML='Two it nails. <span style="color:var(--amber)">One it refuses</span> — and hands to a human.';
-    w.appendChild(done); root.appendChild(w);
+    w.appendChild(done);
+    const wismo=step(el('div','body muted'),5); wismo.style.cssText='font-size:19px;max-width:36em;margin-top:2px';
+    wismo.innerHTML='<span class="tag green" style="font-size:18px">Verified · public</span> &nbsp;“Where is my order” = WISMO — Trengo customer Comercial Méndez resolves <b style="color:var(--green)">74%</b> of it with AI.';
+    w.appendChild(wismo); root.appendChild(w);
     const msgs=[
       {step:2,role:'user',text:'Where is my order 18492?'},
       {step:2,role:'ai',text:'Shipped Tuesday, out for delivery today.',tag:['green','Answered']},
@@ -625,6 +630,9 @@ scene({ id:'s7', title:'The Friction Engine', dur:70,
     const df=buildDotField(100); df.el.classList.add('d100');
     const dfWrap=el('div','col'); dfWrap.style.alignItems='center';
     dfWrap.append(df.el, el('div','label','Core 100 · friction monitor'));
+    const src=el('div','body muted'); src.style.cssText='font-size:18px;max-width:24em;text-align:center';
+    src.innerHTML='<span class="tag green" style="font-size:18px">Verified in product</span> &nbsp;states from Trengo Reporting';
+    dfWrap.appendChild(src);
     const legend=el('div','body'); legend.style.cssText='font-size:19px;opacity:0;transition:opacity .3s ease-out;color:var(--muted)';
     legend.innerHTML='10 friction signals · <span style="color:var(--green)">9 handled at scale</span> · <span style="color:var(--amber)">1 needs a person</span>';
     dfWrap.appendChild(legend);
@@ -665,8 +673,8 @@ scene({ id:'s7', title:'The Friction Engine', dur:70,
 
 /* 08 — 90 DAYS */
 scene({ id:'s8', title:'90 Days', dur:60,
-  note:['“90 days proves adoption — not churn. I’d rather say that now than claim it later.”','Next: the close.'],
-  steps:4,
+  note:['“90 days proves adoption — not churn — and here’s what adoption looks like in Trengo’s own customers.”','Next: the close.'],
+  steps:5,
   build(root){
     root.appendChild(pill('target'));
     const w=el('div','wrap');
@@ -687,6 +695,13 @@ scene({ id:'s8', title:'90 Days', dur:60,
     const tierb=el('div','body muted'); tierb.style.cssText='font-size:18px;max-width:22em';
     tierb.textContent='Tier B starts five weeks later — a comparison group, not a randomised experiment.'; right.appendChild(tierb);
     sp.append(flight,right); const spWrap=el('div'); spWrap.style.width='100%'; spWrap.appendChild(sp); w.appendChild(spWrap);
+    const proof=step(el('div','col'),5); proof.style.cssText='align-items:center;gap:6px;margin-top:8px;width:100%;max-width:34em';
+    const pl=el('div'); pl.innerHTML='<span class="tag green" style="font-size:18px">Verified · public case studies</span> &nbsp;<span style="color:var(--muted);font-size:18px">adoption, in Trengo’s own customers</span>'; proof.appendChild(pl);
+    const pledger=el('div'); pledger.style.cssText='width:100%;display:flex;flex-direction:column;gap:4px';
+    [['Vue Cinemas','40% resolved by AI'],['Goedgemerkt','+240% tickets · flat team'],['Dentakay','270 hrs/month saved']]
+      .forEach(([n,r])=>{ const row=el('div','pmet'); const k=el('span',null,n); k.style.fontSize='20px';
+        const v=el('b',null,r); v.style.color='var(--green)'; row.append(k,v); pledger.appendChild(row); });
+    proof.appendChild(pledger); w.appendChild(proof);
     root.appendChild(w);
     return {};
   }
