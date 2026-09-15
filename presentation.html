@@ -841,24 +841,22 @@ scene({ id:'s9', title:'The Close', dur:45,
     const w=el('div','wrap'); const closeWrap=el('div','col'); closeWrap.style.alignItems='center';
     const df=buildDotField(400); df.el.classList.add('sm'); df.el.style.transition='opacity .3s ease-out'; closeWrap.appendChild(df.el);
     const cap=el('div','label'); cap.style.cssText='opacity:0;transition:opacity .3s ease-out'; closeWrap.appendChild(cap);
-    const lEls=['400 customers.','100 prioritised.','One system that makes the next 100 easier.'].map(t=>{
+    const lEls=['400 accounts.','100 activations.','One system that makes the next 100 easier.'].map(t=>{
       const c=el('div','headline'); c.style.cssText='opacity:0;transition:opacity .3s ease-out;max-width:16em'; c.textContent=t; closeWrap.appendChild(c); return c; });
     const finalLine=el('div','headline'); finalLine.style.cssText='opacity:0;transition:opacity .3s ease-out;max-width:18em';
-    finalLine.innerHTML='Not 100 customers switching on AI.<br><span style="color:var(--green)">100 customers running a real part of their customer operation on Trengo</span><br>— and a system that makes the next 100 easier.';
+    finalLine.innerHTML='Not 100 customers simply switching on AI.<br><span style="color:var(--green)">100 customers running a real part of their customer operation on Trengo</span><br>— and a system that makes the next 100 easier.';
     finalLine.style.maxWidth='22em';
     closeWrap.appendChild(finalLine);
     w.appendChild(closeWrap); root.appendChild(w);
     const core100=seededOrder(400,3).slice(0,100);
-    const target160=seededOrder(400,3).slice(0,160);
     return {
       enter(){ df.dots.forEach(d=>{d.classList.remove('in','green');setDot(d,'idle');}); revealDots(df.dots,3); },
       toStep(s){ const nearBlack=s>=6;
         rev(plEl, s>=2 && !nearBlack);
         df.el.style.opacity=nearBlack?'0':'1';
         df.dots.forEach(d=>{ d.classList.add('in'); setDot(d,'idle'); });
-        if(s>=2) transitionDots(df.dots,target160,'green',4);
-        else if(s>=1) transitionDots(df.dots,core100,'green',4);
-        cap.textContent = s>=2?'160 of 400 · target':'100 of 400 · prioritised';
+        if(s>=2) transitionDots(df.dots,core100,'green',4);
+        cap.textContent = s>=2?'100 of 400 · activated':'400 accounts';
         cap.style.opacity=(s>=1&&!nearBlack)?'1':'0';
         lEls[0].style.opacity=(s>=3&&!nearBlack)?'1':'0';
         lEls[1].style.opacity=(s>=4&&!nearBlack)?'1':'0';
