@@ -453,8 +453,8 @@ scene({ id:'s2', title:'Activation Is Not The Goal', dur:50,
       if(name==='ACTIVATION')r.appendChild(el('span','tag green','THE KPI'));
       if(name==='ADOPTION')r.appendChild(el('span','tag grey','WHAT I OPTIMISE FOR'));
       lad.appendChild(r); return r; });
-    const line=step(el('div','hero'),2); line.style.maxWidth='14em';
-    line.innerHTML='Activation is the KPI.<br>Adoption is the proof.<br><span style="color:var(--green)">Customer value is the goal.</span>';
+    const line=step(el('div','hero'),2); line.style.maxWidth='19em';
+    line.innerHTML='Two jobs at once: go <span style="color:var(--green)">deeper</span> into how customers operate —<br>and do it <span style="color:var(--green)">one-to-many</span>, because CS can’t scale 1:1.';
     const ass=step(el('div','body muted'),3); ass.style.maxWidth='30em';
     ass.textContent='15% → 40% is ~160 of 400. Assumption: 25% read as percentage points. I’d confirm on day one.';
     w.append(lad,line,ass); root.appendChild(w);
@@ -485,7 +485,7 @@ scene({ id:'s3', title:'The Activation Matrix', dur:70,
       c.style.transition='opacity .3s ease-out,border-color .3s ease-out'; c.append(el('div','label',h));
       const dd=el('div','body',d); dd.style.fontSize='20px'; dd.style.color='var(--muted)'; c.append(dd); return c; });
     const src=el('div','body muted'); src.style.fontSize='18px';
-    src.innerHTML='Data: <b style="color:var(--text)">HubSpot · Gainsight</b> + a <b style="color:var(--violet)">Claude</b> analysis layer — signals I control';
+    src.innerHTML='Data I’d look for: <b style="color:var(--text)">CRM + product-usage signals</b> + an <b style="color:var(--violet)">AI analysis layer</b> for pattern-finding — signals I control';
     side.append(counter,clab,...fEls,src); top.append(df.el,side);
     const tiers=step(el('div','row'),4); tiers.style.cssText='justify-content:center;gap:min(2.2vw,26px);flex-wrap:wrap';
     const tier=(name,desc,col)=>{ const c=el('div'); c.style.cssText='display:flex;align-items:center;gap:.5em;font-size:20px';
@@ -560,18 +560,27 @@ scene({ id:'s4', title:'One Account', dur:55,
 
 /* 05 — MISSION MILLIONAIRE (HERO) — the four-week campaign */
 scene({ id:'s5', title:'Operation Millionaire', dur:80,
-  note:['“This is Operation Millionaire — four weeks, and every week moves one behaviour.”','Next: I open one of them — the playground.'],
-  steps:4,
+  note:['“Make your clients millionaire, they make you billionaire — four weeks, one real use case.”','Next: I open one of them — the playground.'],
+  steps:6,
   build(root){
     root.appendChild(pill('illustrative'));
     const w=el('div','wrap'); w.style.gap='min(2.2vh,22px)';
+
+    // INTRO (steps 1–2) — the campaign quote, then its business meaning
+    const intro=el('div','col'); intro.style.cssText='align-items:center;gap:min(3vh,30px);max-width:22em';
+    const quote=el('div','hero'); quote.style.cssText='font-size:clamp(34px,4.4vw,60px);line-height:1.08;font-weight:800';
+    quote.innerHTML='“Make your clients&nbsp;<span style="color:var(--green)">millionaire</span>,<br>they make you&nbsp;<span style="color:var(--green)">billionaire</span>.”';
+    const coremsg=el('div'); coremsg.style.cssText='transition:opacity .3s ease-out';
+    coremsg.innerHTML='<div class="subhead" style="font-size:clamp(22px,2.4vw,30px)">The goal is not <span style="color:var(--muted)">“activate AI.”</span><br>It’s to solve one concrete operational problem — and save the customer real time.</div>';
+    intro.append(quote,coremsg); w.appendChild(intro);
+
     const head=el('div'); head.style.cssText='text-align:left;width:100%;max-width:60em';
     const hdr=el('div','apphdr'); hdr.appendChild(el('span','lg'));
     const hb=document.createElement('span'); hb.innerHTML='Trengo › <b>Journeys</b> › Operation Millionaire'; hdr.appendChild(hb);
     head.append(hdr, (()=>{const t=el('div','headline','Operation Millionaire');t.style.fontSize='clamp(30px,3.2vw,44px)';return t;})(), el('div','label','4 weeks. One real AI use case.'));
     w.appendChild(head);
     const rail=el('div','mmrail');
-    const wkEls=[['Week 1 · DISCOVER','the repeating question'],['Week 2 · TRY','test it — don’t launch it'],['Week 3 · ACTIVATE','0 → 100 accounts live'],['Week 4 · ADOPT','the next use case']]
+    const wkEls=[['Week 1 · DISCOVER','the repeating question'],['Week 2 · PROVE','test it — don’t launch it'],['Week 3 · ACTIVATE','one use case, one channel · live'],['Week 4 · PROVE VALUE','measure → expand']]
       .map(([wk,tr])=>{ const c=el('div','mmweek'); c.append(el('div','wk',wk),el('div','tr',tr)); rail.appendChild(c); return c; });
     w.appendChild(rail);
     const stage=el('div'); stage.style.cssText='width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:min(42vh,360px)';
@@ -638,32 +647,39 @@ scene({ id:'s5', title:'Operation Millionaire', dur:80,
       actTimer=setInterval(()=>{ v+=2; if(v>=100){v=100;clearInterval(actTimer);actTimer=null;} bigNum.textContent=String(v); fill.style.width=v+'%'; },22); }
     function stopActivation(){ if(actTimer){clearInterval(actTimer);actTimer=null;} }
 
-    // BEAT 4 — ADOPT: live status dashboard + next use case
+    // BEAT 4 — PROVE VALUE: outcome-measurement view (metric names, no fabricated results) → expand
     const b4=el('div','col'); b4.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
     const dash=el('div','mail'); dash.style.maxWidth='min(680px,94vw)';
-    const dbar=el('div','bar'); dbar.append(el('span','dotr'),el('span',null,'AI Agent · Live'),
-      (()=>{const s=el('span','tag green','Active');s.style.marginLeft='auto';return s;})());
+    const dbar=el('div','bar'); dbar.append(el('span','dotr'),el('span',null,'Week 4 · what we measure'),
+      (()=>{const s=el('span','tag grey','Proposed metrics');s.style.marginLeft='auto';return s;})());
     dash.appendChild(dbar);
-    const drow=(k,v)=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:16px;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:18px';
-      const kk=el('span',null,k); kk.style.cssText='color:var(--muted);min-width:9em';
-      const vv=el('span'); vv.appendChild(document.createTextNode(v)); const c=el('span',null,' ✓'); c.style.color='var(--green)'; vv.appendChild(c); vv.style.textAlign='right';
-      r.append(kk,vv); dash.appendChild(r); };
-    drow('Use case','WISMO · Where is my order?');
-    drow('Knowledge','Connected');
-    drow('Channel','WhatsApp');
-    drow('Human escalation','Active');
+    const drow=(k,v,verified)=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:16px;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:18px';
+      const kk=el('span',null,k); kk.style.cssText='color:var(--text);min-width:11em';
+      const vv=el('span','tag '+(verified?'green':'grey'),v); r.append(kk,vv); dash.appendChild(r); };
+    drow('Conversations handled by AI','Product metric',true);
+    drow('Response time','Product metric',true);
+    drow('Human interventions','Product metric',true);
+    drow('CSAT on AI replies','Business metric',false);
     b4.appendChild(dash);
     const nxt=el('div'); nxt.style.cssText='display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:.7em 1.1em;border:1px solid var(--grey);border-radius:12px;background:rgba(167,139,250,.10);max-width:min(680px,94vw)';
-    nxt.append(el('span','tag violet','NEXT USE CASE'), (()=>{const s=el('span',null,'Returns & exchanges → the same agent, one question wider.');s.style.fontSize='18px';return s;})());
+    nxt.append(el('span','tag violet','VALUE PROVEN → EXPAND'), (()=>{const s=el('span',null,'One question wider, or one channel more — same agent.');s.style.fontSize='18px';return s;})());
     b4.appendChild(nxt);
-    const cap4=el('div','body muted','Adoption is when it stops being a trial and becomes how they work.'); cap4.style.cssText='font-size:19px;max-width:36em'; b4.appendChild(cap4);
+    const cap4=el('div','body muted','Don’t stop at “AI activated.” Show what it changed — then expand.'); cap4.style.cssText='font-size:19px;max-width:36em'; b4.appendChild(cap4);
 
     const beats=[b1,b2,b3,b4];
     beats.forEach(bx=>{ bx.style.opacity='0'; bx.style.display='none'; stage.appendChild(bx); });
     root.appendChild(w);
     let lastCs=0;
     return {
-      toStep(s){ const cs=Math.max(1,Math.min(4,s));
+      toStep(s){
+        const introMode=s<=2;
+        intro.style.display=introMode?'flex':'none';
+        coremsg.style.opacity=(s>=2)?'1':'0';
+        head.style.display=introMode?'none':'block';
+        rail.style.display=introMode?'none':'flex';
+        stage.style.display=introMode?'none':'flex';
+        if(introMode){ stopActivation(); lastCs=0; return; }
+        const cs=Math.max(1,Math.min(4,s-2));               // steps 3–6 → weeks 1–4
         wkEls.forEach((c,i)=> c.classList.toggle('on', i===cs-1));
         beats.forEach((bx,i)=>{ const on=(i===cs-1); bx.style.display=on?'flex':'none'; bx.style.opacity=on?'1':'0'; });
         if(cs===3){ if(lastCs!==3) runActivation(); } else stopActivation();
@@ -734,6 +750,7 @@ scene({ id:'s6', title:'Try To Break It', dur:80,
       nHum.classList.toggle('human',esc); nHum.classList.toggle('on',esc); }
     return {
       enter(){ clearAll(); animating=false; chat.innerHTML=''; curStep=1; chat.style.opacity='0'; status(1); },
+      exit(){ clearAll(); animating=false; },
       busy(){ return animating; },
       finish(){ renderInstant(Math.min(curStep,4)); },
       toStep(s){ curStep=s; chat.style.opacity=(s===1)?'0':'1';
@@ -755,7 +772,7 @@ scene({ id:'s7', title:'The Friction Engine', dur:70,
     const dfWrap=el('div','col'); dfWrap.style.alignItems='center';
     dfWrap.append(df.el, el('div','label','Core 100 · friction monitor'));
     const src=el('div','body muted'); src.style.cssText='font-size:18px;max-width:24em;text-align:center';
-    src.innerHTML='<span class="tag green" style="font-size:18px">Verified in product</span> &nbsp;states from Trengo Reporting';
+    src.innerHTML='<span class="tag grey" style="font-size:18px">Proposed signals</span> &nbsp;from product-usage data I’d track';
     dfWrap.appendChild(src);
     const legend=el('div','body'); legend.style.cssText='font-size:19px;opacity:0;transition:opacity .3s ease-out;color:var(--muted)';
     legend.innerHTML='10 friction signals · <span style="color:var(--green)">9 handled at scale</span> · <span style="color:var(--amber)">1 needs a person</span>';
@@ -816,12 +833,12 @@ scene({ id:'s8', title:'90 Days', dur:60,
     const right=step(el('div','col'),4); right.style.alignItems='flex-start';
     right.appendChild(el('div','label','Success — four layers'));
     const metrics=el('div'); metrics.style.cssText='display:flex;flex-direction:column;gap:2px;margin-bottom:8px';
-    [['Activation','the KPI'],['Adoption','it sticks'],['Customer value','a problem solved'],['Commercial impact','expand · retention']]
+    [['Activation','the KPI'],['Adoption','it sticks'],['Customer value','a problem solved'],['Health','guardrails: escalation · negative CSAT · AI cost']]
       .forEach(([k,v])=>{ const d=el('div','body'); d.style.cssText='font-size:19px;color:var(--muted)';
         d.innerHTML='<b style="color:var(--text)">'+k+'</b> — '+v; metrics.appendChild(d); });
     right.appendChild(metrics);
-    right.appendChild(el('div','label','Commercial signals'));
-    const sig=el('div','signals'); sig.innerHTML='AI conversations · bundle usage · plan upgrades · extra users<br><span style="color:var(--muted)">— measured against contraction.</span>'; right.appendChild(sig);
+    right.appendChild(el('div','label','Leading indicators'));
+    const sig=el('div','signals'); sig.innerHTML='email engagement · playground started · HelpMate created · knowledge connected · test conversations · publish rate<br><span style="color:var(--muted)">— what predicts activation.</span>'; right.appendChild(sig);
     const honest=el('div','body'); honest.style.cssText='font-size:19px;margin-top:8px;max-width:22em';
     honest.textContent='90 days proves adoption. It doesn’t prove churn. I’d rather say that now than claim it later.'; right.appendChild(honest);
     const tierb=el('div','body muted'); tierb.style.cssText='font-size:18px;max-width:22em';
@@ -921,57 +938,75 @@ function fitScene(i){
 }
 window.addEventListener('resize',()=>{ if(state[cur]) fitScene(cur); });
 
-/* ---- autoplay timeline: scenes play their own steps; one press between scenes ---- */
-let playTimers=[], pendingBeats=0;
-function clearPlay(){ playTimers.forEach(t=>clearTimeout(t)); playTimers=[]; pendingBeats=0; }
-function beatsFor(i){
-  const n=maxStep(i); const b=(typeof BEATS!=='undefined'&&BEATS[i]);
-  if(b&&b.length>=n) return b;
-  const a=[]; for(let k=0;k<n;k++)a.push(k*1600); return a; // fallback 1600ms/step
+/* ============================================================
+   FOUR TOP-LEVEL SLIDES = FOUR CHAPTERS
+   - Internal beats (scene steps) auto-play on a timeline, then FREEZE.
+   - SPACE / →  = next top-level slide.  ← / PageUp = previous slide.
+   - The presenter never advances internal beats; they just speak.
+   ============================================================ */
+/* per-step dwell (ms) before the next beat fires; the chapter's LAST beat never advances */
+const HOLD=[
+  [3400,4200,4200,4200],               // 01 portfolio (explanation — deliberately slow)
+  [3600,4200,4600],                    // 02 value ladder
+  [3400,4200,4600,5600,5600],          // 03 matrix (framework — held long, readable)
+  [3600,4200,4200],                    // 04 one account
+  [4600,4600,4600,4600,4600,5200],     // 05 campaign (quote, message, weeks 1–4)
+  [3800,4600,4200,4600,4600],          // 06 playground (typing needs room)
+  [3600,4200,4200,5000],               // 07 human intervention
+  [3600,4200,4200,4600],               // 08 success matrix
+  [3200,3200,3400,3600,3600,4600]      // 09 close
+];
+let slideTimers=[];
+function clearSlide(){ slideTimers.forEach(t=>clearTimeout(t)); slideTimers=[]; }
+function framesForChapter(ch){
+  const frames=[];
+  CHAPTER_OF.forEach((c,sc)=>{ if(c!==ch) return;
+    const n=maxStep(sc);
+    for(let st=1;st<=n;st++){ frames.push({sc,st,hold:(HOLD[sc]&&HOLD[sc][st-1])||3800}); }
+  });
+  return frames;
 }
-function isPlaying(i){ const st=state[i]; return !!(st.inst.busy&&st.inst.busy()); }
-function show(i,atLastStep){                             // manual stepping: one click = one idea
-  if(i<0)i=0; if(i>SCENES.length-1)i=SCENES.length-1;
-  clearPlay();
+function activateScene(sc){
+  if(cur===sc) return;
   if(state[cur]){ if(state[cur].inst.exit) state[cur].inst.exit(); state[cur].sec.classList.remove('active'); }
-  cur=i;
-  const st=state[i]; st.step=atLastStep?maxStep(i):1;
-  st.sec.classList.add('active');
-  if(st.inst.enter) st.inst.enter();
-  applyStep(i);
+  cur=sc; state[sc].sec.classList.add('active');
+  if(state[sc].inst.enter) state[sc].inst.enter();
 }
-function next(){
-  const st=state[cur];
-  if(st.inst.busy&&st.inst.busy()){ if(st.inst.finish)st.inst.finish(); return; } // finish typing first
-  if(st.step<maxStep(cur)){ st.step++; applyStep(cur); }        // reveal next idea
-  else if(cur<SCENES.length-1) show(cur+1,false);               // then next scene
+function applyFrame(f){ activateScene(f.sc); state[f.sc].step=f.st; applyStep(f.sc); }
+let curChapter=1, curFrames=[], frameIdx=0;
+function scheduleFrame(){
+  if(frameIdx>=curFrames.length-1) return;                 // FREEZE indefinitely at the last beat
+  const hold=curFrames[frameIdx].hold;
+  slideTimers.push(setTimeout(()=>{ frameIdx++; applyFrame(curFrames[frameIdx]); scheduleFrame(); }, hold));
 }
-function prev(){
-  const st=state[cur];
-  if(st.inst.busy&&st.inst.busy()){ if(st.inst.finish)st.inst.finish(); return; }
-  if(st.step>1){ st.step--; applyStep(cur); }
-  else if(cur>0) show(cur-1,true);                              // back one scene, fully revealed
+function playChapter(ch){
+  ch=Math.max(1,Math.min(lastChapter(),ch));
+  clearSlide();
+  curChapter=ch; curFrames=framesForChapter(ch); frameIdx=0;
+  const first=curFrames[0].sc;
+  // hard-restart the first scene even if it is already current
+  if(state[cur]){ if(state[cur].inst.exit) state[cur].inst.exit(); state[cur].sec.classList.remove('active'); }
+  cur=first; state[first].sec.classList.add('active'); if(state[first].inst.enter) state[first].inst.enter();
+  applyFrame(curFrames[0]);
+  if(REDUCED){ seekChapterEnd(ch); return; }                // reduced motion: jump to frozen end
+  scheduleFrame();
 }
-function jump(i){ if(i>=0&&i<SCENES.length) show(i,false); }
-function jumpChapter(ch){ show(firstOfChapter(ch),false); }
+function seekChapterEnd(ch){                                // land on the frozen final state (reduced-motion / QA)
+  ch=Math.max(1,Math.min(lastChapter(),ch));
+  clearSlide(); curChapter=ch; curFrames=framesForChapter(ch); frameIdx=curFrames.length-1;
+  CHAPTER_OF.forEach((c,sc)=>{ if(c!==ch) return;
+    activateScene(sc); state[sc].step=maxStep(sc); applyStep(sc); });   // ends with the chapter's last scene active
+}
+function nextSlide(){ if(curChapter<lastChapter()) playChapter(curChapter+1); }
+function prevSlide(){ if(curChapter>1) playChapter(curChapter-1); }
+function jump(i){ if(i>=0&&i<SCENES.length) playChapter(chapterOf(i)); }   // overview → that scene's slide
+function jumpChapter(ch){ playChapter(ch); }
 
 function renderProgress(){
   const ch=chapterOf(cur);
   progEl.textContent = ch+' / 4  ·  '+CHAPTER_TIME[ch-1];
 }
-/* autoplay beat timings per scene index (ms from entry, one per step); null = fallback */
-const BEATS=[
-  [0,1600,3400,5200],            // 01
-  [0,2000,4000],                 // 02
-  [0,1600,3000,4600,6200],       // 03
-  [0,1600,3200],                 // 04
-  [0,5000,10000,15000],          // 05 (campaign — long beats to read each artefact)
-  [0,1500,4200,7200,10800],      // 06 (typing — long beats)
-  [0,1600,3200,4800],            // 07
-  [0,1600,3000,4400],            // 08
-  [0,1400,2800,4000,5200,6600]   // 09
-];
-/* four presenter chapters = four clicks; scenes auto-chain within a chapter, hold at the boundary */
+/* four top-level slides; scenes auto-play within a slide, then freeze at the boundary */
 const CHAPTER_OF=[1,1,2,2,3,3,4,4,4];
 const CHAPTER_TITLES=['Portfolio & Goals','Triggers & Segmentation','Operation Millionaire','Human & Success'];
 const CHAPTER_TIME=['0–3 min','3–7 min','7–13 min','13–15 min'];
@@ -1038,8 +1073,8 @@ window.addEventListener('keydown',e=>{
     if(k==='Escape'||k==='o'||k==='O'){ closeOverview(); e.preventDefault(); }
     return;
   }
-  if(k==='ArrowRight'||k===' '||k==='Spacebar'||k==='PageDown'){ e.preventDefault(); next(); }
-  else if(k==='ArrowLeft'||k==='PageUp'){ e.preventDefault(); prev(); }
+  if(k==='ArrowRight'||k===' '||k==='Spacebar'||k==='PageDown'){ e.preventDefault(); nextSlide(); }
+  else if(k==='ArrowLeft'||k==='PageUp'){ e.preventDefault(); prevSlide(); }
   else if(k==='p'||k==='P'){ e.preventDefault(); toggleNotes(); }
   else if(k==='o'||k==='O'){ e.preventDefault(); openOverview(); }
   else if(k==='f'||k==='F'){ e.preventDefault(); toggleFullscreen(); }
@@ -1060,18 +1095,26 @@ window.addEventListener('beforeprint',()=>{
 });
 window.addEventListener('afterprint',()=>{
   state.forEach(st=>{ if(st) st.sec.classList.remove('active'); });
-  clearPlay();
-  show((printPrev==null)?cur:printPrev);
+  clearSlide();
+  playChapter(printPrev==null?curChapter:chapterOf(printPrev));
 });
 
 /* boot */
 SCENES.forEach((_,i)=>buildScene(i));
 buildOverview();
-show(0);
+playChapter(1);
 
-// expose for headless verification
-window.__deck={next,prev,jump,get cur(){return cur;},get step(){return state[cur].step;},
-  count:SCENES.length,maxStep,playing:()=>isPlaying(cur)};
+// expose for headless verification / QA
+window.__deck={
+  nextSlide, prevSlide, playChapter, seekChapterEnd,
+  get chapter(){return curChapter;}, get cur(){return cur;}, get step(){return state[cur].step;},
+  get frame(){return frameIdx;}, get frames(){return curFrames.length;},
+  chapters:lastChapter(), count:SCENES.length, maxStep,
+  // QA only: freeze at frame `idx` of chapter `ch` (applies every frame up to idx, no timers)
+  _seek(ch,idx){ clearSlide(); curChapter=ch; curFrames=framesForChapter(ch);
+    idx=Math.max(0,Math.min(curFrames.length-1,idx)); frameIdx=idx;
+    for(let k=0;k<=idx;k++) applyFrame(curFrames[k]); }
+};
 })();
 </script>
 </body>
