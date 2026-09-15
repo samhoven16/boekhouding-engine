@@ -638,13 +638,24 @@ scene({ id:'s5', title:'Operation Millionaire', dur:80,
       actTimer=setInterval(()=>{ v+=2; if(v>=100){v=100;clearInterval(actTimer);actTimer=null;} bigNum.textContent=String(v); fill.style.width=v+'%'; },22); }
     function stopActivation(){ if(actTimer){clearInterval(actTimer);actTimer=null;} }
 
-    // BEAT 4 — adoption options
+    // BEAT 4 — ADOPT: live status dashboard + next use case
     const b4=el('div','col'); b4.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
-    const opts=el('div','row'); opts.style.cssText='justify-content:center;gap:min(2vw,20px)';
-    const opt=(t,d)=>{ const c=el('div','card'); c.style.cssText='text-align:left;min-width:min(280px,86vw)';
-      const h=el('div','subhead',t); h.style.fontSize='24px'; c.append(h, (()=>{const p=el('div','body muted',d);p.style.fontSize='19px';return p;})()); return c; };
-    opts.append(opt('A second use case','→ another question, same agent'), opt('A second channel','→ the same agent, one channel wider'));
-    b4.appendChild(opts);
+    const dash=el('div','mail'); dash.style.maxWidth='min(680px,94vw)';
+    const dbar=el('div','bar'); dbar.append(el('span','dotr'),el('span',null,'AI Agent · Live'),
+      (()=>{const s=el('span','tag green','Active');s.style.marginLeft='auto';return s;})());
+    dash.appendChild(dbar);
+    const drow=(k,v)=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:16px;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:18px';
+      const kk=el('span',null,k); kk.style.cssText='color:var(--muted);min-width:9em';
+      const vv=el('span'); vv.appendChild(document.createTextNode(v)); const c=el('span',null,' ✓'); c.style.color='var(--green)'; vv.appendChild(c); vv.style.textAlign='right';
+      r.append(kk,vv); dash.appendChild(r); };
+    drow('Use case','WISMO · Where is my order?');
+    drow('Knowledge','Connected');
+    drow('Channel','WhatsApp');
+    drow('Human escalation','Active');
+    b4.appendChild(dash);
+    const nxt=el('div'); nxt.style.cssText='display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:.7em 1.1em;border:1px solid var(--grey);border-radius:12px;background:rgba(167,139,250,.10);max-width:min(680px,94vw)';
+    nxt.append(el('span','tag violet','NEXT USE CASE'), (()=>{const s=el('span',null,'Returns & exchanges → the same agent, one question wider.');s.style.fontSize='18px';return s;})());
+    b4.appendChild(nxt);
     const cap4=el('div','body muted','Adoption is when it stops being a trial and becomes how they work.'); cap4.style.cssText='font-size:19px;max-width:36em'; b4.appendChild(cap4);
 
     const beats=[b1,b2,b3,b4];
