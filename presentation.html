@@ -582,14 +582,18 @@ scene({ id:'s5', title:'Operation Millionaire', dur:80,
     const crm=el('div','crmrow');
     crm.innerHTML='<b>Account #47</b> · bundle <b>71%</b> · after-hours <b>38%</b> · help centre <b>22</b> · <span style="color:var(--amber)">AI off</span> &nbsp;<span class="enters">→ ENTERS OPERATION MILLIONAIRE</span>';
     b1.appendChild(crm);
-    const mail=el('div','mail'); mail.style.maxWidth='min(620px,92vw)';
-    const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'Inbox · 1 unread'));
-    const from=el('div','from'); from.append(el('span',null,'Trengo Customer Success'),el('span','time','09:02'));
-    mail.append(bar,from, el('div','subj','Which questions are stealing your team’s time?'),
-      el('div','bod','Last month your team answered the same delivery question over and over. A third of them after 18:00. Here are your top ten — and the one I’d automate first.'));
-    const bw=el('div'); bw.style.padding='0 1.1em 1.2em'; bw.appendChild(el('button','btn','See my ten questions →')); mail.appendChild(bw);
-    b1.appendChild(mail);
-    const cap1=el('div','body muted','Awareness becomes relevance when it’s their data, not our product news.'); cap1.style.cssText='font-size:19px;max-width:36em'; b1.appendChild(cap1);
+    const inbox=el('div','mail'); inbox.style.maxWidth='min(620px,92vw)';
+    const ibar=el('div','bar'); ibar.append(el('span','dotr'),el('span',null,'Support inbox · this week'));
+    inbox.appendChild(ibar);
+    [['Where is my order?','08:14',false],['Where is my order?','11:47',false],['Where is my order?','18:32',true],['Where is my order?','21:05',true]]
+      .forEach(([q,t,late])=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:19px';
+        const lft=el('div'); lft.append(el('span',null,q)); if(late){ const af=el('span',null,' · after-hours'); af.style.color='var(--amber)'; lft.appendChild(af); }
+        const tm=el('span',null,t); tm.style.color='var(--muted)'; r.append(lft,tm); inbox.appendChild(r); });
+    const opp=el('div'); opp.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:.7em 1.1em;border-top:1px solid var(--grey);background:rgba(0,178,122,.10)';
+    const ot=el('span',null,'Same question, over and over — the candidate for one AI use case.'); ot.style.fontSize='18px';
+    opp.append(el('span','tag green','AI OPPORTUNITY DETECTED'), ot); inbox.appendChild(opp);
+    b1.appendChild(inbox);
+    const cap1=el('div','body muted','Discovery is their own inbox, not our product news.'); cap1.style.cssText='font-size:19px;max-width:36em'; b1.appendChild(cap1);
 
     // BEAT 2 — in-app toast + webinar
     const b2=el('div','col'); b2.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
