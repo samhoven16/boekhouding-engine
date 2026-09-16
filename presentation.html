@@ -207,6 +207,44 @@ img{max-width:100%}
 .rbar{height:14px;border-radius:7px;background:#20251f;overflow:hidden}
 .rbar>span{display:block;height:100%;background:var(--green)}
 
+/* ---- Operation Millionaire v2: AI Activation Progress rail ---- */
+.mmprog{width:min(760px,92vw);margin:0 auto}
+.mmprog .ptop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.mmprog .plab{font-size:18px;text-transform:uppercase;letter-spacing:.12em;font-weight:700;color:var(--muted)}
+.mmprog .ppct{font-size:24px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums}
+.mmtrack{position:relative;height:12px;border-radius:99px;background:#20251f;overflow:visible}
+.mmtrack>.fill{height:100%;border-radius:99px;background:var(--green);width:0;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.mmticks{display:flex;justify-content:space-between;margin-top:8px}
+.mmtick{font-size:18px;font-weight:700;color:var(--muted);opacity:.4;transition:opacity .3s ease-out,color .3s ease-out;flex:1;text-align:center}
+.mmtick:first-child{text-align:left}.mmtick:last-child{text-align:right}
+.mmtick.on{opacity:1;color:var(--green)}
+/* product screen shell (one surface per beat) */
+.mmscreen{width:100%;display:flex;flex-direction:column;align-items:center;gap:min(1.8vh,16px);transition:opacity .3s ease-out}
+.mmcap{font-size:19px;color:var(--muted);max-width:40em;line-height:1.35}
+.mmcap b{color:var(--text)}
+/* in-app contextual prompt */
+.inapp{display:flex;align-items:center;gap:14px;background:rgba(0,178,122,.10);border:1px solid rgba(0,178,122,.4);
+  border-radius:12px;padding:.9em 1.1em;max-width:min(620px,92vw);text-align:left}
+.inapp .ico{width:34px;height:34px;border-radius:9px;background:var(--green);color:#04160f;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex:none;font-size:20px}
+.inapp .txt{font-size:20px;color:var(--text);line-height:1.3}
+.inapp .txt b{color:var(--green)}
+/* repetition badge on inbox rows */
+.rep{color:var(--amber);font-weight:700;font-size:18px}
+/* supervised-mode review card */
+.sup{border:1px solid #262c29;border-radius:14px;background:var(--surface);overflow:hidden;width:min(620px,92vw);text-align:left}
+.sup .draft{padding:.6em 1.1em;font-size:20px;color:var(--text);line-height:1.35;background:rgba(167,139,250,.10);border-top:1px solid #1e2320}
+.sup .draft .lb{font-size:17px;text-transform:uppercase;letter-spacing:.08em;color:var(--violet);font-weight:700;margin-bottom:.25em}
+.sup .act{display:flex;gap:10px;align-items:center;padding:.7em 1.1em;border-top:1px solid #1e2320;flex-wrap:wrap}
+/* behaviour branch + claude loop rows */
+.brow{display:flex;align-items:center;gap:12px;font-size:19px;padding:.5em .9em;border-radius:10px;
+  background:var(--surface);border:1px solid #262c29;text-align:left;max-width:40em;width:100%}
+.brow .sig{font-weight:700;color:var(--text);min-width:12em}
+.brow .arw{color:var(--muted)}
+.brow .nba{color:var(--green);font-weight:700}
+.loopstep{font-size:19px;color:var(--text);padding:.35em .8em;border-radius:8px;background:var(--surface);border:1px solid #262c29}
+.loopstep.ai{background:rgba(167,139,250,.14);border-color:rgba(167,139,250,.4);color:var(--violet);font-weight:700}
+
 /* friction engine (scene 07) */
 .ftree{display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;max-width:30em}
 .fhead{align-self:center;font-size:20px;font-weight:800;letter-spacing:.08em;color:var(--green);text-transform:uppercase}
@@ -402,8 +440,8 @@ function seededOrder(n,seed){const a=[...Array(n).keys()];let s=seed||1;
 /* Canonical focus account — persists visually across scenes 04→05→06→07.
    Its dot sits at a fixed position (46) in the 100-grid so the audience
    tracks the SAME customer through journey → playground → friction → human. */
-const FOCUS={ id:'#47', kind:'Mid-market e-commerce', plan:'Pro', tenure:'14 months',
-  bundlePct:71, afterHours:38, articles:22, rules:3, ai:'Not activated', dot:46 };
+/* one anonymous account in the Core-100 grid gets the human hand-off (no fictional identity) */
+const HUMAN_DOT=46;
 
 /* 01 — THE PORTFOLIO */
 scene({ id:'s1', title:'The Portfolio', dur:40,
@@ -520,244 +558,168 @@ scene({ id:'s3', title:'The Activation Matrix', dur:70,
   }
 });
 
-/* 04 — ONE ACCOUNT */
-scene({ id:'s4', title:'One Account', dur:55,
-  note:['“The score isn’t a feeling — it’s fields: bundle load, after-hours volume, knowledge, AI still off.”','Next: the Core 100 through four weeks.'],
-  steps:3,
-  build(root){
-    root.appendChild(pill('illustrative','Illustrative — synthetic account'));
-    const w=el('div','wrap'); const sp=el('div','split'); sp.style.gridTemplateColumns='0.85fr 1.15fr';
-    const df=buildDotField(100); df.el.classList.add('d100');
-    const dfWrap=el('div','col'); dfWrap.style.alignItems='center';
-    dfWrap.append(df.el, el('div','label','Core 100 · one account'));
-    const card=el('div','card'); card.style.cssText='opacity:0;transition:opacity .3s ease-out;min-width:min(360px,86vw)';
-    const h=el('div'); h.style.cssText='display:flex;justify-content:space-between;align-items:baseline';
-    h.append(el('span','subhead','Account '+FOCUS.id), el('span','label',FOCUS.plan+' · '+FOCUS.tenure));
-    card.appendChild(h);
-    const sub=el('div','body muted',FOCUS.kind); sub.style.fontSize='19px'; card.appendChild(sub);
-    const fields=[['Annual bundle used',FOCUS.bundlePct+'%','green'],
-      ['After-hours share',FOCUS.afterHours+'%',''],
-      ['Help-centre articles',String(FOCUS.articles),''],
-      ['Active rules',String(FOCUS.rules),''],
-      ['AI status',FOCUS.ai,'amber']];
-    const rows=el('div'); rows.style.cssText='margin-top:10px;display:flex;flex-direction:column;gap:4px';
-    fields.forEach(([k,v,c])=>{ const r=el('div','pmet'); const kk=el('span',null,k); kk.style.fontSize='20px';
-      const vv=el('b',null,v); if(c==='green')vv.style.color='var(--green)'; if(c==='amber')vv.style.color='var(--amber)';
-      r.append(kk,vv); rows.appendChild(r); });
-    card.appendChild(rows);
-    const pt=step(el('div','body'),3); pt.style.cssText='max-width:26em;color:var(--text)';
-    pt.innerHTML='The score is <span style="color:var(--green)">fields</span>, not a feeling.';
-    sp.append(dfWrap,card); w.append(sp,pt); root.appendChild(w);
-    const focus=FOCUS.dot;
-    return {
-      enter(){ df.dots.forEach(d=>{d.classList.remove('in','green','ring','amber','human','violet');setDot(d,'idle');});
-        revealDots(df.dots,4);
-        setTimeout(()=>{ df.dots.forEach(d=>d.classList.add('in')); setDot(df.dots[focus],'green'); df.dots[focus].classList.add('ring','in'); }, REDUCED?0:350); },
-      toStep(s){ card.style.opacity=s>=2?'1':'0'; }
-    };
-  }
-});
-
-/* 05 — MISSION MILLIONAIRE (HERO) — the four-week campaign */
-scene({ id:'s5', title:'Operation Millionaire', dur:80,
-  note:['“Make your clients millionaire, they make you billionaire — four weeks, one real use case.”','Next: I open one of them — the playground.'],
+/* 05 — OPERATION MILLIONAIRE — the campaign as a real product experience */
+scene({ id:'s5', title:'Operation Millionaire', dur:210,
+  note:['“We wait for the pain, meet it in-app, prove it safely, activate one real use case, then show the value.”','Next: the system behind it — behaviour and learning.'],
   steps:6,
   build(root){
-    root.appendChild(pill('illustrative'));
-    const w=el('div','wrap'); w.style.gap='min(2.2vh,22px)';
-
-    // INTRO (steps 1–2) — the campaign quote, then its business meaning
-    const intro=el('div','col'); intro.style.cssText='align-items:center;gap:min(3vh,30px);max-width:22em';
-    const quote=el('div','hero'); quote.style.cssText='font-size:clamp(34px,4.4vw,60px);line-height:1.08;font-weight:800';
-    quote.innerHTML='“Make your clients&nbsp;<span style="color:var(--green)">millionaire</span>,<br>they make you&nbsp;<span style="color:var(--green)">billionaire</span>.”';
-    const coremsg=el('div'); coremsg.style.cssText='transition:opacity .3s ease-out';
-    coremsg.innerHTML='<div class="subhead" style="font-size:clamp(22px,2.4vw,30px)">The goal is not <span style="color:var(--muted)">“activate AI.”</span><br>It’s to solve one concrete operational problem — and save the customer real time.</div>';
-    intro.append(quote,coremsg); w.appendChild(intro);
-
-    const head=el('div'); head.style.cssText='text-align:left;width:100%;max-width:60em';
+    root.appendChild(pill('illustrative','Illustrative — proposed campaign layer'));
+    const w=el('div','wrap'); w.style.gap='min(2.2vh,20px)';
+    // header
+    const head=el('div'); head.style.cssText='text-align:left;width:100%;max-width:64em';
     const hdr=el('div','apphdr'); hdr.appendChild(el('span','lg'));
     const hb=document.createElement('span'); hb.innerHTML='Trengo › <b>Journeys</b> › Operation Millionaire'; hdr.appendChild(hb);
-    head.append(hdr, (()=>{const t=el('div','headline','Operation Millionaire');t.style.fontSize='clamp(30px,3.2vw,44px)';return t;})(), el('div','label','4 weeks. One real AI use case.'));
+    head.append(hdr,(()=>{const t=el('div','headline','Mission Millionaire');t.style.fontSize='clamp(26px,2.8vw,38px)';return t;})());
     w.appendChild(head);
+    // week rail
     const rail=el('div','mmrail');
-    const wkEls=[['Week 1 · DISCOVER','the repeating question'],['Week 2 · PROVE','test it — don’t launch it'],['Week 3 · ACTIVATE','one use case, one channel · live'],['Week 4 · PROVE VALUE','measure → expand']]
+    const wkEls=[['Week 1','Awareness → Relevance'],['Week 2','Relevance → Try'],['Week 3','Try → Activate'],['Week 4','Value → Adopt']]
       .map(([wk,tr])=>{ const c=el('div','mmweek'); c.append(el('div','wk',wk),el('div','tr',tr)); rail.appendChild(c); return c; });
     w.appendChild(rail);
-    const stage=el('div'); stage.style.cssText='width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:min(42vh,360px)';
+    // AI activation progress rail (persistent)
+    const prog=el('div','mmprog');
+    const ptop=el('div','ptop'); const ppct=el('div','ppct','0%'); ptop.append(el('div','plab','AI Activation Progress'),ppct); prog.appendChild(ptop);
+    const track=el('div','mmtrack'); const fill=el('div','fill'); track.appendChild(fill); prog.appendChild(track);
+    const ticks=el('div','mmticks');
+    const tickEls=[['Pain',0],['Relevance',25],['Try',50],['Activate',75],['Value',100]].map(([t,v])=>{ const s=el('div','mmtick',t); s.dataset.v=v; ticks.appendChild(s); return s; });
+    prog.appendChild(ticks); w.appendChild(prog);
+    // stage
+    const stage=el('div'); stage.style.cssText='width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:min(38vh,320px)';
     w.appendChild(stage);
 
-    // BEAT 1 — CRM row + email
-    const b1=el('div','col'); b1.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
-    const crm=el('div','crmrow');
-    crm.innerHTML='<b>Account #47</b> · bundle <b>71%</b> · after-hours <b>38%</b> · help centre <b>22</b> · <span style="color:var(--amber)">AI off</span> &nbsp;<span class="enters">→ ENTERS OPERATION MILLIONAIRE</span>';
-    b1.appendChild(crm);
-    const inbox=el('div','mail'); inbox.style.maxWidth='min(620px,92vw)';
-    const ibar=el('div','bar'); ibar.append(el('span','dotr'),el('span',null,'Support inbox · this week'));
-    inbox.appendChild(ibar);
-    [['Where is my order?','08:14',false],['Where is my order?','11:47',false],['Where is my order?','18:32',true],['Where is my order?','21:05',true]]
-      .forEach(([q,t,late])=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:19px';
-        const lft=el('div'); lft.append(el('span',null,q)); if(late){ const af=el('span',null,' · after-hours'); af.style.color='var(--amber)'; lft.appendChild(af); }
-        const tm=el('span',null,t); tm.style.color='var(--muted)'; r.append(lft,tm); inbox.appendChild(r); });
-    const opp=el('div'); opp.style.cssText='display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:.7em 1.1em;border-top:1px solid var(--grey);background:rgba(0,178,122,.10)';
-    const ot=el('span',null,'Same question, over and over — the candidate for one AI use case.'); ot.style.fontSize='18px';
-    opp.append(el('span','tag green','AI OPPORTUNITY DETECTED'), ot); inbox.appendChild(opp);
-    b1.appendChild(inbox);
-    const cap1=el('div','body muted','Discovery is their own inbox, not our product news.'); cap1.style.cssText='font-size:19px;max-width:36em'; b1.appendChild(cap1);
+    const screens=[];
+    const mkScreen=()=>{ const s=el('div','mmscreen'); s.style.display='none'; stage.appendChild(s); screens.push(s); return s; };
 
-    // BEAT 2 — TRY: AI Agent config panel + supervised review (no go-live yet)
-    const b2=el('div','col'); b2.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
-    const cfg=el('div','mail'); cfg.style.maxWidth='min(680px,94vw)';
-    const cbar=el('div','bar'); cbar.append(el('span','dotr'),el('span',null,'AI Agent · Setup'),
-      (()=>{const s=el('span','tag violet','Supervised Mode');s.style.marginLeft='auto';return s;})());
-    cfg.appendChild(cbar);
-    const crow=(k,v,ok)=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:16px;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:18px';
-      const kk=el('span',null,k); kk.style.cssText='color:var(--muted);min-width:7.5em';
-      const vv=el('span'); vv.appendChild(document.createTextNode(v)); vv.style.textAlign='right';
-      if(ok){ const c=el('span',null,' ✓'); c.style.color='var(--green)'; vv.appendChild(c); }
-      r.append(kk,vv); cfg.appendChild(r); };
-    crow('Knowledge','Help centre · 22 articles',true);
-    crow('Instructions','Answer delivery questions; never guess a refund',false);
-    crow('Skills','Order lookup · Track & Trace',true);
-    crow('Channel','WhatsApp + Web',true);
-    crow('Escalation','Hand to a human on refunds & disputes',true);
-    const act=el('div'); act.style.cssText='display:flex;gap:10px;padding:.7em 1.1em;border-top:1px solid var(--grey);align-items:center;flex-wrap:wrap';
-    const secBtn=(t)=>{ const b=el('button','btn',t); b.style.cssText='background:transparent;color:var(--text);border:1px solid var(--grey)'; return b; };
-    act.append((()=>{const s=el('span',null,'Every reply reviewed →');s.style.cssText='font-size:18px;color:var(--muted);margin-right:auto';return s;})(),
-      el('button','btn','Approve'), secBtn('Edit'), secBtn('Escalate'));
-    cfg.appendChild(act);
-    b2.appendChild(cfg);
-    const cap2=el('div','body muted','Nobody goes live yet: they configure it, then approve every reply by hand.'); cap2.style.cssText='font-size:19px;max-width:36em'; b2.appendChild(cap2);
+    // SCREEN 1 — intro
+    const s1=mkScreen();
+    const q=el('div'); q.style.cssText='font-size:20px;color:var(--muted);font-style:italic';
+    q.textContent='“Make your clients millionaire, they make you billionaire.”';
+    const big=el('div','headline','100 customers · one shared pain'); big.style.maxWidth='16em';
+    const pain=el('div','subhead'); pain.style.color='var(--amber)'; pain.textContent='“Overwhelmed. Not enough time.”';
+    const promise=el('div','body'); promise.style.maxWidth='30em';
+    promise.innerHTML='We save them <b style="color:var(--text)">time</b> — and money — by solving <b style="color:var(--green)">one concrete operational problem</b>.';
+    s1.append(q,big,pain,promise,(()=>{const t=el('span','tag grey','Core 100 · shared pain');return t;})());
 
-    // BEAT 3 — ACTIVATE: the whole campaign drives to 100 activations (target, not a result)
-    const b3=el('div','col'); b3.style.cssText='align-items:center;gap:16px;transition:opacity .3s ease-out';
-    const actHead=el('div','subhead','Priority list · target 100 accounts'); actHead.style.fontSize='22px'; b3.appendChild(actHead);
-    const bigWrap=el('div'); bigWrap.style.cssText='display:flex;align-items:baseline;gap:12px';
-    const bigNum=el('div',null,'0'); bigNum.style.cssText='font-size:clamp(56px,9vw,108px);font-weight:800;color:var(--green);line-height:1;font-variant-numeric:tabular-nums';
-    const bigOf=el('div',null,'/ 100 accounts activated'); bigOf.style.cssText='font-size:22px;color:var(--muted)';
-    bigWrap.append(bigNum,bigOf); b3.appendChild(bigWrap);
-    const track=el('div'); track.style.cssText='width:min(620px,90vw);height:12px;border-radius:99px;background:var(--grey);overflow:hidden';
-    const fill=el('div'); fill.style.cssText='height:100%;width:0;background:var(--green);transition:width .05s linear'; track.appendChild(fill); b3.appendChild(track);
-    const live=el('div',null,'AI Agent live · Supervised → Autopilot'); live.style.cssText='font-size:19px;color:var(--text)'; b3.appendChild(live);
-    b3.append(el('span','tag grey','Target · illustrative'));
-    const cap3=el('div','body muted','Activation is the goal: 100 accounts running one real use case — not a headline number.'); cap3.style.cssText='font-size:19px;max-width:36em'; b3.appendChild(cap3);
-    let actTimer=null;
-    function runActivation(){ if(actTimer){clearInterval(actTimer);actTimer=null;}
-      if(REDUCED){ bigNum.textContent='100'; fill.style.width='100%'; return; }
-      let v=0; bigNum.textContent='0'; fill.style.width='0';
-      actTimer=setInterval(()=>{ v+=2; if(v>=100){v=100;clearInterval(actTimer);actTimer=null;} bigNum.textContent=String(v); fill.style.width=v+'%'; },22); }
-    function stopActivation(){ if(actTimer){clearInterval(actTimer);actTimer=null;} }
+    // SCREEN 2 — Week 1 trigger: inbox with repetition
+    const s2=mkScreen();
+    const inbox=el('div','mail'); inbox.style.maxWidth='min(640px,92vw)';
+    const ibar=el('div','bar'); ibar.append(el('span','dotr'),el('span',null,'Support inbox · Saturday 14:20')); inbox.appendChild(ibar);
+    [['Where is my order?','13:58',false],['Where is my order?','14:06',false],['Refund — where is my money?','14:11',true],['Where is my order?','14:19',false]]
+      .forEach(([qq,tt,amber])=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:19px';
+        const l=el('span',null,qq); if(amber)l.style.color='var(--text)';
+        const tm=el('span',null,tt); tm.style.color='var(--muted)'; r.append(l,tm); inbox.appendChild(r); });
+    const repbar=el('div'); repbar.style.cssText='display:flex;align-items:center;gap:10px;padding:.6em 1.1em;border-top:1px solid var(--grey);background:rgba(240,160,42,.08)';
+    repbar.append(el('span','rep','Answered “Where is my order?” 15× today'), (()=>{const s=el('span',null,'· the same question, over and over');s.style.cssText='font-size:18px;color:var(--muted)';return s;})());
+    inbox.appendChild(repbar); s2.appendChild(inbox);
+    s2.appendChild((()=>{const c=el('div','mmcap');c.innerHTML='<b>We wait for the pain.</b> It happens inside Trengo — a repeating question, on the busiest day.';return c;})());
 
-    // BEAT 4 — PROVE VALUE: outcome-measurement view (metric names, no fabricated results) → expand
-    const b4=el('div','col'); b4.style.cssText='align-items:center;gap:14px;transition:opacity .3s ease-out';
-    const dash=el('div','mail'); dash.style.maxWidth='min(680px,94vw)';
-    const dbar=el('div','bar'); dbar.append(el('span','dotr'),el('span',null,'Week 4 · what we measure'),
-      (()=>{const s=el('span','tag grey','Proposed metrics');s.style.marginLeft='auto';return s;})());
-    dash.appendChild(dbar);
-    const drow=(k,v,verified)=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:16px;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:18px';
-      const kk=el('span',null,k); kk.style.cssText='color:var(--text);min-width:11em';
-      const vv=el('span','tag '+(verified?'green':'grey'),v); r.append(kk,vv); dash.appendChild(r); };
-    drow('Conversations handled by AI','Product metric',true);
-    drow('Response time','Product metric',true);
-    drow('Human interventions','Product metric',true);
-    drow('CSAT on AI replies','Business metric',false);
-    b4.appendChild(dash);
-    const nxt=el('div'); nxt.style.cssText='display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:.7em 1.1em;border:1px solid var(--grey);border-radius:12px;background:rgba(167,139,250,.10);max-width:min(680px,94vw)';
-    nxt.append(el('span','tag violet','VALUE PROVEN → EXPAND'), (()=>{const s=el('span',null,'One question wider, or one channel more — same agent.');s.style.fontSize='18px';return s;})());
-    b4.appendChild(nxt);
-    const cap4=el('div','body muted','Don’t stop at “AI activated.” Show what it changed — then expand.'); cap4.style.cssText='font-size:19px;max-width:36em'; b4.appendChild(cap4);
+    // SCREEN 3 — Week 1 intervention -> 25%
+    const s3=mkScreen();
+    const ia=el('div','inapp'); ia.append((()=>{const i=el('div','ico','AI');return i;})());
+    const iatxt=el('div','txt'); iatxt.innerHTML='You’ve answered <b>“Where is my order?”</b> 15× today. Let Trengo AI handle this next time →'; ia.appendChild(iatxt);
+    s3.appendChild(ia);
+    const vid=el('div','wbcard'); vid.style.maxWidth='min(420px,92vw)';
+    vid.append((()=>{const k=el('div','kick','▶ 1-min · product-led');return k;})(), el('div','wt','How HelpMate answers this'),
+      (()=>{const p=el('div','body muted','See it answer your top repeating question — in your own words.');p.style.fontSize='18px';return p;})());
+    s3.appendChild(vid);
+    s3.appendChild((()=>{const c=el('div','mmcap');c.innerHTML='<b>In-app, in context</b> — no extra email. One minute of content while the pain is fresh.';return c;})());
 
-    const beats=[b1,b2,b3,b4];
-    beats.forEach(bx=>{ bx.style.opacity='0'; bx.style.display='none'; stage.appendChild(bx); });
+    // SCREEN 4 — Week 2 trust (Supervised Mode) -> 50%
+    const s4=mkScreen();
+    const sup=el('div','sup');
+    const sbar=el('div','bar'); sbar.append(el('span','dotr'),el('span',null,'AI Agent · Supervised Mode'),(()=>{const t=el('span','tag violet','Human approves');t.style.marginLeft='auto';return t;})()); sup.appendChild(sbar);
+    const cust=el('div'); cust.style.cssText='padding:.7em 1.1em;font-size:20px;color:var(--text)'; cust.innerHTML='<span style="color:var(--muted);font-size:17px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Customer</span><br>Can I return an opened item?';
+    sup.appendChild(cust);
+    const draft=el('div','draft'); draft.innerHTML='<div class="lb">AI draft — awaiting approval</div>Yes — unused within 30 days, opened items within 14 days with the original packaging. Here’s your return link.';
+    sup.appendChild(draft);
+    const act=el('div','act'); const approve=el('button','btn','Approve & send');
+    const editb=el('button','btn','Edit'); editb.style.cssText='background:transparent;color:var(--text);border:1px solid var(--grey)';
+    act.append(approve,editb,(()=>{const n=el('span',null,'Human owns the ticket · 30-day review');n.style.cssText='font-size:17px;color:var(--muted);margin-left:auto';return n;})());
+    sup.appendChild(act); s4.appendChild(sup);
+    s4.appendChild((()=>{const n=el('div','mmcap');n.innerHTML='<span class="tag grey" style="font-size:17px">Preview</span> pre-live test &nbsp;·&nbsp; <span class="tag violet" style="font-size:17px">Supervised</span> real conversations, human-approved — not a sandbox.';return n;})());
+    s4.appendChild((()=>{const c=el('div','mmcap');c.innerHTML='<b>Trust is the real blocker.</b> AI proposes, a human approves — confidence grows before anything goes live.';return c;})());
+
+    // SCREEN 5 — Week 3 activate (one concrete use case) -> 75%
+    const s5s=mkScreen();
+    const know=el('div','row'); know.style.cssText='gap:12px;justify-content:center';
+    [['Help centre · shipping & returns'],['Order lookup · integration']].forEach(([t])=>{ const c=el('div','pgcol'); c.style.cssText='padding:.6em .9em;max-width:16em';
+      const r=el('div','src'); r.append(el('span','d'),el('span',null,t)); c.appendChild(r); know.appendChild(c); });
+    s5s.appendChild(know);
+    const chat=el('div','chat'); chat.style.maxWidth='min(560px,92vw)';
+    const mu=el('div','msg user','Where is my order #10482?'); const ma=el('div','msg ai','Shipped Tuesday, out for delivery today. Track it here: trg.to/10482');
+    chat.append(mu,ma,(()=>{const t=el('span','tag green mtag','Resolved · no human needed');return t;})()); s5s.appendChild(chat);
+    s5s.appendChild((()=>{const c=el('div','mmcap');c.innerHTML='<b>Activation is the consequence of solving one real problem</b> — order status, from knowledge + an order-lookup integration.';return c;})());
+
+    // SCREEN 6 — Week 4 value (proposed impact) -> 100%
+    const s6=mkScreen();
+    const imp=el('div','mail'); imp.style.maxWidth='min(600px,92vw)';
+    const ibar2=el('div','bar'); ibar2.append(el('span','dotr'),el('span',null,'AI Impact · this month'),(()=>{const t=el('span','tag grey','Proposed');t.style.marginLeft='auto';return t;})()); imp.appendChild(ibar2);
+    ['Conversations handled by AI','Resolution rate','Response time','Human workload'].forEach(k=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:19px';
+      r.append(el('span',null,k),(()=>{const t=el('span','tag grey','tracked');return t;})()); imp.appendChild(r); });
+    s6.appendChild(imp);
+    const nxt=el('div'); nxt.style.cssText='display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:.7em 1.1em;border:1px solid var(--grey);border-radius:12px;background:rgba(167,139,250,.10);max-width:min(600px,92vw)';
+    nxt.append(el('span','tag violet','VALUE PROVEN → NEXT USE CASE'),(()=>{const s=el('span',null,'Returns → the same agent, one step wider.');s.style.fontSize='18px';return s;})());
+    s6.appendChild(nxt);
+    s6.appendChild((()=>{const c=el('div','mmcap');c.innerHTML='<b>“I tried AI” becomes “AI runs part of my operation.”</b> The proof opens the next use case.';return c;})());
+
     root.appendChild(w);
-    let lastCs=0;
+
+    const PCT=[0,0,25,50,75,100];   // per step
+    const WK =[0,1,1,2,3,4];        // week highlight per step (0 = none)
+    let lastPct=0;
+    function setProgress(pct){
+      fill.style.width=pct+'%';
+      if(REDUCED){ ppct.textContent=pct+'%'; } else { animateCount(ppct,lastPct,pct,600); setTimeout(()=>{ppct.textContent=pct+'%';},640); }
+      lastPct=pct;
+      tickEls.forEach(t=>{ const v=parseInt(t.dataset.v,10); t.classList.toggle('on', v>0 ? pct>=v : pct>0); });
+    }
     return {
-      toStep(s){
-        const introMode=s<=2;
-        intro.style.display=introMode?'flex':'none';
-        coremsg.style.opacity=(s>=2)?'1':'0';
-        head.style.display=introMode?'none':'block';
-        rail.style.display=introMode?'none':'flex';
-        stage.style.display=introMode?'none':'flex';
-        if(introMode){ stopActivation(); lastCs=0; return; }
-        const cs=Math.max(1,Math.min(4,s-2));               // steps 3–6 → weeks 1–4
-        wkEls.forEach((c,i)=> c.classList.toggle('on', i===cs-1));
-        beats.forEach((bx,i)=>{ const on=(i===cs-1); bx.style.display=on?'flex':'none'; bx.style.opacity=on?'1':'0'; });
-        if(cs===3){ if(lastCs!==3) runActivation(); } else stopActivation();
-        lastCs=cs;
-      },
-      exit(){ stopActivation(); lastCs=0; }
+      enter(){ lastPct=0; fill.style.width='0'; ppct.textContent='0%'; tickEls.forEach(t=>t.classList.remove('on')); },
+      toStep(s){ const i=Math.max(1,Math.min(6,s));
+        screens.forEach((sc,k)=>{ sc.style.display=(k===i-1)?'flex':'none'; });
+        wkEls.forEach((c,k)=> c.classList.toggle('on', k===WK[i-1]-1));
+        setProgress(PCT[i-1]);
+      }
     };
   }
 });
 
-/* 06 — TRY TO BREAK IT (HERO, centrepiece) — simulated playground */
-scene({ id:'s6', title:'Try To Break It', dur:80,
-  note:['“Two it nails from their own knowledge; the edge case it refuses and hands to a human with a summary.”','Next: the same 100 as a live friction monitor.'],
-  steps:5,
+/* 06 — THE SYSTEM: behaviour-responsive + the learning loop */
+scene({ id:'s6', title:'A System, Not A Sequence', dur:80,
+  note:['“One campaign is not one sequence — behaviour picks the next step, and Claude helps us find where it breaks.”','Next: where a human steps in.'],
+  steps:2,
   build(root){
-    root.appendChild(pill('illustrative','Illustrative — simulated playground'));
+    root.appendChild(pill('illustrative','Illustrative — proposed operating model'));
     const w=el('div','wrap');
-    const head=el('div','row'); head.style.cssText='justify-content:space-between;width:100%;align-items:baseline';
-    head.append(el('div','subhead','Account '+FOCUS.id+' · Playground'), el('div','label','Try to break it'));
+    const head=el('div','headline','A system, not a sequence'); head.style.maxWidth='18em';
     w.appendChild(head);
-    const pg=el('div','pg');
-    const left=el('div','pgcol'); left.appendChild(el('div','h','Knowledge'));
-    [['Help centre · '+FOCUS.articles+' articles'],['Order system · AI Action'],['Returns policy'],['Agent config · Playground']]
-      .forEach(([t])=>{ const r=el('div','src'); r.append(el('span','d'),el('span',null,t)); left.appendChild(r); });
-    const center=el('div','pgcol');
-    const chat=el('div','chat'); chat.style.transition='opacity .3s ease-out'; center.appendChild(chat);
-    const hoCard=el('div','handover'); hoCard.style.cssText='opacity:0;display:none';
-    hoCard.innerHTML='<div class="t">Handover summary</div>Order 18492 · shows delivered, customer disputes receipt · refund requested · needs carrier check.';
-    center.appendChild(hoCard);
-    const flow=el('div','flow');
-    const nHum=el('span','n','HUMAN');
-    flow.append(el('span','n on','CUSTOMER'), el('span','ar','→'), el('span','n on','AI'), el('span','ar','→'), nHum);
-    center.appendChild(flow);
-    const right=el('div','pgcol'); right.appendChild(el('div','h','AI status'));
-    const mkstat=(k,v)=>{ const r=el('div','pstat'); r.append(el('span',null,k), el('b',null,v)); right.appendChild(r); return r; };
-    mkstat('Knowledge','3 sources'); mkstat('Mode','Playground'); mkstat('Escalation','On');
-    const hoRow=mkstat('Handover','—');
-    pg.append(left,center,right); w.appendChild(pg);
-    const done=step(el('div','headline'),5); done.style.maxWidth='16em';
-    done.innerHTML='Two it nails. <span style="color:var(--amber)">One it refuses</span> — and hands to a human.';
-    w.appendChild(done);
-    const wismo=step(el('div','body muted'),5); wismo.style.cssText='font-size:19px;max-width:36em;margin-top:2px';
-    wismo.textContent='WISMO — “where is my order” — the question support teams repeat most.';
-    w.appendChild(wismo); root.appendChild(w);
-    const msgs=[
-      {step:2,role:'user',text:'Where is my order 18492?'},
-      {step:2,role:'ai',text:'Shipped Tuesday, out for delivery today.',tag:['green','Answered']},
-      {step:3,role:'user',text:'What’s your return policy?'},
-      {step:3,role:'ai',text:'30 days, unused, free label — from your help centre.',tag:['green','Answered']},
-      {step:4,role:'user',text:'It says delivered but my neighbour never got it. Refund me.'},
-      {step:4,role:'ai',text:'This needs a human. I’ve prepared a handover.',tag:['amber','Handed to a human']}
-    ];
-    const nodes=msgs.map(m=>({m,bubble:el('div','msg '+m.role),tag:m.tag?el('span','tag '+m.tag[0]+' mtag'+(m.role==='user'?' u':''),m.tag[1]):null}));
-    let animating=false, timers=[], typing=null, curStep=1;
-    function clearAll(){ timers.forEach(t=>clearTimeout(t)); timers=[]; if(typing){clearInterval(typing);typing=null;} }
-    function renderInstant(upto){ clearAll(); animating=false; chat.innerHTML='';
-      nodes.forEach(n=>{ if(n.m.step<=upto){ n.bubble.textContent=n.m.text; chat.appendChild(n.bubble); if(n.tag)chat.appendChild(n.tag); } }); }
-    function typeSeq(stepNo){ const seq=nodes.filter(n=>n.m.step===stepNo); animating=true; let idx=0;
-      (function go(){ if(idx>=seq.length){ animating=false; return; }
-        const n=seq[idx++]; n.bubble.textContent=''; chat.appendChild(n.bubble);
-        if(REDUCED){ n.bubble.textContent=n.m.text; if(n.tag)chat.appendChild(n.tag); go(); return; }
-        let i=0; typing=setInterval(()=>{ n.bubble.textContent=n.m.text.slice(0,++i);
-          if(i>=n.m.text.length){ clearInterval(typing); typing=null; if(n.tag)chat.appendChild(n.tag);
-            timers.push(setTimeout(go, n.m.role==='user'?250:450)); } },35); })(); }
-    function status(s){ const esc=s>=4;
-      hoCard.style.opacity=esc?'1':'0'; hoCard.style.display=esc?'block':'none';
-      hoRow.querySelector('b').textContent=esc?'Generated':'—'; hoRow.classList.toggle('amber',esc);
-      nHum.classList.toggle('human',esc); nHum.classList.toggle('on',esc); }
-    return {
-      enter(){ clearAll(); animating=false; chat.innerHTML=''; curStep=1; chat.style.opacity='0'; status(1); },
-      exit(){ clearAll(); animating=false; },
-      busy(){ return animating; },
-      finish(){ renderInstant(Math.min(curStep,4)); },
-      toStep(s){ curStep=s; chat.style.opacity=(s===1)?'0':'1';
-        if(s<2){ clearAll(); animating=false; chat.innerHTML=''; }
-        else { renderInstant(s-1); if(s>=2&&s<=4) typeSeq(s); else renderInstant(4); }
-        status(s); }
-    };
+    const stage=el('div'); stage.style.cssText='width:100%;display:flex;flex-direction:column;align-items:center;min-height:min(40vh,340px);gap:14px';
+    w.appendChild(stage);
+
+    // SCREEN 1 — behaviour → next-best action
+    const b=el('div','mmscreen'); b.style.display='none'; stage.appendChild(b);
+    b.appendChild((()=>{const s=el('div','subhead','One campaign ≠ one fixed sequence of emails');s.style.fontSize='22px';return s;})());
+    [['Opens the prompt','product-led content'],['Tests in Supervised','guide to activation'],
+     ['Tests but doesn’t go live','targeted friction nudge'],['Activates','adoption path'],
+     ['Sees value','next relevant use case']]
+      .forEach(([sig,nba])=>{ const r=el('div','brow'); r.append(el('span','sig',sig),el('span','arw','→'),el('span','nba',nba)); b.appendChild(r); });
+    b.appendChild((()=>{const c=el('div','mmcap');c.innerHTML='<b>Behaviour → next-best action.</b> The system reacts to what the customer actually does.';return c;})());
+
+    // SCREEN 2 — the learning loop with Claude as analysis layer
+    const l=el('div','mmscreen'); l.style.display='none'; stage.appendChild(l);
+    l.appendChild((()=>{const s=el('div','subhead','How the system improves');s.style.fontSize='22px';return s;})());
+    const loop=el('div','row'); loop.style.cssText='gap:8px;max-width:60em;align-items:center';
+    const chip=(t,ai)=>{ const c=el('div','loopstep'+(ai?' ai':''),t); return c; };
+    const arw=()=>{ const a=el('span','arw','→'); a.style.color='var(--muted)'; return a; };
+    [chip('CRM + product-usage data'),arw(),chip('AI analysis (Claude)',true),arw(),chip('Signal · cluster · priority'),arw(),
+     chip('Digital intervention'),arw(),chip('Customer behaviour'),arw(),chip('New data'),arw(),chip('AI analysis (Claude)',true),arw(),chip('Next-best action'),arw(),chip('CSM validates'),arw(),chip('Improve → scale')]
+      .forEach(n=>loop.appendChild(n));
+    l.appendChild(loop);
+    l.appendChild((()=>{const c=el('div','mmcap');c.style.maxWidth='44em';c.innerHTML='We don’t design the perfect campaign. We <b>measure where it breaks</b> — Claude helps analyse the signals; the CSM decides — then we improve and scale. <span class="tag grey" style="font-size:16px">Claude = analysis layer · proposed</span>';return c;})());
+
+    root.appendChild(w);
+    const screens=[b,l];
+    return { toStep(s){ const i=Math.max(1,Math.min(2,s)); screens.forEach((sc,k)=>{ sc.style.display=(k===i-1)?'flex':'none'; }); } };
   }
 });
 
@@ -792,7 +754,7 @@ scene({ id:'s7', title:'The Friction Engine', dur:70,
     w.append(trig,line); root.appendChild(w);
     const order=seededOrder(100,17);
     const green=order.slice(0,52), violet=order.slice(52,78);
-    const friction=order.slice(78,87).filter(i=>i!==FOCUS.dot).slice(0,9); // 9 auto-resolved (never the focus)
+    const friction=order.slice(78,87).filter(i=>i!==HUMAN_DOT).slice(0,9); // 9 auto-resolved (never the focus)
     const smallSet=friction.slice(0,5), conceptSet=friction.slice(5,9);
     function base(){ df.dots.forEach(d=>d.classList.add('in'));
       green.forEach(i=>setDot(df.dots[i],'green')); violet.forEach(i=>setDot(df.dots[i],'violet')); }
@@ -803,7 +765,7 @@ scene({ id:'s7', title:'The Friction Engine', dur:70,
         base(); friction.forEach(i=>setDot(df.dots[i],'amber'));
         if(s>=2) smallSet.forEach(i=>setDot(df.dots[i],'green'));
         if(s>=3) conceptSet.forEach(i=>setDot(df.dots[i],'green'));
-        const fd=df.dots[FOCUS.dot]; fd.classList.remove('pulse','ring');
+        const fd=df.dots[HUMAN_DOT]; fd.classList.remove('pulse','ring');
         if(s>=4){ setDot(fd,'amber'); fd.classList.add('pulse','ring','in');
           setTimeout(()=>{ setDot(fd,'human'); fd.classList.remove('pulse'); fd.classList.add('ring','in'); }, REDUCED?0:750); }
         else setDot(fd,'green');
@@ -946,15 +908,14 @@ window.addEventListener('resize',()=>{ if(state[cur]) fitScene(cur); });
    ============================================================ */
 /* per-step dwell (ms) before the next beat fires; the chapter's LAST beat never advances */
 const HOLD=[
-  [3400,4200,4200,4200],               // 01 portfolio (explanation — deliberately slow)
-  [3600,4200,4600],                    // 02 value ladder
-  [3400,4200,4600,5600,5600],          // 03 matrix (framework — held long, readable)
-  [3600,4200,4200],                    // 04 one account
-  [4600,4600,4600,4600,4600,5200],     // 05 campaign (quote, message, weeks 1–4)
-  [3800,4600,4200,4600,4600],          // 06 playground (typing needs room)
-  [3600,4200,4200,5000],               // 07 human intervention
-  [3600,4200,4200,4600],               // 08 success matrix
-  [3200,3200,3400,3600,3600,4600]      // 09 close
+  [3400,4200,4200,4200],               // 0: s1 portfolio (explanation — deliberately slow)
+  [3600,4200,4600],                    // 1: s2 value / two-jobs
+  [3400,4200,4600,5600,5600],          // 2: s3 matrix (framework — held long, readable)
+  [5200,5200,5600,5600,5600,6000],     // 3: s5 campaign (intro + 4 weeks — must breathe)
+  [5200,5600],                         // 4: s6 system (behaviour, learning loop)
+  [3600,4200,4200,5000],               // 5: s7 human intervention
+  [3600,4200,4200,4600],               // 6: s8 success matrix
+  [3200,3200,3400,3600,3600,4600]      // 7: s9 close
 ];
 let slideTimers=[];
 function clearSlide(){ slideTimers.forEach(t=>clearTimeout(t)); slideTimers=[]; }
@@ -1007,7 +968,7 @@ function renderProgress(){
   progEl.textContent = ch+' / 4  ·  '+CHAPTER_TIME[ch-1];
 }
 /* four top-level slides; scenes auto-play within a slide, then freeze at the boundary */
-const CHAPTER_OF=[1,1,2,2,3,3,4,4,4];
+const CHAPTER_OF=[1,1,2,3,3,4,4,4];
 const CHAPTER_TITLES=['Portfolio & Goals','Triggers & Segmentation','Operation Millionaire','Human & Success'];
 const CHAPTER_TIME=['0–3 min','3–7 min','7–13 min','13–15 min'];
 function chapterOf(i){ return CHAPTER_OF[i]||1; }
@@ -1015,14 +976,13 @@ function firstOfChapter(ch){ const k=CHAPTER_OF.indexOf(ch); return k<0?0:k; }
 function lastChapter(){ return CHAPTER_OF[CHAPTER_OF.length-1]; }
 /* presenter teleprompter, per scene index */
 const PRESENTER=[
-  {say:"I don't see 400 customers. I see a prioritisation problem.", then:"The portfolio is a prioritisation problem, not a headcount problem.", shows:"the portfolio"},
-  {say:"Activation is the KPI. Adoption is the proof.", then:"Adoption is what I optimise for, one rung past activation.", shows:"the KPI vs the proof"},
-  {say:"I decide who deserves attention before I decide what to send.", then:"A 400 → 100 filter on need, readiness and fit.", shows:"the filter"},
-  {say:"This is what the customer actually receives.", then:"The score is real fields, not a vibe.", shows:"one account"},
-  {say:"This is Operation Millionaire — four weeks, and every week moves one behaviour.", then:"The campaign is a behavioural journey, not a blast.", shows:"the four-week campaign"},
-  {say:"We don't ask customers to trust AI. We let them try to break it.", then:"Two answers land; the edge case hands to a human.", shows:"the playground"},
-  {say:"Human time is the exception, triggered by evidence.", then:"Most friction resolves at scale; one needs a person.", shows:"the friction monitor"},
-  {say:"90 days proves adoption. It doesn't prove churn.", then:"Targets, and the honest limit of the window.", shows:"the 90-day plan"},
+  {say:"Trengo is growing — but we can't give 400 SMB customers a dedicated CSM.", then:"400 customers, <15% on AI, no assigned CSM: a scale problem.", shows:"the portfolio & the scale problem"},
+  {say:"Two jobs at once: go deeper into how customers operate, and do it one-to-many.", then:"AI activation is the entrance to deeper adoption — done at scale.", shows:"the two-sided thesis"},
+  {say:"Need isn't readiness. I score Need × Readiness × Fit, and I cluster a shared pain.", then:"Data → pattern → shared pain → one campaign for the Core 100.", shows:"the matrix & Core 100"},
+  {say:"We wait for the pain, meet it in-app, prove it safely, activate one real use case, then show the value.", then:"A real product experience — progress 0 → 100%.", shows:"the campaign"},
+  {say:"One campaign isn't one sequence — behaviour picks the next step, and Claude helps find where it breaks.", then:"A learning system: measure, improve, scale.", shows:"the system & learning loop"},
+  {say:"Human time is the exception — Intent + Friction + Potential.", then:"Digital first; a person only where it's justified.", shows:"human intervention"},
+  {say:"Activation → adoption → value → health. Adoption is what I optimise for.", then:"Targets, and the honest limit of the window.", shows:"the success matrix"},
   {say:"The goal isn't 100 activations. It's a system that makes the next 100 easier.", then:"100 running part of their operation on Trengo.", shows:"the close"}
 ];
 function phaseFor(i){ return CHAPTER_TITLES[chapterOf(i)-1]; }
