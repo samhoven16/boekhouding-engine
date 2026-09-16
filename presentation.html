@@ -453,21 +453,22 @@ scene({ id:'s1', title:'The Portfolio', dur:40,
     const w=el('div','wrap');
     const df=buildDotField(400); df.el.classList.add('sm');
     const big=step(el('div','col'),1); big.style.gap='6px'; big.style.alignItems='center';
-    big.append(el('div','big-num','400'), el('div','label','SMB & Mid-Market · Benelux'));
+    big.append(el('div','big-num','400'), el('div','label','SMB & Mid-Market · Benelux · 6–12 months · Email & WhatsApp'));
     const g=step(el('div','subhead'),2);
-    g.innerHTML='Fewer than <b style="color:var(--green)">15%</b> have activated AI';
-    const frame=step(el('div','row'),3); frame.style.cssText='gap:min(1.6vw,18px);align-items:center;justify-content:center;flex-wrap:wrap';
-    const node=(t,c)=>{ const d=el('div','subhead',t); d.style.cssText='padding:.3em .8em;border-radius:12px;background:var(--surface);border:1px solid #262c29'; if(c)d.style.color=c; return d; };
+    g.innerHTML='Only <b style="color:var(--green)">15%</b> on AI — <b style="color:var(--text)">60 accounts</b> · <span style="color:var(--amber)">no assigned CSM</span>';
+    const frame=step(el('div','row'),3); frame.style.cssText='gap:min(1.4vw,16px);align-items:center;justify-content:center;flex-wrap:wrap';
+    const node=(t,c)=>{ const d=el('div','subhead',t); d.style.cssText='padding:.3em .8em;border-radius:12px;background:var(--surface);border:1px solid #262c29;font-size:22px'; if(c)d.style.color=c; return d; };
     const arr=()=>{ const a=el('div','subhead','→'); a.style.color='var(--muted)'; return a; };
-    frame.append(node('400'), arr(), node('<15% activated','var(--amber)'), arr(), node('85% opportunity','var(--green)'));
-    const mission=step(el('div','body'),4); mission.style.cssText='max-width:30em;color:var(--text)';
-    mission.textContent='The goal: make Trengo part of how the customer operates — not just where messages arrive.';
-    const arrline=step(el('div','body muted'),3); arrline.style.fontSize='19px';
-    arrline.innerHTML='≈ <b style="color:var(--text)">€1.5M ARR</b> in this group · Boost pricing (est.)';
-    const chans=step(el('div','label'),4); chans.style.color='var(--muted)';
-    chans.textContent='WhatsApp · Instagram · Facebook · Email · Voice · SMS';
-    w.append(df.el,big,g,frame,arrline,mission,chans); root.appendChild(w);
-    const greenIdx=[]; for(let i=3;i<400 && greenIdx.length<58;i+=7)greenIdx.push(i);
+    frame.append(node('Portfolio growing'), arr(), node('CS can’t scale 1:1','var(--amber)'), arr(), node('Digital-first · one-to-many','var(--green)'));
+    const revline=step(el('div','body muted'),3); revline.style.fontSize='19px';
+    revline.innerHTML='<b style="color:var(--text)">€1.5M / yr</b> revenue in this group <span class="tag grey" style="font-size:16px">case</span>';
+    const target=step(el('div','row'),4); target.style.cssText='gap:.6em;align-items:center;justify-content:center;flex-wrap:wrap';
+    target.append((()=>{const t=el('div','headline','60 → 160 active accounts');t.style.fontSize='clamp(28px,3vw,40px)';return t;})(),
+      (()=>{const s=el('span','tag violet','+25% this quarter · target');return s;})());
+    const mission=step(el('div','body'),4); mission.style.cssText='max-width:32em;color:var(--text)';
+    mission.innerHTML='AI activation is the <b style="color:var(--green)">entrance</b> — into deeper adoption, stickiness and retention.';
+    w.append(df.el,big,g,frame,revline,target,mission); root.appendChild(w);
+    const greenIdx=[]; for(let i=3;i<400 && greenIdx.length<60;i+=7)greenIdx.push(i);
     return {
       enter(){ df.dots.forEach(d=>{d.classList.remove('in');setDot(d,'idle');}); revealDots(df.dots,4); },
       toStep(s){ rev(plEl,s>=2);
@@ -516,9 +517,9 @@ scene({ id:'s3', title:'The Activation Matrix', dur:70,
     const df=buildDotField(400); df.el.classList.add('md');
     const side=el('div','col'); side.style.textAlign='left'; side.style.minWidth='min(380px,80vw)';
     const counter=el('div','big-num','400'); const clab=el('div','label','of 400 · Need × Readiness × Fit');
-    const filters=[['Need','volume · growth · repeat topics · team size'],
-      ['Readiness','help centre · automation · active admin · integration'],
-      ['Fit','knowledge sources · use case · channel · plan']];
+    const filters=[['Need · the pain','>500 tickets/mo · SLA breaches · repeat tags: refund / order status'],
+      ['Readiness · the intent','AI HelpMate-tab clicks · AI doc searches · webinar attendance'],
+      ['Fit · the match','WhatsApp & Email · e-commerce / retail / logistics · Help-Centre / FAQ ready']];
     const fEls=filters.map(([h,d])=>{ const c=el('div','card'); c.style.opacity='.35';
       c.style.transition='opacity .3s ease-out,border-color .3s ease-out'; c.append(el('div','label',h));
       const dd=el('div','body',d); dd.style.fontSize='20px'; dd.style.color='var(--muted)'; c.append(dd); return c; });
@@ -530,14 +531,14 @@ scene({ id:'s3', title:'The Activation Matrix', dur:70,
       const d=el('span'); d.style.cssText='width:14px;height:14px;border-radius:50%;flex:none;background:'+col;
       const t=el('span',null,name); t.style.cssText='color:var(--text);font-weight:700';
       c.append(d,t,el('span','muted',desc)); return c; };
-    tiers.append(tier('Tier A · Core 100','start here','var(--green)'), tier('Tier B · next 200','follow','var(--violet)'), tier('Tier C · last 100','monitor','var(--grey)'));
+    tiers.append(tier('Tier A · Core 100','start here','var(--green)'), tier('Tier B · next 100','follow','var(--violet)'), tier('Tier C · learning','monitor','var(--grey)'));
     const head=step(el('div','headline'),4); head.style.maxWidth='18em';
     head.innerHTML='Not the best 100 — the 100 with the <span style="color:var(--green)">same problem</span>, so one campaign fits them all.';
-    const cap=step(el('div','body muted'),5); cap.style.maxWidth='30em';
-    cap.textContent='The model scores; I decide which signals may count. Human-controlled segmentation.';
+    const cap=step(el('div','subhead'),5); cap.style.cssText='max-width:34em;font-size:22px';
+    cap.innerHTML='<span style="color:var(--muted)">Data</span> → <span style="color:var(--muted)">pattern</span> → <span style="color:var(--green)">shared pain</span> → <span style="color:var(--text)">one campaign message</span>.';
     w.append(top,tiers,head,cap); root.appendChild(w);
     const order=seededOrder(400,7); const counts=[400,238,147,100]; let lastShown=400;
-    const tierA=order.slice(0,100), tierB=order.slice(100,300), tierC=order.slice(300,400);
+    const tierA=order.slice(0,100), tierB=order.slice(100,200), tierC=order.slice(200,400);
     function applyFilter(s){
       if(s>=4){ df.dots.forEach(d=>{d.classList.remove('dim');d.classList.add('in');});
         tierA.forEach(i=>setDot(df.dots[i],'green'));
@@ -747,10 +748,15 @@ scene({ id:'s7', title:'The Friction Engine', dur:70,
     const b3=mkbranch('human','High intent · blocked','→ 15 minutes with me');
     const right=el('div','col'); right.style.alignItems='flex-start'; right.appendChild(tree);
     sp.append(dfWrap,right); w.appendChild(sp);
-    const trig=step(el('div','body muted'),4); trig.style.cssText='font-size:20px';
-    trig.innerHTML='The evidence: <b style="color:var(--text)">Intent</b> + <b style="color:var(--amber)">Friction</b> + <b style="color:var(--green)">Potential</b> → a time-boxed 15 minutes.';
+    const trig=step(el('div'),4); trig.style.cssText='display:flex;flex-direction:column;gap:8px;align-items:center;max-width:40em';
+    const evid=el('div','body muted'); evid.style.fontSize='19px';
+    evid.innerHTML='<b style="color:var(--green)">Intent ✓</b> tested it &nbsp;·&nbsp; <b style="color:var(--amber)">Friction ✓</b> stalled, not live &nbsp;·&nbsp; <b style="color:var(--text)">Potential ✓</b> high fit';
+    const msg=el('div','inapp'); msg.style.maxWidth='min(560px,92vw)';
+    msg.append((()=>{const i=el('div','ico');i.textContent='CS';i.style.background='var(--amber)';return i;})());
+    const mt=el('div','txt'); mt.innerHTML='“I saw you tested the <b>returns</b> use case in Week 2, but it isn’t live yet — where are you getting stuck?”'; msg.appendChild(mt);
+    trig.append(evid,msg);
     const line=step(el('div','headline'),4); line.style.maxWidth='20em';
-    line.innerHTML='Human intervention is the <span style="color:var(--amber)">exception</span> — triggered by evidence.';
+    line.innerHTML='Human intervention is the <span style="color:var(--amber)">exception</span> — triggered by behaviour, not by everyone.';
     w.append(trig,line); root.appendChild(w);
     const order=seededOrder(100,17);
     const green=order.slice(0,52), violet=order.slice(52,78);
