@@ -219,6 +219,14 @@ img{max-width:100%}
 .mmtick{font-size:16px;font-weight:600;color:var(--muted);opacity:.35;transition:opacity .3s ease-out,color .3s ease-out;flex:1;text-align:center}
 .mmtick:first-child{text-align:left}.mmtick:last-child{text-align:right}
 .mmtick.on{opacity:.9;color:var(--green)}
+/* consistent per-week operating-model grammar tag */
+.mmstage{display:inline-flex;align-items:center;gap:.55em;font-size:16px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.mmstage::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor;flex:none}
+.mmstage.pain{color:var(--amber)}
+.mmstage.iv{color:var(--green)}
+.mmstage.act{color:var(--text)}
+.mmstage.sig{color:var(--violet)}
+.mmstage.val{color:var(--green)}
 /* product screen shell (one surface per beat) */
 .mmscreen{width:100%;display:flex;flex-direction:column;align-items:center;gap:min(1.8vh,16px);transition:opacity .3s ease-out}
 .mmcap{font-size:19px;color:var(--muted);max-width:40em;line-height:1.35}
@@ -560,18 +568,18 @@ scene({ id:'s3', title:'The Activation Matrix', dur:70,
   }
 });
 
-/* 05 — OPERATION MILLIONAIRE — paced product experience, one message per beat */
-scene({ id:'s5', title:'Operation Millionaire', dur:330,
-  note:['“Week by week: wait for the pain, make it relevant, prove it safely, activate one real use case, then show the value.”','Next: the system behind it.'],
-  steps:19,
+/* 05 — OPERATION MILLIONAIRE — one operating-model grammar, one message per beat */
+scene({ id:'s5', title:'Operation Millionaire', dur:360,
+  note:['“Every week: customer state → digital intervention → action → signal → outcome. Wait for the pain, prove it safely, activate on value, adopt.”','Next: the system behind it.'],
+  steps:23,
   build(root){
     root.appendChild(pill('illustrative','Illustrative — proposed campaign layer'));
-    const w=el('div','wrap'); w.style.gap='min(2vh,18px)';
+    const w=el('div','wrap'); w.style.gap='min(1.8vh,16px)';
     // persistent header
     const head=el('div'); head.style.cssText='text-align:left;width:100%;max-width:64em';
     const hdr=el('div','apphdr'); hdr.appendChild(el('span','lg'));
     const hb=document.createElement('span'); hb.innerHTML='Trengo › <b>Journeys</b> › Operation Millionaire'; hdr.appendChild(hb);
-    head.append(hdr,(()=>{const t=el('div','headline','Mission Millionaire');t.style.fontSize='clamp(24px,2.6vw,34px)';return t;})());
+    head.append(hdr,(()=>{const t=el('div','headline','Mission Millionaire');t.style.fontSize='clamp(22px,2.4vw,32px)';return t;})());
     w.appendChild(head);
     // week rail
     const rail=el('div','mmrail');
@@ -592,113 +600,143 @@ scene({ id:'s5', title:'Operation Millionaire', dur:330,
     const surfaces=[];
     const surf=()=>{ const s=el('div','mmscreen'); s.style.display='none'; stage.appendChild(s); surfaces.push(s); return s; };
     const cap=(html)=>{ const c=el('div','mmcap'); c.innerHTML=html; return c; };
+    const stg=(label,cls)=>el('div','mmstage '+(cls||''),label);
     const chip=(t,cls)=>el('div','loopstep'+(cls?(' '+cls):''),t);
     const arw=()=>{ const a=el('span',null,'→'); a.style.cssText='color:var(--muted);font-size:20px'; return a; };
     const chain=(items)=>{ const r=el('div','row'); r.style.cssText='gap:8px;align-items:center;justify-content:center;flex-wrap:wrap';
       items.forEach((it,i)=>{ if(i)r.appendChild(arw()); r.appendChild(typeof it==='string'?chip(it):it); }); return r; };
-    const milestone=(wk,sub,pct)=>{ const c=el('div','col'); c.style.alignItems='center'; c.style.gap='8px';
-      const t=el('div','headline',wk); t.style.fontSize='clamp(28px,3vw,40px)';
-      const s=el('div','subhead',sub); s.style.cssText='font-size:22px;color:var(--muted)';
+    const milestone=(wk,sub,pct)=>{ const c=el('div','col'); c.style.alignItems='center'; c.style.gap='6px';
+      const t=el('div','headline',wk); t.style.fontSize='clamp(26px,2.9vw,38px)';
+      const s=el('div','subhead',sub); s.style.cssText='font-size:21px;color:var(--muted)';
       c.append(t,s,(()=>{const g=el('span','tag grey',pct+'% · proposed milestone');return g;})()); return c; };
 
-    // ---------- INTRO ----------
+    // ================= INTRO =================
     let s=surf(); // 0 philosophy
     s.append((()=>{const t=el('div','headline','Operation Millionaire');t.style.fontSize='clamp(34px,4vw,52px)';return t;})(),
       (()=>{const a=el('div','subhead','Don’t push AI. Wait for the pain.');a.style.color='var(--amber)';return a;})(),
       cap('“Make your clients millionaire — they make you billionaire.”'));
-    s=surf(); // 1 causal chain
-    s.append((()=>{const t=el('div','subhead','How the campaign creates value');t.style.fontSize='22px';return t;})(),
-      chain(['Behaviour','Pain','Relevant AI use case','Value','Adoption']),
-      cap('I don’t advertise AI. <b>Customer behaviour makes it relevant.</b>'));
+    s=surf(); // 1 principle chain
+    s.append((()=>{const t=el('div','subhead','A problem-led adoption engine');t.style.fontSize='22px';return t;})(),
+      chain(['Wait for the pain','Make AI relevant','Let them experience value','Build adoption']),
+      cap('Not a generic AI campaign. <b>Customer behaviour makes AI relevant.</b>'));
 
-    // ---------- WEEK 1 — DISCOVER ----------
-    s=surf(); // 2 inbox pain
-    (function(){ const inbox=el('div','mail'); inbox.style.maxWidth='min(620px,92vw)';
+    // ================= WEEK 1 · DISCOVER =================
+    s=surf(); // 2 PAIN — inbox
+    (function(){ s.appendChild(stg('Customer state · the pain','pain'));
+      const inbox=el('div','mail'); inbox.style.maxWidth='min(620px,92vw)';
       const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'Support inbox · today')); inbox.appendChild(bar);
-      [['Where is my order?','13:58'],['When will my package arrive?','14:06'],['Where is my order?','14:11'],['Can you check my shipment?','14:19']]
+      [['Where is my order?','13:58'],['When will my package arrive?','14:06'],['Where is my shipment?','14:11'],['Do you know when this arrives?','14:19']]
         .forEach(([q,t])=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;padding:.55em 1.1em;border-top:1px solid var(--grey);font-size:19px';
           r.append(el('span',null,q),(()=>{const tm=el('span',null,t);tm.style.color='var(--muted)';return tm;})()); inbox.appendChild(r); });
-      s.append(inbox, cap('<b>Week 1 · we wait for the pain</b> — the same work, over and over.')); })();
-    s=surf(); // 3 pattern
-    (function(){ const card=el('div','card'); card.style.cssText='text-align:center;max-width:min(460px,90vw)';
+      s.append(inbox, cap('<b>We wait for the pain</b> — the same question, over and over.')); })();
+    s=surf(); // 3 PAIN — pattern
+    (function(){ s.appendChild(stg('Customer state · the pattern','pain'));
+      const card=el('div','card'); card.style.cssText='text-align:center;max-width:min(460px,90vw)';
       card.append((()=>{const b=el('div','big-num','15×');b.style.fontSize='clamp(48px,7vw,84px)';b.style.color='var(--amber)';return b;})(),
         (()=>{const t=el('div','subhead','the same question, today');t.style.fontSize='22px';return t;})(),
         (()=>{const g=el('span','tag grey','illustrative signal');g.style.marginTop='8px';return g;})());
-      s.append(card, cap('<b>Repetitive work is an AI use case.</b>')); })();
-    s=surf(); // 4 in-app trigger
-    (function(){ const ia=el('div','inapp'); ia.append((()=>{const i=el('div','ico','AI');return i;})());
+      s.append(card, cap('<b>Repetitive question = repetitive manual work.</b> That is an AI use case.')); })();
+    s=surf(); // 4 INTERVENTION — in-app trigger
+    (function(){ s.appendChild(stg('Digital intervention · in-app','iv'));
+      const ia=el('div','inapp'); ia.append((()=>{const i=el('div','ico','AI');return i;})());
       const t=el('div','txt'); t.innerHTML='You’ve answered this <b>repeatedly</b> today. Let Trengo AI handle it. &nbsp;<span style="color:var(--green);font-weight:700">See how →</span>'; ia.appendChild(t);
       s.append(ia, cap('<b>Right problem · right moment · in-app</b> — not a generic email.')); })();
-    s=surf(); // 5 learning
-    (function(){ const v=el('div','wbcard'); v.style.maxWidth='min(440px,92vw)';
+    s=surf(); // 5 INTERVENTION — 1-min learning
+    (function(){ s.appendChild(stg('Digital intervention · learn','iv'));
+      const v=el('div','wbcard'); v.style.maxWidth='min(440px,92vw)';
       v.append((()=>{const k=el('div','kick','▶ 1 min · product-led');return k;})(), el('div','wt','See the use case'));
       s.append(v, chain(['Repeated order-status Qs','AI answers from knowledge','less manual work']),
-        cap('<b>One minute</b> — see it, understand the value, try it.')); })();
-    s=surf(); // 6 recap + 25
-    s.append(chain(['Pain','Trigger','Learn','Try']), milestone('Week 1 · Discover','Awareness → Relevance',25));
+        cap('<b>One minute</b> — what it does, and why it matters.')); })();
+    s=surf(); // 6 SIGNAL — engaged
+    (function(){ s.appendChild(stg('Signal · we observe','sig'));
+      s.append(chain(['Opened','Watched','Engaged']),
+        cap('The campaign doesn’t just send — it <b>watches</b>, and picks the next step.')); })();
+    s=surf(); // 7 OUTCOME 25
+    s.append(stg('Outcome','val'), chain(['Pain','Trigger','Learn','Try']), milestone('Week 1 · Discover','Awareness → Relevance',25));
 
-    // ---------- WEEK 2 — PROVE ----------
-    s=surf(); // 7 preview
-    (function(){ const c=el('div','sup');
+    // ================= WEEK 2 · PROVE =================
+    s=surf(); // 8 STATE — doesn't trust yet
+    (function(){ s.appendChild(stg('Customer state · trust','pain'));
+      const t=el('div','headline','“Will it send the wrong answer?”'); t.style.cssText='max-width:16em;font-size:clamp(26px,3vw,40px)';
+      s.append(t, cap('Interested — but <b>trust is the biggest blocker with AI.</b>')); })();
+    s=surf(); // 9 INTERVENTION — Preview
+    (function(){ s.appendChild(stg('Digital intervention · preview','iv'));
+      const c=el('div','sup');
       const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'Preview · pre-live test'),(()=>{const g=el('span','tag grey','simulate');g.style.marginLeft='auto';return g;})()); c.appendChild(bar);
       const q=el('div'); q.style.cssText='padding:.6em 1.1em;font-size:19px'; q.innerHTML='<span style="color:var(--muted);font-size:16px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Simulated customer</span><br>Where is my order?'; c.appendChild(q);
       const a=el('div','draft'); a.innerHTML='<div class="lb">AI response — test only</div>Your order is on its way — here’s your tracking link.'; c.appendChild(a);
-      s.append(c, cap('<b>Week 2 · Preview</b> — a safe pre-live test. Nothing goes to a real customer yet.')); })();
-    s=surf(); // 8 supervised
-    (function(){ const c=el('div','sup');
+      s.append(c, cap('<b>Preview</b> — a safe pre-live test. Nothing reaches a real customer yet.')); })();
+    s=surf(); // 10 INTERVENTION — Supervised
+    (function(){ s.appendChild(stg('Digital intervention · supervised','iv'));
+      const c=el('div','sup');
       const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'AI Agent · Supervised Mode'),(()=>{const t=el('span','tag violet','Human approves');t.style.marginLeft='auto';return t;})()); c.appendChild(bar);
       const q=el('div'); q.style.cssText='padding:.6em 1.1em;font-size:19px'; q.innerHTML='<span style="color:var(--muted);font-size:16px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Real customer</span><br>Can I return an opened item?'; c.appendChild(q);
       const a=el('div','draft'); a.innerHTML='<div class="lb">AI draft — awaiting approval</div>Yes — within 14 days with the original packaging. Here’s your return link.'; c.appendChild(a);
       const act=el('div','act'); const ap=el('button','btn','Approve & send'); const ed=el('button','btn','Edit'); ed.style.cssText='background:transparent;color:var(--text);border:1px solid var(--grey)';
       act.append(ap,ed,(()=>{const n=el('span',null,'Human owns the ticket · 30-day review');n.style.cssText='font-size:16px;color:var(--muted);margin-left:auto';return n;})()); c.appendChild(act);
       s.append(c, cap('<b>Supervised Mode</b> — real conversations; AI drafts, a human approves before it sends.')); })();
-    s=surf(); // 9 trust chain
-    s.append(chain(['Preview','Supervised','Human approval','Trust']),
-      cap('<b>Trust is the biggest blocker with AI</b> — so they prove it safely first, never straight to autonomous.'));
-    s=surf(); // 10 recap + 50
-    s.append(milestone('Week 2 · Prove','Relevance → Try',50));
+    s=surf(); // 11 ACTION — trust builds
+    (function(){ s.appendChild(stg('Customer action · trust builds','act'));
+      s.append(chain(['AI does the work','Human keeps control','Trust']),
+        cap('Not straight to autonomous AI — <b>they prove it safely first.</b>')); })();
+    s=surf(); // 12 SIGNAL — tested, not live
+    (function(){ s.appendChild(stg('Signal · we observe','sig'));
+      const b=el('div'); b.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center';
+      b.append((()=>{const t=el('span','tag violet','Tested');return t;})(),(()=>{const t=el('span','tag amber','not live yet');return t;})());
+      s.append(b, cap('Intent, but friction. <b>A candidate for a human later — not yet.</b>')); })();
+    s=surf(); // 13 OUTCOME 50
+    s.append(stg('Outcome','val'), milestone('Week 2 · Prove','Relevance → Try',50));
 
-    // ---------- WEEK 3 — ACTIVATE ----------
-    s=surf(); // 11 one problem
-    (function(){ const card=el('div','card'); card.style.cssText='text-align:center;max-width:min(440px,90vw)';
-      card.append((()=>{const l=el('div','label','one concrete problem');return l;})(),(()=>{const t=el('div','headline','Order status');t.style.fontSize='clamp(30px,3.4vw,44px)';return t;})());
+    // ================= WEEK 3 · ACTIVATE =================
+    s=surf(); // 14 STATE — one problem
+    (function(){ s.appendChild(stg('Customer state · one problem','pain'));
+      const card=el('div','card'); card.style.cssText='text-align:center;max-width:min(440px,90vw)';
+      card.append((()=>{const l=el('div','label','one concrete use case');return l;})(),(()=>{const t=el('div','headline','Order status');t.style.fontSize='clamp(30px,3.4vw,44px)';return t;})());
       const q=el('div','msg user','Where is my order?'); q.style.margin='14px auto 0';
-      s.append(card, q, cap('<b>Week 3 · one concrete operational problem</b> — an illustrative use case.')); })();
-    s=surf(); // 12 ingredients
-    (function(){ const row=el('div','row'); row.style.cssText='gap:14px;justify-content:center';
+      s.append(card, q, cap('<b>One concrete operational problem</b> — an illustrative example.')); })();
+    s=surf(); // 15 INTERVENTION — inputs
+    (function(){ s.appendChild(stg('Digital intervention · what AI needs','iv'));
+      const row=el('div','row'); row.style.cssText='gap:14px;justify-content:center';
       [['Knowledge','Shipping policy · FAQ'],['Integration','Order lookup · Shopify']].forEach(([h,d])=>{ const c=el('div','pgcol'); c.style.cssText='max-width:15em;padding:.8em 1em';
         c.append(el('div','h',h),(()=>{const r=el('div','src');r.append(el('span','d'),el('span',null,d));return r;})()); row.appendChild(c); });
       s.append(row, cap('<b>AI isn’t magic</b> — it needs the right knowledge and the right data.')); })();
-    s=surf(); // 13 resolve
-    (function(){ const chat=el('div','chat'); chat.style.maxWidth='min(560px,92vw)';
+    s=surf(); // 16 ACTION — AI resolves
+    (function(){ s.appendChild(stg('Customer action · AI resolves','act'));
+      const chat=el('div','chat'); chat.style.maxWidth='min(560px,92vw)';
       chat.append(el('div','msg user','Where is my order?'), el('div','msg ai','It’s in transit, expected tomorrow. Track it here: trg.to/track'),
         (()=>{const t=el('span','tag green mtag','Resolved · no human needed');return t;})());
       s.append(chat, cap('<b>The AI does the work</b> — on a real conversation.')); })();
-    s=surf(); // 14 recap + 75
-    s.append(milestone('Week 3 · Activate','Try → Activate',75),
-      cap('They activate <b>because they saw value</b> — not because we asked.'));
+    s=surf(); // 17 OUTCOME 75
+    s.append(stg('Outcome','val'), chain(['Real problem','Real value','Activation']), milestone('Week 3 · Activate','Try → Activate',75));
 
-    // ---------- WEEK 4 — PROVE VALUE ----------
-    s=surf(); // 15 value
-    (function(){ const imp=el('div','mail'); imp.style.maxWidth='min(560px,92vw)';
+    // ================= WEEK 4 · PROVE VALUE =================
+    s=surf(); // 18 VALUE
+    (function(){ s.appendChild(stg('Value · did it help?','val'));
+      const imp=el('div','mail'); imp.style.maxWidth='min(560px,92vw)';
       const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'AI Impact · this month'),(()=>{const t=el('span','tag grey','Proposed');t.style.marginLeft='auto';return t;})()); imp.appendChild(bar);
       ['AI conversations','AI resolution','Human escalations','Time saved'].forEach(k=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:19px';
         r.append(el('span',null,k),(()=>{const t=el('span','tag grey','tracked');return t;})()); imp.appendChild(r); });
-      s.append(imp, cap('<b>Week 4 · can we show the value was created?</b>')); })();
-    s=surf(); // 16 adoption
-    s.append(chain([chip('AI feature'),chip('part of the daily workflow','ai')]),
-      cap('<b>Activation becomes adoption</b> — AI stops being a trial and becomes how they work.'));
-    s=surf(); // 17 next use case
-    (function(){ const b=el('div'); b.style.cssText='display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:.8em 1.2em;border:1px solid var(--grey);border-radius:12px;background:rgba(167,139,250,.10);max-width:min(560px,92vw)';
+      s.append(imp, cap('<b>Can we show the value was created?</b>')); })();
+    s=surf(); // 19 ACTION — adoption
+    (function(){ s.appendChild(stg('Customer action · adoption','act'));
+      s.append(chain([chip('AI feature'),chip('part of the daily workflow','ai')]),
+        cap('<b>Activation becomes adoption</b> — from “I tried it” to “this is how we work.”')); })();
+    s=surf(); // 20 NEXT
+    (function(){ s.appendChild(stg('Next · expand','iv'));
+      const b=el('div'); b.style.cssText='display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:.8em 1.2em;border:1px solid var(--grey);border-radius:12px;background:rgba(167,139,250,.10);max-width:min(560px,92vw)';
       b.append(el('span','tag violet','NEXT USE CASE'),(()=>{const t=el('span',null,'Returns → the same agent, one step wider.');t.style.fontSize='20px';return t;})());
       s.append(b, cap('<b>The campaign loops</b> — value opens the next use case.')); })();
-    s=surf(); // 18 recap + 100
-    s.append(chain(['Discover','Prove','Activate','Adopt']), milestone('Week 4 · Prove Value','First value → Adopt',100));
+    s=surf(); // 21 LOOP
+    (function(){ s.appendChild(stg('The loop','val'));
+      s.append(chain(['Solve one problem','Learn','Expand','Solve the next']),
+        cap('One problem at a time — <b>each win makes the next easier.</b>')); })();
+    s=surf(); // 22 OUTCOME 100
+    s.append(stg('Outcome','val'), chain(['Discover','Prove','Activate','Adopt']), milestone('Week 4 · Prove Value','First value → Adopt',100));
 
     root.appendChild(w);
 
-    const WK =[0,0, 1,1,1,1,1, 2,2,2,2, 3,3,3,3, 4,4,4,4];
-    const PCT=[0,0, 0,0,0,0,25, 25,25,25,50, 50,50,50,75, 75,75,75,100];
+    const WK =[0,0, 1,1,1,1,1,1, 2,2,2,2,2,2, 3,3,3,3, 4,4,4,4,4];
+    const PCT=[0,0, 0,0,0,0,0,25, 25,25,25,25,25,50, 50,50,50,75, 75,75,75,75,100];
     let lastPct=0;
     function setProgress(pct){
       fill.style.width=pct+'%';
@@ -953,8 +991,8 @@ const HOLD=[
   [3400,4200,4200,4200],               // 0: s1 portfolio (explanation — deliberately slow)
   [3600,4200,4600],                    // 1: s2 value / two-jobs
   [3400,4200,4600,5600,5600],          // 2: s3 matrix (framework — held long, readable)
-  // 3: s5 campaign — 19 one-message beats; generous holds so the presenter never races
-  [5500,6000, 5500,5500,6000,6000,7000, 5500,6000,5500,7000, 5500,5500,6000,7000, 5500,5500,5500,7500],
+  // 3: s5 campaign — 23 one-message beats (consistent grammar); generous holds so the presenter never races
+  [5500,6000, 5500,5500,6000,5500,5500,7000, 5500,6000,6000,5500,5500,7000, 5500,6000,5500,7000, 5500,5500,5500,5500,7500],
   [6000,7000,7500],                    // 4: s6 system (headline, behaviour, learning loop)
   [3600,4200,4200,5000],               // 5: s7 human intervention
   [3600,4200,4200,4600],               // 6: s8 success matrix
