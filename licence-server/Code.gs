@@ -962,6 +962,7 @@ function stuurOtpMail_(email, otp) {
 
   if (brevoKey) {
     try {
+      // klant-mail-ok[klant-transactioneel]: activeringscode (OTP) via Brevo; klant vroeg erom
       const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'post', contentType: 'application/json',
         headers: { 'api-key': brevoKey, 'accept': 'application/json' },
@@ -986,6 +987,7 @@ function stuurOtpMail_(email, otp) {
     }
   }
   // Fallback: MailApp via Google Workspace (lager limiet maar reliable).
+  // klant-mail-ok[klant-transactioneel]: activeringscode (OTP) via MailApp-fallback; klant vroeg erom
   MailApp.sendEmail({
     to: email,
     subject: 'Je activeringscode: ' + otp + ' (15 min geldig) — Boekhoudbaar',
@@ -1487,6 +1489,7 @@ function _meldAdminLockoutAanOwner_() {
     '</div>';
 
   try {
+    // klant-mail-ok[eigenaar]: alert aan eigenaar bij geblokkeerd admin-paneel
     MailApp.sendEmail({
       to: ontvanger,
       subject: '🚨 Boekhoudbaar admin-paneel geblokkeerd (20 pogingen/uur)',
@@ -1898,6 +1901,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
     Logger.log('::error:: TEMPLATE_SS_ID ontbreekt — geen activatiemail voor ' + email + ' (' + sleutel.substring(0, 8) + '…).');
     try { markeerTemplateOntbreekt_(sleutel); } catch (_) {}
     try {
+      // klant-mail-ok[eigenaar]: alert aan eigenaar: TEMPLATE_SS_ID ontbreekt, klant krijgt bewust niets
       MailApp.sendEmail({
         to: vanEmail,
         subject: '🚨 URGENT: TEMPLATE_SS_ID ontbreekt — klant ' + email + ' kan niet activeren',
@@ -1924,6 +1928,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
   if (!_templateIsDeelbaar_(templateId)) {
     Logger.log('::error:: Master Engine (' + templateId + ') niet publiek deelbaar — geen activatiemail voor ' + email + '.');
     try {
+      // klant-mail-ok[eigenaar]: alert aan eigenaar: Master Engine niet deelbaar, klant krijgt bewust niets
       MailApp.sendEmail({
         to: vanEmail,
         subject: '🚨 URGENT: Master Engine niet deelbaar — klant ' + email + ' kan niet activeren',
@@ -2034,6 +2039,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
   const supportEmail = props.getProperty('SUPPORT_EMAIL') || 'support@boekhoudbaar.nl';
   if (brevoKey) {
     try {
+      // klant-mail-ok[klant-transactioneel]: activatiemail na betaling via Brevo; klant heeft betaald en moet de sleutel krijgen
       const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'post',
         contentType: 'application/json',
@@ -2063,6 +2069,7 @@ function stuurLicentiemail_(naam, email, sleutel) {
   if (!brevoOk) {
     // Fallback — minder mooie HTML maar reliable Google delivery.
     // Cruciaal: klant heeft betaald, MOET sleutel ontvangen.
+    // klant-mail-ok[klant-transactioneel]: activatiemail na betaling via MailApp-fallback
     MailApp.sendEmail({
       to: email,
       subject: 'Je ' + productnm + ' is klaar — activeer nu 🚀',
@@ -3415,6 +3422,7 @@ function verstuurDripMail_(naam, email, sleutel, drip) {
 
   if (brevoKey) {
     try {
+      // klant-mail-ok[klant-drip]: onboarding-drip via Brevo; afmelding wordt gecontroleerd in verstuurDripsDagelijks_ (dripuit_)
       const resp = UrlFetchApp.fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'post', contentType: 'application/json',
         headers: { 'api-key': brevoKey },
@@ -3438,6 +3446,7 @@ function verstuurDripMail_(naam, email, sleutel, drip) {
     } catch (e) { Logger.log('Brevo drip exception: ' + e.message); }
   }
   // Fallback MailApp
+  // klant-mail-ok[klant-drip]: onboarding-drip via MailApp-fallback; zelfde afmeld-gate in verstuurDripsDagelijks_
   MailApp.sendEmail({
     to: email, subject: drip.onderwerp, body: text, htmlBody: html,
     replyTo: supportEmail, name: vanNaam,
@@ -3896,6 +3905,7 @@ function verstuurDagelijkseStatusmail_() {
     ' · ' + stats.nieuw24u + ' nieuw, ' + stats.totaalActief + ' actief';
 
   try {
+    // klant-mail-ok[eigenaar]: dagelijkse statusmail naar OWNER_STATUS_EMAIL
     MailApp.sendEmail({
       to: ontvanger,
       subject: onderwerp,
