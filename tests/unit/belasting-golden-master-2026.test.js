@@ -97,6 +97,19 @@ describe('LAAG 1 — 2026-tarieven gepind op Belastingdienst (oracle-anker)', ()
     expect(B.BOX3_HEFFINGSVRIJ).toBe(59357);
     expect(B.BOX3_TARIEF).toBe(0.36);
   });
+  // Bronverificatie 2026-10-22 (docs/fiscale-bronnen-2026.md): twee waarden stonden niet in de pin-lijst en
+  // bleken af te wijken van de Belastingdienst-pagina's. Pin ze nu, zodat ze niet stil terugdriften.
+  test('Vrijstelling groene beleggingen box 3: € 26.715 per persoon (was ten onrechte 67.000)', () => {
+    // Bron: belastingdienst.nl/.../box-3/content/berekening-box-3-inkomen-2026:
+    // "Groene beleggingen zijn vrijgesteld tot € 26.715 per persoon."
+    expect(B.BOX3_GROEN_VRIJSTELLING).toBe(26715);
+  });
+  test('Box 1 schijf 1 voor AOW-gerechtigden: 17,85% (was ten onrechte 17,70%)', () => {
+    // Bron: belastingdienst.nl/.../box_1/box_1: "AOW-leeftijd voor 2026 bereikt, geboren op of na
+    // 1 januari 1946: t/m € 38.883 17,85%". Wie in 2026 zelf de AOW-leeftijd bereikt betaalt 17,85% (januari)
+    // tot 34,26% (december) in schijf 1; dat is nog niet gemodelleerd (F-TAX-112).
+    expect(B.IB_SCHIJVEN_AOW[0]).toEqual({ tot: 38883, pct: 0.1785 });
+  });
 });
 
 describe('LAAG 2 — golden-master berekeningen (hand-afgeleid uit de tarieven)', () => {
