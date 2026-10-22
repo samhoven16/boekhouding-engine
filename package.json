@@ -15,6 +15,7 @@
     "index": "node scripts/symbol-index.js",
     "impact": "node scripts/impact.js",
     "truth-check": "node scripts/truth-check.js",
+    "fiscaal:bronnen": "node scripts/fiscaal-bronnen-check.js",
     "prepare": "husky && git config merge.ours.driver true || true",
     "push:gas": "node scripts/clasp-push.js",
     "push:licence": "cd licence-server && npx clasp push --force",

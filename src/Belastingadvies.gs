@@ -195,8 +195,8 @@ const BELASTING_PER_JAAR = {
   // Bij ontbreken valt getBelasting_() terug op 2026-tarieven met waarschuwing.
   2027: {
     ZELFSTANDIGENAFTREK:    900,     // INDICATIEF — afbouw zet door
-    STARTERSAFTREK:         2123,
-    STAKINGSAFTREK:         3630,
+    STARTERSAFTREK:         10,      // VOORSTEL Belastingplan 2027 (2.123 → 10, 0 in 2028); nog niet aangenomen
+    STAKINGSAFTREK:         908,     // VOORSTEL Belastingplan 2027 (3.630 → 908, stopt 2030); nog niet aangenomen
     MKB_WINSTVRIJSTELLING:  0.1270,
     FOR_MAX:                10786,
     THUISWERK_PER_DAG:      2.40,
@@ -332,13 +332,13 @@ function getBelasting_() {
     // KIA — investerings-aftrek-tabel 2026. Definitieve staffel,
     // geverifieerd op belastingdienst.nl (2026-06-10):
     //   t/m €2.900: 0% · €2.901–€71.683: 28% · €71.684–€132.746: vast €20.072
-    //   €132.747–€398.236: €20.072 − 7,56% × deel boven €132.747 · >€398.236: 0%
+    //   €132.747–€398.236: €20.072 − 7,56% × deel boven €132.746 · >€398.236: 0%
     KIA_MIN:                2901,
     KIA_MAX:                398236,
     KIA_PCT:                0.28,
     KIA_VAST_VAN:           71683,
     KIA_VAST_BEDRAG:        20072,
-    KIA_AFBOUW_START:       132747,
+    KIA_AFBOUW_START:       132746,  // bron: "deel van het investeringsbedrag boven de € 132.746" (de schijf zelf begint bij 132.747)
     KIA_AFBOUW_PCT:         0.0756,
     FOR_PCT:                0.0944,
     MIA_PCT:                0.45,    // max MIA-categorie 2026 (27%/36%/45% naar RVO-milieulijst); het oude vlakke 0.455 was geen bestaand tarief. Vlak max = bovengrens-schatting; categorie-afhankelijk vereist RB.
@@ -1021,7 +1021,7 @@ function _berekenBelastingadviesRaw_(ss) {
   //  - <€2.901:                        geen KIA
   //  - €2.901  – €71.683:              28% van investering
   //  - €71.684 – €132.746:             vast €20.072
-  //  - €132.747 – €398.236:            afbouw: €20.072 − 7,56% × (inv − €132.747)
+  //  - €132.747 – €398.236:            afbouw: €20.072 − 7,56% × (inv − €132.746)
   //  - >€398.236:                      geen KIA (max bereikt)
   const kiaAftrek = berekenKiaAftrek_(investeringen, BELASTING);
   if (kiaAftrek > 0) {

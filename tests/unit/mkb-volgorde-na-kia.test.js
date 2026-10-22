@@ -112,7 +112,7 @@ describe('A1 — NUMERIEK: fiscale formule op exacte casus', () => {
   });
 
   test('Bij MAXIMALE KIA (vast bedrag €20.072) is de drift navenant groter', () => {
-    // KIA vast-bedrag is van toepassing tussen €71.683 en €132.747 → €20.072.
+    // KIA vast-bedrag is van toepassing tussen €71.683 en €132.746 → €20.072.
     const investering = 100000;
     const kiaVast = 20072;
     const correctSubtotaal = Math.max(0, winst - 1200 - 2123 - kiaVast);
