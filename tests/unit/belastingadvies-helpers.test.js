@@ -29,7 +29,7 @@ describe('Belastingadvies helpers', () => {
       expect(B.KIA_MIN).toBe(2901);
       expect(B.KIA_VAST_VAN).toBe(71683);
       expect(B.KIA_VAST_BEDRAG).toBe(20072);
-      expect(B.KIA_AFBOUW_START).toBe(132747);
+      expect(B.KIA_AFBOUW_START).toBe(132746);
       expect(B.KIA_AFBOUW_PCT).toBe(0.0756);
       expect(B.KIA_MAX).toBe(398236);
     });
@@ -39,8 +39,8 @@ describe('Belastingadvies helpers', () => {
       expect(ctx.berekenKiaAftrek_(2901, B)).toBeCloseTo(812.28, 2);   // 28%
       expect(ctx.berekenKiaAftrek_(71684, B)).toBeCloseTo(20072, 2);   // vast
       expect(ctx.berekenKiaAftrek_(132746, B)).toBeCloseTo(20072, 2);  // vast
-      // afbouw: €20.072 − 7,56% × deel boven €132.747
-      expect(ctx.berekenKiaAftrek_(200000, B)).toBeCloseTo(20072 - 0.0756 * (200000 - 132747), 2);
+      // afbouw: €20.072 − 7,56% × deel boven €132.746
+      expect(ctx.berekenKiaAftrek_(200000, B)).toBeCloseTo(20072 - 0.0756 * (200000 - 132746), 2);
       expect(ctx.berekenKiaAftrek_(398237, B)).toBe(0);                // boven max
     });
   });
