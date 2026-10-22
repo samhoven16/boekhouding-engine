@@ -138,7 +138,7 @@ const BELASTING_PER_JAAR = {
     LIJFRENTE_FACTOR_A:     6.27,    // bevestigen na Belastingplan 2026
     AOW_FRANCHISE:          14540,
     AOW_LEEFTIJD:           67,
-    BOX3_GROEN_VRIJSTELLING: 67000,
+    BOX3_GROEN_VRIJSTELLING: 26715,   // per persoon; bron belastingdienst.nl berekening-box-3-inkomen-2026 (22-10-2026). Was 67000 (onjuist)
     BOX3_HEFFINGSVRIJ:      59357,    // F-TAX-110 RB-verificatie 2026-06-21 (def.)
     BOX3_FORFAIT_BELEGGING: 0.06,     // F-TAX-110: 6,00% DEFINITIEF — het kabinets-
                                       // voorstel 7,78% is TERUGGEDRAAID (was 0,0778;
@@ -181,7 +181,7 @@ const BELASTING_PER_JAAR = {
       { tot: Infinity, pct: 0.495  },  // schijf 3
     ],
     IB_SCHIJVEN_AOW: [
-      { tot: 38883,    pct: 0.1770 },  // schijf 1 voor AOW-gerechtigden
+      { tot: 38883,    pct: 0.1785 },  // schijf 1 AOW-gerechtigden (bron belastingdienst.nl box_1, 22-10-2026; was 0,1770)
       { tot: 78426,    pct: 0.3756 },
       { tot: Infinity, pct: 0.495  },
     ],
