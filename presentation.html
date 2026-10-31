@@ -1,0 +1,1162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trengo — Digital Customer Success</title>
+<style>
+:root{
+  --bg:#0B0D0C; --surface:#161A18; --text:#F5F7F6; --muted:#8A9491;
+  --green:#00B27A; --violet:#A78BFA; --amber:#F0A02A; --grey:#39403C;
+  --radius:14px;
+  --font:-apple-system,"Segoe UI",Roboto,Inter,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font-family:var(--font);overflow:hidden;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+/* ---- type scale (nothing below 18px) ---- */
+.hero{font-size:clamp(54px,6.2vw,86px);font-weight:800;line-height:1.03;letter-spacing:-.02em}
+.headline{font-size:clamp(34px,3.7vw,50px);font-weight:700;line-height:1.1;letter-spacing:-.015em}
+.subhead{font-size:clamp(24px,2.5vw,32px);font-weight:600;line-height:1.15}
+.body{font-size:clamp(22px,2vw,26px);font-weight:400;line-height:1.35;color:var(--text)}
+.muted{color:var(--muted)}
+.label{font-size:18px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;color:var(--muted)}
+
+/* ---- deck / scenes ---- */
+#deck{position:fixed;inset:0;user-select:none;-webkit-user-select:none}
+.scene{position:absolute;inset:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:10vh 6vw 6vh}
+.scene.active{display:flex}
+.scene .wrap{width:100%;max-width:1400px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:min(2.6vh,26px);transform-origin:center center;will-change:transform}
+
+/* ---- progressive-disclosure step ---- */
+.step{opacity:0;transform:translateY(14px);
+  transition:opacity .34s ease-out, transform .34s ease-out}
+.step.shown{opacity:1;transform:none}
+
+/* ---- evidence pill ---- */
+.evidence{position:absolute;top:3.2vh;left:3vw;display:inline-flex;align-items:center;
+  gap:.5em;padding:.5em 1em;border-radius:999px;font-size:18px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;background:var(--surface);
+  border:1px solid #262c29;color:var(--muted);z-index:5}
+.evidence::before{content:"";width:11px;height:11px;border-radius:50%;background:currentColor}
+.evidence.case{color:var(--green)}
+.evidence.verified{color:var(--green)}
+.evidence.illustrative{color:var(--muted)}
+.evidence.assumption{color:var(--amber)}
+.evidence.target{color:var(--violet)}
+.evidence.confirm{color:var(--amber)}
+
+/* ---- dot field motif ---- */
+.dotfield{display:grid;grid-template-columns:repeat(20,1fr);
+  gap:clamp(4px,.55vw,9px);width:min(58vh,760px);aspect-ratio:1}
+.dot{width:100%;aspect-ratio:1;border-radius:50%;background:var(--grey);
+  opacity:0;transform:scale(.35);
+  transition:opacity .3s ease-out, transform .3s ease-out, background-color .3s ease-out}
+.dot.in{opacity:.45;transform:none}
+.dot.dim{opacity:.1}
+.dot.green{background:var(--green);opacity:1;transform:none}
+.dot.amber{background:var(--amber);opacity:1;transform:none}
+.dot.violet{background:var(--violet);opacity:1;transform:none}
+.dot.human{background:var(--text);opacity:1;transform:none}
+.dot.pulse{animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(240,160,42,.5)}50%{box-shadow:0 0 0 6px rgba(240,160,42,0)}}
+.dot.ring{outline:3px solid var(--text);outline-offset:2px;z-index:2}
+
+.dotfield.sm{width:min(34vh,360px)}
+.dotfield.md{width:min(46vh,520px)}
+.dotfield.d100{grid-template-columns:repeat(10,1fr);width:min(40vh,440px)}
+
+/* ---- generic building blocks ---- */
+.card{background:var(--surface);border:1px solid #23292600;border:1px solid #262c29;
+  border-radius:var(--radius);padding:min(3vh,28px) min(2.4vw,30px);text-align:left}
+.tag{display:inline-block;font-size:18px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;padding:.28em .7em;border-radius:8px}
+.tag.green{background:rgba(0,178,122,.16);color:var(--green)}
+.tag.amber{background:rgba(240,160,42,.16);color:var(--amber)}
+.tag.violet{background:rgba(167,139,250,.16);color:var(--violet)}
+.tag.grey{background:#20251f;color:var(--muted)}
+
+/* screenshot evidence window */
+.shot{position:relative;border:1px solid #2b322e;border-radius:12px;overflow:hidden;
+  background:#0e1210;display:flex;align-items:center;justify-content:center}
+.shot img{display:block;width:100%;height:100%;object-fit:cover}
+.shot .ph{padding:1.2em 1.2em 3em;text-align:center;color:var(--muted);font-size:18px;line-height:1.4}
+.shot .ph b{color:var(--text);font-weight:700;display:block;margin-bottom:.4em;font-size:18px}
+.shot .cap{position:absolute;left:0;bottom:0;right:0;font-size:18px;padding:.5em .8em;
+  background:rgba(0,0,0,.55);color:var(--muted);text-align:left}
+
+/* layout utilities */
+.row{display:flex;gap:min(2.4vw,28px);align-items:stretch;justify-content:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;gap:min(2vh,20px)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:min(3vw,40px);width:100%;align-items:center}
+.vs{width:1px;background:#262c29}
+.big-num{font-size:clamp(56px,8vw,110px);font-weight:800;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+
+/* pricing recreation (scene 2) */
+.ptable{display:grid;grid-template-columns:1.4fr .8fr .8fr 1fr;gap:0;border-radius:12px;overflow:hidden;border:1px solid #262c29}
+.ptable>div{padding:.7em .9em;border-bottom:1px solid #1e2320;font-size:20px}
+.ptable .ph{background:#11150f;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:18px}
+.ptable .na{color:var(--muted)}
+.ptable .yes{color:var(--green);font-weight:700}
+.ptable .rowlabel{font-weight:700}
+
+/* ladder (scene 3) */
+.ladder{display:flex;flex-direction:column-reverse;gap:10px;width:min(560px,80vw);align-self:center}
+.rung{display:flex;align-items:center;justify-content:space-between;gap:1em;
+  padding:.65em 1em;border-radius:12px;background:var(--surface);border:1px solid #262c29;
+  font-size:22px;font-weight:600;color:var(--muted);opacity:.35;transition:opacity .3s ease-out,color .3s ease-out,border-color .3s ease-out}
+.rung.lit{opacity:1;color:var(--text)}
+.rung.kpi.lit{border-color:var(--green)}
+
+/* flow chips (scene 6) */
+.chip{display:inline-block;padding:.4em .8em;border-radius:10px;font-size:20px;font-weight:600;background:#20251f;color:var(--text)}
+.chip.ai{background:rgba(167,139,250,.16);color:var(--violet)}
+.bubble{max-width:22em;padding:.7em 1em;border-radius:14px;font-size:22px;line-height:1.3}
+.bubble.q{background:#20251f;color:var(--text);align-self:flex-start}
+.bubble.a{background:rgba(0,178,122,.14);color:var(--text);align-self:flex-start;border:1px solid rgba(0,178,122,.3)}
+.arrowdown{color:var(--muted);font-size:24px;line-height:1}
+
+/* inbox + landing (scene 7) */
+.mail{width:min(760px,92vw);border:1px solid #262c29;border-radius:14px;overflow:hidden;background:var(--surface);text-align:left}
+.mail .bar{display:flex;align-items:center;gap:.6em;padding:.7em 1em;background:#11150f;border-bottom:1px solid #1e2320;font-size:18px;color:var(--muted)}
+.dotr{width:11px;height:11px;border-radius:50%;background:var(--green)}
+.mail .from{padding:.9em 1.1em .2em;font-weight:700;font-size:22px;display:flex;justify-content:space-between}
+.mail .time{color:var(--muted);font-weight:400;font-size:18px}
+.mail .subj{padding:.1em 1.1em;font-size:24px;font-weight:700}
+.mail .bod{padding:.6em 1.1em 1em;font-size:22px;color:var(--text);line-height:1.4}
+.btn{display:inline-block;background:var(--green);color:#04160f;font-weight:700;font-size:20px;
+  padding:.7em 1.2em;border-radius:10px;border:none;cursor:pointer}
+.landing{width:min(720px,92vw);text-align:left}
+.qrow{display:grid;grid-template-columns:auto 1fr auto;gap:.8em;align-items:center;padding:.35em 0;font-size:21px}
+.qrow .rk{color:var(--muted);font-weight:700;width:1.6em}
+.qbar{height:14px;border-radius:7px;background:#20251f;overflow:hidden}
+.qbar>span{display:block;height:100%;background:var(--green)}
+.qrow .pc{color:var(--muted);font-variant-numeric:tabular-nums;width:3.2em;text-align:right}
+.qrow.top{font-weight:700}
+.qrow.top .qbar>span{background:var(--green)}
+
+/* trust ladder stages (scene 8) */
+.stage{padding:.8em 1.2em;border-radius:14px;background:var(--surface);border:1px solid #262c29;
+  text-align:left;transition:transform .3s ease-out,opacity .3s ease-out,border-color .3s ease-out;min-width:min(260px,80vw)}
+.stage .st{font-size:26px;font-weight:800;letter-spacing:.02em}
+.stage .sd{font-size:20px;color:var(--muted);margin-top:.2em}
+.stage.cur{transform:scale(1.06);border-color:var(--green)}
+.stage.done{opacity:.5}
+
+/* chat (scene 9) */
+.chat{width:min(680px,92vw);display:flex;flex-direction:column;gap:14px;text-align:left}
+.msg{max-width:80%;padding:.7em 1em;border-radius:14px;font-size:23px;line-height:1.35;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:#20251f}
+.msg.ai{align-self:flex-start;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.28)}
+.msg .caret{display:inline-block;width:.6ch;color:var(--violet)}
+.mtag{align-self:flex-start;margin-top:-6px}
+.mtag.u{align-self:flex-end}
+
+/* playground (scene 06) */
+.pg{display:grid;grid-template-columns:0.85fr 1.5fr 0.85fr;gap:min(1.4vw,16px);width:100%;align-items:stretch}
+.pgcol{background:var(--surface);border:1px solid #262c29;border-radius:var(--radius);
+  padding:min(2vh,16px) min(1.3vw,16px);text-align:left;display:flex;flex-direction:column;gap:8px}
+.pgcol .h{font-size:18px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700}
+.src{display:flex;align-items:center;gap:.5em;font-size:19px;color:var(--text);line-height:1.25}
+.src .d{width:9px;height:9px;border-radius:50%;background:var(--green);flex:none}
+.src.off .d{background:var(--grey)}
+.pstat{display:flex;justify-content:space-between;gap:1em;font-size:19px;color:var(--text);border-bottom:1px solid #1e2320;padding:.28em 0}
+.pstat b{font-weight:700}
+.pstat.amber b{color:var(--amber)}
+.pgcol .chat{gap:10px}
+.pgcol .msg{max-width:100%;font-size:20px}
+.flow{display:flex;align-items:center;gap:.5em;font-size:19px;font-weight:700;letter-spacing:.03em;justify-content:center;margin-top:6px}
+.flow .n{padding:.3em .7em;border-radius:8px;background:#20251f;color:var(--muted)}
+.flow .n.on{color:var(--text)}
+.flow .n.human{background:rgba(240,160,42,.16);color:var(--amber)}
+.flow .ar{color:var(--muted)}
+.handover{border:1px solid var(--amber);border-radius:10px;padding:.55em .75em;background:rgba(240,160,42,.08);
+  font-size:19px;color:var(--text);line-height:1.3;transition:opacity .3s ease-out}
+.handover .t{font-size:18px;text-transform:uppercase;letter-spacing:.08em;color:var(--amber);font-weight:700;margin-bottom:.25em}
+
+/* operation millionaire campaign (scene 05) */
+.apphdr{display:inline-flex;align-items:center;gap:.5em;font-size:18px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.apphdr .lg{width:16px;height:16px;border-radius:5px;background:var(--green);flex:none}
+.apphdr b{color:var(--green)}
+.mmrail{display:flex;gap:min(1.6vw,18px);justify-content:center;flex-wrap:wrap;width:100%}
+.mmweek{display:flex;flex-direction:column;gap:2px;align-items:center;opacity:.35;transition:opacity .3s ease-out;min-width:9.5em}
+.mmweek.on{opacity:1}
+.mmweek .wk{font-size:18px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.mmweek.on .wk{color:var(--green)}
+.mmweek .tr{font-size:18px;color:var(--muted);white-space:nowrap}
+.crmrow{display:flex;flex-wrap:wrap;gap:.4em 1em;align-items:center;justify-content:center;font-size:19px;
+  color:var(--muted);background:var(--surface);border:1px solid #262c29;border-radius:12px;padding:.6em 1em;max-width:44em}
+.crmrow b{color:var(--text)}
+.crmrow .enters{color:var(--green);font-weight:700;letter-spacing:.04em}
+.toast{background:var(--surface);border:1px solid #262c29;border-radius:12px;padding:.9em 1.1em;text-align:left;
+  max-width:22em;display:flex;flex-direction:column;gap:.8em}
+.toast .msg{font-size:20px;color:var(--text);line-height:1.3}
+.wbcard{background:var(--surface);border:1px solid #262c29;border-radius:12px;padding:.9em 1.1em;text-align:left;max-width:24em}
+.wbcard .kick{font-size:18px;letter-spacing:.08em;text-transform:uppercase;color:var(--violet);font-weight:700}
+.wbcard .wt{font-size:22px;font-weight:700;margin:.15em 0 .45em}
+.wbcard ol{margin:0;padding-left:1.3em;font-size:19px;color:var(--muted);line-height:1.55}
+.rpanel{display:flex;flex-direction:column;gap:12px;width:min(560px,90vw);text-align:left}
+.rrow{display:flex;flex-direction:column;gap:5px}
+.rrow .rlab{display:flex;justify-content:space-between;gap:1em;font-size:20px;color:var(--text)}
+.rbar{height:14px;border-radius:7px;background:#20251f;overflow:hidden}
+.rbar>span{display:block;height:100%;background:var(--green)}
+
+/* ---- Operation Millionaire v2: AI Activation Progress rail ---- */
+/* quiet persistent spine — NOT the dominant element */
+.mmprog{width:min(680px,88vw);margin:0 auto;opacity:.9}
+.mmprog .ptop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.mmprog .plab{font-size:16px;text-transform:uppercase;letter-spacing:.12em;font-weight:700;color:var(--muted)}
+.mmprog .ppct{font-size:18px;font-weight:700;color:var(--green);font-variant-numeric:tabular-nums}
+.mmtrack{position:relative;height:7px;border-radius:99px;background:#20251f;overflow:visible}
+.mmtrack>.fill{height:100%;border-radius:99px;background:var(--green);width:0;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.mmticks{display:flex;justify-content:space-between;margin-top:6px}
+.mmtick{font-size:16px;font-weight:600;color:var(--muted);opacity:.35;transition:opacity .3s ease-out,color .3s ease-out;flex:1;text-align:center}
+.mmtick:first-child{text-align:left}.mmtick:last-child{text-align:right}
+.mmtick.on{opacity:.9;color:var(--green)}
+/* consistent per-week operating-model grammar tag */
+.mmstage{display:inline-flex;align-items:center;gap:.55em;font-size:16px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.mmstage::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor;flex:none}
+.mmstage.pain{color:var(--amber)}
+.mmstage.iv{color:var(--green)}
+.mmstage.act{color:var(--text)}
+.mmstage.sig{color:var(--violet)}
+.mmstage.val{color:var(--green)}
+/* product screen shell (one surface per beat) */
+.mmscreen{width:100%;display:flex;flex-direction:column;align-items:center;gap:min(1.8vh,16px);transition:opacity .3s ease-out}
+.mmcap{font-size:19px;color:var(--muted);max-width:40em;line-height:1.35}
+.mmcap b{color:var(--text)}
+/* in-app contextual prompt */
+.inapp{display:flex;align-items:center;gap:14px;background:rgba(0,178,122,.10);border:1px solid rgba(0,178,122,.4);
+  border-radius:12px;padding:.9em 1.1em;max-width:min(620px,92vw);text-align:left}
+.inapp .ico{width:34px;height:34px;border-radius:9px;background:var(--green);color:#04160f;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex:none;font-size:20px}
+.inapp .txt{font-size:20px;color:var(--text);line-height:1.3}
+.inapp .txt b{color:var(--green)}
+/* repetition badge on inbox rows */
+.rep{color:var(--amber);font-weight:700;font-size:18px}
+/* supervised-mode review card */
+.sup{border:1px solid #262c29;border-radius:14px;background:var(--surface);overflow:hidden;width:min(620px,92vw);text-align:left}
+.sup .draft{padding:.6em 1.1em;font-size:20px;color:var(--text);line-height:1.35;background:rgba(167,139,250,.10);border-top:1px solid #1e2320}
+.sup .draft .lb{font-size:17px;text-transform:uppercase;letter-spacing:.08em;color:var(--violet);font-weight:700;margin-bottom:.25em}
+.sup .act{display:flex;gap:10px;align-items:center;padding:.7em 1.1em;border-top:1px solid #1e2320;flex-wrap:wrap}
+/* behaviour branch + claude loop rows */
+.brow{display:flex;align-items:center;gap:12px;font-size:19px;padding:.5em .9em;border-radius:10px;
+  background:var(--surface);border:1px solid #262c29;text-align:left;max-width:40em;width:100%}
+.brow .sig{font-weight:700;color:var(--text);min-width:12em}
+.brow .arw{color:var(--muted)}
+.brow .nba{color:var(--green);font-weight:700}
+.loopstep{font-size:19px;color:var(--text);padding:.35em .8em;border-radius:8px;background:var(--surface);border:1px solid #262c29}
+.loopstep.ai{background:rgba(167,139,250,.14);border-color:rgba(167,139,250,.4);color:var(--violet);font-weight:700}
+
+/* friction engine (scene 07) */
+.ftree{display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;max-width:30em}
+.fhead{align-self:center;font-size:20px;font-weight:800;letter-spacing:.08em;color:var(--green);text-transform:uppercase}
+.fbranch{display:flex;justify-content:space-between;align-items:center;gap:1em;padding:.6em .9em;border-radius:12px;
+  background:var(--surface);border:1px solid #262c29;opacity:.35;transition:opacity .3s ease-out,border-color .3s ease-out}
+.fbranch.lit{opacity:1}
+.fbranch.auto.lit{border-color:var(--green)}
+.fbranch.human{padding:.9em 1em}
+.fbranch.human.lit{border-color:var(--amber)}
+.fbranch .ttl{font-size:19px;font-weight:600;color:var(--text)}
+.fbranch .rte{font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+.fbranch.auto.lit .rte{color:var(--green)}
+.fbranch.human.lit .rte{color:var(--amber)}
+
+/* control room (scene 10) */
+.panel{display:flex;flex-direction:column;gap:.5em;text-align:left;font-size:22px}
+.pmet{display:flex;justify-content:space-between;gap:2em;border-bottom:1px solid #1e2320;padding:.3em 0}
+.pmet b{font-variant-numeric:tabular-nums}
+.pmet.stuck b{color:var(--amber)}
+.pmet.human b{color:var(--text)}
+.acct .chk{display:flex;align-items:center;gap:.6em;font-size:20px;color:var(--muted);opacity:.4;transition:opacity .3s ease-out,color .3s ease-out}
+.acct .chk.lit{opacity:1;color:var(--green)}
+.acct .chk .box{width:16px;height:16px;border-radius:4px;border:2px solid currentColor}
+
+/* not-do list (scene 11) */
+.nd{display:flex;align-items:flex-start;gap:.6em;font-size:clamp(22px,2.3vw,30px);color:var(--muted);line-height:1.25}
+.nd .x{color:var(--muted);font-weight:800}
+
+/* flight path (scene 12) */
+.flight{display:flex;flex-direction:column;gap:14px;text-align:left}
+.leg{display:flex;gap:1em;align-items:flex-start;padding:.5em .2em}
+.leg .d{font-size:20px;font-weight:800;color:var(--green);letter-spacing:.06em;min-width:4em}
+.leg .t{font-size:21px;color:var(--text);line-height:1.3}
+.signals{font-size:20px;color:var(--muted);line-height:1.5;text-align:left}
+
+/* ---- presenter notes ---- */
+#notes{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#05060699;
+  backdrop-filter:blur(6px);border-top:1px solid #22282500;border-top:1px solid #202523;
+  padding:14px 22px;display:none;color:var(--text)}
+#notes.on{display:block}
+.pmhead{display:flex;justify-content:space-between;font-size:18px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:8px}
+.pmrows{display:flex;flex-direction:column;gap:6px}
+.pmrow{display:flex;gap:14px;align-items:baseline}
+.pmlab{flex:none;width:3.6em;font-size:18px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700}
+.pmtxt{font-size:22px;color:var(--text);line-height:1.3}
+.pmrow.say .pmtxt{color:var(--green);font-weight:600}
+
+/* ---- progress ---- */
+#progress{position:fixed;right:3vw;bottom:2.6vh;z-index:30;font-size:18px;
+  color:var(--muted);letter-spacing:.08em;font-weight:600}
+#simmark{position:fixed;top:3.4vh;right:3vw;z-index:30;font-size:18px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--muted);opacity:.55;pointer-events:none}
+#coverage{position:fixed;top:calc(3.4vh + 26px);right:3vw;z-index:30;display:flex;gap:.5em;
+  font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;pointer-events:none}
+#coverage .cv{color:var(--muted);opacity:.3}
+#coverage .cv.done{opacity:.5}
+#coverage .cv.now{color:var(--green);opacity:.85}
+@media print{#coverage{display:none!important}}
+
+/* ---- overview ---- */
+#overview{position:fixed;inset:0;z-index:60;background:#070908f2;display:none;
+  padding:5vh 5vw;overflow:auto}
+#overview.on{display:block}
+#overview h2{font-size:22px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.14em;margin:0 0 3vh}
+#ovgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.ovcell{background:var(--surface);border:1px solid #262c29;border-radius:12px;
+  padding:20px;cursor:pointer;text-align:left;transition:border-color .2s ease-out}
+.ovcell:hover,.ovcell:focus{border-color:var(--green);outline:none}
+.ovcell .num{font-size:18px;color:var(--green);font-weight:800;letter-spacing:.1em}
+.ovcell .ti{font-size:22px;font-weight:600;margin-top:6px;line-height:1.15}
+.ovcell .du{font-size:18px;color:var(--muted);margin-top:10px}
+
+/* ---- reduced motion ---- */
+@media (prefers-reduced-motion: reduce){
+  .step{transition:opacity .001s linear;transform:none}
+  .dot{transition:opacity .001s linear, background-color .001s linear;transform:none}
+  .dot.pulse{animation:none}
+}
+
+/* ---- print emergency fallback ---- */
+@media print{
+  html,body{overflow:visible;background:#fff;color:#111}
+  #notes,#progress,#overview{display:none!important}
+  .scene{position:relative;display:flex!important;page-break-after:always;
+    min-height:100vh;padding:6vh 6vw;background:#fff;color:#111}
+  .step{opacity:1!important;transform:none!important}
+  .evidence{background:#f0f0f0;border-color:#ccc}
+  .muted,.body.muted{color:#555}
+  .card{background:#f6f6f6;border-color:#ddd;color:#111}
+  .dot{opacity:1}
+  .dot.idle,.dot.in,.dot.dim{background:#d5d5d5;opacity:1}
+  @page{size:landscape}
+}
+</style>
+</head>
+<body>
+<div id="deck" aria-live="polite"></div>
+<div id="notes" role="note"></div>
+<div id="progress"></div>
+<div id="simmark">Simulation · Illustrative data</div>
+<div id="coverage" aria-hidden="true"></div>
+<div id="overview" role="dialog" aria-label="Scene overview">
+  <h2>Overview — click a scene</h2>
+  <div id="ovgrid"></div>
+</div>
+
+<script>
+"use strict";
+(function(){
+const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= reusable helpers ================= */
+function el(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!=null)n.textContent=txt;return n;}
+function step(node,n){node.classList.add('step');node.dataset.step=n;return node;}
+
+const EV = {
+  case:'Case data', verified:'Verified — product', illustrative:'Illustrative',
+  assumption:'Assumption', target:'Target', confirm:'To confirm'
+};
+function pill(kind,textOverride){
+  const p=el('div','evidence '+kind, textOverride||EV[kind]||kind);
+  return p;
+}
+
+/* dot field: 400 dots, states idle/green/amber/violet/human + dim */
+function buildDotField(n){
+  n=n||400;
+  const wrap=el('div','dotfield');
+  const dots=[];
+  for(let i=0;i<n;i++){const d=el('span','dot');wrap.appendChild(d);dots.push(d);}
+  return {el:wrap,dots};
+}
+function setDot(d,state){
+  d.classList.remove('dim','green','amber','violet','human');
+  if(state==='idle'){/* stays base */}
+  else if(state==='dim'){d.classList.add('dim');}
+  else if(state){d.classList.add(state);}
+}
+// reveal dots in a staggered wave
+function revealDots(dots,stagger){
+  stagger = REDUCED?0:(stagger==null?4:stagger);
+  dots.forEach((d,i)=>{
+    const delay = stagger? (i%20 + Math.floor(i/20))*stagger : 0;
+    setTimeout(()=>d.classList.add('in'), delay);
+  });
+}
+// transition a set of dot indices to a state, staggered
+function transitionDots(dots,indices,state,stagger){
+  stagger = REDUCED?0:(stagger==null?6:stagger);
+  indices.forEach((idx,k)=>{
+    setTimeout(()=>setDot(dots[idx],state), k*stagger);
+  });
+}
+function firstN(count,total){const a=[];for(let i=0;i<count&&i<total;i++)a.push(i);return a;}
+
+/* screenshot window with graceful fallback */
+function shotWindow(file,w,h,phTitle,phDesc,cap){
+  const box=el('div','shot');
+  box.style.width=w; box.style.height=h;
+  const ph=el('div','ph');
+  ph.appendChild(el('b',null,phTitle));
+  ph.appendChild(document.createTextNode(phDesc));
+  box.appendChild(ph);
+  if(file){
+    const img=new Image();
+    img.alt=phTitle;
+    img.onload=()=>{ ph.remove(); box.insertBefore(img,box.firstChild); };
+    img.onerror=()=>{ /* keep placeholder */ };
+    img.src=file;
+  }
+  if(cap){const c=el('div','cap',cap);box.appendChild(c);}
+  return box;
+}
+
+/* ================= SCENES ================= */
+/* Each scene: {id,title,dur,note:[l1,l2],steps, build(root)->{toStep?,enter?,exit?,busy?,finish?}} */
+const SCENES = [];
+function scene(def){SCENES.push(def);}
+
+// scene helpers
+function mk(node){node.classList.add('step');return node;}          // controlled (no data-step)
+function rev(node,on){node.classList.toggle('shown',!!on);}
+function animateCount(node,from,to,ms){
+  if(REDUCED||ms<=0){node.textContent=to;return;}
+  const start=performance.now();
+  (function tick(t){const p=Math.min(1,(t-start)/ms);node.textContent=Math.round(from+(to-from)*p);if(p<1)requestAnimationFrame(tick);})(start);
+}
+function seededOrder(n,seed){const a=[...Array(n).keys()];let s=seed||1;
+  for(let i=n-1;i>0;i--){s=(s*1103515245+12345)&0x7fffffff;const j=s%(i+1);const tmp=a[i];a[i]=a[j];a[j]=tmp;}return a;}
+
+/* Canonical focus account — persists visually across scenes 04→05→06→07.
+   Its dot sits at a fixed position (46) in the 100-grid so the audience
+   tracks the SAME customer through journey → playground → friction → human. */
+/* one anonymous account in the Core-100 grid gets the human hand-off (no fictional identity) */
+const HUMAN_DOT=46;
+
+/* 01 — THE PORTFOLIO */
+scene({ id:'s1', title:'The Portfolio', dur:40,
+  note:['“400 customers, under 15% on AI — a basic inbox is replaceable, an embedded AI is not.”','Next: what I actually optimise for — the ladder.'],
+  steps:4,
+  build(root){
+    root.appendChild(mk(pill('case')));
+    const plEl=root.querySelector('.evidence');
+    const w=el('div','wrap');
+    const df=buildDotField(400); df.el.classList.add('sm');
+    const big=step(el('div','col'),1); big.style.gap='6px'; big.style.alignItems='center';
+    big.append(el('div','big-num','400'), el('div','label','SMB & Mid-Market · Benelux · 6–12 months · Email & WhatsApp'));
+    const g=step(el('div','subhead'),2);
+    g.innerHTML='Only <b style="color:var(--green)">15%</b> on AI — <b style="color:var(--text)">60 accounts</b> · <span style="color:var(--amber)">no assigned CSM</span>';
+    const frame=step(el('div','row'),3); frame.style.cssText='gap:min(1.4vw,16px);align-items:center;justify-content:center;flex-wrap:wrap';
+    const node=(t,c)=>{ const d=el('div','subhead',t); d.style.cssText='padding:.3em .8em;border-radius:12px;background:var(--surface);border:1px solid #262c29;font-size:22px'; if(c)d.style.color=c; return d; };
+    const arr=()=>{ const a=el('div','subhead','→'); a.style.color='var(--muted)'; return a; };
+    frame.append(node('Portfolio growing'), arr(), node('CS can’t scale 1:1','var(--amber)'), arr(), node('Digital-first · one-to-many','var(--green)'));
+    const revline=step(el('div','body muted'),3); revline.style.fontSize='19px';
+    revline.innerHTML='<b style="color:var(--text)">€1.5M / yr</b> revenue in this group <span class="tag grey" style="font-size:16px">case</span>';
+    const target=step(el('div','row'),4); target.style.cssText='gap:.6em;align-items:center;justify-content:center;flex-wrap:wrap';
+    target.append((()=>{const t=el('div','headline','60 → 160 active accounts');t.style.fontSize='clamp(28px,3vw,40px)';return t;})(),
+      (()=>{const s=el('span','tag violet','+25% this quarter · target');return s;})());
+    const mission=step(el('div','body'),4); mission.style.cssText='max-width:32em;color:var(--text)';
+    mission.innerHTML='AI activation is the <b style="color:var(--green)">entrance</b> — into deeper adoption, stickiness and retention.';
+    w.append(df.el,big,g,frame,revline,target,mission); root.appendChild(w);
+    const greenIdx=[]; for(let i=3;i<400 && greenIdx.length<60;i+=7)greenIdx.push(i);
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in');setDot(d,'idle');}); revealDots(df.dots,4); },
+      toStep(s){ rev(plEl,s>=2);
+        if(s>=2) transitionDots(df.dots,greenIdx,'green',8);
+        else greenIdx.forEach(i=>setDot(df.dots[i],'idle')); }
+    };
+  }
+});
+
+/* 02 — ACTIVATION IS NOT THE GOAL */
+scene({ id:'s2', title:'Activation Is Not The Goal', dur:50,
+  note:['“Activation is the KPI. Adoption is the proof it was real.”','Next: how I choose WHO — the filter.'],
+  steps:3,
+  build(root){
+    root.appendChild(mk(pill('assumption'))); const plEl=root.querySelector('.evidence');
+    const w=el('div','wrap');
+    const rungs=['ENGAGEMENT','ACTIVATION','ADOPTION','CUSTOMER VALUE','RETENTION'];
+    const lad=el('div','ladder'); lad.style.transition='opacity .3s ease-out';
+    const rungEls=rungs.map(name=>{ const r=el('div','rung'); if(name==='ACTIVATION')r.classList.add('kpi');
+      r.appendChild(el('span',null,name));
+      if(name==='ACTIVATION')r.appendChild(el('span','tag green','THE KPI'));
+      if(name==='ADOPTION')r.appendChild(el('span','tag grey','WHAT I OPTIMISE FOR'));
+      lad.appendChild(r); return r; });
+    const line=step(el('div','hero'),2); line.style.maxWidth='19em';
+    line.innerHTML='Two jobs at once: go <span style="color:var(--green)">deeper</span> into how customers operate —<br>and do it <span style="color:var(--green)">one-to-many</span>, because CS can’t scale 1:1.';
+    const ass=step(el('div','body muted'),3); ass.style.maxWidth='30em';
+    ass.textContent='15% → 40% is ~160 of 400. Assumption: 25% read as percentage points. I’d confirm on day one.';
+    w.append(lad,line,ass); root.appendChild(w);
+    return {
+      enter(){ rungEls.forEach(r=>r.classList.remove('lit')); },
+      toStep(s){ rev(plEl,s>=3);
+        lad.style.opacity = s<2?'1':'0';
+        if(s>=1 && s<2) rungEls.forEach((r,i)=>setTimeout(()=>r.classList.add('lit'), REDUCED?0:i*90)); }
+    };
+  }
+});
+
+/* 03 — THE ACTIVATION MATRIX (HERO) */
+scene({ id:'s3', title:'The Activation Matrix', dur:70,
+  note:['“I don’t pick the biggest customers — I pick Need × Readiness × Fit.”','Next: one of the Core 100, up close.'],
+  steps:5,
+  build(root){
+    root.appendChild(pill('illustrative','Illustrative — interim numbers'));
+    const w=el('div','wrap');
+    const top=el('div','row'); top.style.alignItems='center'; top.style.gap='min(4vw,60px)';
+    const df=buildDotField(400); df.el.classList.add('md');
+    const side=el('div','col'); side.style.textAlign='left'; side.style.minWidth='min(380px,80vw)';
+    const counter=el('div','big-num','400'); const clab=el('div','label','of 400 · Need × Readiness × Fit');
+    const filters=[['Need · the pain','>500 tickets/mo · SLA breaches · repeat tags: refund / order status'],
+      ['Readiness · the intent','AI HelpMate-tab clicks · AI doc searches · webinar attendance'],
+      ['Fit · the match','WhatsApp & Email · e-commerce / retail / logistics · Help-Centre / FAQ ready']];
+    const fEls=filters.map(([h,d])=>{ const c=el('div','card'); c.style.opacity='.35';
+      c.style.transition='opacity .3s ease-out,border-color .3s ease-out'; c.append(el('div','label',h));
+      const dd=el('div','body',d); dd.style.fontSize='20px'; dd.style.color='var(--muted)'; c.append(dd); return c; });
+    const src=el('div','body muted'); src.style.fontSize='18px';
+    src.innerHTML='Data I’d look for: <b style="color:var(--text)">CRM + product-usage signals</b> + an <b style="color:var(--violet)">AI analysis layer</b> for pattern-finding — signals I control';
+    side.append(counter,clab,...fEls,src); top.append(df.el,side);
+    const tiers=step(el('div','row'),4); tiers.style.cssText='justify-content:center;gap:min(2.2vw,26px);flex-wrap:wrap';
+    const tier=(name,desc,col)=>{ const c=el('div'); c.style.cssText='display:flex;align-items:center;gap:.5em;font-size:20px';
+      const d=el('span'); d.style.cssText='width:14px;height:14px;border-radius:50%;flex:none;background:'+col;
+      const t=el('span',null,name); t.style.cssText='color:var(--text);font-weight:700';
+      c.append(d,t,el('span','muted',desc)); return c; };
+    tiers.append(tier('Tier A · Core 100','start here','var(--green)'), tier('Tier B · next 100','follow','var(--violet)'), tier('Tier C · learning','monitor','var(--grey)'));
+    const head=step(el('div','headline'),4); head.style.maxWidth='18em';
+    head.innerHTML='Not the best 100 — the 100 with the <span style="color:var(--green)">same problem</span>, so one campaign fits them all.';
+    const cap=step(el('div','subhead'),5); cap.style.cssText='max-width:34em;font-size:22px';
+    cap.innerHTML='<span style="color:var(--muted)">Data</span> → <span style="color:var(--muted)">pattern</span> → <span style="color:var(--green)">shared pain</span> → <span style="color:var(--text)">one campaign message</span>.';
+    w.append(top,tiers,head,cap); root.appendChild(w);
+    const order=seededOrder(400,7); const counts=[400,238,147,100]; let lastShown=400;
+    const tierA=order.slice(0,100), tierB=order.slice(100,200), tierC=order.slice(200,400);
+    function applyFilter(s){
+      if(s>=4){ df.dots.forEach(d=>{d.classList.remove('dim');d.classList.add('in');});
+        tierA.forEach(i=>setDot(df.dots[i],'green'));
+        tierB.forEach(i=>setDot(df.dots[i],'violet'));
+        tierC.forEach(i=>{setDot(df.dots[i],'idle');df.dots[i].classList.add('dim');});
+        fEls.forEach(c=>c.style.opacity='1'); counter.textContent=100; lastShown=100; return; }
+      const f=Math.max(0,Math.min(3,s)); const surv=counts[f]; const survSet=new Set(order.slice(0,surv));
+      df.dots.forEach((d,i)=>{ if(!d.classList.contains('in'))d.classList.add('in');
+        if(survSet.has(i)){ setDot(d, f>=3?'green':'idle'); d.classList.add('in'); } else { setDot(d,'idle'); d.classList.add('dim'); } });
+      fEls.forEach((c,i)=>{ c.style.opacity=(i<f)?'1':'.35'; c.style.borderColor=(i===f-1)?'var(--green)':'#262c29'; });
+      const target=counts[f];
+      if(!REDUCED && target<lastShown) animateCount(counter,lastShown,target,600); else counter.textContent=target;
+      lastShown=target; }
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in','dim','green','violet');setDot(d,'idle');}); revealDots(df.dots,3); lastShown=400; counter.textContent='400'; },
+      toStep(s){ applyFilter(s); }
+    };
+  }
+});
+
+/* 05 — OPERATION MILLIONAIRE — one operating-model grammar, one message per beat */
+scene({ id:'s5', title:'Operation Millionaire', dur:360,
+  note:['“Every week: customer state → digital intervention → action → signal → outcome. Wait for the pain, prove it safely, activate on value, adopt.”','Next: the system behind it.'],
+  steps:23,
+  build(root){
+    root.appendChild(pill('illustrative','Illustrative — proposed campaign layer'));
+    const w=el('div','wrap'); w.style.gap='min(1.8vh,16px)';
+    // persistent header
+    const head=el('div'); head.style.cssText='text-align:left;width:100%;max-width:64em';
+    const hdr=el('div','apphdr'); hdr.appendChild(el('span','lg'));
+    const hb=document.createElement('span'); hb.innerHTML='Trengo › <b>Journeys</b> › Operation Millionaire'; hdr.appendChild(hb);
+    head.append(hdr,(()=>{const t=el('div','headline','Mission Millionaire');t.style.fontSize='clamp(22px,2.4vw,32px)';return t;})());
+    w.appendChild(head);
+    // week rail
+    const rail=el('div','mmrail');
+    const wkEls=[['Week 1','Awareness → Relevance'],['Week 2','Relevance → Try'],['Week 3','Try → Activate'],['Week 4','Value → Adopt']]
+      .map(([wk,tr])=>{ const c=el('div','mmweek'); c.append(el('div','wk',wk),el('div','tr',tr)); rail.appendChild(c); return c; });
+    w.appendChild(rail);
+    // quiet progress spine
+    const prog=el('div','mmprog');
+    const ptop=el('div','ptop'); const ppct=el('div','ppct','0%'); ptop.append(el('div','plab','AI Activation Progress'),ppct); prog.appendChild(ptop);
+    const track=el('div','mmtrack'); const fill=el('div','fill'); track.appendChild(fill); prog.appendChild(track);
+    const ticks=el('div','mmticks');
+    const tickEls=[['Pain',0],['Relevance',25],['Try',50],['Activate',75],['Value',100]].map(([t,v])=>{ const s=el('div','mmtick',t); s.dataset.v=v; ticks.appendChild(s); return s; });
+    prog.appendChild(ticks); w.appendChild(prog);
+    // stage
+    const stage=el('div'); stage.style.cssText='width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:min(40vh,340px)';
+    w.appendChild(stage);
+
+    const surfaces=[];
+    const surf=()=>{ const s=el('div','mmscreen'); s.style.display='none'; stage.appendChild(s); surfaces.push(s); return s; };
+    const cap=(html)=>{ const c=el('div','mmcap'); c.innerHTML=html; return c; };
+    const stg=(label,cls)=>el('div','mmstage '+(cls||''),label);
+    const chip=(t,cls)=>el('div','loopstep'+(cls?(' '+cls):''),t);
+    const arw=()=>{ const a=el('span',null,'→'); a.style.cssText='color:var(--muted);font-size:20px'; return a; };
+    const chain=(items)=>{ const r=el('div','row'); r.style.cssText='gap:8px;align-items:center;justify-content:center;flex-wrap:wrap';
+      items.forEach((it,i)=>{ if(i)r.appendChild(arw()); r.appendChild(typeof it==='string'?chip(it):it); }); return r; };
+    const milestone=(wk,sub,pct)=>{ const c=el('div','col'); c.style.alignItems='center'; c.style.gap='6px';
+      const t=el('div','headline',wk); t.style.fontSize='clamp(26px,2.9vw,38px)';
+      const s=el('div','subhead',sub); s.style.cssText='font-size:21px;color:var(--muted)';
+      c.append(t,s,(()=>{const g=el('span','tag grey',pct+'% · proposed milestone');return g;})()); return c; };
+
+    // ================= INTRO =================
+    let s=surf(); // 0 philosophy
+    s.append((()=>{const t=el('div','headline','Operation Millionaire');t.style.fontSize='clamp(34px,4vw,52px)';return t;})(),
+      (()=>{const a=el('div','subhead','Don’t push AI. Wait for the pain.');a.style.color='var(--amber)';return a;})(),
+      cap('“Make your clients millionaire — they make you billionaire.”'));
+    s=surf(); // 1 principle chain
+    s.append((()=>{const t=el('div','subhead','A problem-led adoption engine');t.style.fontSize='22px';return t;})(),
+      chain(['Wait for the pain','Make AI relevant','Let them experience value','Build adoption']),
+      cap('Not a generic AI campaign. <b>Customer behaviour makes AI relevant.</b>'));
+
+    // ================= WEEK 1 · DISCOVER =================
+    s=surf(); // 2 PAIN — inbox
+    (function(){ s.appendChild(stg('Customer state · the pain','pain'));
+      const inbox=el('div','mail'); inbox.style.maxWidth='min(620px,92vw)';
+      const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'Support inbox · today')); inbox.appendChild(bar);
+      [['Where is my order?','13:58'],['When will my package arrive?','14:06'],['Where is my shipment?','14:11'],['Do you know when this arrives?','14:19']]
+        .forEach(([q,t])=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;padding:.55em 1.1em;border-top:1px solid var(--grey);font-size:19px';
+          r.append(el('span',null,q),(()=>{const tm=el('span',null,t);tm.style.color='var(--muted)';return tm;})()); inbox.appendChild(r); });
+      s.append(inbox, cap('<b>We wait for the pain</b> — the same question, over and over.')); })();
+    s=surf(); // 3 PAIN — pattern
+    (function(){ s.appendChild(stg('Customer state · the pattern','pain'));
+      const card=el('div','card'); card.style.cssText='text-align:center;max-width:min(460px,90vw)';
+      card.append((()=>{const b=el('div','big-num','15×');b.style.fontSize='clamp(48px,7vw,84px)';b.style.color='var(--amber)';return b;})(),
+        (()=>{const t=el('div','subhead','the same question, today');t.style.fontSize='22px';return t;})(),
+        (()=>{const g=el('span','tag grey','illustrative signal');g.style.marginTop='8px';return g;})());
+      s.append(card, cap('<b>Repetitive question = repetitive manual work.</b> That is an AI use case.')); })();
+    s=surf(); // 4 INTERVENTION — in-app trigger
+    (function(){ s.appendChild(stg('Digital intervention · in-app','iv'));
+      const ia=el('div','inapp'); ia.append((()=>{const i=el('div','ico','AI');return i;})());
+      const t=el('div','txt'); t.innerHTML='You’ve answered this <b>repeatedly</b> today. Let Trengo AI handle it. &nbsp;<span style="color:var(--green);font-weight:700">See how →</span>'; ia.appendChild(t);
+      s.append(ia, cap('<b>Right problem · right moment · in-app</b> — not a generic email.')); })();
+    s=surf(); // 5 INTERVENTION — 1-min learning
+    (function(){ s.appendChild(stg('Digital intervention · learn','iv'));
+      const v=el('div','wbcard'); v.style.maxWidth='min(440px,92vw)';
+      v.append((()=>{const k=el('div','kick','▶ 1 min · product-led');return k;})(), el('div','wt','See the use case'));
+      s.append(v, chain(['Repeated order-status Qs','AI answers from knowledge','less manual work']),
+        cap('<b>One minute</b> — what it does, and why it matters.')); })();
+    s=surf(); // 6 SIGNAL — engaged
+    (function(){ s.appendChild(stg('Signal · we observe','sig'));
+      s.append(chain(['Opened','Watched','Engaged']),
+        cap('The campaign doesn’t just send — it <b>watches</b>, and picks the next step.')); })();
+    s=surf(); // 7 OUTCOME 25
+    s.append(stg('Outcome','val'), chain(['Pain','Trigger','Learn','Try']), milestone('Week 1 · Discover','Awareness → Relevance',25));
+
+    // ================= WEEK 2 · PROVE =================
+    s=surf(); // 8 STATE — doesn't trust yet
+    (function(){ s.appendChild(stg('Customer state · trust','pain'));
+      const t=el('div','headline','“Will it send the wrong answer?”'); t.style.cssText='max-width:16em;font-size:clamp(26px,3vw,40px)';
+      s.append(t, cap('Interested — but <b>trust is the biggest blocker with AI.</b>')); })();
+    s=surf(); // 9 INTERVENTION — Preview
+    (function(){ s.appendChild(stg('Digital intervention · preview','iv'));
+      const c=el('div','sup');
+      const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'Preview · pre-live test'),(()=>{const g=el('span','tag grey','simulate');g.style.marginLeft='auto';return g;})()); c.appendChild(bar);
+      const q=el('div'); q.style.cssText='padding:.6em 1.1em;font-size:19px'; q.innerHTML='<span style="color:var(--muted);font-size:16px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Simulated customer</span><br>Where is my order?'; c.appendChild(q);
+      const a=el('div','draft'); a.innerHTML='<div class="lb">AI response — test only</div>Your order is on its way — here’s your tracking link.'; c.appendChild(a);
+      s.append(c, cap('<b>Preview</b> — a safe pre-live test. Nothing reaches a real customer yet.')); })();
+    s=surf(); // 10 INTERVENTION — Supervised
+    (function(){ s.appendChild(stg('Digital intervention · supervised','iv'));
+      const c=el('div','sup');
+      const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'AI Agent · Supervised Mode'),(()=>{const t=el('span','tag violet','Human approves');t.style.marginLeft='auto';return t;})()); c.appendChild(bar);
+      const q=el('div'); q.style.cssText='padding:.6em 1.1em;font-size:19px'; q.innerHTML='<span style="color:var(--muted);font-size:16px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Real customer</span><br>Can I return an opened item?'; c.appendChild(q);
+      const a=el('div','draft'); a.innerHTML='<div class="lb">AI draft — awaiting approval</div>Yes — within 14 days with the original packaging. Here’s your return link.'; c.appendChild(a);
+      const act=el('div','act'); const ap=el('button','btn','Approve & send'); const ed=el('button','btn','Edit'); ed.style.cssText='background:transparent;color:var(--text);border:1px solid var(--grey)';
+      act.append(ap,ed,(()=>{const n=el('span',null,'Human owns the ticket · 30-day review');n.style.cssText='font-size:16px;color:var(--muted);margin-left:auto';return n;})()); c.appendChild(act);
+      s.append(c, cap('<b>Supervised Mode</b> — real conversations; AI drafts, a human approves before it sends.')); })();
+    s=surf(); // 11 ACTION — trust builds
+    (function(){ s.appendChild(stg('Customer action · trust builds','act'));
+      s.append(chain(['AI does the work','Human keeps control','Trust']),
+        cap('Not straight to autonomous AI — <b>they prove it safely first.</b>')); })();
+    s=surf(); // 12 SIGNAL — tested, not live
+    (function(){ s.appendChild(stg('Signal · we observe','sig'));
+      const b=el('div'); b.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center';
+      b.append((()=>{const t=el('span','tag violet','Tested');return t;})(),(()=>{const t=el('span','tag amber','not live yet');return t;})());
+      s.append(b, cap('Intent, but friction. <b>A candidate for a human later — not yet.</b>')); })();
+    s=surf(); // 13 OUTCOME 50
+    s.append(stg('Outcome','val'), milestone('Week 2 · Prove','Relevance → Try',50));
+
+    // ================= WEEK 3 · ACTIVATE =================
+    s=surf(); // 14 STATE — one problem
+    (function(){ s.appendChild(stg('Customer state · one problem','pain'));
+      const card=el('div','card'); card.style.cssText='text-align:center;max-width:min(440px,90vw)';
+      card.append((()=>{const l=el('div','label','one concrete use case');return l;})(),(()=>{const t=el('div','headline','Order status');t.style.fontSize='clamp(30px,3.4vw,44px)';return t;})());
+      const q=el('div','msg user','Where is my order?'); q.style.margin='14px auto 0';
+      s.append(card, q, cap('<b>One concrete operational problem</b> — an illustrative example.')); })();
+    s=surf(); // 15 INTERVENTION — inputs
+    (function(){ s.appendChild(stg('Digital intervention · what AI needs','iv'));
+      const row=el('div','row'); row.style.cssText='gap:14px;justify-content:center';
+      [['Knowledge','Shipping policy · FAQ'],['Integration','Order lookup · Shopify']].forEach(([h,d])=>{ const c=el('div','pgcol'); c.style.cssText='max-width:15em;padding:.8em 1em';
+        c.append(el('div','h',h),(()=>{const r=el('div','src');r.append(el('span','d'),el('span',null,d));return r;})()); row.appendChild(c); });
+      s.append(row, cap('<b>AI isn’t magic</b> — it needs the right knowledge and the right data.')); })();
+    s=surf(); // 16 ACTION — AI resolves
+    (function(){ s.appendChild(stg('Customer action · AI resolves','act'));
+      const chat=el('div','chat'); chat.style.maxWidth='min(560px,92vw)';
+      chat.append(el('div','msg user','Where is my order?'), el('div','msg ai','It’s in transit, expected tomorrow. Track it here: trg.to/track'),
+        (()=>{const t=el('span','tag green mtag','Resolved · no human needed');return t;})());
+      s.append(chat, cap('<b>The AI does the work</b> — on a real conversation.')); })();
+    s=surf(); // 17 OUTCOME 75
+    s.append(stg('Outcome','val'), chain(['Real problem','Real value','Activation']), milestone('Week 3 · Activate','Try → Activate',75));
+
+    // ================= WEEK 4 · PROVE VALUE =================
+    s=surf(); // 18 VALUE
+    (function(){ s.appendChild(stg('Value · did it help?','val'));
+      const imp=el('div','mail'); imp.style.maxWidth='min(560px,92vw)';
+      const bar=el('div','bar'); bar.append(el('span','dotr'),el('span',null,'AI Impact · this month'),(()=>{const t=el('span','tag grey','Proposed');t.style.marginLeft='auto';return t;})()); imp.appendChild(bar);
+      ['AI conversations','AI resolution','Human escalations','Time saved'].forEach(k=>{ const r=el('div'); r.style.cssText='display:flex;justify-content:space-between;padding:.5em 1.1em;border-top:1px solid var(--grey);font-size:19px';
+        r.append(el('span',null,k),(()=>{const t=el('span','tag grey','tracked');return t;})()); imp.appendChild(r); });
+      s.append(imp, cap('<b>Can we show the value was created?</b>')); })();
+    s=surf(); // 19 ACTION — adoption
+    (function(){ s.appendChild(stg('Customer action · adoption','act'));
+      s.append(chain([chip('AI feature'),chip('part of the daily workflow','ai')]),
+        cap('<b>Activation becomes adoption</b> — from “I tried it” to “this is how we work.”')); })();
+    s=surf(); // 20 NEXT
+    (function(){ s.appendChild(stg('Next · expand','iv'));
+      const b=el('div'); b.style.cssText='display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:.8em 1.2em;border:1px solid var(--grey);border-radius:12px;background:rgba(167,139,250,.10);max-width:min(560px,92vw)';
+      b.append(el('span','tag violet','NEXT USE CASE'),(()=>{const t=el('span',null,'Returns → the same agent, one step wider.');t.style.fontSize='20px';return t;})());
+      s.append(b, cap('<b>The campaign loops</b> — value opens the next use case.')); })();
+    s=surf(); // 21 LOOP
+    (function(){ s.appendChild(stg('The loop','val'));
+      s.append(chain(['Solve one problem','Learn','Expand','Solve the next']),
+        cap('One problem at a time — <b>each win makes the next easier.</b>')); })();
+    s=surf(); // 22 OUTCOME 100
+    s.append(stg('Outcome','val'), chain(['Discover','Prove','Activate','Adopt']), milestone('Week 4 · Prove Value','First value → Adopt',100));
+
+    root.appendChild(w);
+
+    const WK =[0,0, 1,1,1,1,1,1, 2,2,2,2,2,2, 3,3,3,3, 4,4,4,4,4];
+    const PCT=[0,0, 0,0,0,0,0,25, 25,25,25,25,25,50, 50,50,50,75, 75,75,75,75,100];
+    let lastPct=0;
+    function setProgress(pct){
+      fill.style.width=pct+'%';
+      if(REDUCED){ ppct.textContent=pct+'%'; } else if(pct!==lastPct){ animateCount(ppct,lastPct,pct,600); setTimeout(()=>{ppct.textContent=pct+'%';},640); }
+      lastPct=pct;
+      tickEls.forEach(t=>{ const v=parseInt(t.dataset.v,10); t.classList.toggle('on', v>0 ? pct>=v : pct>0); });
+    }
+    return {
+      enter(){ lastPct=0; fill.style.width='0'; ppct.textContent='0%'; tickEls.forEach(t=>t.classList.remove('on')); },
+      toStep(st){ const i=Math.max(1,Math.min(surfaces.length,st));
+        surfaces.forEach((sc,k)=>{ sc.style.display=(k===i-1)?'flex':'none'; });
+        wkEls.forEach((c,k)=> c.classList.toggle('on', k===WK[i-1]-1));
+        setProgress(PCT[i-1]);
+      }
+    };
+  }
+});
+
+/* 06 — THE SYSTEM: behaviour-responsive + the learning loop */
+scene({ id:'s6', title:'A System, Not A Sequence', dur:120,
+  note:['“One campaign is not one sequence — behaviour picks the next step, and Claude helps us find where it breaks.”','Next: where a human steps in.'],
+  steps:3,
+  build(root){
+    root.appendChild(pill('illustrative','Illustrative — proposed operating model'));
+    const w=el('div','wrap');
+    const stage=el('div'); stage.style.cssText='width:100%;display:flex;flex-direction:column;align-items:center;min-height:min(46vh,400px);gap:16px;justify-content:center';
+    w.appendChild(stage);
+    const surfaces=[];
+    const surf=()=>{ const s=el('div','mmscreen'); s.style.display='none'; stage.appendChild(s); surfaces.push(s); return s; };
+    const cap=(html)=>{ const c=el('div','mmcap'); c.innerHTML=html; return c; };
+
+    // beat 1 — headline
+    let s=surf();
+    s.append((()=>{const t=el('div','hero','A system,');t.style.fontSize='clamp(40px,5vw,72px)';return t;})(),
+      (()=>{const t=el('div','hero');t.style.fontSize='clamp(40px,5vw,72px)';t.innerHTML='not a <span style="color:var(--green)">sequence</span>.';return t;})());
+
+    // beat 2 — behaviour → next-best action
+    s=surf();
+    s.append((()=>{const t=el('div','subhead','The campaign reacts to behaviour');t.style.fontSize='22px';return t;})());
+    [['Opens the prompt','product-led content'],['Tests it','guide to activation'],
+     ['Tests but doesn’t go live','a human steps in'],['Activates','adoption path'],
+     ['Sees value','next use case']]
+      .forEach(([sig,nba])=>{ const r=el('div','brow'); r.append(el('span','sig',sig),el('span','arw','→'),el('span','nba',nba)); s.appendChild(r); });
+    s.appendChild(cap('<b>Behaviour → next-best action.</b> Not one fixed sequence of emails.'));
+
+    // beat 3 — Claude learning loop
+    s=surf();
+    s.append((()=>{const t=el('div','subhead','How the system improves');t.style.fontSize='22px';return t;})());
+    const loop=el('div','row'); loop.style.cssText='gap:8px;max-width:60em;align-items:center;justify-content:center';
+    const chip=(t,ai)=>el('div','loopstep'+(ai?' ai':''),t);
+    const arw=()=>{ const a=el('span',null,'→'); a.style.cssText='color:var(--muted)'; return a; };
+    [chip('Customer behaviour'),arw(),chip('Data'),arw(),chip('AI analysis · Claude',true),arw(),chip('Next-best action'),arw(),chip('CSM decides'),arw(),chip('Improve → scale')]
+      .forEach(n=>loop.appendChild(n));
+    s.appendChild(loop);
+    s.appendChild((()=>{const c=cap('We don’t design the perfect campaign — we <b>measure where it breaks.</b> Claude analyses the signals; the CSM owns the decision. <span class="tag grey" style="font-size:15px">Claude = analysis layer · proposed</span>');c.style.maxWidth='46em';return c;})());
+
+    root.appendChild(w);
+    return { toStep(st){ const i=Math.max(1,Math.min(surfaces.length,st)); surfaces.forEach((sc,k)=>{ sc.style.display=(k===i-1)?'flex':'none'; }); } };
+  }
+});
+
+/* 07 — THE FRICTION ENGINE */
+scene({ id:'s7', title:'The Friction Engine', dur:70,
+  note:['“Most friction resolves without a call — I spend human time only where intent is high and blocked.”','Next: the 90-day plan.'],
+  steps:4,
+  build(root){
+    root.appendChild(pill('illustrative'));
+    const w=el('div','wrap'); const sp=el('div','split');
+    const df=buildDotField(100); df.el.classList.add('d100');
+    const dfWrap=el('div','col'); dfWrap.style.alignItems='center';
+    dfWrap.append(df.el, el('div','label','Core 100 · friction monitor'));
+    const src=el('div','body muted'); src.style.cssText='font-size:18px;max-width:24em;text-align:center';
+    src.innerHTML='<span class="tag grey" style="font-size:18px">Proposed signals</span> &nbsp;from product-usage data I’d track';
+    dfWrap.appendChild(src);
+    const legend=el('div','body'); legend.style.cssText='font-size:19px;opacity:0;transition:opacity .3s ease-out;color:var(--muted)';
+    legend.innerHTML='10 friction signals · <span style="color:var(--green)">9 handled at scale</span> · <span style="color:var(--amber)">1 needs a person</span>';
+    dfWrap.appendChild(legend);
+    const tree=el('div','ftree');
+    tree.appendChild(el('div','fhead','Digital first'));
+    const mkbranch=(cls,ttl,rte)=>{ const b=el('div','fbranch '+cls); b.append(el('div','ttl',ttl), el('div','rte',rte)); tree.appendChild(b); return b; };
+    const b1=mkbranch('auto','Small friction','→ In-app guide');
+    const b2=mkbranch('auto','Conceptual friction','→ Group session');
+    const b3=mkbranch('human','High intent · blocked','→ 15 minutes with me');
+    const right=el('div','col'); right.style.alignItems='flex-start'; right.appendChild(tree);
+    sp.append(dfWrap,right); w.appendChild(sp);
+    const trig=step(el('div'),4); trig.style.cssText='display:flex;flex-direction:column;gap:8px;align-items:center;max-width:40em';
+    const evid=el('div','body muted'); evid.style.fontSize='19px';
+    evid.innerHTML='<b style="color:var(--green)">Intent ✓</b> tested it &nbsp;·&nbsp; <b style="color:var(--amber)">Friction ✓</b> stalled, not live &nbsp;·&nbsp; <b style="color:var(--text)">Potential ✓</b> high fit';
+    const msg=el('div','inapp'); msg.style.maxWidth='min(560px,92vw)';
+    msg.append((()=>{const i=el('div','ico');i.textContent='CS';i.style.background='var(--amber)';return i;})());
+    const mt=el('div','txt'); mt.innerHTML='“I saw you tested the <b>returns</b> use case in Week 2, but it isn’t live yet — where are you getting stuck?”'; msg.appendChild(mt);
+    trig.append(evid,msg);
+    const line=step(el('div','headline'),4); line.style.maxWidth='20em';
+    line.innerHTML='Human intervention is the <span style="color:var(--amber)">exception</span> — triggered by behaviour, not by everyone.';
+    w.append(trig,line); root.appendChild(w);
+    const order=seededOrder(100,17);
+    const green=order.slice(0,52), violet=order.slice(52,78);
+    const friction=order.slice(78,87).filter(i=>i!==HUMAN_DOT).slice(0,9); // 9 auto-resolved (never the focus)
+    const smallSet=friction.slice(0,5), conceptSet=friction.slice(5,9);
+    function base(){ df.dots.forEach(d=>d.classList.add('in'));
+      green.forEach(i=>setDot(df.dots[i],'green')); violet.forEach(i=>setDot(df.dots[i],'violet')); }
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in','green','violet','amber','human','pulse','ring');setDot(d,'idle');});
+        revealDots(df.dots,4); },
+      toStep(s){
+        base(); friction.forEach(i=>setDot(df.dots[i],'amber'));
+        if(s>=2) smallSet.forEach(i=>setDot(df.dots[i],'green'));
+        if(s>=3) conceptSet.forEach(i=>setDot(df.dots[i],'green'));
+        const fd=df.dots[HUMAN_DOT]; fd.classList.remove('pulse','ring');
+        if(s>=4){ setDot(fd,'amber'); fd.classList.add('pulse','ring','in');
+          setTimeout(()=>{ setDot(fd,'human'); fd.classList.remove('pulse'); fd.classList.add('ring','in'); }, REDUCED?0:750); }
+        else setDot(fd,'green');
+        b1.classList.toggle('lit',s>=2); b2.classList.toggle('lit',s>=3); b3.classList.toggle('lit',s>=4);
+        legend.style.opacity=s>=4?'1':'0';
+      }
+    };
+  }
+});
+
+/* 08 — 90 DAYS */
+scene({ id:'s8', title:'90 Days', dur:60,
+  note:['“90 days proves adoption — not churn. I’d rather say that now than claim it later.”','Next: the close.'],
+  steps:4,
+  build(root){
+    root.appendChild(pill('target'));
+    const w=el('div','wrap');
+    const sp=el('div','split'); sp.style.gridTemplateColumns='1.3fr .9fr';
+    const flight=el('div','flight');
+    [['DAY 30','100 prioritised · lighthouse built · campaign live'],
+     ['DAY 60','first cohort live · adoption measured'],
+     ['DAY 90','~160 of 400 · second cohort started · playbook written']]
+      .forEach(([d,t],i)=>{ const L=step(el('div','leg'),i+1); const tt=el('div','t');
+        if(i===2) tt.innerHTML='<span style="color:var(--violet)">~160 of 400</span> <span class="tag target" style="font-size:18px">TARGET</span> · second cohort started · playbook written';
+        else tt.textContent=t;
+        L.append(el('div','d',d),tt); flight.appendChild(L); });
+    const right=step(el('div','col'),4); right.style.alignItems='flex-start';
+    right.appendChild(el('div','label','Success — four layers'));
+    const metrics=el('div'); metrics.style.cssText='display:flex;flex-direction:column;gap:2px;margin-bottom:8px';
+    [['Activation','the KPI'],['Adoption','it sticks'],['Customer value','a problem solved'],['Health','guardrails: escalation · negative CSAT · AI cost']]
+      .forEach(([k,v])=>{ const d=el('div','body'); d.style.cssText='font-size:19px;color:var(--muted)';
+        d.innerHTML='<b style="color:var(--text)">'+k+'</b> — '+v; metrics.appendChild(d); });
+    right.appendChild(metrics);
+    right.appendChild(el('div','label','Leading indicators'));
+    const sig=el('div','signals'); sig.innerHTML='email engagement · playground started · HelpMate created · knowledge connected · test conversations · publish rate<br><span style="color:var(--muted)">— what predicts activation.</span>'; right.appendChild(sig);
+    const honest=el('div','body'); honest.style.cssText='font-size:19px;margin-top:8px;max-width:22em';
+    honest.textContent='90 days proves adoption. It doesn’t prove churn. I’d rather say that now than claim it later.'; right.appendChild(honest);
+    const tierb=el('div','body muted'); tierb.style.cssText='font-size:18px;max-width:22em';
+    tierb.textContent='Tier B starts five weeks later — a comparison group, not a randomised experiment.'; right.appendChild(tierb);
+    sp.append(flight,right); const spWrap=el('div'); spWrap.style.width='100%'; spWrap.appendChild(sp); w.appendChild(spWrap);
+    root.appendChild(w);
+    return {};
+  }
+});
+
+/* 09 — THE CLOSE */
+scene({ id:'s9', title:'The Close', dur:45,
+  note:['“Not 100 customers switching on AI — 100 running part of their operation on Trengo.”','End. No thank-you slide.'],
+  steps:6,
+  build(root){
+    root.appendChild(mk(pill('target'))); const plEl=root.querySelector('.evidence');
+    const w=el('div','wrap'); const closeWrap=el('div','col'); closeWrap.style.alignItems='center';
+    const df=buildDotField(400); df.el.classList.add('sm'); df.el.style.transition='opacity .3s ease-out'; closeWrap.appendChild(df.el);
+    const cap=el('div','label'); cap.style.cssText='opacity:0;transition:opacity .3s ease-out'; closeWrap.appendChild(cap);
+    const lEls=['400 accounts.','100 activations.','One system that makes the next 100 easier.'].map(t=>{
+      const c=el('div','headline'); c.style.cssText='opacity:0;transition:opacity .3s ease-out;max-width:16em'; c.textContent=t; closeWrap.appendChild(c); return c; });
+    const finalLine=el('div','headline'); finalLine.style.cssText='opacity:0;transition:opacity .3s ease-out;max-width:18em';
+    finalLine.innerHTML='Not 100 customers simply switching on AI.<br><span style="color:var(--green)">100 customers running a real part of their customer operation on Trengo</span><br>— and a system that makes the next 100 easier.';
+    finalLine.style.maxWidth='22em';
+    closeWrap.appendChild(finalLine);
+    w.appendChild(closeWrap); root.appendChild(w);
+    const core100=seededOrder(400,3).slice(0,100);
+    return {
+      enter(){ df.dots.forEach(d=>{d.classList.remove('in','green');setDot(d,'idle');}); revealDots(df.dots,3); },
+      toStep(s){ const nearBlack=s>=6;
+        rev(plEl, s>=2 && !nearBlack);
+        df.el.style.opacity=nearBlack?'0':'1';
+        df.dots.forEach(d=>{ d.classList.add('in'); setDot(d,'idle'); });
+        if(s>=2) transitionDots(df.dots,core100,'green',4);
+        cap.textContent = s>=2?'100 of 400 · activated':'400 accounts';
+        cap.style.opacity=(s>=1&&!nearBlack)?'1':'0';
+        lEls[0].style.opacity=(s>=3&&!nearBlack)?'1':'0';
+        lEls[1].style.opacity=(s>=4&&!nearBlack)?'1':'0';
+        lEls[2].style.opacity=(s>=5&&!nearBlack)?'1':'0';
+        finalLine.style.opacity=nearBlack?'1':'0';
+      }
+    };
+  }
+});
+
+/* ================= ENGINE ================= */
+const deck=document.getElementById('deck');
+const notesEl=document.getElementById('notes');
+const progEl=document.getElementById('progress');
+const overviewEl=document.getElementById('overview');
+const ovgrid=document.getElementById('ovgrid');
+const coverageEl=document.getElementById('coverage');
+
+const state=[]; // per scene: {def,sec,inst,step,built:bool}
+
+function buildScene(i){
+  const def=SCENES[i];
+  const sec=el('section','scene');
+  sec.dataset.index=i;
+  sec.setAttribute('aria-label',def.title);
+  deck.appendChild(sec);
+  const inst=def.build(sec)||{};
+  state[i]={def,sec,inst,step:1};
+}
+
+function maxStep(i){return SCENES[i].steps||1;}
+
+let cur=0;
+
+function applyStep(i){
+  const st=state[i];
+  const s=st.step;
+  st.sec.querySelectorAll('.step').forEach(node=>{
+    if(node.dataset.step===undefined) return; // driven manually by toStep()
+    const ns=parseInt(node.dataset.step,10)||1;
+    node.classList.toggle('shown', ns<=s);
+  });
+  if(st.inst.toStep) st.inst.toStep(s);
+  fitScene(i);
+  renderProgress();
+  renderPresenter();
+  renderCoverage();
+}
+
+// scale a scene's wrap down if its content is taller/wider than the viewport
+function fitScene(i){
+  const st=state[i]; if(!st) return;
+  const wrap=st.sec.querySelector('.wrap'); if(!wrap) return;
+  wrap.style.transform='none';
+  const cs=getComputedStyle(st.sec);
+  const availH=st.sec.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+  const availW=st.sec.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  const h=wrap.scrollHeight, wd=wrap.scrollWidth;
+  if(!h||!wd) return;
+  const scale=Math.min(1, availH/h, availW/wd);
+  if(scale<0.999) wrap.style.transform='scale('+scale.toFixed(4)+')';
+}
+window.addEventListener('resize',()=>{ if(state[cur]) fitScene(cur); });
+
+/* ============================================================
+   FOUR TOP-LEVEL SLIDES = FOUR CHAPTERS
+   - Internal beats (scene steps) auto-play on a timeline, then FREEZE.
+   - SPACE / →  = next top-level slide.  ← / PageUp = previous slide.
+   - The presenter never advances internal beats; they just speak.
+   ============================================================ */
+/* per-step dwell (ms) before the next beat fires; the chapter's LAST beat never advances */
+const HOLD=[
+  [3400,4200,4200,4200],               // 0: s1 portfolio (explanation — deliberately slow)
+  [3600,4200,4600],                    // 1: s2 value / two-jobs
+  [3400,4200,4600,5600,5600],          // 2: s3 matrix (framework — held long, readable)
+  // 3: s5 campaign — 23 one-message beats (consistent grammar); generous holds so the presenter never races
+  [5500,6000, 5500,5500,6000,5500,5500,7000, 5500,6000,6000,5500,5500,7000, 5500,6000,5500,7000, 5500,5500,5500,5500,7500],
+  [6000,7000,7500],                    // 4: s6 system (headline, behaviour, learning loop)
+  [3600,4200,4200,5000],               // 5: s7 human intervention
+  [3600,4200,4200,4600],               // 6: s8 success matrix
+  [3200,3200,3400,3600,3600,4600]      // 7: s9 close
+];
+let slideTimers=[];
+function clearSlide(){ slideTimers.forEach(t=>clearTimeout(t)); slideTimers=[]; }
+function framesForChapter(ch){
+  const frames=[];
+  CHAPTER_OF.forEach((c,sc)=>{ if(c!==ch) return;
+    const n=maxStep(sc);
+    for(let st=1;st<=n;st++){ frames.push({sc,st,hold:(HOLD[sc]&&HOLD[sc][st-1])||3800}); }
+  });
+  return frames;
+}
+function activateScene(sc){
+  if(cur===sc) return;
+  if(state[cur]){ if(state[cur].inst.exit) state[cur].inst.exit(); state[cur].sec.classList.remove('active'); }
+  cur=sc; state[sc].sec.classList.add('active');
+  if(state[sc].inst.enter) state[sc].inst.enter();
+}
+function applyFrame(f){ activateScene(f.sc); state[f.sc].step=f.st; applyStep(f.sc); }
+let curChapter=1, curFrames=[], frameIdx=0;
+function scheduleFrame(){
+  if(frameIdx>=curFrames.length-1) return;                 // FREEZE indefinitely at the last beat
+  const hold=curFrames[frameIdx].hold;
+  slideTimers.push(setTimeout(()=>{ frameIdx++; applyFrame(curFrames[frameIdx]); scheduleFrame(); }, hold));
+}
+function playChapter(ch){
+  ch=Math.max(1,Math.min(lastChapter(),ch));
+  clearSlide();
+  curChapter=ch; curFrames=framesForChapter(ch); frameIdx=0;
+  const first=curFrames[0].sc;
+  // hard-restart the first scene even if it is already current
+  if(state[cur]){ if(state[cur].inst.exit) state[cur].inst.exit(); state[cur].sec.classList.remove('active'); }
+  cur=first; state[first].sec.classList.add('active'); if(state[first].inst.enter) state[first].inst.enter();
+  applyFrame(curFrames[0]);
+  if(REDUCED){ seekChapterEnd(ch); return; }                // reduced motion: jump to frozen end
+  scheduleFrame();
+}
+function seekChapterEnd(ch){                                // land on the frozen final state (reduced-motion / QA)
+  ch=Math.max(1,Math.min(lastChapter(),ch));
+  clearSlide(); curChapter=ch; curFrames=framesForChapter(ch); frameIdx=curFrames.length-1;
+  CHAPTER_OF.forEach((c,sc)=>{ if(c!==ch) return;
+    activateScene(sc); state[sc].step=maxStep(sc); applyStep(sc); });   // ends with the chapter's last scene active
+}
+function nextSlide(){ if(curChapter<lastChapter()) playChapter(curChapter+1); }
+function prevSlide(){ if(curChapter>1) playChapter(curChapter-1); }
+function jump(i){ if(i>=0&&i<SCENES.length) playChapter(chapterOf(i)); }   // overview → that scene's slide
+function jumpChapter(ch){ playChapter(ch); }
+
+function renderProgress(){
+  const ch=chapterOf(cur);
+  progEl.textContent = ch+' / 4  ·  '+CHAPTER_TIME[ch-1];
+}
+/* four top-level slides; scenes auto-play within a slide, then freeze at the boundary */
+const CHAPTER_OF=[1,1,2,3,3,4,4,4];
+const CHAPTER_TITLES=['Portfolio & Goals','Triggers & Segmentation','Operation Millionaire','Human & Success'];
+const CHAPTER_TIME=['0–3 min','3–7 min','7–13 min','13–15 min'];
+function chapterOf(i){ return CHAPTER_OF[i]||1; }
+function firstOfChapter(ch){ const k=CHAPTER_OF.indexOf(ch); return k<0?0:k; }
+function lastChapter(){ return CHAPTER_OF[CHAPTER_OF.length-1]; }
+/* presenter teleprompter, per scene index */
+const PRESENTER=[
+  {say:"Trengo is growing — but we can't give 400 SMB customers a dedicated CSM.", then:"400 customers, <15% on AI, no assigned CSM: a scale problem.", shows:"the portfolio & the scale problem"},
+  {say:"Two jobs at once: go deeper into how customers operate, and do it one-to-many.", then:"AI activation is the entrance to deeper adoption — done at scale.", shows:"the two-sided thesis"},
+  {say:"Need isn't readiness. I score Need × Readiness × Fit, and I cluster a shared pain.", then:"Data → pattern → shared pain → one campaign for the Core 100.", shows:"the matrix & Core 100"},
+  {say:"We wait for the pain, meet it in-app, prove it safely, activate one real use case, then show the value.", then:"A real product experience — progress 0 → 100%.", shows:"the campaign"},
+  {say:"One campaign isn't one sequence — behaviour picks the next step, and Claude helps find where it breaks.", then:"A learning system: measure, improve, scale.", shows:"the system & learning loop"},
+  {say:"Human time is the exception — Intent + Friction + Potential.", then:"Digital first; a person only where it's justified.", shows:"human intervention"},
+  {say:"Activation → adoption → value → health. Adoption is what I optimise for.", then:"Targets, and the honest limit of the window.", shows:"the success matrix"},
+  {say:"The goal isn't 100 activations. It's a system that makes the next 100 easier.", then:"100 running part of their operation on Trengo.", shows:"the close"}
+];
+function phaseFor(i){ return CHAPTER_TITLES[chapterOf(i)-1]; }
+function renderCoverage(){
+  const ci=chapterOf(cur)-1; coverageEl.innerHTML='';
+  CHAPTER_TITLES.forEach((t,k)=>{ const s=el('span','cv'+(k===ci?' now':k<ci?' done':''),(k+1)+' '+t); coverageEl.appendChild(s); });
+}
+function renderPresenter(){
+  const i=cur, p=PRESENTER[i]||{say:'',then:'',shows:''};
+  const nextShows=(i+1<SCENES.length&&PRESENTER[i+1])?PRESENTER[i+1].shows:'—';
+  notesEl.innerHTML='';
+  const head=el('div','pmhead');
+  head.append(el('span',null,String(i+1).padStart(2,'0')+' / '+String(SCENES.length).padStart(2,'0')),
+              el('span',null,'Case: '+phaseFor(i)));
+  notesEl.appendChild(head);
+  const rows=el('div','pmrows');
+  const row=(cls,lab,txt)=>{ const r=el('div','pmrow'+cls); r.append(el('span','pmlab',lab), el('span','pmtxt',txt)); return r; };
+  rows.append(row(' say','Say',p.say||''), row('','Then',p.then||''), row('','Next',nextShows));
+  notesEl.appendChild(rows);
+}
+
+/* overlays */
+function toggleNotes(){ notesEl.classList.toggle('on'); }
+function openOverview(){ overviewEl.classList.add('on'); }
+function closeOverview(){ overviewEl.classList.remove('on'); }
+function toggleFullscreen(){
+  if(!document.fullscreenElement){ (document.documentElement.requestFullscreen||function(){}).call(document.documentElement); }
+  else if(document.exitFullscreen){ document.exitFullscreen(); }
+}
+
+function buildOverview(){
+  SCENES.forEach((def,i)=>{
+    const c=el('div','ovcell'); c.tabIndex=0;
+    c.appendChild(el('div','num',String(i+1).padStart(2,'0')));
+    c.appendChild(el('div','ti',def.title));
+    c.appendChild(el('div','du','~'+def.dur+'s · '+def.steps+' steps'));
+    const go=()=>{ closeOverview(); jump(i); };
+    c.addEventListener('click',go);
+    c.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+    ovgrid.appendChild(c);
+  });
+}
+
+/* single keydown listener */
+window.addEventListener('keydown',e=>{
+  const k=e.key;
+  if(overviewEl.classList.contains('on')){
+    if(k==='Escape'||k==='o'||k==='O'){ closeOverview(); e.preventDefault(); }
+    return;
+  }
+  if(k==='ArrowRight'||k===' '||k==='Spacebar'||k==='PageDown'){ e.preventDefault(); nextSlide(); }
+  else if(k==='ArrowLeft'||k==='PageUp'){ e.preventDefault(); prevSlide(); }
+  else if(k==='p'||k==='P'){ e.preventDefault(); toggleNotes(); }
+  else if(k==='o'||k==='O'){ e.preventDefault(); openOverview(); }
+  else if(k==='f'||k==='F'){ e.preventDefault(); toggleFullscreen(); }
+  else if(k==='Escape'){ if(notesEl.classList.contains('on')) toggleNotes(); }
+  else if(/^[1-4]$/.test(k)){ e.preventDefault(); jumpChapter(parseInt(k,10)); }
+},{passive:false});
+
+/* print: force every scene to reveal all content (JS sets inline opacity, so CSS alone can't) */
+let printPrev=null;
+window.addEventListener('beforeprint',()=>{
+  printPrev=cur;
+  state.forEach((st,i)=>{ if(!st)return;
+    st.sec.classList.add('active'); st.step=maxStep(i);
+    st.sec.querySelectorAll('.step').forEach(n=>{ if(n.dataset.step!==undefined)n.classList.add('shown'); });
+    if(st.inst.toStep) st.inst.toStep(maxStep(i));
+    const wr=st.sec.querySelector('.wrap'); if(wr) wr.style.transform='none';
+  });
+});
+window.addEventListener('afterprint',()=>{
+  state.forEach(st=>{ if(st) st.sec.classList.remove('active'); });
+  clearSlide();
+  playChapter(printPrev==null?curChapter:chapterOf(printPrev));
+});
+
+/* boot */
+SCENES.forEach((_,i)=>buildScene(i));
+buildOverview();
+playChapter(1);
+
+// expose for headless verification / QA
+window.__deck={
+  nextSlide, prevSlide, playChapter, seekChapterEnd,
+  get chapter(){return curChapter;}, get cur(){return cur;}, get step(){return state[cur].step;},
+  get frame(){return frameIdx;}, get frames(){return curFrames.length;},
+  chapters:lastChapter(), count:SCENES.length, maxStep,
+  // QA only: freeze at frame `idx` of chapter `ch` (applies every frame up to idx, no timers)
+  _seek(ch,idx){ clearSlide(); curChapter=ch; curFrames=framesForChapter(ch);
+    idx=Math.max(0,Math.min(curFrames.length-1,idx)); frameIdx=idx;
+    for(let k=0;k<=idx;k++) applyFrame(curFrames[k]); }
+};
+})();
+</script>
+</body>
+</html>
