@@ -62,22 +62,9 @@ describe('CYCLE 88: changelog.json + update-script', () => {
 describe('CYCLE 88: homepage "Recente updates"-sectie', () => {
   const HOMEPAGE = fs.readFileSync(path.join(ROOT, 'website/index.html'), 'utf8');
 
-  test('section met id="recente-updates" + h2 bestaat', () => {
-    expect(HOMEPAGE).toMatch(/<section id="recente-updates"/);
-    expect(HOMEPAGE).toMatch(/<h2 id="updates-heading">Recente updates<\/h2>/);
-  });
-
-  test('ul met data-updates-lijst placeholder bestaat', () => {
-    expect(HOMEPAGE).toMatch(/<ul class="updates-lijst" data-updates-lijst>/);
-  });
-
-  test('fetch-script roept /changelog.json aan', () => {
-    expect(HOMEPAGE).toMatch(/fetch\('\/changelog\.json'/);
-  });
-
-  test('CSS-classes voor .updates-lijst en .update-cycle zitten in <style>', () => {
-    expect(HOMEPAGE).toMatch(/\.updates-lijst\s*\{/);
-    expect(HOMEPAGE).toMatch(/\.update-cycle\s*\{/);
+  // Website korter (6 nov): de homepage toont geen updates-sectie meer; changelog.json blijft de bron voor de updates-pagina.
+  test('homepage heeft geen recente-updates-sectie meer', () => {
+    expect(HOMEPAGE).not.toMatch(/<section id="recente-updates"/);
   });
 });
 
