@@ -756,6 +756,7 @@ function logServerFout_(categorie, bericht, extra) {
       const ontvanger = props.getProperty('OWNER_STATUS_EMAIL') || '';
       if (ontvanger) {
         try {
+          // klant-mail-ok[eigenaar]: server-foutmelding naar OWNER_STATUS_EMAIL, max 1 per uur
           MailApp.sendEmail({
             to: ontvanger,
             subject: '⚠ Boekhoudbaar server-fout: ' + entry.categorie,

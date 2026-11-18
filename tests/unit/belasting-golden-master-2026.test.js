@@ -80,7 +80,7 @@ describe('LAAG 1 — 2026-tarieven gepind op Belastingdienst (oracle-anker)', ()
     expect(B.KIA_PCT).toBe(0.28);
     expect(B.KIA_VAST_VAN).toBe(71683);
     expect(B.KIA_VAST_BEDRAG).toBe(20072);
-    expect(B.KIA_AFBOUW_START).toBe(132747);
+    expect(B.KIA_AFBOUW_START).toBe(132746); // bron: afbouw over het deel boven € 132.746
     expect(B.KIA_AFBOUW_PCT).toBe(0.0756);
   });
   test('Ondernemersaftrek-kernwaarden', () => {
@@ -96,6 +96,19 @@ describe('LAAG 1 — 2026-tarieven gepind op Belastingdienst (oracle-anker)', ()
     expect(B.BOX3_FORFAIT_SPAAR).toBe(0.0128);          // 2026 voorlopig; definitief begin 2027
     expect(B.BOX3_HEFFINGSVRIJ).toBe(59357);
     expect(B.BOX3_TARIEF).toBe(0.36);
+  });
+  // Bronverificatie 2026-10-22 (docs/fiscale-bronnen-2026.md): twee waarden stonden niet in de pin-lijst en
+  // bleken af te wijken van de Belastingdienst-pagina's. Pin ze nu, zodat ze niet stil terugdriften.
+  test('Vrijstelling groene beleggingen box 3: € 26.715 per persoon (was ten onrechte 67.000)', () => {
+    // Bron: belastingdienst.nl/.../box-3/content/berekening-box-3-inkomen-2026:
+    // "Groene beleggingen zijn vrijgesteld tot € 26.715 per persoon."
+    expect(B.BOX3_GROEN_VRIJSTELLING).toBe(26715);
+  });
+  test('Box 1 schijf 1 voor AOW-gerechtigden: 17,85% (was ten onrechte 17,70%)', () => {
+    // Bron: belastingdienst.nl/.../box_1/box_1: "AOW-leeftijd voor 2026 bereikt, geboren op of na
+    // 1 januari 1946: t/m € 38.883 17,85%". Wie in 2026 zelf de AOW-leeftijd bereikt betaalt 17,85% (januari)
+    // tot 34,26% (december) in schijf 1; dat is nog niet gemodelleerd (F-TAX-112).
+    expect(B.IB_SCHIJVEN_AOW[0]).toEqual({ tot: 38883, pct: 0.1785 });
   });
 });
 
@@ -155,8 +168,11 @@ describe('LAAG 2 — golden-master berekeningen (hand-afgeleid uit de tarieven)'
   test('KIA €100.000 → €20.072,00 (vlakke zone, vast bedrag)', () => {
     expect(ctx.berekenKiaAftrek_(100000, B)).toBeCloseTo(20072.00, 2);
   });
-  test('KIA €200.000 → €14.987,67 (afbouw: 20072 − 0,0756×67253)', () => {
-    expect(ctx.berekenKiaAftrek_(200000, B)).toBeCloseTo(14987.67, 2);
+  test('KIA €132.747 → €20.071,92 (eerste euro van de afbouwschijf telt al mee: bron rekent boven € 132.746)', () => {
+    expect(ctx.berekenKiaAftrek_(132747, B)).toBeCloseTo(20071.92, 2);
+  });
+  test('KIA €200.000 → €14.987,60 (afbouw: 20072 − 0,0756×67254, deel boven € 132.746)', () => {
+    expect(ctx.berekenKiaAftrek_(200000, B)).toBeCloseTo(14987.60, 2);
   });
   test('KIA buiten staffel (€2.000 < min, €400.000 > max) → €0', () => {
     expect(ctx.berekenKiaAftrek_(2000, B)).toBe(0);

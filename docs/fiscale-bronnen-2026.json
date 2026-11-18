@@ -1,0 +1,280 @@
+{
+ "jaar": 2026,
+ "opgehaald": "2026-10-22",
+ "geldigTot": "2026-12-31",
+ "uitleg": "Elke regel: een citaat dat letterlijk op de officiële pagina staat, en de constanten in src/Belastingadvies.gs die ervan afhangen. tests/unit/fiscale-bronnen-register.test.js koppelt dit aan de code; scripts/fiscaal-bronnen-check.js haalt de pagina's opnieuw op. Nieuw jaar: opnieuw ophalen, citaten bijwerken, jaar en geldigTot verhogen.",
+ "bronnen": [
+  {
+   "id": "box1",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/prive/inkomstenbelasting/heffingskortingen_boxen_tarieven/boxen_en_tarieven/box_1/box_1",
+   "citaat": "1 t/m € 38.883 35,75% 2 Meer dan € 38.883 t/m € 78.426 37,56% 3 Meer dan € 78.426 49,50%",
+   "constanten": [
+    {
+     "sleutel": "IB_SCHIJVEN.0.tot",
+     "waarde": 38883,
+     "staatAls": "€ 38.883"
+    },
+    {
+     "sleutel": "IB_SCHIJVEN.0.pct",
+     "waarde": 0.3575,
+     "staatAls": "35,75%"
+    },
+    {
+     "sleutel": "IB_SCHIJVEN.1.tot",
+     "waarde": 78426,
+     "staatAls": "€ 78.426"
+    },
+    {
+     "sleutel": "IB_SCHIJVEN.1.pct",
+     "waarde": 0.3756,
+     "staatAls": "37,56%"
+    },
+    {
+     "sleutel": "IB_SCHIJVEN.2.pct",
+     "waarde": 0.495,
+     "staatAls": "49,50%"
+    }
+   ]
+  },
+  {
+   "id": "box1-aow",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/prive/inkomstenbelasting/heffingskortingen_boxen_tarieven/boxen_en_tarieven/box_1/box_1",
+   "citaat": "1 t/m € 38.883 17,85% 2 Meer dan € 38.883 t/m € 78.426 37,56%",
+   "constanten": [
+    {
+     "sleutel": "IB_SCHIJVEN_AOW.0.tot",
+     "waarde": 38883,
+     "staatAls": "€ 38.883"
+    },
+    {
+     "sleutel": "IB_SCHIJVEN_AOW.0.pct",
+     "waarde": 0.1785,
+     "staatAls": "17,85%"
+    }
+   ]
+  },
+  {
+   "id": "algemene-heffingskorting",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/voorlopige-aanslag/content/voorlopige-aanslag-tarieven-en-heffingskortingen",
+   "citaat": "Algemene heffingskorting tot € 29.736 € 3.115 vanaf € 29.736 tot € 78.426 € 3.115 - 6,398% x (verzamelinkomen - € 29.736) vanaf € 78.426 € 0",
+   "constanten": [
+    {
+     "sleutel": "HEFFINGSKORTING_MAX",
+     "waarde": 3115,
+     "staatAls": "€ 3.115"
+    },
+    {
+     "sleutel": "HEFFINGSKORTING_AFBOUW_VAN",
+     "waarde": 29736,
+     "staatAls": "€ 29.736"
+    },
+    {
+     "sleutel": "HEFFINGSKORTING_AFBOUW_PCT",
+     "waarde": 0.06398,
+     "staatAls": "6,398%"
+    },
+    {
+     "sleutel": "HEFFINGSKORTING_NUL_VAN",
+     "waarde": 78426,
+     "staatAls": "€ 78.426"
+    }
+   ]
+  },
+  {
+   "id": "arbeidskorting",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/voorlopige-aanslag/content/voorlopige-aanslag-tarieven-en-heffingskortingen",
+   "citaat": "vanaf € 25.845 tot € 45.592 € 5.300 + 1,950% x (arbeidsinkomen - € 25.845) vanaf € 45.592 tot € 132.920 € 5.685 - 6,510% x (arbeidsinkomen - € 45.592)",
+   "constanten": [
+    {
+     "sleutel": "ARBEIDSKORTING_MAX",
+     "waarde": 5685,
+     "staatAls": "€ 5.685"
+    },
+    {
+     "sleutel": "ARBEIDSKORTING_TOP_TOT",
+     "waarde": 45592,
+     "staatAls": "€ 45.592"
+    },
+    {
+     "sleutel": "ARBEIDSKORTING_AFBOUW_PCT",
+     "waarde": 0.0651,
+     "staatAls": "6,510%"
+    }
+   ]
+  },
+  {
+   "id": "zelfstandigenaftrek",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/ondernemersaftrek_en_investeringsaftrek",
+   "citaat": "De zelfstandigenaftrek is € 1.200 (of € 600",
+   "constanten": [
+    {
+     "sleutel": "ZELFSTANDIGENAFTREK",
+     "waarde": 1200,
+     "staatAls": "€ 1.200"
+    }
+   ]
+  },
+  {
+   "id": "startersaftrek",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/ondernemersaftrek_en_investeringsaftrek",
+   "citaat": "De startersaftrek is € 2.123 (of € 1.062",
+   "constanten": [
+    {
+     "sleutel": "STARTERSAFTREK",
+     "waarde": 2123,
+     "staatAls": "€ 2.123"
+    }
+   ]
+  },
+  {
+   "id": "stakingsaftrek",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/ondernemersaftrek_en_investeringsaftrek",
+   "citaat": "maar maximaal € 3.630",
+   "constanten": [
+    {
+     "sleutel": "STAKINGSAFTREK",
+     "waarde": 3630,
+     "staatAls": "€ 3.630"
+    }
+   ]
+  },
+  {
+   "id": "mkb-winstvrijstelling",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/ondernemersaftrek_en_investeringsaftrek",
+   "citaat": "De mkb-winstvrijstelling is 12,7%",
+   "constanten": [
+    {
+     "sleutel": "MKB_WINSTVRIJSTELLING",
+     "waarde": 0.127,
+     "staatAls": "12,7%"
+    }
+   ]
+  },
+  {
+   "id": "kia",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/zakelijk/winst/inkomstenbelasting/veranderingen-inkomstenbelasting-2026/investeringsaftrek-2026/kleinschaligheidsinvesteringsaftrek-2026",
+   "citaat": "€ 2.901 t/m € 71.683 28% van het investeringsbedrag € 71.684 t/m € 132.746 € 20.072 € 132.747 t/m € 398.236 € 20.072 verminderd met 7,56% van het deel van het investeringsbedrag boven de € 132.746 meer dan € 398.236 0%",
+   "constanten": [
+    {
+     "sleutel": "KIA_MIN",
+     "waarde": 2901,
+     "staatAls": "€ 2.901"
+    },
+    {
+     "sleutel": "KIA_PCT",
+     "waarde": 0.28,
+     "staatAls": "28%"
+    },
+    {
+     "sleutel": "KIA_VAST_VAN",
+     "waarde": 71683,
+     "staatAls": "€ 71.683"
+    },
+    {
+     "sleutel": "KIA_VAST_BEDRAG",
+     "waarde": 20072,
+     "staatAls": "€ 20.072"
+    },
+    {
+     "sleutel": "KIA_AFBOUW_START",
+     "waarde": 132746,
+     "staatAls": "boven de € 132.746"
+    },
+    {
+     "sleutel": "KIA_AFBOUW_PCT",
+     "waarde": 0.0756,
+     "staatAls": "7,56%"
+    },
+    {
+     "sleutel": "KIA_MAX",
+     "waarde": 398236,
+     "staatAls": "€ 398.236"
+    }
+   ]
+  },
+  {
+   "id": "box3-spaargeld",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2026",
+   "citaat": "Banktegoeden: 1,28%",
+   "constanten": [
+    {
+     "sleutel": "BOX3_FORFAIT_SPAAR",
+     "waarde": 0.0128,
+     "staatAls": "1,28%"
+    }
+   ]
+  },
+  {
+   "id": "box3-overig",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2026",
+   "citaat": "Beleggingen en andere bezittingen: 6,00%",
+   "constanten": [
+    {
+     "sleutel": "BOX3_FORFAIT_BELEGGING",
+     "waarde": 0.06,
+     "staatAls": "6,00%"
+    }
+   ]
+  },
+  {
+   "id": "box3-tarief",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2026",
+   "citaat": "het belastingtarief voor box 3 in 2026 (36%)",
+   "constanten": [
+    {
+     "sleutel": "BOX3_TARIEF",
+     "waarde": 0.36,
+     "staatAls": "36%"
+    }
+   ]
+  },
+  {
+   "id": "box3-groen",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2026",
+   "citaat": "Groene beleggingen zijn vrijgesteld tot € 26.715 per persoon",
+   "constanten": [
+    {
+     "sleutel": "BOX3_GROEN_VRIJSTELLING",
+     "waarde": 26715,
+     "staatAls": "€ 26.715"
+    }
+   ]
+  },
+  {
+   "id": "box3-heffingsvrij",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/heffingsvrij-vermogen",
+   "citaat": "met fiscale partner 2026 € 59.357 € 118.714",
+   "constanten": [
+    {
+     "sleutel": "BOX3_HEFFINGSVRIJ",
+     "waarde": 59357,
+     "staatAls": "€ 59.357"
+    }
+   ]
+  },
+  {
+   "id": "zvw-percentage",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/prive/werk_en_inkomen/zorgverzekeringswet/veranderingen-bijdrage-zvw/percentages-zvw",
+   "citaat": "4,85% (was 5,26% in 2025)",
+   "constanten": [
+    {
+     "sleutel": "ZVW_PCT",
+     "waarde": 0.0485,
+     "staatAls": "4,85%"
+    }
+   ]
+  },
+  {
+   "id": "zvw-maximum",
+   "url": "https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/prive/werk_en_inkomen/zorgverzekeringswet/veranderingen-bijdrage-zvw/percentages-zvw",
+   "citaat": "Het maximumbijdrage-inkomen in 2026 is € 79.409",
+   "constanten": [
+    {
+     "sleutel": "ZVW_MAX_INKOMEN",
+     "waarde": 79409,
+     "staatAls": "€ 79.409"
+    }
+   ]
+  }
+ ]
+}

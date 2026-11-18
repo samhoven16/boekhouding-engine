@@ -1,5 +1,8 @@
 # RB-verificatie 2026 — fiscale constanten (UITGEVOERD 2026-06-21)
 
+> **Update 2026-10-22:** nieuwe bronverificatie bij de officiële pagina's staat in `docs/fiscale-bronnen-2026.md`. Het ⚠️-punt `IB_SCHIJVEN_AOW[0].pct` is daarmee gesloten (17,85%, was 17,70%); `BOX3_GROEN_VRIJSTELLING` bleek 26.715 per persoon (was 67.000).
+
+
 > **Status**: bron-verificatie uitgevoerd door Claude tegen live bronnen
 > (WebSearch: belastingdienst.nl-tabellen, Deloitte, PwC, MKB Servicedesk,
 > Raisin, Ondernemersplein, accountants-publicaties). **Eerlijkheidsgrens**: dit

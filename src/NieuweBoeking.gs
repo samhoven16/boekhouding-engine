@@ -776,6 +776,13 @@ function parseEU(v) {
   return isFinite(n) ? n : 0;
 }
 
+// BTW in hele centen, half-up (zelfde uitkomst als rondTariefCent_ op de server).
+// Het float-product rondde 21,50 x 21% = 4,515 af naar 4,51 (float: 451.4999...).
+function btwBedrag(excl, pct) {
+  var bp = Math.round(pct * 10000);
+  return Math.floor((Math.round(excl * 100) * bp + 5000) / 10000) / 100;
+}
+
 function herbereken() {
   try {
     var excl = 0;
@@ -792,7 +799,7 @@ function herbereken() {
       excl += tot;
     }
     var pct = btwPct('f-btw');
-    var btw = Math.round(excl*pct*100)/100;
+    var btw = btwBedrag(excl, pct);
     var incl = Math.round((excl+btw)*100)/100;
     var totExclEl = document.getElementById('tot-excl');
     var totBtwEl  = document.getElementById('tot-btw');
