@@ -49,19 +49,10 @@ describe('CYCLE 87: breakpoint-consolidatie 9 → 3', () => {
   });
 });
 
-describe('CYCLE 87: agenda-feed sectie heeft geen inline-styles meer', () => {
-  test('section gebruikt class i.p.v. inline background-gradient', () => {
-    expect(HOMEPAGE).toMatch(/<section id="agenda-feed" class="agenda-feed"/);
-    expect(HOMEPAGE).not.toMatch(/<section id="agenda-feed"[^>]*style="background:linear-gradient/);
-  });
-
-  test('agenda-feed-knop class bestaat in <style> en wordt gebruikt in markup', () => {
-    expect(HOMEPAGE).toMatch(/\.agenda-feed-knop\s*\{/);
-    expect(HOMEPAGE).toMatch(/<a [^>]*class="agenda-feed-knop"/);
-  });
-
-  test('agenda-feed-knop wordt NIET inline gestyled met background:#2EC4B6', () => {
-    expect(HOMEPAGE).not.toMatch(/style="background:#2EC4B6;color:#0D1B4E;padding:14px 26px/);
+describe('Website korter (6 nov): agenda-feed-sectie is van de homepage gehaald', () => {
+  test('geen agenda-feed sectie meer op de homepage (iCal-feed blijft als bestand bestaan)', () => {
+    expect(HOMEPAGE).not.toMatch(/<section id="agenda-feed"/);
+    expect(fs.existsSync(path.resolve(__dirname, '../../website/zzp-deadlines.ics'))).toBe(true);
   });
 });
 

@@ -1275,65 +1275,6 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* ── AGENDA-FEED SECTIE (cycle 87) — was 9-prop inline button + style soup ── */
-  .agenda-feed {
-    background: linear-gradient(135deg, #0D1B4E 0%, #1A2A6B 100%);
-    color: #fff;
-    padding: 56px 32px;
-  }
-  .agenda-feed-inner { max-width: 680px; margin: 0 auto; text-align: center; }
-  .agenda-feed .section-label { color: #2EC4B6; }
-  .agenda-feed h2 { color: #fff; margin-bottom: 14px; font-size: 28px; line-height: 1.25; }
-  .agenda-feed-sub { color: #B8C2D1; font-size: 16px; line-height: 1.65; margin-bottom: 24px; }
-  .agenda-feed-knop {
-    background: #2EC4B6; color: #0D1B4E;
-    padding: 14px 26px; border-radius: 10px;
-    text-decoration: none; font-weight: 700; font-size: 15px;
-    display: inline-block; letter-spacing: .1px;
-    transition: transform .15s ease, box-shadow .2s ease;
-  }
-  .agenda-feed-knop:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(46,196,182,.32); }
-
-  /* ── RECENTE UPDATES (cycle 88) — changelog-feed onder FAQ ── */
-  .recente-updates {
-    padding: 60px 32px;
-    background: var(--licht);
-    border-top: 1px solid var(--rand);
-  }
-  .recente-updates .container { max-width: 720px; margin: 0 auto; }
-  .recente-updates h2 {
-    color: var(--blauw);
-    font-size: 28px;
-    line-height: 1.25;
-    margin-bottom: 18px;
-  }
-  .updates-lijst {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 24px;
-    border-top: 1px solid var(--rand);
-  }
-  .updates-lijst li {
-    padding: 14px 0;
-    border-bottom: 1px solid var(--rand);
-    display: flex;
-    gap: 14px;
-    align-items: baseline;
-  }
-  .update-datum {
-    font-size: 13px;
-    color: var(--grijs);
-    flex-shrink: 0;
-    width: 90px;
-  }
-  .update-titel { font-size: 15px; color: #1A1A1A; line-height: 1.5; }
-  .update-cycle { color: var(--grijs); font-weight: 600; margin-right: 6px; }
-  .updates-leeg { color: var(--grijs); font-style: italic; }
-  .updates-meta { font-size: 13px; color: var(--grijs); line-height: 1.6; margin-top: 16px; }
-  @media (max-width: 640px) {
-    .updates-lijst li { flex-direction: column; gap: 4px; }
-    .update-datum { width: auto; }
-  }
 
   /* ── CTA BANNER ── */
   .cta-banner {
@@ -1504,6 +1445,11 @@
     }
     [data-reveal] { opacity: 1 !important; transform: none !important; }
   }
+.scherm-noot{font-size:13px;color:var(--grijs);text-align:center;margin:10px 0 0}
+.scherm-rij{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;margin-top:24px}
+.scherm{margin:0}.scherm img{width:100%;height:auto;border-radius:10px;border:1px solid var(--rand);box-shadow:0 8px 24px rgba(13,27,78,.08)}
+.scherm figcaption{font-size:15px;color:var(--grijs);margin-top:12px;line-height:1.5}
+@media(max-width:768px){.scherm-rij{grid-template-columns:1fr}}
 </style>
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "26812e478fcf4d449a8164390c3f6faa"}'></script>
 <link rel="stylesheet" href="/animations.css">
@@ -1551,10 +1497,8 @@
         <span class="hero-badge-dot" aria-hidden="true"></span>
         In jouw Google Drive · eenmalig €49 · geen abonnement
       </div>
-      <h1 id="hero-heading"><span class="hero-brand">Boekhoudbaar</span>Je boekhouding in één Google Sheet die je zélf bezit — Boekhoudprogramma voor ZZP &amp; eenmanszaak.</h1>
-      <p class="hero-sub">
-        Boekhoudbaar regelt je facturen, BTW-aangifte en overzicht — in een Google Sheet in je eigen Drive. Geen ingewikkeld programma, geen abonnement. Klaar in vijf minuten. <a href="/tools/besparing/" class="hero-sub-link">Reken je besparing uit →</a>
-      </p>
+      <h1 id="hero-heading">Je btw-aangifte klaar in je eigen Google Sheet.</h1>
+      <p class="hero-sub">Facturen, btw en overzicht voor zzp en eenmanszaak, eenmalig €49. Je data blijft in je eigen Drive. <a href="/demo/" class="hero-sub-link">Klik door het voorbeeld →</a></p>
       <div class="hero-ctas">
         <a href="/kopen" class="btn-primair">
           <span>Koop nu →</span>
@@ -1568,9 +1512,9 @@
         <li><span aria-hidden="true">✓</span> <strong>Activatie-garantie</strong> — werkt niet? Geld terug</li>
       </ul>
     </div>
-    <div class="hero-product" aria-hidden="true">
+    <div class="hero-product">
       <div class="hero-product-frame">
-        <img src="/preview.svg" alt="" width="1200" height="720" loading="eager" fetchpriority="high" decoding="async">
+        <img src="/img/scherm-dashboard.webp" alt="Het Dashboard-tabblad van Boekhoudbaar in Google Sheets, met voorbeeldgegevens" width="1100" height="914" loading="eager" fetchpriority="high" decoding="async"><p class="scherm-noot">Zo ziet het eruit, met testgegevens van een voorbeeldbedrijf.</p>
       </div>
     </div>
   </div>
@@ -1582,60 +1526,19 @@
 <section class="hoe-werkt" aria-labelledby="hoe-heading">
   <div class="container">
     <p class="section-label hoe-label">Zo werkt het</p>
-    <h2 id="hoe-heading">In drie stappen jouw eigen boekhouding</h2>
-    <div class="hoe-stappen">
-      <div class="hoe-stap">
-        <div class="hoe-stap-nr">Stap 1</div>
-        <strong>Je krijgt je eigen Sheet</strong>
-        <span>Een kopie in jóuw Google Drive — klaar in vijf minuten.</span>
-      </div>
-      <div class="hoe-stap">
-        <div class="hoe-stap-nr">Stap 2</div>
-        <strong>Je vult je facturen en kosten in</strong>
-        <span>Boekhoudbaar boekt en rekent automatisch.</span>
-      </div>
-      <div class="hoe-stap">
-        <div class="hoe-stap-nr">Stap 3</div>
-        <strong>Je BTW en overzicht staan klaar</strong>
-        <span>Aangifte-cijfers en dashboard, altijd actueel.</span>
-      </div>
+    <h2 id="hoe-heading">Zo ziet je boekhouding eruit</h2>
+    <p class="scherm-noot">Beelden met testgegevens van een voorbeeldbedrijf. In jouw Sheet staan jouw cijfers.</p>
+    <div class="scherm-rij">
+      <figure class="scherm">
+        <img src="/img/scherm-nieuwe-boeking.webp" alt="Het invoerscherm Nieuwe boeking, met voorbeeldgegevens" width="700" height="751" loading="lazy" decoding="async">
+        <figcaption><strong>1. Je boekt een factuur of kosten.</strong> Boekhoudbaar boekt en rekent automatisch.</figcaption>
+      </figure>
+      <figure class="scherm">
+        <img src="/img/scherm-btw.webp" alt="Het tabblad BTW-aangifte met rubrieken en saldo, met voorbeeldgegevens" width="1100" height="914" loading="lazy" decoding="async">
+        <figcaption><strong>2. Je btw-cijfers staan klaar.</strong> Per rubriek, om over te nemen bij de Belastingdienst.</figcaption>
+      </figure>
     </div>
-  </div>
-</section>
-
-<!-- ── ANCHORED PRICING — visualiseert besparing tov concurrenten ── -->
-<section class="anchor-sectie" aria-labelledby="anchor-heading">
-  <div class="container">
-    <p class="section-label">Wat het kost over 5 jaar</p>
-    <h2 id="anchor-heading" class="reveal-on-scroll">€49 nu. Bespaar <em>€2.291</em> over 5 jaar.</h2>
-    <p class="sub-tekst">Pak elk boekhoudpakket dat je wilt. Ik laat zien wat het jou over vijf jaar écht kost — daarna kies jij.</p>
-
-    <div class="anchor-grid" role="list">
-      <article class="anchor-card anchor-card--ons" role="listitem">
-        <div class="anchor-tag">Boekhoudbaar</div>
-        <div class="anchor-bedrag">€49<span class="anchor-bedrag-suffix">eenmalig</span></div>
-        <div class="anchor-vs">€<span data-anchor-jaar>49</span> over 5 jaar</div>
-        <div class="anchor-feat">Eén keer betalen. Niets in jaar 2.</div>
-      </article>
-
-      <article class="anchor-card anchor-card--mb" role="listitem">
-        <div class="anchor-tag">Moneybird Premium</div>
-        <div class="anchor-bedrag anchor-bedrag--muted">€39<span class="anchor-bedrag-suffix">/maand</span></div>
-        <div class="anchor-vs anchor-vs--muted">€<strong>2.340</strong> over 5 jaar</div>
-        <div class="anchor-besparing">Verschil: €2.291</div>
-      </article>
-
-      <article class="anchor-card anchor-card--eb" role="listitem">
-        <div class="anchor-tag">e-Boekhouden Plus</div>
-        <div class="anchor-bedrag anchor-bedrag--muted">€19<span class="anchor-bedrag-suffix">/maand</span></div>
-        <div class="anchor-vs anchor-vs--muted">€<strong>1.140</strong> over 5 jaar</div>
-        <div class="anchor-besparing">Verschil: €1.091</div>
-      </article>
-    </div>
-    <p class="anchor-disclaimer">
-      Tarieven mei 2026. Vergelijkbare functies (facturatie, BTW, boekhouder-toegang).
-      Andere pakketten doen meer; lees ook <a href="/vergelijking/">de complete vergelijking</a>.
-    </p>
+    <p style="text-align:center;margin-top:24px"><a href="/demo/" class="btn-secundair">Klik door alle tabbladen →</a></p>
   </div>
 </section>
 
@@ -1643,49 +1546,12 @@
      hero — een tweede CTA voor dezelfde demo is dubbel en breekt de
      "eerlijke, geen-marketing"-toon van de trust-sectie hieronder. -->
 
-<!-- ── TRUST LAYER — eerlijk, geen marketing ── -->
 <section class="trust-sectie" aria-labelledby="trust-heading">
   <div class="container">
-    <p class="section-label">Waar draait dit op</p>
     <h2 id="trust-heading" class="reveal-on-scroll">Eerlijk antwoord, zonder marketing-praat.</h2>
-    <ul class="trust-feiten" role="list">
-      <li>
-        <span class="trust-icon" aria-hidden="true">▦</span>
-        <div><strong>Google-infrastructuur</strong>
-        <p>Draait op dezelfde systemen als Gmail en Docs.</p></div>
-      </li>
-      <li>
-        <span class="trust-icon" aria-hidden="true">↺</span>
-        <div><strong>Jouw data</strong>
-        <p>Staat alleen in jouw eigen Google Drive.</p></div>
-      </li>
-      <li>
-        <span class="trust-icon" aria-hidden="true">⛨</span>
-        <div><strong>Geen toegang</strong>
-        <p>Ik kan je boekhouding niet zien of kopiëren.</p></div>
-      </li>
-      <li>
-        <span class="trust-icon" aria-hidden="true">∅</span>
-        <div><strong>Geen vendor-lock</strong>
-        <p>Stop je ooit? Sheet werkt door, data blijft van jou.</p></div>
-      </li>
-    </ul>
-    <p style="text-align:center;margin-top:32px;font-size:14px;color:var(--grijs)">
-      Als je Gmail vertrouwt, werkt dit op dezelfde infrastructuur.
-      <a href="/transparantie/" style="color:var(--blauw);text-decoration:underline;text-underline-offset:3px;margin-left:6px;">Hoe het achter de schermen werkt →</a>
-    </p>
-  </div>
-</section>
-
-<!-- ── COMPARE-INLINE — compact, kernsignaal ── -->
-<section id="vergelijking" class="compare-inline-sectie" aria-labelledby="compare-heading" style="padding:60px 32px;">
-  <div class="container" style="max-width:780px;margin:0 auto;text-align:center;">
-    <p class="section-label">Eerlijke vergelijking</p>
-    <h2 id="compare-heading" class="reveal-on-scroll" style="font-size:28px;line-height:1.25;margin-bottom:14px;">Niet beter dan Moneybird, alleen anders.</h2>
-    <p class="sub-tekst" style="margin-bottom:28px;">Géén realtime team-collaboration, géén ingebouwde loonadministratie. Wél: jouw data in jouw Drive, eenmalig betalen, geen vendor-lock. Voor solo-ZZP'ers genoeg.</p>
-    <p>
-      <a href="/vergelijking/" class="btn-secundair">→ Lees de complete vergelijking</a>
-    </p>
+    <p class="sub-tekst">Alles staat alleen in jouw eigen Google Drive. Ik kan je boekhouding niet zien of kopiëren. Stop je ooit? De Sheet werkt door. <a href="/transparantie/">Hoe het achter de schermen werkt →</a></p>
+    <p class="sub-tekst">Over 5 jaar kost Moneybird Premium €<strong>2.340</strong> en e-Boekhouden Plus €<strong>1.140</strong>, Boekhoudbaar €49 eenmalig (tarieven mei 2026; andere pakketten doen meer).</p>
+    <p class="sub-tekst">Niet beter dan Moneybird, alleen anders: geen team-samenwerking en geen loonadministratie. <a href="/vergelijking/">Lees de complete vergelijking →</a></p>
   </div>
 </section>
 
@@ -1732,27 +1598,6 @@
         Werkt met élk emailadres — @gmail, @outlook, @icloud, @proton, eigen domein. <a href="/faq/#gmail" style="color:var(--blauw);text-decoration:underline;text-underline-offset:2px">Geen Gmail? Lees hoe →</a>
       </p>
 
-      <!-- Persona-rij: één tier, eerlijke uitleg waarom geen pakket-onderscheid -->
-      <div class="persona-rij" role="note">
-        <div class="persona-titel">Geen tiers, geen "Premium". Eerlijke prijs voor iedereen:</div>
-        <div class="persona-grid">
-          <div class="persona">
-            <div class="persona-icon" aria-hidden="true">🌱</div>
-            <div class="persona-naam">Net begonnen</div>
-            <div class="persona-tekst">Eerste factuur deze maand? Alles wat je nodig hebt zit erin.</div>
-          </div>
-          <div class="persona">
-            <div class="persona-icon" aria-hidden="true">📈</div>
-            <div class="persona-naam">10 jaar zelfstandig</div>
-            <div class="persona-tekst">Bewuste keuze tegen abonnement. Eigen data, geen lock-in.</div>
-          </div>
-          <div class="persona">
-            <div class="persona-icon" aria-hidden="true">📊</div>
-            <div class="persona-naam">Accountant of coach</div>
-            <div class="persona-tekst">Beveel het je klanten aan. Eén klik exporteert een rapportagepakket + XAF-auditfile naar hun eigen Drive.</div>
-          </div>
-        </div>
-      </div>
       <div class="garantie-bord" role="note">
         <span class="garantie-bord-icon" aria-hidden="true">🛡️</span>
         <div>
@@ -1761,20 +1606,6 @@
         </div>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- ── BONUS: Gratis BTW-deadline-agenda (iCal feed) — compact ── -->
-<section id="agenda-feed" class="agenda-feed">
-  <div class="agenda-feed-inner container">
-    <p class="section-label">Bonus · gratis</p>
-    <h2>📅 BTW-deadlines in je agenda</h2>
-    <p class="agenda-feed-sub">
-      Abonneer en alle kwartaaldeadlines verschijnen automatisch in Google/Apple/Outlook agenda — met herinneringen vooraf. Werkt ook zonder Boekhoudbaar-aankoop.
-    </p>
-    <a href="webcal://www.boekhoudbaar.nl/zzp-deadlines.ics" class="agenda-feed-knop">
-      📲 Abonneer in agenda
-    </a>
   </div>
 </section>
 
@@ -1892,22 +1723,6 @@
     </div>
     <p style="text-align:center;margin-top:24px;">
       <a href="/faq/" class="btn-secundair">Bekijk alle 30+ vragen →</a>
-    </p>
-  </div>
-</section>
-
-<!-- ── RECENTE UPDATES (cycle 88) — leefsignaal. Verbergt zich automatisch
-     als changelog.json leeg is (zie script onderaan). ── -->
-<section id="recente-updates" class="recente-updates" aria-labelledby="updates-heading">
-  <div class="container">
-    <p class="section-label">Wat er onlangs is gebeurd</p>
-    <h2 id="updates-heading">Recente updates</h2>
-    <ul class="updates-lijst" data-updates-lijst>
-      <li class="updates-leeg">Laden…</li>
-    </ul>
-    <p class="updates-meta">
-      Boekhoudbaar wordt actief onderhouden. Alle updates worden automatisch
-      naar je spreadsheet gepushed — je hoeft niets te doen.
     </p>
   </div>
 </section>
@@ -2336,42 +2151,6 @@
      entries. Faalt stil bij netwerk- of parse-fout — sectie blijft dan
      met "(geen recente updates)" of geheel verborgen staan. -->
 <script>
-  (function() {
-    var lijst = document.querySelector('[data-updates-lijst]');
-    if (!lijst) return;
-    fetch('/changelog.json', { cache: 'no-store' })
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(j) {
-        var entries = (j && Array.isArray(j.entries)) ? j.entries.slice(0, 5) : [];
-        if (entries.length === 0) {
-          // Geen updates → verberg de hele sectie i.p.v. een contradictoire
-          // "Geen recente updates" tonen onder "actief onderhouden".
-          var sectieLeeg = document.getElementById('recente-updates');
-          if (sectieLeeg) sectieLeeg.style.display = 'none';
-          return;
-        }
-        var maanden = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
-        lijst.innerHTML = entries.map(function(e) {
-          var d = new Date(e.date + 'T00:00:00Z');
-          var datum = isNaN(d.getTime())
-            ? (e.date || '')
-            : (d.getUTCDate() + ' ' + maanden[d.getUTCMonth()] + ' ' + d.getUTCFullYear());
-          // Sanitize: titel staat in een textNode, geen HTML-rendering
-          var titel = document.createElement('span');
-          titel.className = 'update-titel';
-          var cyc = document.createElement('span');
-          cyc.className = 'update-cycle';
-          cyc.textContent = 'Cycle ' + (e.cycle || '?') + ':';
-          titel.appendChild(cyc);
-          titel.appendChild(document.createTextNode(' ' + (e.titel || '')));
-          return '<li><span class="update-datum">' + datum + '</span>' + titel.outerHTML + '</li>';
-        }).join('');
-      })
-      .catch(function() {
-        var sectieFout = document.getElementById('recente-updates');
-        if (sectieFout) sectieFout.style.display = 'none';
-      });
-  })();
 </script>
 </body>
 </html>

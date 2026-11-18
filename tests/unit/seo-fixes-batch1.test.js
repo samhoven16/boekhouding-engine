@@ -22,12 +22,17 @@ const demo = fs.readFileSync(path.join(ROOT, 'website/demo/index.html'), 'utf8')
 const cont = fs.readFileSync(path.join(ROOT, 'website/continuiteit/index.html'), 'utf8');
 
 describe('Fix #1 — Homepage H1 keyword-first', () => {
-  test('H1 bevat "Boekhoudprogramma" + "ZZP" (category keyword vooraan)', () => {
-    const m = home.match(/<h1 id="hero-heading">[\s\S]*?<\/h1>/);
+  // Website korter (6 nov): de H1 is één korte belofte; het categorie-keyword staat in <title> (Fix #2) en de hero-sub.
+  test('H1 is één korte belofte (max 80 tekens, geen keyword-opsomming)', () => {
+    const m = home.match(/<h1 id="hero-heading">([\s\S]*?)<\/h1>/);
     expect(m).toBeTruthy();
-    expect(m[0]).toMatch(/Boekhoudprogramma/);
-    expect(m[0]).toMatch(/ZZP/);
-    expect(m[0]).toMatch(/eenmanszaak/);
+    expect(m[1].replace(/<[^>]+>/g, '').length).toBeLessThanOrEqual(80);
+    expect(m[1]).toMatch(/btw-aangifte/i);
+  });
+  test('category keyword staat in de hero-sub (zzp + eenmanszaak)', () => {
+    const m = home.match(/<p class="hero-sub">[\s\S]*?<\/p>/);
+    expect(m[0]).toMatch(/zzp/i);
+    expect(m[0]).toMatch(/eenmanszaak/i);
   });
 
   test('H1 noemt niet meer alleen "Boekhouding zonder abonnement in Google Drive"', () => {
@@ -35,8 +40,9 @@ describe('Fix #1 — Homepage H1 keyword-first', () => {
     expect(m[0]).not.toMatch(/in jouw Google Drive\.<\/h1>/);
   });
 
-  test('Brand-span behouden voor visuele branding (niet verwijderd)', () => {
-    expect(home).toMatch(/<span class="hero-brand">Boekhoudbaar<\/span>/);
+  test('hero toont een echt schermbeeld (webp) met alt-tekst, geen getekende preview.svg', () => {
+    expect(home).toMatch(/<img src="\/img\/scherm-dashboard\.webp" alt="[^"]{10,}"/);
+    expect(home).not.toMatch(/<img src="\/preview\.svg"/);
   });
 });
 
